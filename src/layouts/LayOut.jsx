@@ -16,7 +16,7 @@ import {
 import MenuIcon from "@mui/icons-material/Menu";
 import { useTheme } from "@mui/material/styles";
 import Sidebar from "../sidebar/Sidebar";
-import NavLogo from "../assets/logos/NavLogo.svg";
+import NavLogo from "../assets/logos/guru-los.png";
 import BackwardIcon from "../assets/logos/BackwordIcon.svg";
 import ForwardIcon from "../assets/logos/ForvordIcon.svg";
 import SettingIcon from "../assets/logos/SettingIcon.svg";
@@ -24,7 +24,7 @@ import { useSelector } from "react-redux";
 
 const navItems = [
   { label: "Dashboard", path: "/dashboard" },
-  { label: "Product Library", path: "/dashboard/product_library" }, // Fixed typo
+  { label: "Product Library", path: "/dashboard/product_library/product_template" }, // Fixed typ
   { label: "Procurement", path: "/dashboard/procurement" },
   { label: "Inventory", path: "/dashboard/inventory" },
   { label: "CRM", path: "/dashboard/crm" },
@@ -159,7 +159,7 @@ const LayOut = () => {
                 component="img"
                 src={NavLogo}
                 alt="Logo"
-                sx={{ maxWidth: 120, height: "auto", ml: 1 }}
+                sx={{ maxWidth: 250, height: "auto", ml: 1 }}
               />
             </IconButton>
           </Box>

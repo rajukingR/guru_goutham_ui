@@ -32,25 +32,6 @@ import API_URL from "../../api/Api_url";
 const apiEndpoints = {
   settings: `${API_URL}/users`,
   roles: `${API_URL}/roles`,
-  department: `${API_URL}/department`,
-  "experience-range": `${API_URL}/experience-range`,
-  WorkLayout: `${API_URL}/work-layouts`,
-  CandidateStatus: `${API_URL}/candidate-status`,
-  RevenType: `${API_URL}/revenue-models`,
-  JobTitle: `${API_URL}/job-Title`,
-  Skills: `${API_URL}/skills-add`,
-  Currency: `${API_URL}/currency`,
-  RateType: `${API_URL}/rate-types`,
-  OffBoardingReasons: `${API_URL}/offboarding-reasons`,
-  Availability: `${API_URL}/availability-status`,
-  OverallStatus: `${API_URL}/overall-status`,
-  SourceSe: `${API_URL}/sources`,
-  LanguageProficiency: `${API_URL}/language-proficiency`,
-  BenchStatus: `${API_URL}/bench-status`,
-  InterviewName: `${API_URL}/interview-names`,
-  InterviewStatus: `${API_URL}/interview-statuses`,
-  Industry: `${API_URL}/industries`,
-  branch: `${API_URL}/branch`,
 };
 
 const DynamicTable = ({
