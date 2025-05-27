@@ -9,6 +9,7 @@ import {
   Typography,
   useTheme,
   Divider,
+  Collapse,
 } from "@mui/material";
 import { Link, useLocation } from "react-router-dom";
 
@@ -25,6 +26,14 @@ import ReceiptLongIcon from "@mui/icons-material/ReceiptLong";
 import AdminPanelSettingsIcon from "@mui/icons-material/AdminPanelSettings";
 import ApartmentIcon from "@mui/icons-material/Apartment";
 import TimelineIcon from "@mui/icons-material/Timeline";
+import ShoppingCartIcon from '@mui/icons-material/ShoppingCart';
+import InventoryIcon from '@mui/icons-material/Inventory';
+import LocalShippingIcon from '@mui/icons-material/LocalShipping';
+import PurchaseRequestsIcon from '@mui/icons-material/ShoppingCart'; // or another appropriate icon
+import POQuotationsIcon from '@mui/icons-material/Description';
+
+
+
 
 import { MdAttachMoney, MdOutlineComputer } from "react-icons/md";
 import { FaUserTie, FaBriefcase, FaIndustry, FaChalkboardTeacher, FaUserMinus, FaMoneyCheckAlt } from "react-icons/fa";
@@ -65,27 +74,27 @@ const Sidebar = ({ section }) => {
         },
         {
           text: "Item Variant",
-          path: "/dashboard/item_variant",
+          path: "/dashboard/product_library/item_variant",
           icon: <BusinessIcon />,
         },
         {
           text: "Asset",
-          path: "/dashboard/asset",
+          path: "/dashboard/product_library/asset",
           icon: <AccountBalanceIcon />,
         },
         {
           text: "Asset Modification Tracker",
-          path: "/dashboard/asset_modification_tracker",
+          path: "/dashboard/product_library/asset_modification_tracker",
           icon: <ReceiptIcon />,
         },
         {
           text: "Grade",
-          path: "/dashboard/grade",
+          path: "/dashboard/product_library/grade",
           icon: <ReceiptLongIcon />,
         },
         {
           text: "Stock Locations",
-          path: "/dashboard/stock_locations",
+          path: "/dashboard/product_library/stock_locations",
           icon: <ApartmentIcon />,
         },
       ];
@@ -94,9 +103,30 @@ const Sidebar = ({ section }) => {
     case "procurement":
       menuItems = [
         {
-          text: "Procurement List",
-          path: "/dashboard/procurement",
-          icon: <PeopleIcon />,
+          text: "Purchase Requests",
+          path: "/dashboard/procurement/purchase-requests",
+          icon: <PurchaseRequestsIcon />,
+        },
+        {
+          text: "PO Quotations",
+          path: "/dashboard/procurement/PO-quotations",
+          icon: <POQuotationsIcon />,
+
+        },
+        {
+          text: "Purchase Orders",
+          path: "/dashboard/procurement/PurchaseOrders",
+          icon: <ShoppingCartIcon />,
+        },
+        {
+          text: "Goods Receipt",
+          path: "/dashboard/procurement/GoodsReceipt",
+          icon: <InventoryIcon />,
+        },
+        {
+          text: "Supplier",
+          path: "/dashboard/procurement/Supplier",
+          icon: <LocalShippingIcon />,
         },
       ];
       break;
@@ -302,11 +332,16 @@ const Sidebar = ({ section }) => {
           width: drawerWidth,
           boxSizing: "border-box",
           height: "calc(100vh - 65px)",
-          background: 'linear-gradient(180deg, #1a237e 0%, #0d47a1 40%, #01579b 100%)',
+          background: 'linear-gradient(155deg, #1a237e 0%, #283593 25%, #1565c0 50%, #0d47a1 75%, #01579b 100%)',
           borderRight: "none",
-          backdropFilter: "blur(20px)",
-          boxShadow: '12px 0 40px rgba(13, 71, 161, 0.25), inset -1px 0 0 rgba(255, 255, 255, 0.08), inset 1px 0 0 rgba(255, 255, 255, 0.05)',
-          paddingTop: "32px",
+          backdropFilter: "blur(25px)",
+          boxShadow: `
+            20px 0 60px rgba(13, 71, 161, 0.4),
+            inset -1px 0 0 rgba(255, 255, 255, 0.1),
+            inset 1px 0 0 rgba(255, 255, 255, 0.05),
+            0 0 0 1px rgba(255, 255, 255, 0.02)
+          `,
+          paddingTop: "24px",
           overflowX: "hidden",
           overflowY: "auto",
           position: "relative",
@@ -316,137 +351,246 @@ const Sidebar = ({ section }) => {
             top: 0,
             left: 0,
             right: 0,
-            height: "100px",
-            background: "linear-gradient(180deg, rgba(255, 255, 255, 0.03) 0%, transparent 100%)",
+            height: "120px",
+            background: `
+              radial-gradient(ellipse at center top, rgba(100, 181, 246, 0.15) 0%, rgba(255, 255, 255, 0.05) 50%, transparent 100%),
+              linear-gradient(180deg, rgba(255, 255, 255, 0.04) 0%, transparent 100%)
+            `,
+            pointerEvents: "none",
+          },
+          "&::after": {
+            content: '""',
+            position: "absolute",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: `
+              radial-gradient(circle at 20% 30%, rgba(100, 181, 246, 0.08) 0%, transparent 40%),
+              radial-gradient(circle at 80% 70%, rgba(63, 81, 181, 0.06) 0%, transparent 40%)
+            `,
             pointerEvents: "none",
           },
           "&::-webkit-scrollbar": {
-            width: "3px",
+            width: "4px",
           },
           "&::-webkit-scrollbar-track": {
-            background: "transparent",
+            background: "rgba(255, 255, 255, 0.02)",
+            borderRadius: "10px",
           },
           "&::-webkit-scrollbar-thumb": {
-            background: 'linear-gradient(180deg, rgba(100, 181, 246, 0.4) 0%, rgba(255, 255, 255, 0.2) 100%)',
+            background: 'linear-gradient(180deg, rgba(100, 181, 246, 0.6) 0%, rgba(63, 81, 181, 0.4) 50%, rgba(25, 118, 210, 0.3) 100%)',
             borderRadius: "10px",
+            border: "1px solid rgba(255, 255, 255, 0.1)",
             "&:hover": {
-              background: 'linear-gradient(180deg, rgba(100, 181, 246, 0.6) 0%, rgba(255, 255, 255, 0.3) 100%)',
+              background: 'linear-gradient(180deg, rgba(100, 181, 246, 0.8) 0%, rgba(63, 81, 181, 0.6) 50%, rgba(25, 118, 210, 0.5) 100%)',
             },
           },
         },
       }}
     >
-
-      <List sx={{ width: "100%", padding: "0" }}>
+      <List sx={{ width: "100%", padding: "0 12px", zIndex: 1, position: "relative" }}>
         {menuItems.map((item, index) => {
           const isSelected = selected === item.path;
           return (
-            <ListItem
-              key={index}
-              component={Link}
-              to={item.path}
-              sx={{
-                padding: "14px 28px",
-                marginBottom: "3px",
-                borderRadius: "0",
-                transition: "all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94)",
-                position: "relative",
-                overflow: "hidden",
-                textDecoration: "none",
-                background: isSelected 
-                  ? 'linear-gradient(90deg, rgba(100, 181, 246, 0.15) 0%, rgba(255, 255, 255, 0.08) 100%)'
-                  : "transparent",
-                borderLeft: isSelected ? "3px solid #64b5f6" : "3px solid transparent",
-                "&::before": {
-                  content: '""',
-                  position: "absolute",
-                  left: 0,
-                  top: 0,
-                  bottom: 0,
-                  width: "100%",
-                  background: "linear-gradient(90deg, rgba(255, 255, 255, 0.03) 0%, transparent 50%)",
-                  opacity: 0,
-                  transition: "opacity 0.4s ease",
-                },
-                "&::after": isSelected ? {
-                  content: '""',
-                  position: "absolute",
-                  right: 0,
-                  top: "50%",
-                  transform: "translateY(-50%)",
-                  width: "4px",
-                  height: "20px",
-                  background: "linear-gradient(180deg, #64b5f6 0%, #42a5f5 100%)",
-                  borderRadius: "2px 0 0 2px",
-                  boxShadow: "0 0 8px rgba(100, 181, 246, 0.5)",
-                } : {},
-                "&:hover": {
-                  background: isSelected 
-                    ? 'linear-gradient(90deg, rgba(100, 181, 246, 0.2) 0%, rgba(255, 255, 255, 0.1) 100%)'
-                    : 'linear-gradient(90deg, rgba(255, 255, 255, 0.06) 0%, rgba(100, 181, 246, 0.04) 100%)',
-                  borderLeft: isSelected 
-                    ? "3px solid #64b5f6" 
-                    : "3px solid rgba(100, 181, 246, 0.4)",
-                  transform: "translateX(4px)",
-                  "&::before": {
-                    opacity: 1,
-                  },
-                },
-                "&:active": {
-                  transform: "translateX(2px) scale(0.98)",
-                },
-              }}
-              onClick={() => setSelected(item.path)}
-            >
-              <Box
+            <Box key={index} sx={{ marginBottom: "4px" }}>
+              <ListItem
+                component={Link}
+                to={item.path}
                 sx={{
-                  display: "flex",
-                  alignItems: "center",
-                  width: "100%",
-                  color: isSelected ? '#ffffff' : 'rgba(255, 255, 255, 0.85)',
-                  transition: "all 0.4s ease",
+                  padding: "16px 20px",
+                  borderRadius: "16px",
+                  transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+                  position: "relative",
+                  overflow: "hidden",
+                  textDecoration: "none",
+                  background: isSelected 
+                    ? `
+                        linear-gradient(135deg, 
+                          rgba(100, 181, 246, 0.25) 0%, 
+                          rgba(63, 81, 181, 0.15) 50%, 
+                          rgba(25, 118, 210, 0.1) 100%
+                        )
+                      `
+                    : "transparent",
+                  border: isSelected 
+                    ? "1px solid rgba(100, 181, 246, 0.3)" 
+                    : "1px solid transparent",
+                  backdropFilter: isSelected ? "blur(10px)" : "none",
+                  "&::before": {
+                    content: '""',
+                    position: "absolute",
+                    left: 0,
+                    top: 0,
+                    bottom: 0,
+                    width: "100%",
+                    background: isSelected 
+                      ? "linear-gradient(90deg, rgba(100, 181, 246, 0.1) 0%, transparent 70%)"
+                      : "linear-gradient(90deg, rgba(255, 255, 255, 0.02) 0%, transparent 50%)",
+                    opacity: 0,
+                    transition: "opacity 0.3s ease",
+                    borderRadius: "16px",
+                  },
+                  "&::after": isSelected ? {
+                    content: '""',
+                    position: "absolute",
+                    left: "12px",
+                    top: "50%",
+                    transform: "translateY(-50%)",
+                    width: "3px",
+                    height: "24px",
+                    background: "linear-gradient(180deg, #64b5f6 0%, #42a5f5 50%, #1976d2 100%)",
+                    borderRadius: "2px",
+                    boxShadow: `
+                      0 0 12px rgba(100, 181, 246, 0.8),
+                      0 0 24px rgba(100, 181, 246, 0.4),
+                      inset 0 1px 0 rgba(255, 255, 255, 0.3)
+                    `,
+                  } : {},
+                  "&:hover": {
+                    background: isSelected 
+                      ? `
+                          linear-gradient(135deg, 
+                            rgba(100, 181, 246, 0.35) 0%, 
+                            rgba(63, 81, 181, 0.25) 50%, 
+                            rgba(25, 118, 210, 0.15) 100%
+                          )
+                        `
+                      : `
+                          linear-gradient(135deg, 
+                            rgba(255, 255, 255, 0.08) 0%, 
+                            rgba(100, 181, 246, 0.06) 50%, 
+                            rgba(63, 81, 181, 0.04) 100%
+                          )
+                        `,
+                    border: isSelected 
+                      ? "1px solid rgba(100, 181, 246, 0.5)" 
+                      : "1px solid rgba(255, 255, 255, 0.1)",
+                    transform: "translateX(6px) scale(1.02)",
+                    boxShadow: isSelected
+                      ? `
+                          0 8px 32px rgba(100, 181, 246, 0.3),
+                          0 4px 16px rgba(13, 71, 161, 0.2),
+                          inset 0 1px 0 rgba(255, 255, 255, 0.1)
+                        `
+                      : `
+                          0 4px 20px rgba(0, 0, 0, 0.15),
+                          0 2px 8px rgba(100, 181, 246, 0.1),
+                          inset 0 1px 0 rgba(255, 255, 255, 0.05)
+                        `,
+                    backdropFilter: "blur(15px)",
+                    "&::before": {
+                      opacity: 1,
+                    },
+                  },
+                  "&:active": {
+                    transform: "translateX(3px) scale(0.98)",
+                    transition: "all 0.1s ease",
+                  },
                 }}
+                onClick={() => setSelected(item.path)}
               >
-                <ListItemIcon
+                <Box
                   sx={{
-                    minWidth: "48px",
-                    color: "inherit",
                     display: "flex",
                     alignItems: "center",
-                    justifyContent: "center",
-                    "& svg": {
-                      fontSize: "22px",
-                      filter: isSelected 
-                        ? 'drop-shadow(0 0 12px rgba(100, 181, 246, 0.6)) drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2))'
-                        : "drop-shadow(0 1px 2px rgba(0, 0, 0, 0.1))",
-                      transition: "all 0.4s ease",
-                    },
+                    width: "100%",
+                    color: isSelected ? '#ffffff' : 'rgba(255, 255, 255, 0.87)',
+                    transition: "all 0.3s ease",
+                    zIndex: 1,
+                    position: "relative",
                   }}
                 >
-                  {item.icon}
-                </ListItemIcon>
-                <ListItemText
-                  primary={
-                    <Typography
-                      variant="body2"
+                  <ListItemIcon
+                    sx={{
+                      minWidth: "52px",
+                      color: "inherit",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      marginRight: "4px",
+                      "& svg": {
+                        fontSize: "22px",
+                        filter: isSelected 
+                          ? `
+                              drop-shadow(0 0 16px rgba(100, 181, 246, 0.8))
+                              drop-shadow(0 2px 8px rgba(0, 0, 0, 0.3))
+                              drop-shadow(0 1px 0 rgba(255, 255, 255, 0.2))
+                            `
+                          : `
+                              drop-shadow(0 1px 3px rgba(0, 0, 0, 0.2))
+                              drop-shadow(0 0 8px rgba(100, 181, 246, 0.1))
+                            `,
+                        transition: "all 0.3s ease",
+                        transform: isSelected ? "scale(1.1)" : "scale(1)",
+                      },
+                    }}
+                  >
+                    {item.icon}
+                  </ListItemIcon>
+                  <ListItemText
+                    primary={
+                      <Typography
+                        variant="body2"
+                        sx={{
+                          fontWeight: isSelected ? 600 : 500,
+                          color: "inherit",
+                          fontSize: "0.92rem",
+                          letterSpacing: "0.025em",
+                          lineHeight: 1.4,
+                          textShadow: isSelected 
+                            ? `
+                                0 1px 3px rgba(0, 0, 0, 0.3),
+                                0 0 8px rgba(100, 181, 246, 0.2)
+                              ` 
+                            : "0 1px 2px rgba(0, 0, 0, 0.1)",
+                          transition: "all 0.3s ease",
+                          fontFamily: '"Segoe UI", "Roboto", "Helvetica", "Arial", sans-serif',
+                        }}
+                      >
+                        {item.text}
+                      </Typography>
+                    }
+                  />
+                  {isSelected && (
+                    <Box
                       sx={{
-                        fontWeight: isSelected ? 600 : 500,
-                        color: "inherit",
-                        fontSize: "0.95rem",
-                        letterSpacing: "0.02em",
-                        lineHeight: 1.5,
-                        textShadow: isSelected 
-                          ? "0 1px 2px rgba(0, 0, 0, 0.2)" 
-                          : "0 1px 1px rgba(0, 0, 0, 0.1)",
-                        transition: "all 0.4s ease",
+                        width: "6px",
+                        height: "6px",
+                        borderRadius: "50%",
+                        background: "linear-gradient(45deg, #64b5f6 0%, #42a5f5 100%)",
+                        boxShadow: `
+                          0 0 8px rgba(100, 181, 246, 0.8),
+                          0 0 16px rgba(100, 181, 246, 0.4)
+                        `,
+                        flexShrink: 0,
+                        animation: "pulse 2s infinite",
+                        "@keyframes pulse": {
+                          "0%": {
+                            boxShadow: `
+                              0 0 8px rgba(100, 181, 246, 0.8),
+                              0 0 16px rgba(100, 181, 246, 0.4)
+                            `,
+                          },
+                          "50%": {
+                            boxShadow: `
+                              0 0 12px rgba(100, 181, 246, 1),
+                              0 0 24px rgba(100, 181, 246, 0.6)
+                            `,
+                          },
+                          "100%": {
+                            boxShadow: `
+                              0 0 8px rgba(100, 181, 246, 0.8),
+                              0 0 16px rgba(100, 181, 246, 0.4)
+                            `,
+                          },
+                        },
                       }}
-                    >
-                      {item.text}
-                    </Typography>
-                  }
-                />
-              </Box>
-            </ListItem>
+                    />
+                  )}
+                </Box>
+              </ListItem>
+            </Box>
           );
         })}
       </List>
