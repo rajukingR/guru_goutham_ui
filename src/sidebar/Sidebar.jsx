@@ -31,6 +31,7 @@ import InventoryIcon from '@mui/icons-material/Inventory';
 import LocalShippingIcon from '@mui/icons-material/LocalShipping';
 import PurchaseRequestsIcon from '@mui/icons-material/ShoppingCart'; // or another appropriate icon
 import POQuotationsIcon from '@mui/icons-material/Description';
+import WarehouseIcon from '@mui/icons-material/Warehouse';
 
 
 
@@ -59,8 +60,8 @@ const Sidebar = ({ section }) => {
         },
         {
           text: "Brands",
-          path: "/dashboard/product_library/brands",
-          icon: <AssignmentIcon />,
+          path: "/dashboard/product_library/brands",                        
+          icon: <AssignmentIcon />,                                                                                         
         },
         {
           text: "Product Categories",
@@ -104,28 +105,28 @@ const Sidebar = ({ section }) => {
       menuItems = [
         {
           text: "Purchase Requests",
-          path: "/dashboard/procurement/purchase-requests",
+          path: "/dashboard/procurement/purchase-request",
           icon: <PurchaseRequestsIcon />,
         },
         {
           text: "PO Quotations",
-          path: "/dashboard/procurement/PO-quotations",
+          path: "/dashboard/procurement/po-quotations",
           icon: <POQuotationsIcon />,
 
         },
         {
           text: "Purchase Orders",
-          path: "/dashboard/procurement/PurchaseOrders",
+          path: "/dashboard/procurement/purchase-orders",
           icon: <ShoppingCartIcon />,
         },
         {
           text: "Goods Receipt",
-          path: "/dashboard/procurement/GoodsReceipt",
+          path: "/dashboard/procurement/goods-receipt",
           icon: <InventoryIcon />,
         },
         {
           text: "Supplier",
-          path: "/dashboard/procurement/Supplier",
+          path: "/dashboard/procurement/supplier",
           icon: <LocalShippingIcon />,
         },
       ];
@@ -133,24 +134,24 @@ const Sidebar = ({ section }) => {
 
     case "inventory":
       menuItems = [
-        {
-          text: "Inventory List",
-          path: "/dashboard/inventory",
-          icon: <GroupIcon />,
-        },
+       {
+    text: "Products",
+    path: "/dashboard/inventory/products",
+    icon: <InventoryIcon />,
+  },
       ];
       break;
 
     case "crm":
       menuItems = [
         {
-          text: "Client List",
-          path: "/dashboard/crm",
+          text: "Contacts",
+          path: "/dashboard/crm/contacts",
           icon: <BusinessCenterIcon />,
         },
         {
-          text: "Contacts",
-          path: "/dashboard/crm/contacts",
+          text: "Leads",
+          path: "/dashboard/crm/leads",
           icon: <ContactsIcon />,
         },
         {
@@ -159,10 +160,15 @@ const Sidebar = ({ section }) => {
           icon: <ReceiptLongIcon />,
         },
         {
-          text: "Orders",
-          path: "/dashboard/crm/orders",
+          text: "Sales Orders",
+          path: "/dashboard/crm/sales-orders",
           icon: <AssignmentIcon />,
         },
+        {
+        text: "Dispatch Orders",
+        path: "/dashboard/crm/dispatch-orders",
+        icon:  <WarehouseIcon />,
+      }
       ];
       break;
 
@@ -351,7 +357,7 @@ const Sidebar = ({ section }) => {
             top: 0,
             left: 0,
             right: 0,
-            height: "120px",
+            height: "auto",
             background: `
               radial-gradient(ellipse at center top, rgba(100, 181, 246, 0.15) 0%, rgba(255, 255, 255, 0.05) 50%, transparent 100%),
               linear-gradient(180deg, rgba(255, 255, 255, 0.04) 0%, transparent 100%)

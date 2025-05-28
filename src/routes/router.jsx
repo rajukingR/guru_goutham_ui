@@ -37,6 +37,26 @@ import ItemMasterPageLayoutEdit from "../pages/product_library/itemmaster/ItemMa
 import BrandsPageAddLayout from "../pages/product_library/brands/BrandsPageAddLayout.jsx";
 import BrandsPageEditLayout from "../pages/product_library/brands/BrandsPageEditLayout.jsx";
 import ProductTemplateAdd from "../pages/product_library/producttemplate/ProductTemplateAdd.jsx";
+import PurchaseRequestTableLayoutPage from "../pages/procurement/purchaserequest/PurchaseRequestTableLayoutPage.jsx";
+import PurchaseRequestAdd from "../pages/procurement/purchaserequest/PurchaseRequestAdd.jsx";
+import PurchaseRequestEdit from "../pages/procurement/purchaserequest/PurchaseRequestEditPage.jsx";
+import PoOperationTableLayout from "../pages/procurement/poquotation/PoOperationTableLayout.jsx";
+import PurchaseOrderTableLayout from "../pages/procurement/purchaseorders/PurchaseOrderTableLayout.jsx";
+import PurchaseOrderAddLayout from "../pages/procurement/purchaseorders/PurchaseOrderAddLayout.jsx";
+import PurchaseOrderEditLayout from "../pages/procurement/purchaseorders/PurchaseOrderEditLayout.jsx";
+import GoodsReceiptsTableLayout from "../pages/procurement/goodsreceipts/GoodsReceiptsTableLayout.jsx";
+import GoodsReceiptsAddLayout from "../pages/procurement/goodsreceipts/GoodsReceiptsAddLayout.jsx";
+import GoodsReceiptsEditLayout from "../pages/procurement/goodsreceipts/GoodsReceiptsEditLayout.jsx";
+import SupplierTableLayout from "../pages/procurement/supplier/SupplierTableLayout.jsx";
+import SupplierAddLayout from "../pages/procurement/supplier/SupplierAddayout.jsx";
+import PoOperationAddPageLayout from "../pages/procurement/poquotation/PoOperationAddPageLayout.jsx";
+import ProductsTableLayout from "../pages/inventory/products/productsTableLayout.jsx";
+import ContactsTableLayoutPage from "../pages/crm/contacts/ContactsTableLayoutPage.jsx";
+import LeadsTableLayoutPage from "../pages/crm/leads/LeadsTableLayoutPage.jsx";
+import QuotationsTableLayoutPage from "../pages/crm/quotations/QuotationsTableLayoutPage.jsx";
+import SalesOrdersTableLayoutPage from "../pages/crm/salesoreders/SalesOrdersTableLayoutPage.jsx";
+import DispatchOrdersTableLayoutPage from "../pages/crm/dispatchorders/DispatchOrdersTableLayoutPage.jsx";
+import ContactsAddLayoutPage from "../pages/crm/contacts/ContactsAddLayoutPage.jsx";
 const ProtectedRoute = ({ element }) => {
   const user = useSelector((state) => state.auth.user);
   return user ? element : <Navigate to="/signin" replace />;
@@ -53,7 +73,7 @@ const RoutesConfig = () => {
           <Route path="/dashboard/*" element={<ProtectedRoute element={<LayOut />} />}>
           <Route index element={<DashBoard />} />
 
-            
+            {/* product library roots */}
             <Route path="profile" element={<ProfilePage />} />
             <Route path="profile/edit-profile/:id" element={<EditProfile />} />
             <Route path="product_library/product_template" element={<ProductTemplatePage />} />
@@ -80,7 +100,32 @@ const RoutesConfig = () => {
             <Route path="product_library/stock_locations" element={<StockLocationPageLayout/>} />
             <Route path="product_library/stock_locations/add/" element={<StockLoAddPage/>} />
             <Route path="product_library/stock_locations/edit/:id" element={<StockLoEditPage/>} />
+            {/* procurement library roots */}
+            <Route path="procurement/purchase-request" element={<PurchaseRequestTableLayoutPage/>}/>
+            <Route path="procurement/purchase-request/add" element={<PurchaseRequestAdd/>} />
+            <Route path="procurement/purchase-request/edit/:id" element={<PurchaseRequestEdit/>}/>
+            <Route path="procurement/po-quotations" element={<PoOperationTableLayout/>}/>
+            <Route path="procurement/po-quotations/add" element={<PoOperationAddPageLayout/>}/>
+            <Route path="procurement/purchase-orders/" element={<PurchaseOrderTableLayout/>}/>
+            <Route path="procurement/purchase-orders/add" element={<PurchaseOrderAddLayout/>}/>
+            <Route path="procurement/purchase-orders/edit/:id" element={<PurchaseOrderEditLayout/>}/>
+            <Route path="procurement/goods-receipt" element={<GoodsReceiptsTableLayout/>}/>
+            <Route path="procurement/goods-receipt/add" element={<GoodsReceiptsAddLayout/>}/>
+            <Route path="procurement/goods-receipt/edit/:id" element={<GoodsReceiptsEditLayout/>}/>
+            <Route path="procurement/supplier" element={<SupplierTableLayout/>}/>
+            <Route path="procurement/supplier/add" element={<SupplierAddLayout/>}/>
+                        {/* INVENTORY ROOTS */}
+            <Route path="inventory/products" element={<ProductsTableLayout/>}/>
+                        {/* CRM ROOTS */}
+            <Route path="crm/contacts" element={<ContactsTableLayoutPage/>}/>
+            <Route path="crm/contacts/add" element={<ContactsAddLayoutPage/>}/>
+            <Route path="crm/leads" element={<LeadsTableLayoutPage/>}/>
+            <Route path="crm/quotations" element={<QuotationsTableLayoutPage/>}/>
+            <Route path="crm/sales-orders" element={<SalesOrdersTableLayoutPage/>}/>
+            <Route path="crm/dispatch-orders" element={<DispatchOrdersTableLayoutPage/>}/>
 
+
+            
           </Route>
         </Routes>
       </Router>

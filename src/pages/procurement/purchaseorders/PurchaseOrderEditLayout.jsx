@@ -1,14 +1,17 @@
 import React, { useState } from 'react';
 
-const PurchaseRequestAdd = () => {
+const PurchaseOrderEditLayout = () => {
   const [formData, setFormData] = useState({
-    purchaseRequestId: '',
-    purchaseRequestDate: '28-06-2025',
+    purchaseOrderId: 'PO12345',
+    purchaseQuotationDetails: 'PQ12345',
+    purchaseQuotationId: 'PQ12345',
+    purchaseQuotationStatus: 'Approved',
+    purchaseOrderDate: '2022-01-01',
     purchaseType: 'Buy',
-    purchaseRequestStatus: 'Pending',
-    owner: '',
-    supplier: '',
-    description: ''
+    poStatus: 'Pending',
+    owner: 'John Doe',
+    supplier: 'ABC Suppliers',
+    description: 'This is a sample purchase order',
   });
 
   const handleInputChange = (field, value) => {
@@ -18,41 +21,57 @@ const PurchaseRequestAdd = () => {
   return (
     <div style={containerStyle}>
       <div style={formContainerStyle}>
-        {/* Purchase Request Details Section */}
+        {/* Purchase Order Details Section */}
         <div style={cardStyle}>
           <div style={cardHeaderContainerStyle}>
             <div style={iconStyle}>📋</div>
-            <h3 style={cardHeaderStyle}>Purchase Request Details</h3>
+            <h3 style={cardHeaderStyle}>Purchase Order Details</h3>
           </div>
           <div style={fieldsGridStyle}>
             <Field 
-              label="Purchase Request ID" 
-              placeholder="Enter Purchase Request ID" 
-              value={formData.purchaseRequestId}
-              onChange={(value) => handleInputChange('purchaseRequestId', value)}
+              label="Purchase Order ID" 
+              placeholder="Enter Purchase Order ID" 
+              value={formData.purchaseOrderId}
+              onChange={(value) => handleInputChange('purchaseOrderId', value)}
             />
             <Field 
-              label="Purchase Request Date" 
+              label="Purchase Quotation Details" 
+              type="select" 
+              placeholder="Select Purchase Quotation" 
+              value={formData.purchaseQuotationDetails}
+              onChange={(value) => handleInputChange('purchaseQuotationDetails', value)}
+            />
+            <Field 
+              label="Purchase Quotation ID" 
+              placeholder="Enter Purchase Quotation ID" 
+              value={formData.purchaseQuotationId}
+              onChange={(value) => handleInputChange('purchaseQuotationId', value)}
+            />
+            <Field 
+              label="Purchase Quotation Status" 
+              placeholder="Pending" 
+              value={formData.purchaseQuotationStatus}
+              disabled
+            />
+            <Field 
+              label="Purchase Order Date" 
               type="date" 
               placeholder="dd-mm-yyyy" 
-              value={formData.purchaseRequestDate}
-              onChange={(value) => handleInputChange('purchaseRequestDate', value)}
+              value={formData.purchaseOrderDate}
+              onChange={(value) => handleInputChange('purchaseOrderDate', value)}
             />
             <Field 
               label="Purchase Type" 
-              type="select" 
-              placeholder="Select Purchase Type" 
+              placeholder="Buy" 
               value={formData.purchaseType}
-              onChange={(value) => handleInputChange('purchaseType', value)}
-              required
+              disabled
             />
             <Field 
-              label="Purchase Request Status" 
+              label="PO Status" 
               type="select" 
-              placeholder="Select Status" 
-              value={formData.purchaseRequestStatus}
-              onChange={(value) => handleInputChange('purchaseRequestStatus', value)}
-              required
+              placeholder="Pending" 
+              value={formData.poStatus}
+              onChange={(value) => handleInputChange('poStatus', value)}
             />
             <Field 
               label="Owner" 
@@ -63,16 +82,15 @@ const PurchaseRequestAdd = () => {
           </div>
         </div>
 
-        {/* Select Product Section */}
+        {/* Supplier Details Section */}
         <div style={cardStyle}>
           <div style={cardHeaderContainerStyle}>
-            <div style={iconStyle}>🛒</div>
-            <h3 style={cardHeaderStyle}>Select Product</h3>
+            <div style={iconStyle}>📞</div>
+            <h3 style={cardHeaderStyle}>Supplier Details</h3>
           </div>
-          <div style={{ marginBottom: '1.5rem' }}>
-            <h4 style={subSectionHeaderStyle}>Supplier Details:</h4>
+          <div style={fieldsGridStyle}>
             <Field 
-              label="Select Supplier" 
+              label="Supplier" 
               type="select" 
               placeholder="Select Supplier" 
               value={formData.supplier}
@@ -87,11 +105,10 @@ const PurchaseRequestAdd = () => {
             <div style={iconStyle}>ℹ️</div>
             <h3 style={cardHeaderStyle}>Additional Information</h3>
           </div>
-          <div style={{ gridColumn: '1 / -1' }}>
+          <div style={fieldsGridStyle}>
             <Field 
               label="Description" 
               placeholder="Enter Description" 
-              type="textarea"
               value={formData.description}
               onChange={(value) => handleInputChange('description', value)}
             />
@@ -101,63 +118,30 @@ const PurchaseRequestAdd = () => {
 
       {/* Action Buttons */}
       <div style={buttonContainerStyle}>
-        <button style={cancelBtnStyle} onMouseEnter={(e) => e.target.style.backgroundColor = '#e5e7eb'} onMouseLeave={(e) => e.target.style.backgroundColor = '#f3f4f6'}>
-          Cancel
-        </button>
-        <button style={createBtnStyle} onMouseEnter={(e) => e.target.style.backgroundColor = '#1d4ed8'} onMouseLeave={(e) => e.target.style.backgroundColor = '#2563eb'}>
-          Create Purchase Request
-        </button>
+        <button style={cancelBtnStyle}>Cancel</button>
+        <button style={createBtnStyle}>Save</button>
       </div>
     </div>
   );
 };
 
-const Field = ({ label, placeholder, type = 'text', required = false, value, onChange }) => (
+const Field = ({ label, placeholder, type = 'text', value, onChange, disabled = false }) => (
   <div style={fieldContainerStyle}>
-    <label style={labelStyle}>
-      {label}
-      {required && <span style={requiredStyle}>*</span>}
-    </label>
+    <label style={labelStyle}>{label}</label>
     {type === 'select' ? (
       <div style={selectWrapperStyle}>
         <select 
           style={selectStyle} 
           value={value}
           onChange={(e) => onChange(e.target.value)}
+          disabled={disabled}
         >
           <option value="">{placeholder}</option>
-          {label === "Purchase Type" && (
-            <>
-              <option value="Buy">Buy</option>
-              <option value="Lease">Lease</option>
-              <option value="Rent">Rent</option>
-            </>
-          )}
-          {label === "Purchase Request Status" && (
-            <>
-              <option value="Pending">Pending</option>
-              <option value="Approved">Approved</option>
-              <option value="Rejected">Rejected</option>
-            </>
-          )}
-          {label === "Select Supplier" && (
-            <>
-              <option value="supplier1">Supplier 1</option>
-              <option value="supplier2">Supplier 2</option>
-              <option value="supplier3">Supplier 3</option>
-            </>
-          )}
+          <option value="option1">Option 1</option>
+          <option value="option2">Option 2</option>
         </select>
         <div style={selectArrowStyle}>▼</div>
       </div>
-    ) : type === 'textarea' ? (
-      <textarea
-        placeholder={placeholder}
-        style={textareaStyle}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        rows={3}
-      />
     ) : (
       <input
         type={type}
@@ -165,12 +149,13 @@ const Field = ({ label, placeholder, type = 'text', required = false, value, onC
         style={inputStyle}
         value={value}
         onChange={(e) => onChange(e.target.value)}
+        disabled={disabled}
       />
     )}
   </div>
 );
 
-// Styles (same as in the reference code)
+// Styles
 const containerStyle = {
   padding: '2rem',
   fontFamily: '"Inter", "Segoe UI", -apple-system, BlinkMacSystemFont, sans-serif',
@@ -180,9 +165,9 @@ const containerStyle = {
 
 const formContainerStyle = {
   display: 'grid',
+  gridTemplateColumns: 'repeat(3, 1fr)',
   gap: '1.5rem',
   maxWidth: '1400px',
-  gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))',
 };
 
 const cardStyle = {
@@ -191,7 +176,6 @@ const cardStyle = {
   borderRadius: '12px',
   boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06)',
   border: '1px solid #e2e8f0',
-  transition: 'box-shadow 0.2s ease',
 };
 
 const cardHeaderContainerStyle = {
@@ -217,13 +201,6 @@ const cardHeaderStyle = {
   margin: 0,
 };
 
-const subSectionHeaderStyle = {
-  fontSize: '1rem',
-  fontWeight: '500',
-  color: '#374151',
-  margin: '0 0 1rem 0',
-};
-
 const fieldsGridStyle = {
   display: 'grid',
   gap: '1rem',
@@ -241,12 +218,6 @@ const labelStyle = {
   fontWeight: '500',
   fontSize: '0.875rem',
   color: '#374151',
-  letterSpacing: '0.025em',
-};
-
-const requiredStyle = {
-  color: '#ef4444',
-  marginLeft: '0.25rem',
 };
 
 const inputStyle = {
@@ -256,9 +227,6 @@ const inputStyle = {
   border: '1px solid #d1d5db',
   fontSize: '0.875rem',
   backgroundColor: '#ffffff',
-  transition: 'all 0.2s ease',
-  outline: 'none',
-  boxSizing: 'border-box',
 };
 
 const selectWrapperStyle = {
@@ -275,10 +243,6 @@ const selectStyle = {
   fontSize: '0.875rem',
   backgroundColor: '#ffffff',
   appearance: 'none',
-  transition: 'all 0.2s ease',
-  outline: 'none',
-  boxSizing: 'border-box',
-  cursor: 'pointer',
 };
 
 const selectArrowStyle = {
@@ -289,20 +253,6 @@ const selectArrowStyle = {
   pointerEvents: 'none',
   fontSize: '0.75rem',
   color: '#6b7280',
-};
-
-const textareaStyle = {
-  width: '100%',
-  padding: '0.75rem',
-  borderRadius: '8px',
-  border: '1px solid #d1d5db',
-  fontSize: '0.875rem',
-  backgroundColor: '#ffffff',
-  transition: 'all 0.2s ease',
-  outline: 'none',
-  resize: 'vertical',
-  fontFamily: 'inherit',
-  boxSizing: 'border-box',
 };
 
 const buttonContainerStyle = {
@@ -324,8 +274,6 @@ const cancelBtnStyle = {
   cursor: 'pointer',
   fontSize: '0.875rem',
   fontWeight: '500',
-  transition: 'all 0.2s ease',
-  outline: 'none',
 };
 
 const createBtnStyle = {
@@ -337,8 +285,6 @@ const createBtnStyle = {
   cursor: 'pointer',
   fontSize: '0.875rem',
   fontWeight: '500',
-  transition: 'all 0.2s ease',
-  outline: 'none',
 };
 
-export default PurchaseRequestAdd;
+export default PurchaseOrderEditLayout;

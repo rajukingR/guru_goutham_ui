@@ -24,14 +24,16 @@ import { useSelector } from "react-redux";
 
 const navItems = [
   { label: "Dashboard", path: "/dashboard" },
-  { label: "Product Library", path: "/dashboard/product_library/product_template" }, // Fixed typ
-  { label: "Procurement", path: "/dashboard/procurement" },
-  { label: "Inventory", path: "/dashboard/inventory" },
+  {
+    label: "Product Library",
+    path: "/dashboard/product_library/product_template",
+  }, // Fixed typ
+  { label: "Procurement", path: "/dashboard/procurement/purchase-request" },
+  { label: "Inventory", path: "/dashboard/inventory/products" },
   { label: "CRM", path: "/dashboard/crm" },
   { label: "Operations", path: "/dashboard/operations" },
   { label: "Users Performance", path: "/dashboard/users_performance" },
   { label: "Client", path: "/dashboard/client" },
-
 ];
 
 const LayOut = () => {
@@ -45,29 +47,35 @@ const LayOut = () => {
 
   const { user } = useSelector((state) => state.auth);
 
-
-  
   // Function to determine which section the user is on
   const getSection = () => {
     if (location.pathname.includes("/dashboard/product_library"))
       return "product_library";
-    if (location.pathname.includes("/dashboard/procurement")) return "procurement";
-    if (location.pathname.includes("/dashboard/inventory")) return "inventory";
-    if (location.pathname.includes("/dashboard/crm")) return "crm";
+    if (location.pathname.includes("/dashboard/procurement"))
+      return "procurement";
+    if (location.pathname.includes("/dashboard/inventory/products")) 
+      return "inventory";
+    if (location.pathname.includes("/dashboard/crm")) 
+      return "crm";
     if (location.pathname.includes("/dashboard/operations"))
       return "operations";
-    if (location.pathname.includes("/dashboard/users_performance")) return "users_performance";
-    if (location.pathname.includes("/dashboard/client")) return "client";
-    if (location.pathname.includes("/dashboard/settings")) return "settings"; // Added settings
+    if (location.pathname.includes("/dashboard/users_performance"))
+      return "users_performance";
+    if (location.pathname.includes("/dashboard/client")) 
+      return "client";
+    if (location.pathname.includes("/dashboard/settings"))
+       return "settings"; 
 
     return "dashboard";
   };
 
   // Update selected tab on route change
-  
+
   useEffect(() => {
-    const currentIndex = navItems.findIndex((item) => item.path === location.pathname);
-  
+    const currentIndex = navItems.findIndex(
+      (item) => item.path === location.pathname
+    );
+
     if (location.pathname === "/dashboard/settings") {
       setSelectedTab(null);
     } else if (currentIndex !== -1) {
@@ -91,9 +99,7 @@ const LayOut = () => {
     }
   };
 
-
   // console.log(localStorage.getItem("user"));
-
 
   return (
     <Box
@@ -102,7 +108,6 @@ const LayOut = () => {
         flexDirection: "column",
         height: "100vh",
         backgroundColor: "#F4F1FA",
-
       }}
     >
       {/* AppBar for navigation */}
@@ -246,14 +251,30 @@ const LayOut = () => {
       <Toolbar />
 
       {/* Main Content with Sidebar */}
-      <Box sx={{ display: "flex", height: "100vh" }}>
+      <Box sx={{ display: "flex", flex: 1, overflow: "hidden" }}>
         {/* Sidebar with dynamic section */}
+
         {location.pathname !== "/dashboard" && (
-          <Sidebar section={getSection()} />
+          <Box
+            sx={{ position: "sticky", top: 0, height: "100vh", zIndex: 1200 }}
+          >
+            <Sidebar section={getSection()} />
+          </Box>
         )}
 
-        {/* Main Content */}
-        <Box component="main" sx={{ flexGrow: 1, p: 3 }}>
+        {/* Main Content with scroll */}
+        <Box
+          component="main"
+          sx={{
+            flexGrow: 1,
+
+            p: 3,
+
+            height: "calc(100vh - 64px)", // subtract AppBar height
+
+            overflowY: "auto",
+          }}
+        >
           <Outlet />
         </Box>
       </Box>

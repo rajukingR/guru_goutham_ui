@@ -1,14 +1,14 @@
 import React, { useState } from 'react';
 
-const PurchaseRequestAdd = () => {
+const PurchaseRequestEdit = () => {
   const [formData, setFormData] = useState({
-    purchaseRequestId: '',
-    purchaseRequestDate: '28-06-2025',
+    purchaseRequestId: 'PR-2025-001',
+    purchaseRequestDate: '2025-06-28',
     purchaseType: 'Buy',
-    purchaseRequestStatus: 'Pending',
-    owner: '',
-    supplier: '',
-    description: ''
+    purchaseRequestStatus: 'Approved',
+    owner: 'John Doe',
+    supplier: 'supplier2',
+    description: 'Urgent purchase request for project materials.',
   });
 
   const handleInputChange = (field, value) => {
@@ -105,7 +105,7 @@ const PurchaseRequestAdd = () => {
           Cancel
         </button>
         <button style={createBtnStyle} onMouseEnter={(e) => e.target.style.backgroundColor = '#1d4ed8'} onMouseLeave={(e) => e.target.style.backgroundColor = '#2563eb'}>
-          Create Purchase Request
+          Update Purchase Request
         </button>
       </div>
     </div>
@@ -170,7 +170,7 @@ const Field = ({ label, placeholder, type = 'text', required = false, value, onC
   </div>
 );
 
-// Styles (same as in the reference code)
+// Styles (same as in the Add component)
 const containerStyle = {
   padding: '2rem',
   fontFamily: '"Inter", "Segoe UI", -apple-system, BlinkMacSystemFont, sans-serif',
@@ -341,4 +341,4 @@ const createBtnStyle = {
   outline: 'none',
 };
 
-export default PurchaseRequestAdd;
+export default PurchaseRequestEdit;
