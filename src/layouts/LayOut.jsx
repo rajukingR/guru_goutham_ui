@@ -16,7 +16,7 @@ import {
 import MenuIcon from "@mui/icons-material/Menu";
 import { useTheme } from "@mui/material/styles";
 import Sidebar from "../sidebar/Sidebar";
-import NavLogo from "../assets/logos/NavLogo.svg";
+import NavLogo from "../assets/logos/NavLogo.png";
 import BackwardIcon from "../assets/logos/BackwordIcon.svg";
 import ForwardIcon from "../assets/logos/ForvordIcon.svg";
 import SettingIcon from "../assets/logos/SettingIcon.svg";
@@ -24,9 +24,9 @@ import { useSelector } from "react-redux";
 
 const navItems = [
   { label: "Dashboard", path: "/dashboard" },
-  { label: "Product Library", path: "/dashboard/product_library" }, // Fixed typo
-  { label: "Procurement", path: "/dashboard/procurement" },
+  { label: "Product Library", path: "/dashboard/product_library" },
   { label: "Inventory", path: "/dashboard/inventory" },
+  { label: "Procurement", path: "/dashboard/procurement" },
   { label: "CRM", path: "/dashboard/crm" },
   { label: "Operations", path: "/dashboard/operations" },
   { label: "Users Performance", path: "/dashboard/users_performance" },
@@ -236,7 +236,7 @@ const LayOut = () => {
               onClick={() => navigate("/dashboard/profile")}
             >
               <Avatar src="https://via.placeholder.com/40" />
-              <Typography sx={{ color: "#171719" }}>{user.name}</Typography>
+              <Typography sx={{ color: "#171719" }}>{user.full_name}</Typography>
             </Box>
           </Box>
         </Toolbar>
