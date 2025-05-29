@@ -1,167 +1,176 @@
-import React, { useState } from 'react';
+import React from 'react';
 
-const AssetPageLayoutAdd = () => {
-  const [formData, setFormData] = useState({
-    assetTagId: '',
-    parentAssetId: '',
-    productName: '',
-    poId: '',
-    supplier: '',
-    stockLocation: '',
-    assetStatus: 'Available',
-    client: '',
-    date: '',
-    warrantyStartDate: '',
-    warrantyEndDate: '',
-    warrantyTime: '',
-    remarks: '',
-    activeStatus: true
-  });
-
-  const handleInputChange = (field, value) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
-  };
-
+const QuotationsAddLayoutPage = () => {
   return (
     <div style={containerStyle}>
+      <div style={headerStyle}>
+        <h1 style={titleStyle}>Create a new Quotation</h1>
+        <p style={subtitleStyle}>Fill in the details below to create a new quotation</p>
+      </div>
+
       <div style={formContainerStyle}>
-        {/* Asset Information Section */}
+        {/* Quotation Information Section */}
         <div style={cardStyle}>
           <div style={cardHeaderContainerStyle}>
             <div style={iconStyle}>📋</div>
-            <h3 style={cardHeaderStyle}>Asset Information</h3>
+            <h3 style={cardHeaderStyle}>Quotation Information</h3>
           </div>
           <div style={fieldsGridStyle}>
             <Field 
-              label="Asset Tag ID" 
-              placeholder="Enter Asset Tag ID" 
-              value={formData.assetTagId}
-              onChange={(value) => handleInputChange('assetTagId', value)}
-              required
+              label="Quotation ID" 
+              placeholder="Enter Quotation ID" 
             />
             <Field 
-              label="Parent Asset ID" 
+              label="Quotation Title" 
+              placeholder="Enter Quotation Title" 
+            />
+            <Field 
+              label="Lead Details" 
               type="select" 
-              placeholder="Select Parent Asset ID" 
-              value={formData.parentAssetId}
-              onChange={(value) => handleInputChange('parentAssetId', value)}
+              placeholder="Select Lead" 
+              options={['Lead 1', 'Lead 2']}
             />
             <Field 
-              label="Product Name" 
+              label="Lead ID" 
+              placeholder="Enter Lead ID" 
+            />
+            <Field 
+              label="Transaction Type" 
               type="select" 
-              placeholder="Select Product Name" 
-              value={formData.productName}
-              onChange={(value) => handleInputChange('productName', value)}
-              required
+              placeholder="Select Type" 
+              options={['Rent', 'Buy']}
             />
             <Field 
-              label="Purchase Order ID" 
+              label="Quotation Status" 
               type="select" 
-              placeholder="Select Purchase Order" 
-              value={formData.poId}
-              onChange={(value) => handleInputChange('poId', value)}
+              placeholder="Select Status" 
+              options={['New', 'Sent', 'Accepted']}
             />
             <Field 
-              label="Supplier" 
+              label="Source of Enquiry" 
               type="select" 
-              placeholder="Select Supplier" 
-              value={formData.supplier}
-              onChange={(value) => handleInputChange('supplier', value)}
+              placeholder="Select Source" 
+              options={['Search Engine', 'Referral', 'Advertisement']}
             />
             <Field 
-              label="Stock Location" 
-              type="select" 
-              placeholder="Select Stock Location" 
-              value={formData.stockLocation}
-              onChange={(value) => handleInputChange('stockLocation', value)}
+              label="Owner" 
+              placeholder="Enter Owner Name" 
             />
             <Field 
-              label="Asset Status" 
-              type="select" 
-              placeholder="Available" 
-              value={formData.assetStatus}
-              onChange={(value) => handleInputChange('assetStatus', value)}
+              label="Remarks" 
+              placeholder="Enter Remarks" 
+              type="textarea"
             />
             <Field 
-              label="Client" 
-              type="select" 
-              placeholder="Select Client" 
-              value={formData.client}
-              onChange={(value) => handleInputChange('client', value)}
-            />
-          </div>
-        </div>
-
-        {/* Additional Details Section */}
-        <div style={cardStyle}>
-          <div style={cardHeaderContainerStyle}>
-            <div style={iconStyle}>📅</div>
-            <h3 style={cardHeaderStyle}>Additional Details</h3>
-          </div>
-          <div style={fieldsGridStyle}>
-            <Field 
-              label="Purchase Date" 
-              type="date" 
-              placeholder="dd-mm-yyyy" 
-              value={formData.date}
-              onChange={(value) => handleInputChange('date', value)}
-            />
-            <Field 
-              label="Warranty Start Date" 
-              type="date" 
-              placeholder="dd-mm-yyyy" 
-              value={formData.warrantyStartDate}
-              onChange={(value) => handleInputChange('warrantyStartDate', value)}
-            />
-            <Field 
-              label="Warranty End Date" 
-              type="date" 
-              placeholder="dd-mm-yyyy" 
-              value={formData.warrantyEndDate}
-              onChange={(value) => handleInputChange('warrantyEndDate', value)}
-            />
-            <Field 
-              label="Warranty Period" 
-              placeholder="e.g., 12 months, 2 years" 
-              value={formData.warrantyTime}
-              onChange={(value) => handleInputChange('warrantyTime', value)}
+              label="Quotation Generated By" 
+              placeholder="Enter Name" 
             />
             <div style={{ gridColumn: '1 / -1' }}>
-              <Field 
-                label="Remarks" 
-                placeholder="Enter additional notes or comments" 
-                type="textarea"
-                value={formData.remarks}
-                onChange={(value) => handleInputChange('remarks', value)}
+              <Checkbox 
+                label="Active Status" 
+                description="Enable this quotation in the system"
               />
             </div>
           </div>
         </div>
 
-        {/* Control Section */}
+        {/* Personal Details Section */}
         <div style={cardStyle}>
           <div style={cardHeaderContainerStyle}>
-            <div style={iconStyle}>⚙️</div>
-            <h3 style={cardHeaderStyle}>Configuration</h3>
+            <div style={iconStyle}>👤</div>
+            <h3 style={cardHeaderStyle}>Personal Details</h3>
           </div>
-          <div style={checkboxContainerStyle}>
-            <label style={checkboxLabelStyle}>
-              <input 
-                type="checkbox" 
-                style={checkboxStyle}
-                checked={formData.activeStatus}
-                onChange={(e) => handleInputChange('activeStatus', e.target.checked)}
-              />
-              <div style={checkboxCustomStyle}>
-                {formData.activeStatus && <span style={checkmarkStyle}>✓</span>}
-              </div>
-              <div>
-                <span style={checkboxTextStyle}>Active Status</span>
-                <span style={checkboxDescStyle}>Enable this asset for use in the system</span>
-              </div>
-            </label>
+          <div style={fieldsGridStyle}>
+            <Field 
+              label="First Name" 
+              placeholder="Enter First Name" 
+            />
+            <Field 
+              label="Last Name" 
+              placeholder="Enter Last Name" 
+            />
+            <Field 
+              label="Email ID" 
+              placeholder="Enter Email" 
+              type="email"
+            />
+            <Field 
+              label="Phone Number" 
+              placeholder="Enter Phone Number" 
+              type="tel"
+            />
+            <Field 
+              label="Rental Duration (Months)" 
+              placeholder="Enter Duration" 
+              type="number"
+            />
+            <Field 
+              label="Rental Start Date" 
+              type="date" 
+              placeholder="Select Date" 
+            />
+            <Field 
+              label="Rental End Date" 
+              type="date" 
+              placeholder="Select Date" 
+            />
+            <Field 
+              label="Quotation Date" 
+              type="date" 
+              placeholder="Select Date" 
+            />
+            <Field 
+              label="Industry" 
+              placeholder="Enter Industry" 
+            />
           </div>
         </div>
+
+        {/* Address Section */}
+        <div style={cardStyle}>
+          <div style={cardHeaderContainerStyle}>
+            <div style={iconStyle}>🏠</div>
+            <h3 style={cardHeaderStyle}>Address</h3>
+          </div>
+          <div style={fieldsGridStyle}>
+            <Field 
+              label="Street" 
+              placeholder="Enter Street" 
+            />
+            <Field 
+              label="Landmark" 
+              placeholder="Enter Landmark" 
+            />
+            <Field 
+              label="Pincode" 
+              placeholder="Enter Pincode" 
+              type="number"
+            />
+            <Field 
+              label="City" 
+              placeholder="Enter City" 
+              value="Bangalore"
+            />
+            <Field 
+              label="State" 
+              placeholder="Enter State" 
+              value="Karnataka"
+            />
+            <Field 
+              label="Country" 
+              placeholder="Enter Country" 
+              value="India"
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Selected Products Section */}
+      <div style={productsSectionStyle}>
+        <h3 style={sectionTitleStyle}>Selected Products</h3>
+        <button style={selectProductBtnStyle}>
+          Select Product
+        </button>
       </div>
 
       {/* Action Buttons */}
@@ -170,29 +179,28 @@ const AssetPageLayoutAdd = () => {
           Cancel
         </button>
         <button style={createBtnStyle} onMouseEnter={(e) => e.target.style.backgroundColor = '#1d4ed8'} onMouseLeave={(e) => e.target.style.backgroundColor = '#2563eb'}>
-          Create Asset
+          Create Quotation
         </button>
       </div>
     </div>
   );
 };
 
-const Field = ({ label, placeholder, type = 'text', required = false, value, onChange }) => (
+const Field = ({ label, placeholder, type = 'text', options = [], value }) => (
   <div style={fieldContainerStyle}>
     <label style={labelStyle}>
       {label}
-      {required && <span style={requiredStyle}>*</span>}
     </label>
     {type === 'select' ? (
       <div style={selectWrapperStyle}>
         <select 
           style={selectStyle} 
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
+          defaultValue=""
         >
-          <option value="">{placeholder}</option>
-          <option value="option1">Option 1</option>
-          <option value="option2">Option 2</option>
+          <option value="" disabled>{placeholder}</option>
+          {options.map((option, idx) => (
+            <option key={idx} value={option}>{option}</option>
+          ))}
         </select>
         <div style={selectArrowStyle}>▼</div>
       </div>
@@ -200,9 +208,13 @@ const Field = ({ label, placeholder, type = 'text', required = false, value, onC
       <textarea
         placeholder={placeholder}
         style={textareaStyle}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
         rows={3}
+      />
+    ) : type === 'date' ? (
+      <input
+        type="date"
+        placeholder={placeholder}
+        style={inputStyle}
       />
     ) : (
       <input
@@ -210,18 +222,42 @@ const Field = ({ label, placeholder, type = 'text', required = false, value, onC
         placeholder={placeholder}
         style={inputStyle}
         value={value}
-        onChange={(e) => onChange(e.target.value)}
+        readOnly={!!value}
       />
     )}
   </div>
 );
 
-// Enhanced Styles
+const Checkbox = ({ label, description }) => (
+  <div style={checkboxContainerStyle}>
+    <label style={checkboxLabelStyle}>
+      <input 
+        type="checkbox" 
+        style={checkboxStyle}
+        defaultChecked
+      />
+      <div style={checkboxCustomStyle}>
+        <span style={checkmarkStyle}>✓</span>
+      </div>
+      <div>
+        <span style={checkboxTextStyle}>{label}</span>
+        <span style={checkboxDescStyle}>{description}</span>
+      </div>
+    </label>
+  </div>
+);
+
+// Styles (consistent with the previous examples)
 const containerStyle = {
   padding: '2rem',
   fontFamily: '"Inter", "Segoe UI", -apple-system, BlinkMacSystemFont, sans-serif',
   minHeight: '100vh',
   lineHeight: 1.6,
+};
+
+const headerStyle = {
+  marginBottom: '2rem',
+  maxWidth: '1400px',
 };
 
 const titleStyle = {
@@ -242,7 +278,6 @@ const formContainerStyle = {
   display: 'grid',
   gap: '1.5rem',
   maxWidth: '1400px',
-  margin: '0 auto',
   gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))',
 };
 
@@ -296,11 +331,6 @@ const labelStyle = {
   fontSize: '0.875rem',
   color: '#374151',
   letterSpacing: '0.025em',
-};
-
-const requiredStyle = {
-  color: '#ef4444',
-  marginLeft: '0.25rem',
 };
 
 const inputStyle = {
@@ -379,7 +409,7 @@ const checkboxCustomStyle = {
   height: '20px',
   borderRadius: '4px',
   border: '2px solid #d1d5db',
-  backgroundColor: '#ffffff',
+  backgroundColor: '#2563eb',
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
@@ -444,4 +474,30 @@ const createBtnStyle = {
   outline: 'none',
 };
 
-export default AssetPageLayoutAdd;
+const productsSectionStyle = {
+  maxWidth: '1200px',
+  margin: '0 auto',
+  padding: '0 1.5rem',
+};
+
+const sectionTitleStyle = {
+  fontSize: '1rem',
+  fontWeight: '600',
+  color: '#374151',
+  marginBottom: '1rem',
+};
+
+const selectProductBtnStyle = {
+  padding: '0.75rem 1.5rem',
+  backgroundColor: '#ffffff',
+  color: '#2563eb',
+  border: '1px solid #2563eb',
+  borderRadius: '8px',
+  cursor: 'pointer',
+  fontSize: '0.875rem',
+  fontWeight: '500',
+  transition: 'all 0.2s ease',
+  outline: 'none',
+};
+
+export default QuotationsAddLayoutPage;

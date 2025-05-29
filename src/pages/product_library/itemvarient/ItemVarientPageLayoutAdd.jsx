@@ -50,14 +50,8 @@ const ItemVariantPageLayoutAdd = () => {
                 onChange={(e) => handleInputChange('activeStatus', e.target.checked)}
               />
               <div style={{
-                width: '20px',
-                height: '20px',
-                borderRadius: '4px',
-                border: '2px solid #d1d5db',
+                ...checkboxCustomStyle,
                 backgroundColor: formData.activeStatus ? '#2563eb' : '#ffffff',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
                 boxShadow: formData.activeStatus ? '0 0 0 2px #2563eb' : 'none',
               }}>
                 {formData.activeStatus && <span style={checkmarkStyle}>✓</span>}
@@ -81,16 +75,26 @@ const Field = ({ label, type = 'text', placeholder, value, onChange }) => (
   <div style={fieldContainerStyle}>
     <label style={labelStyle}>{label}</label>
     {type === 'select' ? (
-      <select style={inputStyle} value={value} onChange={(e) => onChange(e.target.value)}>
-        <option value="">{placeholder}</option>
-        <option value="dummy">{label} Option</option>
-      </select>
+      <div style={selectWrapperStyle}>
+        <select style={selectStyle} value={value} onChange={(e) => onChange(e.target.value)}>
+          <option value="">{placeholder}</option>
+          <option value="option1">{label} Option</option>
+        </select>
+        <div style={selectArrowStyle}>▼</div>
+      </div>
     ) : (
-      <input type={type} placeholder={placeholder} style={inputStyle} value={value} onChange={(e) => onChange(e.target.value)} />
+      <input
+        type={type}
+        placeholder={placeholder}
+        style={inputStyle}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+      />
     )}
   </div>
 );
 
+// Shared Styles
 const containerStyle = {
   padding: '2rem',
   fontFamily: '"Inter", "Segoe UI", -apple-system, BlinkMacSystemFont, sans-serif',
@@ -105,7 +109,7 @@ const cardStyle = {
   boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06)',
   border: '1px solid #e2e8f0',
   maxWidth: '800px',
-  margin: '0 auto',
+  margin: '0',
 };
 
 const cardHeaderContainerStyle = {
@@ -119,6 +123,7 @@ const cardHeaderContainerStyle = {
 const iconStyle = {
   fontSize: '1.25rem',
   marginRight: '0.75rem',
+  backgroundColor: '#f1f5f9',
   padding: '0.5rem',
   borderRadius: '8px',
 };
@@ -158,6 +163,32 @@ const inputStyle = {
   backgroundColor: '#ffffff',
 };
 
+const selectWrapperStyle = {
+  position: 'relative',
+  width: '100%',
+};
+
+const selectStyle = {
+  width: '100%',
+  padding: '0.75rem',
+  paddingRight: '2.5rem',
+  borderRadius: '8px',
+  border: '1px solid #d1d5db',
+  fontSize: '0.875rem',
+  backgroundColor: '#ffffff',
+  appearance: 'none',
+};
+
+const selectArrowStyle = {
+  position: 'absolute',
+  right: '0.75rem',
+  top: '50%',
+  transform: 'translateY(-50%)',
+  pointerEvents: 'none',
+  fontSize: '0.75rem',
+  color: '#6b7280',
+};
+
 const checkboxContainerStyle = {
   marginTop: '0.5rem',
 };
@@ -171,6 +202,16 @@ const checkboxLabelStyle = {
 
 const checkboxStyle = {
   display: 'none',
+};
+
+const checkboxCustomStyle = {
+  width: '20px',
+  height: '20px',
+  borderRadius: '4px',
+  border: '2px solid #d1d5db',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
 };
 
 const checkmarkStyle = {

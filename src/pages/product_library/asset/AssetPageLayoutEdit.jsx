@@ -100,7 +100,7 @@ const containerStyle = {
 const formContainerStyle = {
   display: 'grid',
   gap: '1.5rem',
-  maxWidth: '1200px',
+  maxWidth: '1400px',
   margin: '0',
   gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))',
 };

@@ -33,7 +33,7 @@ const navItems = [
   { label: "CRM", path: "/dashboard/crm" },
   { label: "Operations", path: "/dashboard/operations" },
   { label: "Users Performance", path: "/dashboard/users_performance" },
-  { label: "Client", path: "/dashboard/client" },
+  { label: "Client", path: "/dashboard/clients" },
 ];
 
 const LayOut = () => {

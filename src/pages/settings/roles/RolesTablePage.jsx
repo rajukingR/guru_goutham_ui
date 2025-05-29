@@ -6,7 +6,7 @@ import {
 } from "@mui/material";
 import DynamicTable from "../../../components/table-format/DynamicTable";
 
-const ClinetTablePage = () => {
+const RolesTablePage = () => {
   // Define columns for the table
   const columns = [
     { 
@@ -76,4 +76,4 @@ const ClinetTablePage = () => {
   );
 };
 
-export default ClinetTablePage;
+export default RolesTablePage;

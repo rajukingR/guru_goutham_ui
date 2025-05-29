@@ -57,6 +57,34 @@ import QuotationsTableLayoutPage from "../pages/crm/quotations/QuotationsTableLa
 import SalesOrdersTableLayoutPage from "../pages/crm/salesoreders/SalesOrdersTableLayoutPage.jsx";
 import DispatchOrdersTableLayoutPage from "../pages/crm/dispatchorders/DispatchOrdersTableLayoutPage.jsx";
 import ContactsAddLayoutPage from "../pages/crm/contacts/ContactsAddLayoutPage.jsx";
+import ContactsEditLayout from "../pages/crm/contacts/ContactsEditLayout.jsx";
+import LeadsLayoutAddPage from "../pages/crm/leads/LeadsLayoutAddPage.jsx";
+import QuotationsAddLayoutPage from "../pages/crm/quotations/QuotationsAddLayoutPage.jsx";
+import SalesOrdersAddLayoutPage from "../pages/crm/salesoreders/SalesOrdersAddLayoutPage.jsx";
+import DeliveryChallanTablePage from "../pages/operations/deliverychallan/DeliveryChallanTablePage.jsx";
+import InvoicesTablePage from "../pages/operations/invoices/InvoicesTablePage.jsx";
+import GrmTablePageLayout from "../pages/operations/grn/GrmTablePageLayout.jsx";
+import AssetModificationTrackerTableOperations from "../pages/operations/assetmodificationtracker/AssetModificationTrackerTableOperations.jsx";
+import CreditNoteTablePageLayout from "../pages/operations/creditnote/CreditNoteTablePageLayout.jsx";
+import ServiceTablePageOper from "../pages/operations/service/ServiceTablePageOper.jsx";
+import ClientJourneyTablePageLayout from "../pages/operations/clientjourney/ClientJourneyTablePageLayout.jsx";
+import DeliveryChallanAddPage from "../pages/operations/deliverychallan/DeliveryChallanAddPage.jsx";
+import InvoicesAddPage from "../pages/operations/invoices/InvoicesAddPage.jsx";
+import GrmAddPageLayoutOpe from "../pages/operations/grn/GrmAddPageLayoutOpe.jsx";
+import CreditNotePageLayout from "../pages/operations/creditnote/CreditNotePageLayout.jsx";
+import ClinetTablePageLayoutCli from "../pages/client/ClinetTablePageLayoutCli.jsx";
+import UserTablePageLayout from "../pages/settings/user/UserTablePageLayout.jsx";
+import BranchesTablePageLayout from "../pages/settings/branches/BranchesTablePageLayout.jsx";
+import DepartmentTablePage from "../pages/settings/department/DepartmentTablePage.jsx";
+import RolesTablePage from "../pages/settings/roles/RolesTablePage.jsx";
+import UserAddPageLayout from "../pages/settings/user/UserAddPageLayout.jsx";
+import UserEditPageLayout from "../pages/settings/user/UserEditPageLayout.jsx";
+import RolesAddPageLayout from "../pages/settings/roles/RolesAddPageLayout.jsx";
+import DepartmentAddPageLayout from "../pages/settings/department/DepartmentAddPageLayout.jsx";
+import DepartmentEditPageLayoutDept from "../pages/settings/department/DepartmentEditPageLayoutDept.jsx";
+import BranchesAddPageLayout from "../pages/settings/branches/BranchesAddPageLayout.jsx";
+import BranchesEditPageLayout from "../pages/settings/branches/BranchesEditPageLayout.jsx";
+import ProductTemplateEdit from "../pages/product_library/producttemplate/ProductTemplateEdit.jsx";
 const ProtectedRoute = ({ element }) => {
   const user = useSelector((state) => state.auth.user);
   return user ? element : <Navigate to="/signin" replace />;
@@ -73,11 +101,12 @@ const RoutesConfig = () => {
           <Route path="/dashboard/*" element={<ProtectedRoute element={<LayOut />} />}>
           <Route index element={<DashBoard />} />
 
-            {/* product library roots */}
+            {/* product library roUts */}
             <Route path="profile" element={<ProfilePage />} />
             <Route path="profile/edit-profile/:id" element={<EditProfile />} />
             <Route path="product_library/product_template" element={<ProductTemplatePage />} />
             <Route path="product_library/product_template/add" element={<ProductTemplateAdd/>} />
+            <Route path="product_library/product_template/edit/:id" element={<ProductTemplateEdit/>} />
             <Route path="product_library/brands" element={<ProductTable />} />
             <Route path="product_library/brands/add" element={<BrandsPageAddLayout />} />
             <Route path="product_library/brands/edit/:id" element={<BrandsPageEditLayout />} />
@@ -100,7 +129,7 @@ const RoutesConfig = () => {
             <Route path="product_library/stock_locations" element={<StockLocationPageLayout/>} />
             <Route path="product_library/stock_locations/add/" element={<StockLoAddPage/>} />
             <Route path="product_library/stock_locations/edit/:id" element={<StockLoEditPage/>} />
-            {/* procurement library roots */}
+            {/* procurement library roUts */}
             <Route path="procurement/purchase-request" element={<PurchaseRequestTableLayoutPage/>}/>
             <Route path="procurement/purchase-request/add" element={<PurchaseRequestAdd/>} />
             <Route path="procurement/purchase-request/edit/:id" element={<PurchaseRequestEdit/>}/>
@@ -114,18 +143,47 @@ const RoutesConfig = () => {
             <Route path="procurement/goods-receipt/edit/:id" element={<GoodsReceiptsEditLayout/>}/>
             <Route path="procurement/supplier" element={<SupplierTableLayout/>}/>
             <Route path="procurement/supplier/add" element={<SupplierAddLayout/>}/>
-                        {/* INVENTORY ROOTS */}
+                        {/* INVENTORY ROUTS */}
             <Route path="inventory/products" element={<ProductsTableLayout/>}/>
-                        {/* CRM ROOTS */}
+                        {/* CRM ROUTS */}
             <Route path="crm/contacts" element={<ContactsTableLayoutPage/>}/>
             <Route path="crm/contacts/add" element={<ContactsAddLayoutPage/>}/>
+            <Route path="crm/contacts/edit/:id" element={<ContactsEditLayout/>}/>
             <Route path="crm/leads" element={<LeadsTableLayoutPage/>}/>
             <Route path="crm/quotations" element={<QuotationsTableLayoutPage/>}/>
             <Route path="crm/sales-orders" element={<SalesOrdersTableLayoutPage/>}/>
             <Route path="crm/dispatch-orders" element={<DispatchOrdersTableLayoutPage/>}/>
+            <Route path="crm/leads/add" element={<LeadsLayoutAddPage/>}/>
+            <Route path="crm/quotations/add" element={<QuotationsAddLayoutPage/>}/>
+            <Route path="crm/sales-orders/add" element={<SalesOrdersAddLayoutPage/>}/>
+                        {/* OPERATIONS ROUTES */}
+            <Route path="operations/delivery-challan" element={<DeliveryChallanTablePage/>}/>
+            <Route path="operations/delivery-challan/add" element={<DeliveryChallanAddPage/>}/>
+            <Route path="operations/invoices" element={<InvoicesTablePage/>}/>
+            <Route path="operations/invoices/add" element={<InvoicesAddPage/>}/>
+            <Route path="operations/grn" element={<GrmTablePageLayout/>}/>
+            <Route path="operations/grn/add" element={<GrmAddPageLayoutOpe/>}/>
+            <Route path="operations/asset-modification-tracker" element={<AssetModificationTrackerTableOperations/>}/>
+            <Route path="operations/credit-note" element={<CreditNoteTablePageLayout/>}/>
+            <Route path="operations/credit-note/add" element={<CreditNotePageLayout/>}/>
+            <Route path="operations/service" element={<ServiceTablePageOper/>}/>
+            <Route path="operations/client-journey" element={<ClientJourneyTablePageLayout/>}/>
+                        {/* CLIENT ROUTES*/}
+            <Route path="client/clients" element={<ClinetTablePageLayoutCli/>}/>
+                        {/* settings ROUTES*/}
+            <Route path="settings/user" element={<UserTablePageLayout/>}/>
+            <Route path="settings/user/add" element={<UserAddPageLayout/>}/>
+            <Route path="settings/user/edit/:id" element={<UserEditPageLayout/>}/>
+            <Route path="settings/branches" element={<BranchesTablePageLayout/>}/>
+            <Route path="settings/branches/Add" element={<BranchesAddPageLayout/>}/>
+            <Route path="settings/branches/edit/:id" element={<BranchesEditPageLayout/>}/>
+            <Route path="settings/department" element={<DepartmentTablePage/>}/>
+            <Route path="settings/department/add" element={<DepartmentAddPageLayout/>}/>
+            <Route path="settings/department/edit/:id" element={<DepartmentEditPageLayoutDept/>}/>
+            <Route path="settings/Roles" element={<RolesTablePage/>}/>
+            <Route path="settings/Roles/Add" element={<RolesAddPageLayout/>}/>
 
 
-            
           </Route>
         </Routes>
       </Router>
