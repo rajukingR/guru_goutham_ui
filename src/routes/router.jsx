@@ -97,6 +97,8 @@ import ClientJourneyPageLayout from "../pages/operations/clientjourney/ClientJou
 import ServiceEditPageOper from "../pages/operations/service/ServiceEditPageOper.jsx";
 import GrmEditPageLayoutOpe from "../pages/operations/grn/GrmEditPageLayoutOpe.jsx";
 import InvoicesEditPage from "../pages/operations/invoices/InvoicesEditPage.jsx";
+import ClinetAddPageLayout from "../pages/client/ClinetAddPageLayout.jsx";
+import ClinetEditPageLayout from "../pages/client/ClinetEditPageLayout.jsx";
 const ProtectedRoute = ({ element }) => {
   const user = useSelector((state) => state.auth.user);
   return user ? element : <Navigate to="/signin" replace />;
@@ -194,6 +196,8 @@ const RoutesConfig = () => {
             <Route path="operations/client-journey" element={<ClientJourneyPageLayout/>}/>
                         {/* CLIENT ROUTES*/}
             <Route path="client/clients" element={<ClinetTablePageLayoutCli/>}/>
+            <Route path="client/clients/add" element={<ClinetAddPageLayout/>}/>
+            <Route path="client/clients/edit/:id" element={<ClinetEditPageLayout/>}/>
                         {/* settings ROUTES*/}
             <Route path="settings/user" element={<UserTablePageLayout/>}/>
             <Route path="settings/user/add" element={<UserAddPageLayout/>}/>
