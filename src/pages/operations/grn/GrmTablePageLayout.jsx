@@ -1,72 +1,65 @@
 import React from "react";
-import { Card, CardContent } from "@mui/material";
 import DynamicTable from "../../../components/table-format/DynamicTable";
 
 const GrmTablePageLayout = () => {
-  // Define columns for the GRN table
+  // Define columns for the brands table
   const columns = [
-    { id: "grnNumber", label: "GRN Number" },
-    { id: "grnTitle", label: "GRN Title" },
-    { id: "industry", label: "Industry" },
-    { id: "transactionType", label: "Transaction Type" },
-    { id: "customerId", label: "Customer ID" },
-    { id: "date", label: "Date" },
-    { id: "customerName", label: "Customer Name" },
-    { id: "createdBy", label: "Created By" },
-    { id: "reference", label: "Reference" },
-    { id: "tin", label: "TIN" },
-    { id: "pan", label: "PAN" },
-    { id: "email", label: "Email" },
-    { id: "shippingName", label: "Shipping Name" },
-    { id: "pincode", label: "Pincode" },
-    { id: "vehicleNo", label: "Vehicle No" },
-    { id: "informedPersonName", label: "Informed Person Name" },
-    { id: "informedPersonPhone", label: "Informed Person Phone No" },
-    { id: "returnerName", label: "Returner Name" },
-    { id: "returnerPhone", label: "Returner Phone No" },
-    { id: "receiverName", label: "Receiver Name" },
-    { id: "receiverPhone", label: "Receiver Phone No" },
+    { id: "id", label: "ID" },
+    { id: "logo", label: "Brand Logo" },
+    { id: "name", label: "Brand Name" },
+    { id: "country", label: "Country" },
+    { id: "founded", label: "Founded" },
     { id: "status", label: "Status" },
   ];
 
-  // Sample GRN data
+  // Define dummy data for brands
   const data = [
     {
-      grnNumber: "GRN-001",
-      grnTitle: "Return of Damaged Items",
-      industry: "Electronics",
-      transactionType: "Return",
-      customerId: "CUST-101",
-      date: "2025-05-29",
-      customerName: "Arjun Mehta",
-      createdBy: "Admin",
-      reference: "REF-1234",
-      tin: "TIN9876",
-      pan: "PAN4567",
-      email: "arjun@example.com",
-      shippingName: "Warehouse A",
-      pincode: "560001",
-      vehicleNo: "KA01AB1234",
-      informedPersonName: "Rajesh Kumar",
-      informedPersonPhone: "9876543210",
-      returnerName: "Suresh",
-      returnerPhone: "9123456780",
-      receiverName: "Kiran",
-      receiverPhone: "8899776655",
-      status: "Completed",
+      id: 1,
+      logo: "https://upload.wikimedia.org/wikipedia/commons/0/0b/Dell_Logo.svg",
+      name: "Dell",
+      country: "USA",
+      founded: "1984",
+      status: "Active",
+    },
+    {
+      id: 2,
+      logo: "https://upload.wikimedia.org/wikipedia/commons/2/2e/HP_Logo_2012.svg",
+      name: "HP",
+      country: "USA",
+      founded: "1939",
+      status: "Active",
+    },
+    {
+      id: 3,
+      logo: "https://upload.wikimedia.org/wikipedia/commons/6/6c/Lenovo_logo_2015.svg",
+      name: "Lenovo",
+      country: "China",
+      founded: "1984",
+      status: "Active",
+    },
+    {
+      id: 4,
+      logo: "https://upload.wikimedia.org/wikipedia/commons/3/3e/ASUS_Logo.svg",
+      name: "Asus",
+      country: "Taiwan",
+      founded: "1989",
+      status: "Active",
+    },
+    {
+      id: 5,
+      logo: "https://upload.wikimedia.org/wikipedia/commons/5/5f/Acer_Logo.svg",
+      name: "Acer",
+      country: "Taiwan",
+      founded: "1976",
+      status: "Active",
     },
   ];
 
   return (
-    <Card>
-      <CardContent>
-        <DynamicTable 
-          columns={columns} 
-          data={data} 
-          rowsPerPage={5} 
-        />
-      </CardContent>
-    </Card>
+    <div>
+      <DynamicTable columns={columns} data={data} rowsPerPage={5} />
+    </div>
   );
 };
 

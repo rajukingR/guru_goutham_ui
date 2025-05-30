@@ -1,81 +1,65 @@
 import React from "react";
-import { 
-  Card, 
-  CardContent 
-} from "@mui/material";
 import DynamicTable from "../../../components/table-format/DynamicTable";
 
 const InvoicesTablePage = () => {
-  // Define columns for the table
+  // Define columns for the brands table
   const columns = [
-    { id: "invoiceNumber", label: "Invoice Number" },
-    { id: "invoiceTitle", label: "Invoice Title" },
-    { id: "industry", label: "Industry" },
-    { id: "transactionType", label: "Transaction Type" },
-    { id: "paymentType", label: "Payment Type" },
-    { id: "dcId", label: "DC ID" },
-    { id: "companyName", label: "Company Name" },
-    { id: "customerId", label: "Customer ID" },
-    { id: "invoiceDate", label: "Invoice Date" },
-    { id: "invoiceStartDate", label: "Invoice Start Date" },
-    { id: "invoiceEndDate", label: "Invoice End Date" },
-    { id: "customerName", label: "Customer Name" },
-    { id: "createdBy", label: "Created By" },
-    { id: "amount", label: "Amount" },
-    { id: "reference", label: "Reference" },
-    { id: "tin", label: "TIN" },
-    { id: "pan", label: "PAN" },
-    { id: "email", label: "Email" },
-    { id: "shippingName", label: "Shipping Name" },
-    { id: "pincode", label: "Pincode" },
+    { id: "id", label: "ID" },
+    { id: "logo", label: "Brand Logo" },
+    { id: "name", label: "Brand Name" },
+    { id: "country", label: "Country" },
+    { id: "founded", label: "Founded" },
     { id: "status", label: "Status" },
-    { id: "printCurrentMonth", label: "Print Current Month Invoice" },
-    { id: "printPreviousMonth", label: "Print Previous Month" },
-    { id: "deliveriesInvoice", label: "Deliveries Invoice" },
-    { id: "printCreditNote", label: "Print Credit Note" },
   ];
 
-  // Sample data (can be extended or fetched from API)
+  // Define dummy data for brands
   const data = [
     {
-      invoiceNumber: "INV-001",
-      invoiceTitle: "Monthly Subscription",
-      industry: "IT Services",
-      transactionType: "Sale",
-      paymentType: "Online",
-      dcId: "DC-123",
-      companyName: "Tech Solutions Pvt Ltd",
-      customerId: "CUST-101",
-      invoiceDate: "2025-05-29",
-      invoiceStartDate: "2025-05-01",
-      invoiceEndDate: "2025-05-31",
-      customerName: "Rahul Sharma",
-      createdBy: "Admin",
-      amount: "$1500",
-      reference: "REF-INV-001",
-      tin: "TIN456",
-      pan: "PAN789",
-      email: "rahul@example.com",
-      shippingName: "Main Warehouse",
-      pincode: "110001",
-      status: "Paid",
-      printCurrentMonth: "Yes",
-      printPreviousMonth: "No",
-      deliveriesInvoice: "INV-DEL-01",
-      printCreditNote: "No",
+      id: 1,
+      logo: "https://upload.wikimedia.org/wikipedia/commons/0/0b/Dell_Logo.svg",
+      name: "Dell",
+      country: "USA",
+      founded: "1984",
+      status: "Active",
+    },
+    {
+      id: 2,
+      logo: "https://upload.wikimedia.org/wikipedia/commons/2/2e/HP_Logo_2012.svg",
+      name: "HP",
+      country: "USA",
+      founded: "1939",
+      status: "Active",
+    },
+    {
+      id: 3,
+      logo: "https://upload.wikimedia.org/wikipedia/commons/6/6c/Lenovo_logo_2015.svg",
+      name: "Lenovo",
+      country: "China",
+      founded: "1984",
+      status: "Active",
+    },
+    {
+      id: 4,
+      logo: "https://upload.wikimedia.org/wikipedia/commons/3/3e/ASUS_Logo.svg",
+      name: "Asus",
+      country: "Taiwan",
+      founded: "1989",
+      status: "Active",
+    },
+    {
+      id: 5,
+      logo: "https://upload.wikimedia.org/wikipedia/commons/5/5f/Acer_Logo.svg",
+      name: "Acer",
+      country: "Taiwan",
+      founded: "1976",
+      status: "Active",
     },
   ];
 
   return (
-    <Card>
-      <CardContent>
-        <DynamicTable 
-          columns={columns} 
-          data={data} 
-          rowsPerPage={5} 
-        />
-      </CardContent>
-    </Card>
+    <div>
+      <DynamicTable columns={columns} data={data} rowsPerPage={5} />
+    </div>
   );
 };
 

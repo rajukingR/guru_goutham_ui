@@ -3,37 +3,36 @@ import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 
-const GrmAddPageLayoutOpe = () => {
+const GrmEditPageLayoutOpe = () => {
   const [formData, setFormData] = useState({
-    grnId: '',
-    grnTitle: '',
-    selectedCustomer: '',
-    customerId: '',
-    email: '',
-    phoneNo: '',
-    grnDate: new Date(),
-    gstNumber: '',
-    pan: '',
+    grnId: 'GRN001',
+    grnTitle: 'Goods Return Note for Customer ABC',
+    selectedCustomer: 'Customer 1',
+    customerId: 'CUS001',
+    email: 'customer@example.com',
+    phoneNo: '1234567890',
+    grnDate: new Date('2023-03-15'),
+    gstNumber: 'GST123456789',
+    pan: 'PAN123456',
     grnCreatedBy: 'rounder',
-    industry: '',
-    companyName: '',
-    pincode: '',
+    industry: 'Manufacturing',
+    companyName: 'ABC Corporation',
+    pincode: '123456',
     country: 'India',
-    state: '',
-    city: '',
-    street: '',
-    landmark: '',
-    informedPersonName: '',
-    informedPersonPhoneNo: '',
-    returnerName: '',
-    returnerPhoneNo: '',
-    receiverName: '',
-    receiverPhoneNo: '',
-    description: '',
-    vehicleNumber: '',
+    state: 'Maharashtra',
+    city: 'Mumbai',
+    street: '123, Street Name',
+    landmark: 'Near Landmark',
+    informedPersonName: 'John Doe',
+    informedPersonPhoneNo: '9876543210',
+    returnerName: 'Jane Doe',
+    returnerPhoneNo: '9876543211',
+    receiverName: 'Richard Roe',
+    receiverPhoneNo: '9876543212',
+    description: 'This is a sample goods return note.',
+    vehicleNumber: 'MH01AB1234',
   });
 
-  // ... rest of your component code remains the same ...
   const handleInputChange = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
@@ -41,8 +40,8 @@ const GrmAddPageLayoutOpe = () => {
   return (
     <div style={containerStyle}>
       <div style={headerStyle}>
-        <h1 style={titleStyle}>Create Goods Return Note</h1>
-        <p style={subtitleStyle}>Fill in the details below to create a new GRN</p>
+        <h1 style={titleStyle}>Edit Goods Return Note</h1>
+        <p style={subtitleStyle}>Update the details below to edit a GRN</p>
       </div>
 
       <div style={formContainerStyle}>
@@ -58,6 +57,7 @@ const GrmAddPageLayoutOpe = () => {
               placeholder="Enter GRN ID" 
               value={formData.grnId}
               onChange={(value) => handleInputChange('grnId', value)}
+              disabled
             />
             <Field 
               label="GRN Title" 
@@ -263,14 +263,13 @@ const GrmAddPageLayoutOpe = () => {
           Cancel
         </button>
         <button style={createBtnStyle} onMouseEnter={(e) => e.target.style.backgroundColor = '#1d4ed8'} onMouseLeave={(e) => e.target.style.backgroundColor = '#2563eb'}>
-          Submit
+          Update
         </button>
       </div>
     </div>
   );
 };
 
-// Reuse all the same styles from LeadsLayoutAddPage
 const containerStyle = {
   padding: '2rem',
   fontFamily: '"Inter", "Segoe UI", -apple-system, BlinkMacSystemFont, sans-serif',
@@ -280,7 +279,7 @@ const containerStyle = {
 
 const headerStyle = {
   marginBottom: '2rem',
-  maxWidth: '1600px',
+  maxWidth: '1400px',
 };
 
 const titleStyle = {
@@ -294,8 +293,8 @@ const titleStyle = {
 const subtitleStyle = {
   fontSize: '1rem',
   color: '#64748b',
-  margin: 0,
-};
+marginBottom: '1rem',
+}
 
 const formContainerStyle = {
   display: 'grid',
@@ -496,7 +495,6 @@ const createBtnStyle = {
   outline: 'none',
 };
 
-// Field component (same as in LeadsLayoutAddPage)
 const Field = ({ label, placeholder, type = 'text', value, onChange, options = [], disabled = false }) => (
   <div style={fieldContainerStyle}>
     <label style={labelStyle}>
@@ -548,4 +546,4 @@ const Field = ({ label, placeholder, type = 'text', value, onChange, options = [
   </div>
 );
 
-export default GrmAddPageLayoutOpe;
+export default GrmEditPageLayoutOpe;

@@ -67,11 +67,9 @@ import GrmTablePageLayout from "../pages/operations/grn/GrmTablePageLayout.jsx";
 import AssetModificationTrackerTableOperations from "../pages/operations/assetmodificationtracker/AssetModificationTrackerTableOperations.jsx";
 import CreditNoteTablePageLayout from "../pages/operations/creditnote/CreditNoteTablePageLayout.jsx";
 import ServiceTablePageOper from "../pages/operations/service/ServiceTablePageOper.jsx";
-import ClientJourneyTablePageLayout from "../pages/operations/clientjourney/ClientJourneyTablePageLayout.jsx";
 import DeliveryChallanAddPage from "../pages/operations/deliverychallan/DeliveryChallanAddPage.jsx";
 import InvoicesAddPage from "../pages/operations/invoices/InvoicesAddPage.jsx";
 import GrmAddPageLayoutOpe from "../pages/operations/grn/GrmAddPageLayoutOpe.jsx";
-import CreditNotePageLayout from "../pages/operations/creditnote/CreditNotePageLayout.jsx";
 import ClinetTablePageLayoutCli from "../pages/client/ClinetTablePageLayoutCli.jsx";
 import UserTablePageLayout from "../pages/settings/user/UserTablePageLayout.jsx";
 import BranchesTablePageLayout from "../pages/settings/branches/BranchesTablePageLayout.jsx";
@@ -85,6 +83,20 @@ import DepartmentEditPageLayoutDept from "../pages/settings/department/Departmen
 import BranchesAddPageLayout from "../pages/settings/branches/BranchesAddPageLayout.jsx";
 import BranchesEditPageLayout from "../pages/settings/branches/BranchesEditPageLayout.jsx";
 import ProductTemplateEdit from "../pages/product_library/producttemplate/ProductTemplateEdit.jsx";
+import PoOperationEditPageLayout from "../pages/procurement/poquotation/PoOperationEditPageLayout.jsx";
+import SupplierEditLayout from "../pages/procurement/supplier/SupplierEditayout.jsx";
+import LeadsLayoutEditPage from "../pages/crm/leads/LeadsLayoutEditPage.jsx";
+import QuotationsEditLayoutPage from "../pages/crm/quotations/QuotationsEditLayoutPage.jsx";
+import SalesOrdersEditLayoutPage from "../pages/crm/salesoreders/SalesOrdersEditLayoutPage.jsx";
+import DispatchOrdersAddLayoutPage from "../pages/crm/dispatchorders/DispatchOrdersAddLayoutPage.jsx";
+import DispatchOrdersEditLayoutPageDis from "../pages/crm/dispatchorders/DispatchOrdersEditLayoutPageDis.jsx";
+import DeliveryChallanEditPageDe from "../pages/operations/deliverychallan/DeliveryChallanEditPageDe.jsx";
+import ServiceAddPageOper from "../pages/operations/service/ServiceAddPageOper.jsx";
+import CreditNoteAddPageLayout from "../pages/operations/creditnote/CreditNoteAddPageLayout.jsx";
+import ClientJourneyPageLayout from "../pages/operations/clientjourney/ClientJourneyPageLayout.jsx";
+import ServiceEditPageOper from "../pages/operations/service/ServiceEditPageOper.jsx";
+import GrmEditPageLayoutOpe from "../pages/operations/grn/GrmEditPageLayoutOpe.jsx";
+import InvoicesEditPage from "../pages/operations/invoices/InvoicesEditPage.jsx";
 const ProtectedRoute = ({ element }) => {
   const user = useSelector((state) => state.auth.user);
   return user ? element : <Navigate to="/signin" replace />;
@@ -135,6 +147,7 @@ const RoutesConfig = () => {
             <Route path="procurement/purchase-request/edit/:id" element={<PurchaseRequestEdit/>}/>
             <Route path="procurement/po-quotations" element={<PoOperationTableLayout/>}/>
             <Route path="procurement/po-quotations/add" element={<PoOperationAddPageLayout/>}/>
+            <Route path="procurement/po-quotations/edit/:id" element={<PoOperationEditPageLayout/>}/>
             <Route path="procurement/purchase-orders/" element={<PurchaseOrderTableLayout/>}/>
             <Route path="procurement/purchase-orders/add" element={<PurchaseOrderAddLayout/>}/>
             <Route path="procurement/purchase-orders/edit/:id" element={<PurchaseOrderEditLayout/>}/>
@@ -143,6 +156,7 @@ const RoutesConfig = () => {
             <Route path="procurement/goods-receipt/edit/:id" element={<GoodsReceiptsEditLayout/>}/>
             <Route path="procurement/supplier" element={<SupplierTableLayout/>}/>
             <Route path="procurement/supplier/add" element={<SupplierAddLayout/>}/>
+            <Route path="procurement/supplier/edit/:id" element={<SupplierEditLayout/>}/>
                         {/* INVENTORY ROUTS */}
             <Route path="inventory/products" element={<ProductsTableLayout/>}/>
                         {/* CRM ROUTS */}
@@ -150,24 +164,34 @@ const RoutesConfig = () => {
             <Route path="crm/contacts/add" element={<ContactsAddLayoutPage/>}/>
             <Route path="crm/contacts/edit/:id" element={<ContactsEditLayout/>}/>
             <Route path="crm/leads" element={<LeadsTableLayoutPage/>}/>
+            <Route path="crm/leads/add" element={<LeadsLayoutAddPage/>}/>
+            <Route path="crm/leads/edit/:id" element={<LeadsLayoutEditPage/>}/>
             <Route path="crm/quotations" element={<QuotationsTableLayoutPage/>}/>
             <Route path="crm/sales-orders" element={<SalesOrdersTableLayoutPage/>}/>
             <Route path="crm/dispatch-orders" element={<DispatchOrdersTableLayoutPage/>}/>
-            <Route path="crm/leads/add" element={<LeadsLayoutAddPage/>}/>
+            <Route path="crm/dispatch-orders/add" element={<DispatchOrdersAddLayoutPage/>}/>
+            <Route path="crm/dispatch-orders/edit/:id" element={<DispatchOrdersEditLayoutPageDis/>}/>
             <Route path="crm/quotations/add" element={<QuotationsAddLayoutPage/>}/>
+            <Route path="crm/quotations/edit/:id" element={<QuotationsEditLayoutPage/>}/>
             <Route path="crm/sales-orders/add" element={<SalesOrdersAddLayoutPage/>}/>
+            <Route path="crm/sales-orders/edit/:id" element={<SalesOrdersEditLayoutPage/>}/>
                         {/* OPERATIONS ROUTES */}
             <Route path="operations/delivery-challan" element={<DeliveryChallanTablePage/>}/>
             <Route path="operations/delivery-challan/add" element={<DeliveryChallanAddPage/>}/>
+            <Route path="operations/delivery-challan/edit/:id" element={<DeliveryChallanEditPageDe/>}/>
             <Route path="operations/invoices" element={<InvoicesTablePage/>}/>
             <Route path="operations/invoices/add" element={<InvoicesAddPage/>}/>
+            <Route path="operations/invoices/edit/:id" element={<InvoicesEditPage/>}/>
             <Route path="operations/grn" element={<GrmTablePageLayout/>}/>
             <Route path="operations/grn/add" element={<GrmAddPageLayoutOpe/>}/>
+            <Route path="operations/grn/edit/:id" element={<GrmEditPageLayoutOpe/>}/>
             <Route path="operations/asset-modification-tracker" element={<AssetModificationTrackerTableOperations/>}/>
             <Route path="operations/credit-note" element={<CreditNoteTablePageLayout/>}/>
-            <Route path="operations/credit-note/add" element={<CreditNotePageLayout/>}/>
+            <Route path="operations/credit-note/add" element={<CreditNoteAddPageLayout/>}/>
             <Route path="operations/service" element={<ServiceTablePageOper/>}/>
-            <Route path="operations/client-journey" element={<ClientJourneyTablePageLayout/>}/>
+            <Route path="operations/service/add" element={<ServiceAddPageOper/>}/>
+            <Route path="operations/service/edit/:id" element={<ServiceEditPageOper/>}/>
+            <Route path="operations/client-journey" element={<ClientJourneyPageLayout/>}/>
                         {/* CLIENT ROUTES*/}
             <Route path="client/clients" element={<ClinetTablePageLayoutCli/>}/>
                         {/* settings ROUTES*/}
