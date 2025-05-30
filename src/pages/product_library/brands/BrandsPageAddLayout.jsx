@@ -1,27 +1,64 @@
 import React, { useState } from "react";
+import axios from "axios";
 import {
   Box,
   Button,
   Checkbox,
+  Snackbar,
+  Alert,
+  CircularProgress
 } from "@mui/material";
 
 const BrandsPageAddLayout = () => {
   const [form, setForm] = useState({
-    brandNumber: "",
-    brandName: "",
-    description: "",
-    active: false,
+    brand_number: "",
+    brand_name: "",
+    brand_description: "",
+    active_status: false,
   });
+
+  const [loading, setLoading] = useState(false);
+  const [success, setSuccess] = useState(false);
+  const [error, setError] = useState(null);
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
     setForm({ ...form, [name]: type === "checkbox" ? checked : value });
   };
 
-  const handleSubmit = () => {
-    console.log("Brand form:", form);
+  const handleSubmit = async () => {
+    setLoading(true);
+    setError(null);
+    
+    try {
+      const response = await axios.post(
+        "http://localhost:5000/api/brand/create",
+        form
+      );
+      
+      console.log("Brand created:", response.data);
+      setSuccess(true);
+      // Reset form after successful submission
+      setForm({
+        brand_number: "",
+        brand_name: "",
+        brand_description: "",
+        active_status: false,
+      });
+    } catch (err) {
+      console.error("Error creating brand:", err);
+      setError(err.response?.data?.message || "Failed to create brand");
+    } finally {
+      setLoading(false);
+    }
   };
 
+  const handleCloseSnackbar = () => {
+    setSuccess(false);
+    setError(null);
+  };
+
+  // Styles (same as your original styles)
   const containerStyle = {
     padding: '2rem',
     fontFamily: '"Inter", "Segoe UI", -apple-system, BlinkMacSystemFont, sans-serif',
@@ -112,8 +149,8 @@ const BrandsPageAddLayout = () => {
     width: '20px',
     height: '20px',
     borderRadius: '4px',
-    border: form.active ? '2px solid #2563eb' : '2px solid #d1d5db',
-    backgroundColor: form.active ? '#2563eb' : '#ffffff',
+    border: form.active_status ? '2px solid #2563eb' : '2px solid #d1d5db',
+    backgroundColor: form.active_status ? '#2563eb' : '#ffffff',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
@@ -123,7 +160,7 @@ const BrandsPageAddLayout = () => {
     color: '#ffffff',
     fontSize: '12px',
     fontWeight: 'bold',
-    display: form.active ? 'block' : 'none',
+    display: form.active_status ? 'block' : 'none',
   };
 
   const checkboxTextStyle = {
@@ -155,21 +192,24 @@ const BrandsPageAddLayout = () => {
     border: 'none',
     borderRadius: '8px',
     cursor: 'pointer',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '0.5rem',
   };
 
   return (
     <div style={containerStyle}>
       <div style={cardStyle}>
-       <div style={cardHeaderContainerStyle}>
-  <div style={iconStyle}>📝</div>
-  <h3 style={cardHeaderStyle}>Add New Brand</h3>
-</div>
+        <div style={cardHeaderContainerStyle}>
+          <div style={iconStyle}>📝</div>
+          <h3 style={cardHeaderStyle}>Add New Brand</h3>
+        </div>
         <div style={fieldsGridStyle}>
           <Field
             label="Brand Number"
             type="text"
-            name="brandNumber"
-            value={form.brandNumber}
+            name="brand_number"
+            value={form.brand_number}
             onChange={handleChange}
             fieldContainerStyle={fieldContainerStyle}
             labelStyle={labelStyle}
@@ -178,8 +218,8 @@ const BrandsPageAddLayout = () => {
           <Field
             label="Brand Name"
             type="text"
-            name="brandName"
-            value={form.brandName}
+            name="brand_name"
+            value={form.brand_name}
             onChange={handleChange}
             fieldContainerStyle={fieldContainerStyle}
             labelStyle={labelStyle}
@@ -188,8 +228,8 @@ const BrandsPageAddLayout = () => {
           <Field
             label="Brand Description"
             type="text"
-            name="description"
-            value={form.description}
+            name="brand_description"
+            value={form.brand_description}
             onChange={handleChange}
             fieldContainerStyle={fieldContainerStyle}
             labelStyle={labelStyle}
@@ -198,8 +238,8 @@ const BrandsPageAddLayout = () => {
           <div style={checkboxContainerStyle}>
             <label style={checkboxLabelStyle}>
               <Checkbox
-                name="active"
-                checked={form.active}
+                name="active_status"
+                checked={form.active_status}
                 onChange={handleChange}
                 style={checkboxStyle}
               />
@@ -214,11 +254,37 @@ const BrandsPageAddLayout = () => {
         </div>
         <div style={buttonContainerStyle}>
           <button style={cancelBtnStyle}>Cancel</button>
-          <button style={createBtnStyle} onClick={handleSubmit}>
+          <button 
+            style={createBtnStyle} 
+            onClick={handleSubmit}
+            disabled={loading}
+          >
+            {loading && <CircularProgress size={16} color="inherit" />}
             Create
           </button>
         </div>
       </div>
+
+      {/* Success/Error notifications */}
+      <Snackbar
+        open={success}
+        autoHideDuration={6000}
+        onClose={handleCloseSnackbar}
+      >
+        <Alert onClose={handleCloseSnackbar} severity="success">
+          Brand created successfully!
+        </Alert>
+      </Snackbar>
+
+      <Snackbar
+        open={!!error}
+        autoHideDuration={6000}
+        onClose={handleCloseSnackbar}
+      >
+        <Alert onClose={handleCloseSnackbar} severity="error">
+          {error}
+        </Alert>
+      </Snackbar>
     </div>
   );
 };

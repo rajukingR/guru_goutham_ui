@@ -32,6 +32,7 @@ import API_URL from "../../api/Api_url";
 const apiEndpoints = {
   settings: `${API_URL}/users`,
   roles: `${API_URL}/roles`,
+  brands: `${API_URL}/brand`,
 };
 
 const DynamicTable = ({

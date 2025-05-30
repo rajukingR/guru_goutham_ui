@@ -99,6 +99,7 @@ import GrmEditPageLayoutOpe from "../pages/operations/grn/GrmEditPageLayoutOpe.j
 import InvoicesEditPage from "../pages/operations/invoices/InvoicesEditPage.jsx";
 import ClinetAddPageLayout from "../pages/client/ClinetAddPageLayout.jsx";
 import ClinetEditPageLayout from "../pages/client/ClinetEditPageLayout.jsx";
+import BrandsTablePage from "../pages/product_library/brands/BrandsTablePage.jsx";
 const ProtectedRoute = ({ element }) => {
   const user = useSelector((state) => state.auth.user);
   return user ? element : <Navigate to="/signin" replace />;
@@ -121,7 +122,7 @@ const RoutesConfig = () => {
             <Route path="product_library/product_template" element={<ProductTemplatePage />} />
             <Route path="product_library/product_template/add" element={<ProductTemplateAdd/>} />
             <Route path="product_library/product_template/edit/:id" element={<ProductTemplateEdit/>} />
-            <Route path="product_library/brands" element={<ProductTable />} />
+            <Route path="product_library/brands" element={<BrandsTablePage />} />
             <Route path="product_library/brands/add" element={<BrandsPageAddLayout />} />
             <Route path="product_library/brands/edit/:id" element={<BrandsPageEditLayout />} />
             <Route path="product_library/product_categories" element={<ProductCategoriesPage/>} />

@@ -19,7 +19,7 @@
     "@mui/x-data-grid": "^8.4.0",
     "@mui/x-date-pickers": "^7.29.4",
     "@reduxjs/toolkit": "^2.6.0",
-    "axios": "^1.8.1",
+    "axios": "^1.9.0",
     "bcryptjs": "^3.0.2",
     "chart.js": "^4.4.8",
     "date-fns": "^2.30.0",
