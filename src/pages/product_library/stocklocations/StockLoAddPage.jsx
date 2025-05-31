@@ -1,6 +1,16 @@
 import React, { useState } from 'react';
+import axios from 'axios';
+import Snackbar from '@mui/material/Snackbar';
+import MuiAlert from '@mui/material/Alert';
+import { useNavigate } from 'react-router-dom';
+
+const Alert = React.forwardRef(function Alert(props, ref) {
+  return <MuiAlert elevation={6} ref={ref} variant="filled" {...props} />;
+});
 
 const StockLoAddPage = () => {
+    const navigate = useNavigate();
+
   const [formData, setFormData] = useState({
     stockLocationId: '',
     stockName: '',
@@ -12,11 +22,59 @@ const StockLoAddPage = () => {
     city: '',
     landmark: '',
     street: '',
-    activeStatus: true
+    activeStatus: true,
   });
+
+  const [snackbar, setSnackbar] = useState({
+    open: false,
+    message: '',
+    severity: 'success',
+  });
+
+  const handleCloseSnackbar = (event, reason) => {
+    if (reason === 'clickaway') {
+      return;
+    }
+    setSnackbar({ ...snackbar, open: false });
+  };
 
   const handleInputChange = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleSubmit = async () => {
+    const payload = {
+      stock_location_id: formData.stockLocationId,
+      stock_name: formData.stockName,
+      mail_id: formData.mailId,
+      phone_no: formData.phoneNo,
+      pincode: formData.pincode,
+      country: formData.country,
+      state: formData.state,
+      city: formData.city,
+      landmark: formData.landmark,
+      street: formData.street,
+      is_active: formData.activeStatus,
+    };
+
+    try {
+      const response = await axios.post('http://localhost:5000/api/stock-locations/create', payload);
+      setSnackbar({
+        open: true,
+        message: response.data.message || 'Stock location created successfully!',
+        severity: 'success'
+      });
+      setTimeout(() => {
+        navigate('/dashboard/product_library/stock_locations'); 
+      }, 3000);
+    } catch (error) {
+      console.error('Error creating stock location:', error);
+      setSnackbar({
+        open: true,
+        message: 'Failed to create stock location.',
+        severity: 'error'
+      });
+    }
   };
 
   return (
@@ -29,34 +87,10 @@ const StockLoAddPage = () => {
             <h3 style={cardHeaderStyle}>Stock Location Information</h3>
           </div>
           <div style={fieldsGridStyle}>
-            <Field 
-              label="Stock Location ID" 
-              placeholder="Enter Stock Location ID" 
-              value={formData.stockLocationId}
-              onChange={(value) => handleInputChange('stockLocationId', value)}
-              required
-            />
-            <Field 
-              label="Stock Name" 
-              placeholder="Enter Stock Name" 
-              value={formData.stockName}
-              onChange={(value) => handleInputChange('stockName', value)}
-              required
-            />
-            <Field 
-              label="Mail ID" 
-              type="email"
-              placeholder="Email id" 
-              value={formData.mailId}
-              onChange={(value) => handleInputChange('mailId', value)}
-            />
-            <Field 
-              label="Phone No" 
-              type="tel"
-              placeholder="Contact number" 
-              value={formData.phoneNo}
-              onChange={(value) => handleInputChange('phoneNo', value)}
-            />
+            <Field label="Stock Location ID" placeholder="Enter Stock Location ID" value={formData.stockLocationId} onChange={(value) => handleInputChange('stockLocationId', value)} required />
+            <Field label="Stock Name" placeholder="Enter Stock Name" value={formData.stockName} onChange={(value) => handleInputChange('stockName', value)} required />
+            <Field label="Mail ID" type="email" placeholder="Email id" value={formData.mailId} onChange={(value) => handleInputChange('mailId', value)} />
+            <Field label="Phone No" type="tel" placeholder="Contact number" value={formData.phoneNo} onChange={(value) => handleInputChange('phoneNo', value)} />
           </div>
         </div>
 
@@ -67,46 +101,16 @@ const StockLoAddPage = () => {
             <h3 style={cardHeaderStyle}>Address Details</h3>
           </div>
           <div style={fieldsGridStyle}>
-            <Field 
-              label="Pincode" 
-              placeholder="Enter Pincode" 
-              value={formData.pincode}
-              onChange={(value) => handleInputChange('pincode', value)}
-            />
-            <Field 
-              label="Country" 
-              placeholder="Enter Country" 
-              value={formData.country}
-              onChange={(value) => handleInputChange('country', value)}
-            />
-            <Field 
-              label="State" 
-              placeholder="Enter State" 
-              value={formData.state}
-              onChange={(value) => handleInputChange('state', value)}
-            />
-            <Field 
-              label="City" 
-              placeholder="Enter City" 
-              value={formData.city}
-              onChange={(value) => handleInputChange('city', value)}
-            />
-            <Field 
-              label="Landmark" 
-              placeholder="Enter Landmark" 
-              value={formData.landmark}
-              onChange={(value) => handleInputChange('landmark', value)}
-            />
-            <Field 
-              label="Street" 
-              placeholder="Enter Street" 
-              value={formData.street}
-              onChange={(value) => handleInputChange('street', value)}
-            />
+            <Field label="Pincode" placeholder="Enter Pincode" value={formData.pincode} onChange={(value) => handleInputChange('pincode', value)} />
+            <Field label="Country" placeholder="Enter Country" value={formData.country} onChange={(value) => handleInputChange('country', value)} />
+            <Field label="State" placeholder="Enter State" value={formData.state} onChange={(value) => handleInputChange('state', value)} />
+            <Field label="City" placeholder="Enter City" value={formData.city} onChange={(value) => handleInputChange('city', value)} />
+            <Field label="Landmark" placeholder="Enter Landmark" value={formData.landmark} onChange={(value) => handleInputChange('landmark', value)} />
+            <Field label="Street" placeholder="Enter Street" value={formData.street} onChange={(value) => handleInputChange('street', value)} />
           </div>
         </div>
 
-        {/* Control Section */}
+        {/* Configuration Section */}
         <div style={cardStyle}>
           <div style={cardHeaderContainerStyle}>
             <div style={iconStyle}>⚙️</div>
@@ -114,13 +118,8 @@ const StockLoAddPage = () => {
           </div>
           <div style={checkboxContainerStyle}>
             <label style={checkboxLabelStyle}>
-              <input 
-                type="checkbox" 
-                style={checkboxStyle}
-                checked={formData.activeStatus}
-                onChange={(e) => handleInputChange('activeStatus', e.target.checked)}
-              />
-              <div style={checkboxCustomStyle}>
+              <input type="checkbox" style={checkboxStyle} checked={formData.activeStatus} onChange={(e) => handleInputChange('activeStatus', e.target.checked)} />
+              <div style={{ ...checkboxCustomStyle, backgroundColor: formData.activeStatus ? '#2563eb' : '#fff' }}>
                 {formData.activeStatus && <span style={checkmarkStyle}>✓</span>}
               </div>
               <div>
@@ -134,13 +133,25 @@ const StockLoAddPage = () => {
 
       {/* Action Buttons */}
       <div style={buttonContainerStyle}>
-        <button style={cancelBtnStyle} onMouseEnter={(e) => e.target.style.backgroundColor = '#e5e7eb'} onMouseLeave={(e) => e.target.style.backgroundColor = '#f3f4f6'}>
+        <button style={cancelBtnStyle} onClick={() => setFormData({ ...formData, stockLocationId: '', stockName: '', mailId: '', phoneNo: '', pincode: '', country: '', state: '', city: '', landmark: '', street: '', activeStatus: true })}>
           Cancel
         </button>
-        <button style={createBtnStyle} onMouseEnter={(e) => e.target.style.backgroundColor = '#1d4ed8'} onMouseLeave={(e) => e.target.style.backgroundColor = '#2563eb'}>
+        <button style={createBtnStyle} onClick={handleSubmit}>
           Create Location
         </button>
       </div>
+
+      {/* Snackbar Notification */}
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={6000}
+        onClose={handleCloseSnackbar}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+      >
+        <Alert onClose={handleCloseSnackbar} severity={snackbar.severity} sx={{ width: '100%' }}>
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
     </div>
   );
 };
@@ -151,41 +162,16 @@ const Field = ({ label, placeholder, type = 'text', required = false, value, onC
       {label}
       {required && <span style={requiredStyle}>*</span>}
     </label>
-    <input
-      type={type}
-      placeholder={placeholder}
-      style={inputStyle}
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
-    />
+    <input type={type} placeholder={placeholder} style={inputStyle} value={value} onChange={(e) => onChange(e.target.value)} />
   </div>
 );
 
-// Enhanced Styles (Identical to Asset component)
+// Style Definitions
 const containerStyle = {
   padding: '2rem',
   fontFamily: '"Inter", "Segoe UI", -apple-system, BlinkMacSystemFont, sans-serif',
   minHeight: '100vh',
   lineHeight: 1.6,
-};
-
-const titleContainerStyle = {
-  textAlign: 'center',
-  marginBottom: '2rem',
-};
-
-const titleStyle = {
-  fontSize: '2rem',
-  fontWeight: '700',
-  color: '#1e293b',
-  margin: '0 0 0.5rem 0',
-  letterSpacing: '-0.025em',
-};
-
-const subtitleStyle = {
-  fontSize: '1rem',
-  color: '#64748b',
-  margin: 0,
 };
 
 const formContainerStyle = {
@@ -284,7 +270,6 @@ const checkboxCustomStyle = {
   height: '20px',
   borderRadius: '4px',
   border: '2px solid #d1d5db',
-  backgroundColor: '#ffffff',
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',

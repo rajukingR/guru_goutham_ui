@@ -1,76 +1,46 @@
-import React from "react";
-import { 
-  Avatar, 
-  Card, 
-  CardContent 
+import React, { useEffect, useState } from "react";
+import {
+  Card,
+  CardContent,
+  CircularProgress
 } from "@mui/material";
 import DynamicTable from "../../../components/table-format/DynamicTable";
+import axios from "axios";
 
 const GradePageLayoutPage = () => {
-  // Define columns for the table
+  const [gradeData, setGradeData] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  // Define columns (without 'is_active')
   const columns = [
-    { 
-      id: "itemImage", 
-      label: "Item Image",
-      render: (value) => (
-        <Avatar 
-          variant="square" 
-          src={value} 
-          sx={{ width: 56, height: 56 }}
-        />
-      )
-    },
-    { id: "itemName", label: "Item Name" },
-    { id: "itemCode", label: "Item Code" },
-    { id: "category", label: "Category" },
-    { id: "unitPrice", label: "Unit Price" },
-    { id: "stockQuantity", label: "Stock Quantity" },
-    { id: "status", label: "Status" },
-    { id: "actions", label: "Actions" },
+    { id: "grade_id", label: "Grade ID" },
+    { id: "grade_name", label: "Grade Name" },
+    { id: "description", label: "Description" },
   ];
 
-  // Sample data for items
-  const data = [
-    {
-      itemImage: "https://via.placeholder.com/56", 
-      itemName: "Wireless Mouse",
-      itemCode: "WM-1001",
-      category: "Accessories",
-      unitPrice: "$25",
-      stockQuantity: 120,
-      status: "Available",
-      actions: "..."
-    },
-    {
-      itemImage: "https://via.placeholder.com/56", 
-      itemName: "Mechanical Keyboard",
-      itemCode: "MK-2002",
-      category: "Accessories",
-      unitPrice: "$70",
-      stockQuantity: 85,
-      status: "Available",
-      actions: "..."
-    },
-    {
-      itemImage: "https://via.placeholder.com/56", 
-      itemName: "27-inch Monitor",
-      itemCode: "MN-3003",
-      category: "Monitors",
-      unitPrice: "$230",
-      stockQuantity: 30,
-      status: "Low Stock",
-      actions: "..."
-    },
-  ];
+  useEffect(() => {
+    const fetchGrades = async () => {
+      try {
+        const response = await axios.get("http://localhost:5000/api/grades");
+        setGradeData(response.data); // Assuming data is an array of grades
+      } catch (error) {
+        console.error("Failed to fetch grades:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchGrades();
+  }, []);
 
   return (
     <Card>
       <CardContent>
-        <DynamicTable 
-          columns={columns} 
-          data={data} 
-          rowsPerPage={5} 
-        />
+        {loading ? (
+          <CircularProgress />
+        ) : (
+          <DynamicTable columns={columns} data={gradeData} rowsPerPage={5} />
+        )}
       </CardContent>
     </Card>
   );

@@ -1,21 +1,62 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import axios from 'axios';
+import { useParams, useNavigate } from 'react-router-dom';
 
 const GradeEditPage = () => {
+  const { id } = useParams(); // grade ID from route params
+  const navigate = useNavigate();
   const [formData, setFormData] = useState({
-    gradeId: 'GRD-1001',
-    gradeName: 'Senior Executive',
-    description: 'This grade is for senior executives with 5+ years of experience.',
-    activeStatus: true,
+    gradeId: '',
+    gradeName: '',
+    description: '',
+    activeStatus: false,
   });
+
+  // Fetch grade data by ID
+  useEffect(() => {
+    axios
+      .get(`http://localhost:5000/api/grades/${id}`)
+      .then((res) => {
+        const data = res.data;
+        setFormData({
+          gradeId: data.grade_id || '',
+          gradeName: data.grade_name || '',
+          description: data.description || '',
+          activeStatus: data.is_active || false,
+        });
+      })
+      .catch((err) => {
+        console.error('Error fetching grade:', err);
+      });
+  }, [id]);
 
   const handleInputChange = (field, value) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
+  const handleUpdate = () => {
+    const updatedData = {
+      grade_id: formData.gradeId,
+      grade_name: formData.gradeName,
+      description: formData.description,
+      is_active: formData.activeStatus,
+    };
+
+    axios
+      .put(`http://localhost:5000/api/grades/${id}`, updatedData)
+      .then(() => {
+        alert('Grade updated successfully');
+        navigate('/grades'); // redirect after update
+      })
+      .catch((err) => {
+        console.error('Error updating grade:', err);
+        alert('Failed to update grade');
+      });
+  };
+
   return (
     <div style={containerStyle}>
       <div style={formContainerStyle}>
-        {/* Grade Information Section */}
         <div style={{ ...cardStyle, gridColumn: '1 / -1' }}>
           <div style={cardHeaderContainerStyle}>
             <div style={iconStyle}>📝</div>
@@ -46,7 +87,6 @@ const GradeEditPage = () => {
           </div>
         </div>
 
-        {/* Control Section */}
         <div style={cardStyle}>
           <div style={cardHeaderContainerStyle}>
             <div style={iconStyle}>⚙️</div>
@@ -72,10 +112,9 @@ const GradeEditPage = () => {
         </div>
       </div>
 
-      {/* Action Buttons */}
       <div style={buttonContainerStyle}>
-        <button style={cancelBtnStyle}>Cancel</button>
-        <button style={createBtnStyle}>Update</button>
+        <button style={cancelBtnStyle} onClick={() => navigate('/grades')}>Cancel</button>
+        <button style={createBtnStyle} onClick={handleUpdate}>Update</button>
       </div>
     </div>
   );
@@ -94,7 +133,8 @@ const Field = ({ label, placeholder, value, onChange }) => (
   </div>
 );
 
-// Styles
+// --- STYLES (same as before, unchanged) ---
+
 const containerStyle = {
   padding: '2rem',
   fontFamily: '"Inter", "Segoe UI", -apple-system, BlinkMacSystemFont, sans-serif',

@@ -33,6 +33,7 @@ const apiEndpoints = {
   settings: `${API_URL}/users`,
   roles: `${API_URL}/roles`,
   brands: `${API_URL}/brand`,
+  stocklocations: `${API_URL}/stock_locations`,
 };
 
 const DynamicTable = ({

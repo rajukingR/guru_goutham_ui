@@ -11,6 +11,8 @@ const BrandsTablePage = () => {
     { id: "brand_number", label: "Brand Number" },
     { id: "brand_name", label: "Brand Name" },
     { id: "brand_description", label: "Description" },
+    { id: "active_status", label: "Active Status" }, // Added active status column
+    { id: "action", label: "Action" } // Added action column
   ];
 
   const [data, setData] = useState([]);
@@ -26,7 +28,13 @@ const BrandsTablePage = () => {
           ? response.data
           : [response.data];
 
-        setData(brandsArray);
+        // Add serial numbers to each brand
+        const brandsWithSNo = brandsArray.map((brand, index) => ({
+          ...brand,
+          sno: index + 1 // This will create sequential numbers starting from 1
+        }));
+
+        setData(brandsWithSNo);
         setLoading(false);
       } catch (err) {
         console.error("Error fetching brands:", err);
@@ -59,7 +67,12 @@ const BrandsTablePage = () => {
       <h2 style={{ marginBottom: "1rem", color: "#333" }}>Brands Management</h2>
 
       {data.length > 0 ? (
-        <DynamicTable columns={columns} data={data} rowsPerPage={5} keyProp="brand_id" />
+        <DynamicTable 
+          columns={columns} 
+          data={data} 
+          rowsPerPage={5} 
+          keyProp="brand_id" 
+        />
       ) : (
         <Alert severity="info">No brands found in the system</Alert>
       )}

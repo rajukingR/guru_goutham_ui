@@ -100,6 +100,9 @@ import InvoicesEditPage from "../pages/operations/invoices/InvoicesEditPage.jsx"
 import ClinetAddPageLayout from "../pages/client/ClinetAddPageLayout.jsx";
 import ClinetEditPageLayout from "../pages/client/ClinetEditPageLayout.jsx";
 import BrandsTablePage from "../pages/product_library/brands/BrandsTablePage.jsx";
+import ProductCategoriesAddPage from "../pages/product_library/productcategories/ProductCategoriesAddPage.jsx";
+import EditProductCategoryForm from "../pages/product_library/productcategories/EditProductCategoryForm .jsx";
+import ProductsAddLayout from "../pages/inventory/products/ProductsAddLayout.jsx";
 const ProtectedRoute = ({ element }) => {
   const user = useSelector((state) => state.auth.user);
   return user ? element : <Navigate to="/signin" replace />;
@@ -126,6 +129,8 @@ const RoutesConfig = () => {
             <Route path="product_library/brands/add" element={<BrandsPageAddLayout />} />
             <Route path="product_library/brands/edit/:id" element={<BrandsPageEditLayout />} />
             <Route path="product_library/product_categories" element={<ProductCategoriesPage/>} />
+            <Route path="product_library/product_categories/add" element={<ProductCategoriesAddPage/>} />
+            <Route path="product_library/product_categories/edit/:id" element={<EditProductCategoryForm/>} />
             <Route path="product_library/item_master" element={<ItemMasterPageLayout/>} />
             <Route path="product_library/item_master/add" element={<ItemMasterPageLayoutAdd/>} />
             <Route path="product_library/item_master/edit/:id" element={<ItemMasterPageLayoutEdit/>} />
@@ -162,6 +167,7 @@ const RoutesConfig = () => {
             <Route path="procurement/supplier/edit/:id" element={<SupplierEditLayout/>}/>
                         {/* INVENTORY ROUTS */}
             <Route path="inventory/products" element={<ProductsTableLayout/>}/>
+            <Route path="inventory/products/add" element={<ProductsAddLayout/>}/>
                         {/* CRM ROUTS */}
             <Route path="crm/contacts" element={<ContactsTableLayoutPage/>}/>
             <Route path="crm/contacts/add" element={<ContactsAddLayoutPage/>}/>

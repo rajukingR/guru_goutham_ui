@@ -1,84 +1,123 @@
-import React from "react";
-import { 
-  Avatar,
-  Box, 
-  Button, 
-  Card, 
-  CardContent, 
-  Grid, 
-  InputAdornment, 
+import React, { useState, useEffect } from "react";
+import axios from "axios";
+import {
+  Box,
+  Button,
+  Card,
+  CardContent,
   TextField,
-  Typography 
+  Typography,
+  CircularProgress,
+  Alert,
+  Chip,
+  InputAdornment
 } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
 import DynamicTable from "../../../components/table-format/DynamicTable";
 
 const ProductCategoriesPage = () => {
-  // Define columns for the table
   const columns = [
+    { id: "sno", label: "S.No" },
+    { id: "category_code", label: "Category Code" },
+    { id: "category_name", label: "Category Name" },
+    { id: "hsn_code", label: "HSN Code" },
+    { id: "category_type", label: "Type" },
     { 
-      id: "categoryImage", 
-      label: "Category Image",
       render: (value) => (
-        <Avatar 
-          variant="square" 
-          src={value} 
-          sx={{ width: 56, height: 56 }}
+        <Chip
+          label={value ? "Active" : "Inactive"}
+          color={value ? "success" : "error"}
+          size="small"
         />
       )
-    },
-    { id: "categoryName", label: "Category Name" },
-    { id: "parentCategory", label: "Parent Category" },
-    { id: "description", label: "Description" },
-    { id: "productsCount", label: "Products Count" },
-    { id: "status", label: "Status" },
-    { id: "actions", label: "Actions" },
-  ];
-
-  // Sample data for product categories
-  const data = [
-    {
-      categoryName: "Electronics",
-      parentCategory: "None",
-      description: "All electronic devices and components",
-      productsCount: 125,
-      status: "Active",
-      actions: "..."
-    },
-    {
-      categoryName: "Computers",
-      parentCategory: "Electronics",
-      description: "Desktops, laptops and accessories",
-      productsCount: 78,
-      status: "Active",
-      actions: "..."
-    },
-    {
-      categoryName: "Monitors",
-      parentCategory: "Computers",
-      description: "Computer displays and screens",
-      productsCount: 42,
-      status: "Active",
-      actions: "..."
-    },
-    {
-      categoryName: "Accessories",
-      parentCategory: "Computers",
-      description: "Keyboards, mice and other peripherals",
-      productsCount: 56,
-      status: "Active",
-      actions: "..."
     }
   ];
 
+  const [data, setData] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [searchTerm, setSearchTerm] = useState("");
+
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const response = await axios.get("http://localhost:5000/api/product-categories");
+        
+        // Process the response data
+        const categoriesData = Array.isArray(response.data) 
+          ? response.data 
+          : response.data?.data 
+            ? response.data.data 
+            : [response.data];
+
+        // Add serial numbers
+        const processedData = categoriesData.map((item, index) => ({
+          ...item,
+          sno: index + 1,
+          is_active: Boolean(item.is_active)
+        }));
+
+        setData(processedData);
+      } catch (err) {
+        setError(err.response?.data?.message || err.message);
+        console.error("Error fetching categories:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchCategories();
+  }, []);
+
+  // Filter data based on search term
+  const filteredData = data.filter(item =>
+    Object.values(item).some(
+      value =>
+        value &&
+        value.toString().toLowerCase().includes(searchTerm.toLowerCase())
+    )
+  );
+
+  if (loading) {
+    return (
+      <Box display="flex" justifyContent="center" p={3}>
+        <CircularProgress />
+      </Box>
+    );
+  }
+
+  if (error) {
+    return (
+      <Box p={2}>
+        <Alert severity="error">Error: {error}</Alert>
+      </Box>
+    );
+  }
+
   return (
-    <Card>
+    <Card variant="outlined">
       <CardContent>
-        <DynamicTable 
-          columns={columns} 
-          data={data} 
-          rowsPerPage={5} 
-        />
+        <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+          <Typography variant="h6">Product Categories</Typography>
+    
+        </Box>
+
+        <Box mb={3}>
+
+        </Box>
+
+        {filteredData.length > 0 ? (
+          <DynamicTable
+            columns={columns}
+            data={filteredData}
+            rowsPerPage={5}
+            keyProp="category_code"
+          />
+        ) : (
+          <Alert severity="info">
+            {searchTerm ? "No matching categories found" : "No categories available"}
+          </Alert>
+        )}
       </CardContent>
     </Card>
   );
