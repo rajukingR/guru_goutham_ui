@@ -72,6 +72,16 @@ import ProductCategoriesAddPage from "../pages/product_library/productcategories
 import DeliveryChallanTable from "../pages/operations/DeliveryChallanTable.jsx";
 import DeliveryChallanAddPage from "../pages/operations/DeliveryChallanAddPage.jsx";
 import DeliveryChallanEditPage from "../pages/operations/DeliveryChallanEditPage.jsx";
+import UsersTablePage from "../pages/settings/users/UsersTablePage.jsx";
+import UsersAddPage from "../pages/settings/users/UsersAddPage.jsx";
+import RolesTablePage from "../pages/settings/roles/RolesTablePage.jsx";
+import RolesAddPage from "../pages/settings/roles/RolesAddPage.jsx";
+import BranchAddPage from "../pages/settings/branches/BranchAddPage.jsx";
+import BranchTablePage from "../pages/settings/branches/BranchTablePage.jsx";
+import ContactTypeTable from "../pages/settings/contacttype/ContactTypeTable.jsx";
+import ContactTypeAdd from "../pages/settings/contacttype/ContactTypeAdd.jsx";
+import TaxListTable from "../pages/settings/taxlist/TaxListTable.jsx";
+import TaxListAdd from "../pages/settings/taxlist/TaxListAdd.jsx";
 const ProtectedRoute = ({ element }) => {
   const user = useSelector((state) => state.auth.user);
   return user ? element : <Navigate to="/signin" replace />;
@@ -151,6 +161,19 @@ const RoutesConfig = () => {
             <Route path="operations" element={<DeliveryChallanTable />} />
             <Route path="operations/add" element={<DeliveryChallanAddPage />} />
             <Route path="operations/edit/:id" element={<DeliveryChallanEditPage />} />
+                                       {/* settings */}
+            <Route path="settings/users" element={<UsersTablePage/>} />
+            <Route path="settings/users/add" element={<UsersAddPage/>} />
+            <Route path="settings/roles" element={<RolesTablePage/>} />
+            <Route path="settings/roles/add" element={<RolesAddPage/>} />
+            <Route path="settings/branch" element={<BranchTablePage/>} />
+            <Route path="settings/branch/add" element={<BranchAddPage/>} />
+            <Route path="settings/contact_type" element={<ContactTypeTable/>} />
+            <Route path="settings/contact_type/add" element={<ContactTypeAdd/>} />
+            <Route path="settings/taxt_list" element={<TaxListTable/>} />
+            <Route path="settings/taxt_list/add" element={<TaxListAdd/>} />
+
+
 
           </Route>
         </Routes>
