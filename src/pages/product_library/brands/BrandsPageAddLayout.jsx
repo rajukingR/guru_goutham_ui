@@ -8,8 +8,9 @@ import {
   Alert,
   CircularProgress
 } from "@mui/material";
-
+import { Routes, Route, useNavigate } from "react-router-dom";
 const BrandsPageAddLayout = () => {
+  const navigate = useNavigate();
   const [form, setForm] = useState({
     brand_number: "",
     brand_name: "",
@@ -38,7 +39,9 @@ const BrandsPageAddLayout = () => {
       
       console.log("Brand created:", response.data);
       setSuccess(true);
-      // Reset form after successful submission
+      setTimeout(() => {
+    navigate("/dashboard/product_library/brands"); 
+  }, 3000); 
       setForm({
         brand_number: "",
         brand_name: "",

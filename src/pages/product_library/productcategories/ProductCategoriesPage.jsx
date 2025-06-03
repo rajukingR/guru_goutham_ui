@@ -1,18 +1,13 @@
 import React, { useState, useEffect } from "react";
-import axios from "axios";
 import {
   Box,
-  Button,
   Card,
   CardContent,
-  TextField,
   Typography,
   CircularProgress,
   Alert,
   Chip,
-  InputAdornment
 } from "@mui/material";
-import SearchIcon from "@mui/icons-material/Search";
 import DynamicTable from "../../../components/table-format/DynamicTable";
 
 const ProductCategoriesPage = () => {
@@ -22,57 +17,62 @@ const ProductCategoriesPage = () => {
     { id: "category_name", label: "Category Name" },
     { id: "hsn_code", label: "HSN Code" },
     { id: "category_type", label: "Type" },
-    { 
+    {
       render: (value) => (
         <Chip
           label={value ? "Active" : "Inactive"}
           color={value ? "success" : "error"}
           size="small"
         />
-      )
-    }
+      ),
+    },
   ];
 
   const [data, setData] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchCategories = async () => {
-      try {
-        const response = await axios.get("http://localhost:5000/api/product-categories");
-        
-        // Process the response data
-        const categoriesData = Array.isArray(response.data) 
-          ? response.data 
-          : response.data?.data 
-            ? response.data.data 
-            : [response.data];
+    // Dummy data instead of API call
+    const dummyData = [
+      {
+        category_code: "CAT-1001",
+        category_name: "Laptops",
+        hsn_code: "8471",
+        category_type: "Electronics",
+        is_active: true,
+      },
+      {
+        category_code: "CAT-1002",
+        category_name: "Desktops",
+        hsn_code: "8471",
+        category_type: "Electronics",
+        is_active: true,
+      },
+      {
+        category_code: "CAT-1003",
+        category_name: "Accessories",
+        hsn_code: "8473",
+        category_type: "Peripheral",
+        is_active: false,
+      },
+    ];
 
-        // Add serial numbers
-        const processedData = categoriesData.map((item, index) => ({
-          ...item,
-          sno: index + 1,
-          is_active: Boolean(item.is_active)
-        }));
+    const processedData = dummyData.map((item, index) => ({
+      ...item,
+      sno: index + 1,
+    }));
 
-        setData(processedData);
-      } catch (err) {
-        setError(err.response?.data?.message || err.message);
-        console.error("Error fetching categories:", err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchCategories();
+    setTimeout(() => {
+      setData(processedData);
+      setLoading(false);
+    }, 500); // simulate API delay
   }, []);
 
-  // Filter data based on search term
-  const filteredData = data.filter(item =>
+  // Filter data based on search term (optional, currently unused)
+  const filteredData = data.filter((item) =>
     Object.values(item).some(
-      value =>
+      (value) =>
         value &&
         value.toString().toLowerCase().includes(searchTerm.toLowerCase())
     )
@@ -86,24 +86,11 @@ const ProductCategoriesPage = () => {
     );
   }
 
-  if (error) {
-    return (
-      <Box p={2}>
-        <Alert severity="error">Error: {error}</Alert>
-      </Box>
-    );
-  }
-
   return (
     <Card variant="outlined">
       <CardContent>
         <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
           <Typography variant="h6">Product Categories</Typography>
-    
-        </Box>
-
-        <Box mb={3}>
-
         </Box>
 
         {filteredData.length > 0 ? (

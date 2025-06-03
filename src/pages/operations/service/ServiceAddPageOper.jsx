@@ -1,6 +1,10 @@
 import React, { useState } from 'react';
+import axios from 'axios';
+import { useNavigate } from 'react-router-dom';
+import { CircularProgress, Snackbar, Alert } from '@mui/material';
 
 const ServiceAddPageOper = () => {
+  const navigate = useNavigate();
   const [formData, setFormData] = useState({
     productImage: null,
     productId: '',
@@ -16,6 +20,10 @@ const ServiceAddPageOper = () => {
     activeStatus: false
   });
 
+  const [loading, setLoading] = useState(false);
+  const [success, setSuccess] = useState(false);
+  const [error, setError] = useState(null);
+
   const handleChange = (e) => {
     const { name, value, type, checked, files } = e.target;
     setFormData(prev => ({
@@ -24,9 +32,61 @@ const ServiceAddPageOper = () => {
     }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log('Form submitted:', formData);
+    setLoading(true);
+    setError(null);
+    
+    try {
+      // Create FormData for file upload
+      const formDataToSend = new FormData();
+      
+      // Append all form fields to FormData
+      Object.keys(formData).forEach(key => {
+        if (key === 'productImage' && formData[key]) {
+          formDataToSend.append('productImage', formData[key]);
+        } else {
+          formDataToSend.append(key, formData[key]);
+        }
+      });
+
+      const response = await axios.post(
+        'http://localhost:5000/api/services/create',
+        formDataToSend,
+        {
+          headers: {
+            'Content-Type': 'multipart/form-data'
+          }
+        }
+      );
+      
+      console.log('Service created:', response.data);
+      setSuccess(true);
+      setTimeout(() => {
+        navigate('/dashboard/services'); // Adjust the route as needed
+      }, 3000);
+      
+      // Reset form
+      setFormData({
+        productImage: null,
+        productId: '',
+        productName: '',
+        type: '',
+        priority: '',
+        orderNo: '',
+        clientId: '',
+        serviceStaff: '',
+        startDate: '',
+        endDate: '',
+        taskDuration: '',
+        activeStatus: false
+      });
+    } catch (err) {
+      console.error('Error creating service:', err);
+      setError(err.response?.data?.message || 'Failed to create service');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleCancel = () => {
@@ -44,6 +104,11 @@ const ServiceAddPageOper = () => {
       taskDuration: '',
       activeStatus: false
     });
+  };
+
+  const handleCloseSnackbar = () => {
+    setSuccess(false);
+    setError(null);
   };
 
   return (
@@ -126,14 +191,14 @@ const ServiceAddPageOper = () => {
             />
             <Field 
               label="Start Date & Time" 
-              placeholder="dd-mm-yyyy"
+              type="datetime-local"
               name="startDate"
               value={formData.startDate}
               onChange={handleChange}
             />
             <Field 
               label="End Date & Time" 
-              placeholder="dd-mm-yyyy"
+              type="datetime-local"
               name="endDate"
               value={formData.endDate}
               onChange={handleChange}
@@ -164,13 +229,42 @@ const ServiceAddPageOper = () => {
         </div>
         <div>
           <button style={cancelBtnStyle} onClick={handleCancel}>Cancel</button>
-          <button style={createBtnStyle} onClick={handleSubmit}>Create</button>
+          <button 
+            style={createBtnStyle} 
+            onClick={handleSubmit}
+            disabled={loading}
+          >
+            {loading && <CircularProgress size={16} color="inherit" style={{ marginRight: '8px' }} />}
+            Create
+          </button>
         </div>
       </div>
+
+      {/* Success/Error notifications */}
+      <Snackbar
+        open={success}
+        autoHideDuration={6000}
+        onClose={handleCloseSnackbar}
+      >
+        <Alert onClose={handleCloseSnackbar} severity="success">
+          Service created successfully!
+        </Alert>
+      </Snackbar>
+
+      <Snackbar
+        open={!!error}
+        autoHideDuration={6000}
+        onClose={handleCloseSnackbar}
+      >
+        <Alert onClose={handleCloseSnackbar} severity="error">
+          {error}
+        </Alert>
+      </Snackbar>
     </div>
   );
 };
 
+// Field component and styles remain the same as in your original code
 const Field = ({ label, type = 'text', placeholder, value, onChange, name, disabled = false, style }) => (
   <div style={{ ...fieldContainerStyle, ...style }}>
     <label style={labelStyle}>{label}</label>
@@ -202,7 +296,7 @@ const Field = ({ label, type = 'text', placeholder, value, onChange, name, disab
   </div>
 );
 
-// Styles
+// Styles (same as your original styles)
 const containerStyle = {
   padding: '2rem',
   fontFamily: '"Inter", "Segoe UI", -apple-system, BlinkMacSystemFont, sans-serif',
@@ -365,6 +459,8 @@ const createBtnStyle = {
   fontSize: '0.875rem',
   fontWeight: '500',
   marginLeft: '0.75rem',
+  display: 'flex',
+  alignItems: 'center',
 };
 
 export default ServiceAddPageOper;

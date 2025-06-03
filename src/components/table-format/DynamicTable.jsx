@@ -23,6 +23,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 
 // Import Icons
 import DeleteIcon from "../../assets/logos/delete.png";
+import Dchallan from "../../assets/logos/viewdeliverchallan.png";
 import EditIcon from "../../assets/logos/edit.png";
 import StatusOff from "../../assets/logos/turnoff.png";
 import StatusOn from "../../assets/logos/turnon.png";
@@ -138,7 +139,7 @@ const DynamicTable = ({
         alignItems="center"
         gap={2}
         mb={2}
-      >
+>
         <TextField
           label="Search"
           variant="outlined"
@@ -176,11 +177,13 @@ const DynamicTable = ({
                   {column.label}
                 </TableCell>
               ))}
-              {tableType !== "vendor" && tableType !== "invoices" && tableType !== "operations" && (
-                <TableCell align="center" sx={{ fontWeight: "bold" }}>
-                  Active Status
-                </TableCell>
-              )}
+              {tableType !== "vendor" &&
+                tableType !== "invoices" &&
+                tableType !== "operations" && (
+                  <TableCell align="center" sx={{ fontWeight: "bold" }}>
+                    Active Status
+                  </TableCell>
+                )}
 
               <TableCell align="center" sx={{ fontWeight: "bold" }}>
                 Action
@@ -192,30 +195,44 @@ const DynamicTable = ({
               paginatedData.map((row, rowIndex) => (
                 <TableRow key={row.id}>
                   {columns.map((column, colIndex) => (
-                    <TableCell key={colIndex} align="center" sx={{minWidth: 106}} >
+                    <TableCell
+                      key={colIndex}
+                      align="center"
+                      sx={{ minWidth: 106 }}
+                    >
                       {row[column.id] || "N/A"}
                     </TableCell>
                   ))}
-                  {tableType !== "vendor" && tableType !== "invoices" && tableType !== "operations" && (
-                    <TableCell align="center">
-                      <Button onClick={() => toggleStatus(rowIndex)}>
-                        <img
-                          src={status[rowIndex] ? StatusOn : StatusOff}
-                          alt={status[rowIndex] ? "Active" : "Inactive"}
-                          width="40"
-                          height="24"
-                        />
-                      </Button>
-                    </TableCell>
-                  )}
+                  {tableType !== "vendor" &&
+                    tableType !== "invoices" &&
+                    tableType !== "operations" && (
+                      <TableCell align="center">
+                        <Button onClick={() => toggleStatus(rowIndex)}>
+                          <img
+                            src={status[rowIndex] ? StatusOn : StatusOff}
+                            alt={status[rowIndex] ? "Active" : "Inactive"}
+                            width="40"
+                            height="24"
+                          />
+                        </Button>
+                      </TableCell>
+                    )}
                   <TableCell align="center">
                     <Box display="flex" justifyContent="center" gap={1}>
+                      {tableType === "delivery-challan" && (
+                        <Button
+                        onClick={() => handleView(row)}
+                        sx={{ minWidth: "30px", p: 0 }}>
+                        <img src={Dchallan} alt="Challan" width="45" height="35" />
+                      </Button>
+                      )}
                       <Button
                         onClick={() => handleEdit(row)}
                         sx={{ minWidth: "30px", p: 0 }}
                       >
                         <img src={EditIcon} alt="Edit" width="45" height="35" />
                       </Button>
+
                       <Button
                         onClick={() => handleDeleteClick(row)}
                         sx={{ minWidth: "30px", p: 0 }}

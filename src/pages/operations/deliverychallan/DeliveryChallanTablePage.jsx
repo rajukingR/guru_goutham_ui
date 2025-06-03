@@ -2,7 +2,6 @@ import React from "react";
 import DynamicTable from "../../../components/table-format/DynamicTable";
 
 const DeliveryChallanTablePage = () => {
-  // Define columns for the brands table
   const columns = [
     { id: "id", label: "ID" },
     { id: "logo", label: "Brand Logo" },
@@ -12,7 +11,6 @@ const DeliveryChallanTablePage = () => {
     { id: "status", label: "Status" },
   ];
 
-  // Define dummy data for brands
   const data = [
     {
       id: 1,
