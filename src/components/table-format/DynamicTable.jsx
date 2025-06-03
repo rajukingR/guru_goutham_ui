@@ -20,10 +20,16 @@ import {
   Typography,
 } from "@mui/material";
 import { useNavigate, useLocation } from "react-router-dom";
+import axios from "axios";
+import { jsPDF } from "jspdf";
+import html2canvas from "html2canvas";
 
 // Import Icons
 import DeleteIcon from "../../assets/logos/delete.png";
 import EditIcon from "../../assets/logos/edit.png";
+import ViewDC from "../../assets/logos/ViewDC.png";
+import ViewDCLogo from "../../../public/SORT-ICON.png";
+
 import StatusOff from "../../assets/logos/turnoff.png";
 import StatusOn from "../../assets/logos/turnon.png";
 import API_URL from "../../api/Api_url";
@@ -32,25 +38,229 @@ import API_URL from "../../api/Api_url";
 const apiEndpoints = {
   settings: `${API_URL}/users`,
   roles: `${API_URL}/roles`,
-  department: `${API_URL}/department`,
-  "experience-range": `${API_URL}/experience-range`,
-  WorkLayout: `${API_URL}/work-layouts`,
-  CandidateStatus: `${API_URL}/candidate-status`,
-  RevenType: `${API_URL}/revenue-models`,
-  JobTitle: `${API_URL}/job-Title`,
-  Skills: `${API_URL}/skills-add`,
-  Currency: `${API_URL}/currency`,
-  RateType: `${API_URL}/rate-types`,
-  OffBoardingReasons: `${API_URL}/offboarding-reasons`,
-  Availability: `${API_URL}/availability-status`,
-  OverallStatus: `${API_URL}/overall-status`,
-  SourceSe: `${API_URL}/sources`,
-  LanguageProficiency: `${API_URL}/language-proficiency`,
-  BenchStatus: `${API_URL}/bench-status`,
-  InterviewName: `${API_URL}/interview-names`,
-  InterviewStatus: `${API_URL}/interview-statuses`,
-  Industry: `${API_URL}/industries`,
-  branch: `${API_URL}/branch`,
+  product_categories: `${API_URL}/product-categories`,
+  operations: `${API_URL}/delivery-challans`,
+};
+
+// Delivery Challan Dialog Component
+const DeliveryChallanDialog = ({ open, onClose, dcData }) => {
+  if (!dcData) return null;
+
+  const handleDownloadPDF = () => {
+    const input = document.getElementById('delivery-challan-container');
+    
+    html2canvas(input, {
+      scale: 2,
+      logging: false,
+      useCORS: true,
+      allowTaint: true
+    }).then(canvas => {
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      const imgWidth = 210;
+      const imgHeight = canvas.height * imgWidth / canvas.width;
+      
+      pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
+      pdf.save(`delivery-challan-${dcData.dc_id}.pdf`);
+    });
+  };
+
+  return (
+    <Dialog open={open} onClose={onClose} maxWidth="lg" fullWidth>
+      <DialogTitle>Delivery Challan Details</DialogTitle>
+      <DialogContent>
+        <div style={containerStyle}>
+          <div id="delivery-challan-container" style={receiptContainerStyle}>
+            {/* Header Color Bar */}
+            <div style={headerBarStyle}></div>
+            
+            {/* Company Header */}
+            <div style={companyHeaderStyle}>
+              <div style={companyInfoContainerStyle}>
+                <div style={logoStyle}>
+                  <img src={ViewDCLogo} alt="Company Logo" style={{ width: "100%", height: "100%", objectFit: "contain" }} />
+                </div>
+                <div>
+                  <div style={companyNameStyle}>Guru Goutam Infotech Pvt. Ltd.</div>
+                  <div style={companyDetailsStyle}>
+                    CIN: U72200KA2008PTC047679<br />
+                    GST: {dcData.gst_number || '29AADCG2608Q1Z6'}
+                  </div>
+                </div>
+              </div>
+              <div style={challanHeaderStyle}>
+                <div style={challanTitleStyle}>DELIVERY CHALLAN</div>
+                <div style={challanDetailsStyle}>
+                  Challan No. &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;: {dcData.dc_id}<br />
+                  Challan Date. &nbsp;&nbsp;&nbsp;: {new Date(dcData.dc_date).toLocaleDateString('en-GB')}
+                </div>
+              </div>
+            </div>
+            
+            {/* Recipient Section */}
+            <div style={recipientSectionStyle}>
+              <div style={recipientContainerStyle}>
+                <div style={recipientAddressStyle}>
+                  <div style={recipientLabelStyle}>To</div>
+                  {dcData.shipping_name}<br />
+                  {dcData.street && `${dcData.street}, `}
+                  {dcData.landmark && `${dcData.landmark}, `}
+                  {dcData.city}, {dcData.state}<br />
+                  {dcData.country} - {dcData.pincode}
+                </div>
+                <div style={recipientDetailsGridStyle}>
+                  <div>
+                    <div style={detailLabelStyle}>Customer Code :</div>
+                    {dcData.customer_code}
+                  </div>
+                  <div>
+                    <div style={detailLabelStyle}>Contact Person :</div>
+                    {dcData.shipping_ordered_by}
+                  </div>
+                  <div>
+                    <div style={detailLabelStyle}>Received Person :</div>
+                    {dcData.receiver_name}
+                  </div>
+                  <div>
+                    <div style={detailLabelStyle}>Delivered Staff :</div>
+                    {dcData.delivery_person_name}
+                  </div>
+                  <div>
+                    <div style={detailLabelStyle}>PO Number:</div>
+                    {dcData.order_number || 'N/A'}
+                  </div>
+                  <div>
+                    <div style={detailLabelStyle}>Contact Number :</div>
+                    {dcData.shipping_phone_number}
+                  </div>
+                  <div>
+                    <div style={detailLabelStyle}>Receiver Number :</div>
+                    {dcData.receiver_phone_number}
+                  </div>
+                  <div>
+                    <div style={detailLabelStyle}>Vehicle Number :</div>
+                    {dcData.vehicle_number}
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            {/* Items Table */}
+            <table style={tableStyle}>
+              <thead>
+                <tr>
+                  <th style={tableHeaderNoStyle}>NO.</th>
+                  <th style={tableHeaderParticularsStyle}>PARTICULARS</th>
+                  <th style={tableHeaderQtyStyle}>QTY</th>
+                  <th style={tableHeaderQtyStyle}>Price</th>
+                </tr>
+              </thead>
+              <tbody>
+                {dcData.items?.map((item, index) => (
+                  <tr key={item.id} style={index % 2 === 0 ? tableRowOddStyle : tableRowEvenStyle}>
+                    <td style={tableCellCenterStyle}>{index + 1}</td>
+                    <td style={tableCellStyle}>
+                      <div style={itemTitleStyle}>{item.product_name}</div>
+                    </td>
+                    <td style={tableCellCenterStyle}>{item.quantity}</td>
+                    <td style={tableCellCenterStyle}>
+                      ₹{Number(item.total_price).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            
+            {/* Footer Info */}
+            <div style={footerInfoStyle}>
+              <div style={taxDetailsStyle}>
+                PAN No. &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;: {dcData.pan_number}<br />
+                GST No. &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;: {dcData.gst_number}
+              </div>
+              
+              <div style={totalContainerStyle}>
+                <div style={totalLabelStyle}>TOTAL QTY :</div>
+                <div style={totalValueStyle}>{dcData.totalQuantity}</div>
+              </div>
+              <div style={totalContainerStyle}>
+                <div style={totalLabelStyle}>Total Amount :</div>
+                <div style={totalValueStyle}>
+                  ₹{Number(dcData.totalPrice).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                </div>
+              </div>
+            </div>
+            
+            {/* Not For Sale */}
+            <div style={notForSaleStyle}>
+              {dcData.type === 'Rent' ? 'NOT FOR SALE - RETURNABLE BASIS ONLY' : 'FOR SALE'}
+            </div>
+            
+            {/* Signature Section */}
+            <div style={signatureSectionStyle}>
+              <div style={leftSignatureAreaStyle}>
+                <div style={jurisdictionNoteStyle}>Note: Subjected to Bengaluru Jurisdiction</div>
+                <table style={signatureTableStyle}>
+                  <tbody>
+                    <tr>
+                      <td style={signatureTableHeaderStyle}>Delivery Address</td>
+                      <td style={signatureTableHeaderStyle}>Receiver Date and Signature</td>
+                    </tr>
+                    <tr>
+                      <td style={signatureTableCellStyle}>{dcData.shipping_name}<br />
+                  {dcData.street && `${dcData.street}, `}
+                  {dcData.landmark && `${dcData.landmark}, `}
+                  {dcData.city}, {dcData.state}<br />
+                  {dcData.country} - {dcData.pincode}</td>
+                      <td style={signatureTableCellStyle}></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <div style={rightSignatureAreaStyle}>
+                <div style={companySignatureLabelStyle}>For Guru Goutham Infotech Private Limited</div>
+                <div style={signatureBoxStyle}>
+                  SD/-
+                </div>
+                <div style={signatureDesignationStyle}>Authorised Signatory</div>
+              </div>
+            </div>
+            
+            {/* Company Footer */}
+            <div style={companyFooterStyle}>
+              <div style={footerAddressStyle}>
+                <span>📍</span>
+                <span>
+                  No. 8, 2nd Cross, Diagonal Road, 3rd Block,<br />
+                  Jayanagar Bengaluru-560011.
+                </span>
+              </div>
+              <div style={footerContactStyle}>
+                <div style={footerContactItemStyle}>
+                  <span>🌐</span>
+                  <span>gurugoutam.com</span>
+                </div>
+                <div style={footerContactItemStyle}>
+                  <span>📞</span>
+                  <span>080-2242 9955, +91 9449 0789 55</span>
+                </div>
+                <div style={footerContactItemStyle}>
+                  <span>✉️</span>
+                  <span>info@gurugoutam.com</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={onClose}>Close</Button>
+        <Button onClick={handleDownloadPDF} variant="contained" color="primary">
+          Download PDF
+        </Button>
+        <Button onClick={() => window.print()}>Print</Button>
+      </DialogActions>
+    </Dialog>
+  );
 };
 
 const DynamicTable = ({
@@ -65,9 +275,14 @@ const DynamicTable = ({
 
   const [data, setData] = useState([]);
   const [status, setStatus] = useState([]);
+  const [page, setPage] = useState(1);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
+  const [selectedRow, setSelectedRow] = useState(null);
+  const [openViewDialog, setOpenViewDialog] = useState(false);
+  const [selectedDCRow, setSelectedDCRow] = useState(null);
 
   useEffect(() => {
-    console.log("Received initialData:", initialData);
 
     if (Array.isArray(initialData) && initialData.length > 0) {
       setData(initialData);
@@ -77,11 +292,6 @@ const DynamicTable = ({
       setStatus([]);
     }
   }, [initialData]);
-
-  const [page, setPage] = useState(1);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
-  const [selectedRow, setSelectedRow] = useState(null);
 
   const toggleStatus = (index) => {
     setStatus((prevStatus) => {
@@ -118,6 +328,17 @@ const DynamicTable = ({
     console.log("Selected Row for Deletion:", row);
     setSelectedRow(row);
     setOpenDeleteDialog(true);
+  };
+
+  const handleViewDC = async (row) => {
+    try {
+      const response = await axios.get(`${API_URL}/delivery-challans/${row.id}`);
+      console.log("DC Data Response:", response.data);
+      setSelectedDCRow(response.data);
+      setOpenViewDialog(true);
+    } catch (error) {
+      console.error("Error fetching DC details:", error);
+    }
   };
 
   // Handle Confirm Delete API Call
@@ -162,21 +383,23 @@ const DynamicTable = ({
           size="small"
           onChange={(e) => setSearchTerm(e.target.value)}
         />
-        <Button
-          variant="contained"
-          color="primary"
-          onClick={() => navigate(`${location.pathname}/add`)}
-        >
-          {tableType === "settings"
-            ? "Add User"
-            : tableType === "crm"
-            ? "Add Client"
-            : tableType === "operations"
-            ? "Add Account"
-            : tableType === "job_description"
-            ? "Add Job Description"
-            : `Add ${tableType.charAt(0).toUpperCase() + tableType.slice(1)}`}
-        </Button>
+        {tableType !== "inventory" && (
+          <Button
+            variant="contained"
+            color="primary"
+            onClick={() => navigate(`${location.pathname}/add`)}
+          >
+            {tableType === "settings"
+              ? "Add User"
+              : tableType === "crm"
+              ? "Add Client"
+              : tableType === "operations"
+              ? "Add DC"
+              : tableType === "job_description"
+              ? "Add Job Description"
+              : `Add ${tableType.charAt(0).toUpperCase() + tableType.slice(1)}`}
+          </Button>
+        )}
       </Box>
 
       {/* Table */}
@@ -193,15 +416,24 @@ const DynamicTable = ({
                   {column.label}
                 </TableCell>
               ))}
-              {tableType !== "vendor" && tableType !== "invoices" && tableType !== "operations" && (
+              {tableType !== "purchase-requests" &&
+                tableType !== "purchase-orders" &&
+                tableType !== "goodsreceipt" &&
+                tableType !== "po-quotations" &&
+                tableType !== "supplier" &&
+                tableType !== "inventory" &&
+                tableType !== "quotations" &&
+                tableType !== "orders" &&
+                tableType !== "operations" && (
+                  <TableCell align="center" sx={{ fontWeight: "bold" }}>
+                    Active Status
+                  </TableCell>
+                )}
+              {tableType !== "inventory" && (
                 <TableCell align="center" sx={{ fontWeight: "bold" }}>
-                  Active Status
+                  Action
                 </TableCell>
               )}
-
-              <TableCell align="center" sx={{ fontWeight: "bold" }}>
-                Action
-              </TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -209,43 +441,128 @@ const DynamicTable = ({
               paginatedData.map((row, rowIndex) => (
                 <TableRow key={row.id}>
                   {columns.map((column, colIndex) => (
-                    <TableCell key={colIndex} align="center" sx={{minWidth: 106}} >
-                      {row[column.id] || "N/A"}
+                    <TableCell
+                      key={colIndex}
+                      align="center"
+                      sx={{
+                        minWidth: column.id === "specifications" ? 250 : 106,
+                        maxWidth: column.id === "specifications" ? 300 : "auto",
+                        whiteSpace:
+                          column.id === "specifications"
+                            ? "pre-wrap"
+                            : "normal",
+                        wordWrap:
+                          column.id === "specifications"
+                            ? "break-word"
+                            : "normal",
+                        textAlign:
+                          column.id === "specifications" ? "left" : "center",
+                      }}
+                    >
+                      {[
+                        "purchase_request_status",
+                        "po_quotation_status",
+                        "po_status",
+                        "goods_receipt_status",
+                        "status",
+                        "order_status",
+                      ].includes(column.id) ? (
+                        <Typography
+                          variant="body2"
+                          sx={{
+                            fontWeight: 600,
+                            px: 1.5,
+                            py: 0.5,
+                            borderRadius: 2,
+                            display: "inline-block",
+                            color:
+                              row[column.id] === "Pending"
+                                ? "#b26a00"
+                                : row[column.id] === "Approved"
+                                ? "#1b5e20"
+                                : row[column.id] === "Rejected"
+                                ? "#b71c1c"
+                                : "inherit",
+                            backgroundColor:
+                              row[column.id] === "Pending"
+                                ? "#fff3e0"
+                                : row[column.id] === "Approved"
+                                ? "#e8f5e9"
+                                : row[column.id] === "Rejected"
+                                ? "#ffebee"
+                                : "transparent",
+                          }}
+                        >
+                          {row[column.id]}
+                        </Typography>
+                      ) : (
+                        row[column.id] || "N/A"
+                      )}
                     </TableCell>
                   ))}
-                  {tableType !== "vendor" && tableType !== "invoices" && tableType !== "operations" && (
+
+                  {tableType !== "purchase-requests" &&
+                    tableType !== "purchase-orders" &&
+                    tableType !== "goodsreceipt" &&
+                    tableType !== "po-quotations" &&
+                    tableType !== "supplier" &&
+                    tableType !== "inventory" &&
+                    tableType !== "quotations" &&
+                    tableType !== "orders" &&
+                    tableType !== "operations" && (
+                      <TableCell align="center">
+                        <Button onClick={() => toggleStatus(rowIndex)}>
+                          <img
+                            src={status[rowIndex] ? StatusOn : StatusOff}
+                            alt={status[rowIndex] ? "Active" : "Inactive"}
+                            width="40"
+                            height="24"
+                          />
+                        </Button>
+                      </TableCell>
+                    )}
+
+                  {tableType !== "inventory" && (
                     <TableCell align="center">
-                      <Button onClick={() => toggleStatus(rowIndex)}>
-                        <img
-                          src={status[rowIndex] ? StatusOn : StatusOff}
-                          alt={status[rowIndex] ? "Active" : "Inactive"}
-                          width="40"
-                          height="24"
-                        />
-                      </Button>
+                      <Box display="flex" justifyContent="center" gap={1}>
+                        {tableType === "operations" && (
+                          <Button
+                            onClick={() => handleViewDC(row)}
+                            sx={{ minWidth: "30px", p: 0 }}
+                          >
+                            <img
+                              src={ViewDC}
+                              alt="ViewDC"
+                              width="45"
+                              height="35"
+                            />
+                          </Button>
+                        )}
+                        <Button
+                          onClick={() => handleEdit(row)}
+                          sx={{ minWidth: "30px", p: 0 }}
+                        >
+                          <img
+                            src={EditIcon}
+                            alt="Edit"
+                            width="45"
+                            height="35"
+                          />
+                        </Button>
+                        <Button
+                          onClick={() => handleDeleteClick(row)}
+                          sx={{ minWidth: "30px", p: 0 }}
+                        >
+                          <img
+                            src={DeleteIcon}
+                            alt="Delete"
+                            width="45"
+                            height="35"
+                          />
+                        </Button>
+                      </Box>
                     </TableCell>
                   )}
-                  <TableCell align="center">
-                    <Box display="flex" justifyContent="center" gap={1}>
-                      <Button
-                        onClick={() => handleEdit(row)}
-                        sx={{ minWidth: "30px", p: 0 }}
-                      >
-                        <img src={EditIcon} alt="Edit" width="45" height="35" />
-                      </Button>
-                      <Button
-                        onClick={() => handleDeleteClick(row)}
-                        sx={{ minWidth: "30px", p: 0 }}
-                      >
-                        <img
-                          src={DeleteIcon}
-                          alt="Delete"
-                          width="45"
-                          height="35"
-                        />
-                      </Button>
-                    </Box>
-                  </TableCell>
                 </TableRow>
               ))
             ) : (
@@ -296,8 +613,695 @@ const DynamicTable = ({
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* Delivery Challan Dialog */}
+      <DeliveryChallanDialog 
+        open={openViewDialog} 
+        onClose={() => setOpenViewDialog(false)} 
+        dcData={selectedDCRow} 
+      />
     </Box>
   );
 };
 
+// Styles (keep all your existing styles exactly as they are)
+const containerStyle = {
+  minHeight: '100vh',
+  backgroundColor: '#f3f4f6',
+  padding: '1.25rem',
+};
+
+const receiptContainerStyle = {
+  maxWidth: '64rem',
+  margin: '0 auto',
+  backgroundColor: '#ffffff',
+  boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
+};
+
+const headerBarStyle = {
+  height: '0.5rem',
+  background: 'linear-gradient(to right, #475569, #475569, #60a5fa)',
+};
+
+const companyHeaderStyle = {
+  padding: '1.25rem',
+  display: 'flex',
+  justifyContent: 'space-between',
+  alignItems: 'flex-start',
+};
+
+const companyInfoContainerStyle = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: '1rem',
+};
+
+const logoStyle = {
+  width: '3rem',
+  height: '3rem',
+  backgroundColor: 'white',
+  borderRadius: '50%',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  color: '#ffffff',
+  fontWeight: 'bold',
+  fontSize: '0.875rem',
+};
+
+const companyNameStyle = {
+  color: '#f97316',
+  fontSize: '1.5rem',
+  fontWeight: 'bold',
+};
+
+const companyDetailsStyle = {
+  fontSize: '0.75rem',
+  color: '#4b5563',
+  marginTop: '0.25rem',
+};
+
+const challanHeaderStyle = {
+  textAlign: 'right',
+};
+
+const challanTitleStyle = {
+  color: '#60a5fa',
+  fontSize: '2.25rem',
+  fontWeight: 'bold',
+  letterSpacing: '0.1em',
+};
+
+const challanDetailsStyle = {
+  fontSize: '0.75rem',
+  color: '#4b5563',
+  marginTop: '0.5rem',
+};
+
+const recipientSectionStyle = {
+  backgroundColor: '#e2e8f0',
+  padding: '1rem 1.25rem',
+};
+
+const recipientContainerStyle = {
+  display: 'flex',
+  justifyContent: 'space-between',
+};
+
+const recipientAddressStyle = {
+  fontSize: '0.75rem',
+  color: '#1f2937',
+};
+
+const recipientLabelStyle = {
+  fontWeight: 'bold',
+  marginBottom: '0.25rem',
+};
+
+const recipientDetailsGridStyle = {
+  display: 'grid',
+  gridTemplateColumns: 'repeat(4, 1fr)',
+  gap: '1.25rem',
+  fontSize: '0.75rem',
+  color: '#4b5563',
+};
+
+const detailLabelStyle = {
+  fontWeight: 'bold',
+  color: '#1f2937',
+  marginBottom: '0.25rem',
+};
+
+const tableStyle = {
+  width: '100%',
+  borderCollapse: 'collapse',
+};
+
+const tableHeaderNoStyle = {
+  backgroundColor: '#475569',
+  color: '#ffffff',
+  padding: '0.75rem',
+  textAlign: 'center',
+  fontWeight: 'bold',
+  fontSize: '0.75rem',
+  width: '4rem',
+};
+
+const tableHeaderParticularsStyle = {
+  backgroundColor: '#60a5fa',
+  color: '#ffffff',
+  padding: '0.75rem',
+  textAlign: 'left',
+  fontWeight: 'bold',
+  fontSize: '0.75rem',
+};
+
+const tableHeaderQtyStyle = {
+  backgroundColor: '#60a5fa',
+  color: '#ffffff',
+  padding: '0.75rem',
+  textAlign: 'center',
+  fontWeight: 'bold',
+  fontSize: '0.75rem',
+  width: '5rem',
+};
+
+const tableRowOddStyle = {
+  borderBottom: '1px solid #e2e8f0',
+  backgroundColor: '#f1f5f9',
+};
+
+const tableRowEvenStyle = {
+  borderBottom: '1px solid #e2e8f0',
+  backgroundColor: '#e2e8f0',
+};
+
+const tableCellStyle = {
+  padding: '1rem',
+  fontSize: '0.75rem',
+};
+
+const tableCellCenterStyle = {
+  padding: '1rem',
+  textAlign: 'center',
+  fontWeight: 'bold',
+  fontSize: '0.75rem',
+};
+
+const itemTitleStyle = {
+  fontWeight: 'bold',
+  marginBottom: '0.25rem',
+};
+
+const footerInfoStyle = {
+  padding: '1.25rem',
+  display: 'flex',
+  justifyContent: 'space-between',
+  alignItems: 'flex-end',
+};
+
+const taxDetailsStyle = {
+  fontSize: '0.75rem',
+  color: '#4b5563',
+};
+
+const totalContainerStyle = {
+  display: 'flex',
+  alignItems: 'center',
+};
+
+const totalLabelStyle = {
+  backgroundColor: '#60a5fa',
+  color: '#ffffff',
+  padding: '0.5rem 1rem',
+  fontSize: '0.875rem',
+  fontWeight: 'bold',
+};
+
+const totalValueStyle = {
+  backgroundColor: '#475569',
+  color: '#ffffff',
+  padding: '0.5rem 1rem',
+  fontSize: '1.125rem',
+  fontWeight: 'bold',
+  minWidth: '3rem',
+  textAlign: 'center',
+};
+
+const notForSaleStyle = {
+  textAlign: 'center',
+  fontSize: '0.875rem',
+  fontWeight: 'bold',
+  color: '#1f2937',
+  margin: '1.25rem 0',
+};
+
+const signatureSectionStyle = {
+  padding: '0 1.25rem 1.25rem',
+  display: 'flex',
+  justifyContent: 'space-between',
+  alignItems: 'flex-start',
+  fontSize: '0.75rem',
+  color: '#4b5563',
+};
+
+const leftSignatureAreaStyle = {
+  width: '50%',
+};
+
+const jurisdictionNoteStyle = {
+  marginBottom: '0.75rem',
+  color: '#1f2937',
+};
+
+const signatureTableStyle = {
+  width: '100%',
+  borderCollapse: 'collapse',
+  border: '1px solid #d1d5db',
+};
+
+const signatureTableHeaderStyle = {
+  border: '1px solid #d1d5db',
+  padding: '1rem',
+  fontWeight: 'bold',
+  backgroundColor: '#ffffff',
+};
+
+const signatureTableCellStyle = {
+  border: '1px solid #d1d5db',
+  padding: '1rem',
+  height: '5rem',
+  backgroundColor: '#ffffff',
+};
+
+const rightSignatureAreaStyle = {
+  textAlign: 'center',
+  marginLeft: '2rem',
+};
+
+const companySignatureLabelStyle = {
+  marginBottom: '0.75rem',
+  color: '#1f2937',
+};
+
+const signatureBoxStyle = {
+  width: '12rem',
+  height: '6rem',
+  border: '1px solid #d1d5db',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  color: '#4b5563',
+  fontSize: '0.875rem',
+  backgroundColor: '#ffffff',
+};
+
+const signatureDesignationStyle = {
+  marginTop: '0.75rem',
+  fontSize: '0.75rem',
+  color: '#1f2937',
+};
+
+const companyFooterStyle = {
+  backgroundColor: '#334155',
+  color: '#ffffff',
+  padding: '1rem 1.25rem',
+  display: 'flex',
+  justifyContent: 'space-between',
+  alignItems: 'center',
+  fontSize: '0.75rem',
+};
+
+const footerAddressStyle = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: '0.5rem',
+};
+
+const footerContactStyle = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: '1.25rem',
+};
+
+const footerContactItemStyle = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: '0.5rem',
+};
+
 export default DynamicTable;
+
+
+
+
+// import React, { useEffect, useState } from "react";
+// import {
+//   Table,
+//   TableBody,
+//   TableCell,
+//   TableContainer,
+//   TableHead,
+//   TableRow,
+//   Paper,
+//   Button,
+//   Box,
+//   Stack,
+//   Pagination,
+//   TextField,
+//   Dialog,
+//   DialogActions,
+//   DialogContent,
+//   DialogContentText,
+//   DialogTitle,
+//   Typography,
+// } from "@mui/material";
+// import { useNavigate, useLocation } from "react-router-dom";
+
+// // Import Icons
+// import DeleteIcon from "../../assets/logos/delete.png";
+// import EditIcon from "../../assets/logos/edit.png";
+// import StatusOff from "../../assets/logos/turnoff.png";
+// import StatusOn from "../../assets/logos/turnon.png";
+// import API_URL from "../../api/Api_url";
+
+// // API Endpoints Mapping
+// const apiEndpoints = {
+//   settings: `${API_URL}/users`,
+//   roles: `${API_URL}/roles`,
+//   product_categories: `${API_URL}/product-categories`,
+//   operations: `${API_URL}/delivery-challans`,
+
+// };
+
+// const DynamicTable = ({
+
+//   columns,
+//   data: initialData = [],
+//   rowsPerPage = 10,
+// }) => {
+//   const navigate = useNavigate();
+//   const location = useLocation();
+//   const tableType = location.pathname.split("/").pop();
+//   const deleteApiUrl = apiEndpoints[tableType];
+
+//   const [data, setData] = useState([]);
+//   const [status, setStatus] = useState([]);
+
+//   useEffect(() => {
+
+//     if (Array.isArray(initialData) && initialData.length > 0) {
+//       setData(initialData);
+//       setStatus(initialData.map((row) => row.status === "Active"));
+//     } else {
+//       setData([]);
+//       setStatus([]);
+//     }
+//   }, [initialData]);
+
+//   const [page, setPage] = useState(1);
+//   const [searchTerm, setSearchTerm] = useState("");
+//   const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
+//   const [selectedRow, setSelectedRow] = useState(null);
+
+//   const toggleStatus = (index) => {
+//     setStatus((prevStatus) => {
+//       const updatedStatus = [...prevStatus];
+//       updatedStatus[index] = !updatedStatus[index];
+//       console.log("Toggled Status:", updatedStatus);
+//       return updatedStatus;
+//     });
+//   };
+
+//   // Filter Data Based on Search
+//   const filteredData = data.filter((row) =>
+//     columns.some((column) =>
+//       row[column.id]
+//         ?.toString()
+//         .toLowerCase()
+//         .includes(searchTerm.toLowerCase())
+//     )
+//   );
+
+//   // Pagination Logic
+//   const paginatedData = filteredData.slice(
+//     (page - 1) * rowsPerPage,
+//     page * rowsPerPage
+//   );
+//   const totalPages = Math.ceil(filteredData.length / rowsPerPage);
+
+//   // Navigate to Edit Page
+//   const handleEdit = (row) => {
+//     navigate(`${location.pathname}/edit/${row.id}`);
+//   };
+
+//   const handleDeleteClick = (row) => {
+//     console.log("Selected Row for Deletion:", row);
+//     setSelectedRow(row);
+//     setOpenDeleteDialog(true);
+//   };
+
+//   // Handle Confirm Delete API Call
+//   const handleConfirmDelete = async () => {
+//     if (selectedRow && deleteApiUrl) {
+//       try {
+//         const response = await fetch(`${deleteApiUrl}/${selectedRow.id}`, {
+//           method: "DELETE",
+//           headers: {
+//             "Content-Type": "application/json",
+//           },
+//         });
+
+//         if (response.ok) {
+//           console.log(`Deleted ID: ${selectedRow.id} from ${tableType}`);
+//           setData((prevData) =>
+//             prevData.filter((row) => row.id !== selectedRow.id)
+//           );
+//         } else {
+//           console.error("Failed to delete:", await response.text());
+//         }
+//       } catch (error) {
+//         console.error("Error deleting:", error);
+//       }
+//     }
+//     setOpenDeleteDialog(false);
+//   };
+
+//   return (
+//     <Box>
+//       {/* Search and Add Button */}
+//       <Box
+//         display="flex"
+//         justifyContent="flex-end"
+//         alignItems="center"
+//         gap={2}
+//         mb={2}
+//       >
+//         <TextField
+//           label="Search"
+//           variant="outlined"
+//           size="small"
+//           onChange={(e) => setSearchTerm(e.target.value)}
+//         />
+//         {tableType !== "inventory" && (
+//           <Button
+//           variant="contained"
+//           color="primary"
+//           onClick={() => navigate(`${location.pathname}/add`)}
+//         >
+//           {tableType === "settings"
+//             ? "Add User"
+//             : tableType === "crm"
+//             ? "Add Client"
+//             : tableType === "operations"
+//             ? "Add DC"
+//             : tableType === "job_description"
+//             ? "Add Job Description"
+//             : `Add ${tableType.charAt(0).toUpperCase() + tableType.slice(1)}`}
+//         </Button>
+//         )}
+//       </Box>
+
+//       {/* Table */}
+//       <TableContainer component={Paper} sx={{ overflowX: "auto" }}>
+//         <Table sx={{ minWidth: 600 }}>
+//           <TableHead>
+//             <TableRow>
+//               {columns.map((column, index) => (
+//                 <TableCell
+//                   key={index}
+//                   align="center"
+//                   sx={{ whiteSpace: "nowrap", fontWeight: "bold" }}
+//                 >
+//                   {column.label}
+//                 </TableCell>
+//               ))}
+//               {tableType !== "purchase-requests" &&
+//                 tableType !== "purchase-orders" &&
+//                 tableType !== "goodsreceipt" &&
+//                 tableType !== "po-quotations" &&
+//                 tableType !== "supplier" &&
+//                 tableType !== "inventory" &&
+//                 tableType !== "quotations" &&
+//                 tableType !== "orders" && 
+//                 tableType !== "operations" && (
+//                   <TableCell align="center" sx={{ fontWeight: "bold" }}>
+//                     Active Status
+//                   </TableCell>
+//                 )}
+//               {tableType !== "inventory" && (
+//                 <TableCell align="center" sx={{ fontWeight: "bold" }}>
+//                   Action
+//                 </TableCell>
+//               )}
+//             </TableRow>
+//           </TableHead>
+//           <TableBody>
+//             {paginatedData.length > 0 ? (
+//               paginatedData.map((row, rowIndex) => (
+//                 <TableRow key={row.id}>
+//                   {columns.map((column, colIndex) => (
+//                     <TableCell
+//                       key={colIndex}
+//                       align="center"
+//                       sx={{
+//                         minWidth: column.id === "specifications" ? 250 : 106,
+//                         maxWidth: column.id === "specifications" ? 300 : "auto",
+//                         whiteSpace:
+//                           column.id === "specifications"
+//                             ? "pre-wrap"
+//                             : "normal",
+//                         wordWrap:
+//                           column.id === "specifications"
+//                             ? "break-word"
+//                             : "normal",
+//                         textAlign:
+//                           column.id === "specifications" ? "left" : "center",
+//                       }}
+//                     >
+//                       {[
+//                         "purchase_request_status",
+//                         "po_quotation_status",
+//                         "po_status",
+//                         "goods_receipt_status",
+//                         "status",
+//                         "order_status",
+//                       ].includes(column.id) ? (
+//                         <Typography
+//                           variant="body2"
+//                           sx={{
+//                             fontWeight: 600,
+//                             px: 1.5,
+//                             py: 0.5,
+//                             borderRadius: 2,
+//                             display: "inline-block",
+//                             color:
+//                               row[column.id] === "Pending"
+//                                 ? "#b26a00"
+//                                 : row[column.id] === "Approved"
+//                                 ? "#1b5e20"
+//                                 : row[column.id] === "Rejected"
+//                                 ? "#b71c1c"
+//                                 : "inherit",
+//                             backgroundColor:
+//                               row[column.id] === "Pending"
+//                                 ? "#fff3e0"
+//                                 : row[column.id] === "Approved"
+//                                 ? "#e8f5e9"
+//                                 : row[column.id] === "Rejected"
+//                                 ? "#ffebee"
+//                                 : "transparent",
+//                           }}
+//                         >
+//                           {row[column.id]}
+//                         </Typography>
+//                       ) : (
+//                         row[column.id] || "N/A"
+//                       )}
+//                     </TableCell>
+//                   ))}
+
+//                   {tableType !== "purchase-requests" &&
+//                     tableType !== "purchase-orders" &&
+//                     tableType !== "goodsreceipt" &&
+//                     tableType !== "po-quotations" &&
+//                     tableType !== "supplier" &&
+//                     tableType !== "inventory" &&
+//                     tableType !== "quotations" &&
+//                     tableType !== "orders" && 
+//                     tableType !== "operations" && (
+//                       <TableCell align="center">
+//                         <Button onClick={() => toggleStatus(rowIndex)}>
+//                           <img
+//                             src={status[rowIndex] ? StatusOn : StatusOff}
+//                             alt={status[rowIndex] ? "Active" : "Inactive"}
+//                             width="40"
+//                             height="24"
+//                           />
+//                         </Button>
+//                       </TableCell>
+//                     )}
+
+//                   {tableType !== "inventory" && (
+//                     <TableCell align="center">
+//                       <Box display="flex" justifyContent="center" gap={1}>
+//                         <Button
+//                           onClick={() => handleEdit(row)}
+//                           sx={{ minWidth: "30px", p: 0 }}
+//                         >
+//                           <img
+//                             src={EditIcon}
+//                             alt="Edit"
+//                             width="45"
+//                             height="35"
+//                           />
+//                         </Button>
+//                         <Button
+//                           onClick={() => handleDeleteClick(row)}
+//                           sx={{ minWidth: "30px", p: 0 }}
+//                         >
+//                           <img
+//                             src={DeleteIcon}
+//                             alt="Delete"
+//                             width="45"
+//                             height="35"
+//                           />
+//                         </Button>
+//                       </Box>
+//                     </TableCell>
+//                   )}
+//                 </TableRow>
+//               ))
+//             ) : (
+//               <TableRow>
+//                 <TableCell colSpan={columns.length + 2} align="center">
+//                   <Typography>No data available</Typography>
+//                 </TableCell>
+//               </TableRow>
+//             )}
+//           </TableBody>
+//         </Table>
+//       </TableContainer>
+
+//       {/* Pagination */}
+//       <Stack
+//         spacing={2}
+//         direction="row"
+//         justifyContent="center"
+//         alignItems="center"
+//         sx={{ marginTop: 2 }}
+//       >
+//         <Pagination
+//           count={totalPages}
+//           page={page}
+//           onChange={(event, value) => setPage(value)}
+//           color="primary"
+//         />
+//       </Stack>
+
+//       {/* Delete Confirmation Dialog */}
+//       <Dialog
+//         open={openDeleteDialog}
+//         onClose={() => setOpenDeleteDialog(false)}
+//       >
+//         <DialogTitle>Confirm Deletion</DialogTitle>
+//         <DialogContent>
+//           <DialogContentText>
+//             Are you sure you want to delete{" "}
+//             <b>{selectedRow ? selectedRow[columns[1]?.id] : "this record"}</b>?
+//           </DialogContentText>
+//         </DialogContent>
+//         <DialogActions>
+//           <Button onClick={() => setOpenDeleteDialog(false)} color="secondary">
+//             Cancel
+//           </Button>
+//           <Button onClick={handleConfirmDelete} color="error">
+//             Delete
+//           </Button>
+//         </DialogActions>
+//       </Dialog>
+//     </Box>
+//   );
+// };
+
+// export default DynamicTable;
