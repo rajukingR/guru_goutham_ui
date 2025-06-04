@@ -38,8 +38,15 @@ import API_URL from "../../api/Api_url";
 const apiEndpoints = {
   settings: `${API_URL}/users`,
   roles: `${API_URL}/roles`,
-  product_categories: `${API_URL}/product-categories`,
   operations: `${API_URL}/delivery-challans`,
+  supplier: `${API_URL}/supplier`,
+  goodsreceipt: `${API_URL}/goods-receipts`,
+  "po-quotations": `${API_URL}/purchase-quotation`,
+  "purchase-requests": `${API_URL}/purchase-requests`,
+  product_library: `${API_URL}/product-templete`,
+  brands: `${API_URL}/product-brands`,
+  product_categories: `${API_URL}/product-categories`,
+  stock_locations: `${API_URL}/stock-location`,
 };
 
 // Delivery Challan Dialog Component

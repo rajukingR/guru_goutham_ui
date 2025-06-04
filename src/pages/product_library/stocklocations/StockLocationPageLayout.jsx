@@ -1,67 +1,67 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { 
-  Avatar, 
   Card, 
-  CardContent 
+  CardContent, 
+  CircularProgress, 
+  Typography 
 } from "@mui/material";
+import axios from "axios";
 import DynamicTable from "../../../components/table-format/DynamicTable";
 
 const StockLocationPageLayout = () => {
-  // Define columns for the table
+  const [data, setData] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  // Define columns (Removed "Active Status" and "Actions")
   const columns = [
-    { 
-      id: "itemImage", 
-      label: "Item Image",
-      render: (value) => (
-        <Avatar 
-          variant="square" 
-          src={value} 
-          sx={{ width: 56, height: 56 }}
-        />
-      )
-    },
-    { id: "itemName", label: "Item Name" },
-    { id: "itemCode", label: "Item Code" },
-    { id: "category", label: "Category" },
-    { id: "unitPrice", label: "Unit Price" },
-    { id: "stockQuantity", label: "Stock Quantity" },
-    { id: "status", label: "Status" },
-    { id: "actions", label: "Actions" },
+    { id: "stockLocationId", label: "Stock Location ID" },
+    { id: "stockName", label: "Stock Name" },
+    { id: "mailId", label: "Mail ID" },
+    { id: "phoneNo", label: "Phone No" },
+    { id: "pincode", label: "Pincode" },
+    { id: "country", label: "Country" },
+    { id: "state", label: "State" },
+    { id: "city", label: "City" },
+    { id: "landmark", label: "Landmark" },
+    { id: "street", label: "Street" }
   ];
 
-  // Sample data for items
-  const data = [
-    {
-      itemImage: "https://via.placeholder.com/56", 
-      itemName: "Wireless Mouse",
-      itemCode: "WM-1001",
-      category: "Accessories",
-      unitPrice: "$25",
-      stockQuantity: 120,
-      status: "Available",
-      actions: "..."
-    },
-    {
-      itemImage: "https://via.placeholder.com/56", 
-      itemName: "Mechanical Keyboard",
-      itemCode: "MK-2002",
-      category: "Accessories",
-      unitPrice: "$70",
-      stockQuantity: 85,
-      status: "Available",
-      actions: "..."
-    },
-    {
-      itemImage: "https://via.placeholder.com/56", 
-      itemName: "27-inch Monitor",
-      itemCode: "MN-3003",
-      category: "Monitors",
-      unitPrice: "$230",
-      stockQuantity: 30,
-      status: "Low Stock",
-      actions: "..."
-    },
-  ];
+  useEffect(() => {
+    const fetchStockLocations = async () => {
+      try {
+        const response = await axios.get("http://localhost:5000/api/stock-location/");
+        const formattedData = response.data.map((item) => ({
+          stockLocationId: item.stock_location_id,
+          stockName: item.stock_name,
+          mailId: item.mail_id,
+          phoneNo: item.phone_no,
+          pincode: item.pincode,
+          country: item.country,
+          state: item.state,
+          city: item.city,
+          landmark: item.landmark,
+          street: item.street
+        }));
+        setData(formattedData);
+        setLoading(false);
+      } catch (err) {
+        console.error("Error fetching stock locations:", err);
+        setError("Failed to load stock locations.");
+        setLoading(false);
+      }
+    };
+
+    fetchStockLocations();
+  }, []);
+
+  if (loading) {
+    return <CircularProgress sx={{ display: "block", margin: "2rem auto" }} />;
+  }
+
+  if (error) {
+    return <Typography color="error" align="center" sx={{ mt: 4 }}>{error}</Typography>;
+  }
 
   return (
     <Card>
