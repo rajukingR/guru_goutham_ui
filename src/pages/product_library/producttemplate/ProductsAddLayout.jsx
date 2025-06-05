@@ -195,7 +195,7 @@ const ProductsAddLayout = () => {
       showSnackbar("Product added successfully!", "success");
 
       setTimeout(() => {
-        navigate("/dashboard/product_library/product_template");
+        navigate("/dashboard/product_library");
       }, 1500);
 
       // Reset form after success

@@ -47,6 +47,10 @@ const apiEndpoints = {
   brands: `${API_URL}/product-brands`,
   product_categories: `${API_URL}/product-categories`,
   stock_locations: `${API_URL}/stock-location`,
+  "purchase-orders": `${API_URL}/purchase-orders`,
+  "client-list": `${API_URL}/clients`,
+  leads: `${API_URL}/leads`,
+  orders: `${API_URL}/orders`,
 };
 
 // Delivery Challan Dialog Component

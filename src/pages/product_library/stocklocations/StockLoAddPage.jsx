@@ -46,7 +46,7 @@ const StockLoAddPage = () => {
       await axios.post('http://localhost:5000/api/stock-location/create', payload);
       setSnackbarOpen(true);
       setTimeout(() => {
-        navigate('dashboard/product_library/stock_locations');
+        navigate('/dashboard/product_library/stock_locations');
       }, 2000);
     } catch (error) {
       console.error('Error creating stock location:', error);
