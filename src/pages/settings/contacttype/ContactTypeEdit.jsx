@@ -1,25 +1,46 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import Snackbar from '@mui/material/Snackbar';
-import MuiAlert from '@mui/material/Alert';
+import React, { useState, useEffect } from 'react';
+import { Snackbar, Alert } from '@mui/material';
+import { useNavigate, useParams } from 'react-router-dom';
+import axios from 'axios';
 
-const Alert = React.forwardRef(function Alert(props, ref) {
-  return <MuiAlert elevation={6} ref={ref} variant="filled" {...props} />;
-});
-
-const TaxListAdd = () => {
+const ContactTypeEdit = () => {
   const navigate = useNavigate();
+  const { id } = useParams(); // get id from URL param
+
   const [formData, setFormData] = useState({
-    taxCode: '',
-    taxName: '',
-    percentage: '',
-    activeStatus: true,
+    contactsTypeCode: '',
+    type: '',
+    description: '',
+    activeStatus: true
   });
-  const [snackbar, setSnackbar] = useState({
-    open: false,
-    message: '',
-    severity: 'success',
-  });
+
+  const [snackbarOpen, setSnackbarOpen] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  // Load data on mount
+  useEffect(() => {
+    const fetchContactType = async () => {
+      try {
+        const response = await axios.get(`http://localhost:5000/api/contact-types/${id}`);
+        const data = response.data;
+
+        // Assuming your backend returns object with keys:
+        // contact_type_name, type, description, is_active
+        setFormData({
+          contactsTypeCode: data.contact_type_name || '',
+          type: data.type || '',
+          description: data.description || '',
+          activeStatus: data.is_active ?? true,
+        });
+      } catch (error) {
+        console.error('Error fetching contact type:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchContactType();
+  }, [id]);
 
   const handleInputChange = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -29,124 +50,83 @@ const TaxListAdd = () => {
     setFormData(prev => ({ ...prev, [field]: !prev[field] }));
   };
 
-  const handleCloseSnackbar = () => {
-    setSnackbar(prev => ({ ...prev, open: false }));
-  };
-
   const handleSubmit = async () => {
     try {
-      // Validate required fields
-      if (!formData.taxCode || !formData.taxName || !formData.percentage) {
-        setSnackbar({
-          open: true,
-          message: 'Please fill all required fields',
-          severity: 'error',
-        });
-        return;
-      }
-
-      const response = await fetch('http://localhost:5000/api/tax-list/create', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          tax_code: formData.taxCode,
-          tax_name: formData.taxName,
-          percentage: parseFloat(formData.percentage),
-          is_active: formData.activeStatus,
-        }),
+      await axios.put(`http://localhost:5000/api/contact-types/${id}`, {
+        contact_type_name: formData.contactsTypeCode,
+        type: formData.type,
+        description: formData.description,
+        is_active: formData.activeStatus
       });
 
-      const result = await response.json();
-
-      if (response.ok) {
-        setSnackbar({
-          open: true,
-          message: 'Tax added successfully!',
-          severity: 'success',
-        });
-        // Reset form and navigate after 1.5 seconds
-        setTimeout(() => {
-          navigate('/dashboard/settings/taxt_list');
-        }, 1500);
-      } else {
-        setSnackbar({
-          open: true,
-          message: result.message || 'Failed to add tax',
-          severity: 'error',
-        });
-      }
+      setSnackbarOpen(true);
+      setTimeout(() => {
+        navigate('/dashboard/settings/contact_type');
+      }, 3000);
     } catch (error) {
-      console.error('Error:', error);
-      setSnackbar({
-        open: true,
-        message: 'An unexpected error occurred',
-        severity: 'error',
-      });
+      console.error('Error updating contact type:', error);
     }
   };
 
+  if (loading) {
+    return <div style={{ padding: '2rem' }}>Loading...</div>;
+  }
+
   return (
     <div style={containerStyle}>
+      {/* Snackbar */}
       <Snackbar
-        open={snackbar.open}
-        autoHideDuration={6000}
-        onClose={handleCloseSnackbar}
-        anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
+        open={snackbarOpen}
+        autoHideDuration={3000}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
       >
-        <Alert
-          onClose={handleCloseSnackbar}
-          severity={snackbar.severity}
-          sx={{ width: '100%' }}
-        >
-          {snackbar.message}
+        <Alert severity="success" sx={{ width: '100%' }}>
+          Contact type updated successfully!
         </Alert>
       </Snackbar>
 
-      <div style={breadcrumbStyle}>Masters / Tax list / Add Tax list</div>
+      {/* Breadcrumb */}
+      <div style={breadcrumbStyle}>
+        Masters / Contacts Type / Edit Contacts Type
+      </div>
 
+      {/* Main Form Container */}
       <div style={formContainerStyle}>
+        {/* Contacts Type Section */}
         <div style={cardStyle}>
           <div style={cardHeaderContainerStyle}>
-            <div style={iconStyle}>📋</div>
-            <h3 style={cardHeaderStyle}>Tax list:</h3>
+            <div style={iconStyle}>📞</div>
+            <h3 style={cardHeaderStyle}>Contacts Type:</h3>
           </div>
           <div style={fieldsGridStyle}>
             <Field
-              label="Tax Code"
-              placeholder="OS"
-              value={formData.taxCode}
-              onChange={(value) => handleInputChange('taxCode', value)}
+              label="Contacts Type Code"
+              placeholder="05"
+              value={formData.contactsTypeCode}
+              onChange={(value) => handleInputChange('contactsTypeCode', value)}
               required
             />
             <Field
-              label="Tax Name"
-              placeholder="Enter Tax Name"
-              value={formData.taxName}
-              onChange={(value) => handleInputChange('taxName', value)}
+              label="Type"
+              placeholder="Enter Type"
+              value={formData.type}
+              onChange={(value) => handleInputChange('type', value)}
               required
+            />
+          </div>
+          <div style={fullWidthFieldStyle}>
+            <Field
+              label="Description"
+              placeholder="Enter Description"
+              value={formData.description}
+              onChange={(value) => handleInputChange('description', value)}
+              required
+              isTextarea
             />
           </div>
         </div>
 
-        <div style={cardStyle}>
-          <div style={cardHeaderContainerStyle}>
-            <div style={iconStyle}>%</div>
-            <h3 style={cardHeaderStyle}>Percentage:</h3>
-          </div>
-          <div style={fieldsGridStyle}>
-            <Field
-              label="Percentage"
-              placeholder="18.00"
-              value={formData.percentage}
-              onChange={(value) => handleInputChange('percentage', value)}
-              type="number"
-              required
-            />
-          </div>
-        </div>
-
+        {/* Control Section */}
         <div style={cardStyle}>
           <div style={cardHeaderContainerStyle}>
             <div style={iconStyle}>⚙️</div>
@@ -163,13 +143,13 @@ const TaxListAdd = () => {
                   onClick={() => handleToggleChange('activeStatus')}
                   style={{
                     ...toggleStyle,
-                    backgroundColor: formData.activeStatus ? '#10b981' : '#d1d5db',
+                    backgroundColor: formData.activeStatus ? '#10b981' : '#d1d5db'
                   }}
                 >
                   <div
                     style={{
                       ...toggleCircleStyle,
-                      transform: formData.activeStatus ? 'translateX(24px)' : 'translateX(2px)',
+                      transform: formData.activeStatus ? 'translateX(24px)' : 'translateX(2px)'
                     }}
                   />
                 </div>
@@ -179,20 +159,21 @@ const TaxListAdd = () => {
         </div>
       </div>
 
+      {/* Action Buttons */}
       <div style={buttonContainerStyle}>
         <button
           style={cancelBtnStyle}
-          onMouseEnter={(e) => (e.target.style.backgroundColor = '#e5e7eb')}
-          onMouseLeave={(e) => (e.target.style.backgroundColor = '#f3f4f6')}
-          onClick={() => navigate('/dashboard/settings/tax_list')}
+          onClick={() => navigate('/dashboard/settings/contact_type')}
+          onMouseEnter={(e) => e.target.style.backgroundColor = '#e5e7eb'}
+          onMouseLeave={(e) => e.target.style.backgroundColor = '#f3f4f6'}
         >
           Cancel
         </button>
         <button
           style={saveBtnStyle}
           onClick={handleSubmit}
-          onMouseEnter={(e) => (e.target.style.backgroundColor = '#3b82f6')}
-          onMouseLeave={(e) => (e.target.style.backgroundColor = '#2563eb')}
+          onMouseEnter={(e) => e.target.style.backgroundColor = '#3b82f6'}
+          onMouseLeave={(e) => e.target.style.backgroundColor = '#2563eb'}
         >
           Save
         </button>
@@ -229,7 +210,8 @@ const Field = ({ label, placeholder, type = 'text', required = false, value, onC
   </div>
 );
 
-// Styles
+// === Styles ===
+// (Reusing styles from ContactTypeAdd.jsx)
 const containerStyle = {
   padding: '2rem',
   fontFamily: '"Inter", "Segoe UI", -apple-system, BlinkMacSystemFont, sans-serif',
@@ -289,6 +271,10 @@ const fieldsGridStyle = {
   display: 'grid',
   gap: '1rem',
   gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
+};
+
+const fullWidthFieldStyle = {
+  marginTop: '1rem',
 };
 
 const fieldContainerStyle = {
@@ -409,4 +395,4 @@ const saveBtnStyle = {
   outline: 'none',
 };
 
-export default TaxListAdd;
+export default ContactTypeEdit;

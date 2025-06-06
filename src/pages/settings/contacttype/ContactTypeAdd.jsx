@@ -1,12 +1,19 @@
 import React, { useState } from 'react';
+import { Snackbar, Alert } from '@mui/material';
+import { useNavigate } from 'react-router-dom';
+import axios from 'axios';
 
 const ContactTypeAdd = () => {
+  const navigate = useNavigate();
+
   const [formData, setFormData] = useState({
     contactsTypeCode: '',
     type: '',
     description: '',
     activeStatus: true
   });
+
+  const [snackbarOpen, setSnackbarOpen] = useState(false);
 
   const handleInputChange = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -16,8 +23,38 @@ const ContactTypeAdd = () => {
     setFormData(prev => ({ ...prev, [field]: !prev[field] }));
   };
 
+  const handleSubmit = async () => {
+    try {
+      await axios.post('http://localhost:5000/api/contact-types/create', {
+        contact_type_name: formData.contactsTypeCode,
+        type: formData.type,
+        description: formData.description,
+        is_active: formData.activeStatus
+      });
+
+      setSnackbarOpen(true);
+      setTimeout(() => {
+        navigate('/dashboard/settings/contact_type');
+      }, 3000);
+    } catch (error) {
+      console.error('Error creating contact type:', error);
+    }
+  };
+
   return (
     <div style={containerStyle}>
+      {/* Snackbar */}
+      <Snackbar
+  open={snackbarOpen}
+  autoHideDuration={3000}
+  anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+>
+  <Alert severity="success" sx={{ width: '100%' }}>
+    Contact type added successfully!
+  </Alert>
+</Snackbar>
+
+
       {/* Breadcrumb */}
       <div style={breadcrumbStyle}>
         Masters / Contacts Type / Add Contacts Type
@@ -25,7 +62,6 @@ const ContactTypeAdd = () => {
 
       {/* Main Form Container */}
       <div style={formContainerStyle}>
-        
         {/* Contacts Type Section */}
         <div style={cardStyle}>
           <div style={cardHeaderContainerStyle}>
@@ -104,6 +140,7 @@ const ContactTypeAdd = () => {
         </button>
         <button
           style={saveBtnStyle}
+          onClick={handleSubmit}
           onMouseEnter={(e) => e.target.style.backgroundColor = '#3b82f6'}
           onMouseLeave={(e) => e.target.style.backgroundColor = '#2563eb'}
         >
@@ -142,7 +179,7 @@ const Field = ({ label, placeholder, type = 'text', required = false, value, onC
   </div>
 );
 
-// Styles
+// === Styles ===
 const containerStyle = {
   padding: '2rem',
   fontFamily: '"Inter", "Segoe UI", -apple-system, BlinkMacSystemFont, sans-serif',

@@ -1,25 +1,44 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import Snackbar from '@mui/material/Snackbar';
-import MuiAlert from '@mui/material/Alert';
+import React, { useState, useEffect } from 'react';
+import { Snackbar, Alert } from '@mui/material';
+import { useNavigate, useParams } from 'react-router-dom';
+import axios from 'axios';
 
-const Alert = React.forwardRef(function Alert(props, ref) {
-  return <MuiAlert elevation={6} ref={ref} variant="filled" {...props} />;
-});
-
-const TaxListAdd = () => {
+const TaxListEdit = () => {
   const navigate = useNavigate();
+  const { id } = useParams(); // get id from URL param
+
   const [formData, setFormData] = useState({
     taxCode: '',
     taxName: '',
     percentage: '',
-    activeStatus: true,
+    activeStatus: true
   });
-  const [snackbar, setSnackbar] = useState({
-    open: false,
-    message: '',
-    severity: 'success',
-  });
+
+  const [snackbarOpen, setSnackbarOpen] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  // Load data on mount
+  useEffect(() => {
+    const fetchTaxData = async () => {
+      try {
+        const response = await axios.get(`http://localhost:5000/api/tax-list/${id}`);
+        const data = response.data;
+
+        setFormData({
+          taxCode: data.tax_code || '',
+          taxName: data.tax_name || '',
+          percentage: data.percentage ? data.percentage.toString() : '',
+          activeStatus: data.is_active ?? true,
+        });
+      } catch (error) {
+        console.error('Error fetching tax data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchTaxData();
+  }, [id]);
 
   const handleInputChange = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -29,84 +48,55 @@ const TaxListAdd = () => {
     setFormData(prev => ({ ...prev, [field]: !prev[field] }));
   };
 
-  const handleCloseSnackbar = () => {
-    setSnackbar(prev => ({ ...prev, open: false }));
-  };
-
   const handleSubmit = async () => {
     try {
       // Validate required fields
       if (!formData.taxCode || !formData.taxName || !formData.percentage) {
-        setSnackbar({
-          open: true,
-          message: 'Please fill all required fields',
-          severity: 'error',
-        });
+        setSnackbarOpen(true);
         return;
       }
 
-      const response = await fetch('http://localhost:5000/api/tax-list/create', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          tax_code: formData.taxCode,
-          tax_name: formData.taxName,
-          percentage: parseFloat(formData.percentage),
-          is_active: formData.activeStatus,
-        }),
+      await axios.put(`http://localhost:5000/api/tax-list/update/${id}`, {
+        tax_code: formData.taxCode,
+        tax_name: formData.taxName,
+        percentage: parseFloat(formData.percentage),
+        is_active: formData.activeStatus
       });
 
-      const result = await response.json();
-
-      if (response.ok) {
-        setSnackbar({
-          open: true,
-          message: 'Tax added successfully!',
-          severity: 'success',
-        });
-        // Reset form and navigate after 1.5 seconds
-        setTimeout(() => {
-          navigate('/dashboard/settings/taxt_list');
-        }, 1500);
-      } else {
-        setSnackbar({
-          open: true,
-          message: result.message || 'Failed to add tax',
-          severity: 'error',
-        });
-      }
+      setSnackbarOpen(true);
+      setTimeout(() => {
+        navigate('/dashboard/settings/tax_list');
+      }, 3000);
     } catch (error) {
-      console.error('Error:', error);
-      setSnackbar({
-        open: true,
-        message: 'An unexpected error occurred',
-        severity: 'error',
-      });
+      console.error('Error updating tax:', error);
     }
   };
 
+  if (loading) {
+    return <div style={{ padding: '2rem' }}>Loading...</div>;
+  }
+
   return (
     <div style={containerStyle}>
+      {/* Snackbar */}
       <Snackbar
-        open={snackbar.open}
-        autoHideDuration={6000}
-        onClose={handleCloseSnackbar}
-        anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
+        open={snackbarOpen}
+        autoHideDuration={3000}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
       >
-        <Alert
-          onClose={handleCloseSnackbar}
-          severity={snackbar.severity}
-          sx={{ width: '100%' }}
-        >
-          {snackbar.message}
+        <Alert severity="success" sx={{ width: '100%' }}>
+          Tax updated successfully!
         </Alert>
       </Snackbar>
 
-      <div style={breadcrumbStyle}>Masters / Tax list / Add Tax list</div>
+      {/* Breadcrumb */}
+      <div style={breadcrumbStyle}>
+        Masters / Tax list / Edit Tax list
+      </div>
 
+      {/* Main Form Container */}
       <div style={formContainerStyle}>
+        {/* Tax List Section */}
         <div style={cardStyle}>
           <div style={cardHeaderContainerStyle}>
             <div style={iconStyle}>📋</div>
@@ -130,6 +120,7 @@ const TaxListAdd = () => {
           </div>
         </div>
 
+        {/* Percentage Section */}
         <div style={cardStyle}>
           <div style={cardHeaderContainerStyle}>
             <div style={iconStyle}>%</div>
@@ -147,6 +138,7 @@ const TaxListAdd = () => {
           </div>
         </div>
 
+        {/* Control Section */}
         <div style={cardStyle}>
           <div style={cardHeaderContainerStyle}>
             <div style={iconStyle}>⚙️</div>
@@ -163,13 +155,13 @@ const TaxListAdd = () => {
                   onClick={() => handleToggleChange('activeStatus')}
                   style={{
                     ...toggleStyle,
-                    backgroundColor: formData.activeStatus ? '#10b981' : '#d1d5db',
+                    backgroundColor: formData.activeStatus ? '#10b981' : '#d1d5db'
                   }}
                 >
                   <div
                     style={{
                       ...toggleCircleStyle,
-                      transform: formData.activeStatus ? 'translateX(24px)' : 'translateX(2px)',
+                      transform: formData.activeStatus ? 'translateX(24px)' : 'translateX(2px)'
                     }}
                   />
                 </div>
@@ -179,22 +171,23 @@ const TaxListAdd = () => {
         </div>
       </div>
 
+      {/* Action Buttons */}
       <div style={buttonContainerStyle}>
         <button
           style={cancelBtnStyle}
-          onMouseEnter={(e) => (e.target.style.backgroundColor = '#e5e7eb')}
-          onMouseLeave={(e) => (e.target.style.backgroundColor = '#f3f4f6')}
           onClick={() => navigate('/dashboard/settings/tax_list')}
+          onMouseEnter={(e) => e.target.style.backgroundColor = '#e5e7eb'}
+          onMouseLeave={(e) => e.target.style.backgroundColor = '#f3f4f6'}
         >
           Cancel
         </button>
         <button
           style={saveBtnStyle}
           onClick={handleSubmit}
-          onMouseEnter={(e) => (e.target.style.backgroundColor = '#3b82f6')}
-          onMouseLeave={(e) => (e.target.style.backgroundColor = '#2563eb')}
+          onMouseEnter={(e) => e.target.style.backgroundColor = '#3b82f6'}
+          onMouseLeave={(e) => e.target.style.backgroundColor = '#2563eb'}
         >
-          Save
+          Update
         </button>
       </div>
     </div>
@@ -229,7 +222,7 @@ const Field = ({ label, placeholder, type = 'text', required = false, value, onC
   </div>
 );
 
-// Styles
+// === Styles ===
 const containerStyle = {
   padding: '2rem',
   fontFamily: '"Inter", "Segoe UI", -apple-system, BlinkMacSystemFont, sans-serif',
@@ -409,4 +402,4 @@ const saveBtnStyle = {
   outline: 'none',
 };
 
-export default TaxListAdd;
+export default TaxListEdit;

@@ -284,15 +284,9 @@ const Sidebar = ({ section }) => {
           icon: <AdminPanelSettingsIcon size={24} />,
         },
         {
-          text: "Department",
-          path: "/dashboard/settings/experience-range",
+          text: "Address",
+          path: "/dashboard/settings/address",
           icon: <TimelineIcon size={24} />,
-        },
-     
-        {
-          text: "Branch",
-          path: "/dashboard/settings/branch",
-          icon: <ApartmentIcon size={24} />,
         },
         {
           text: "Contact Type",
@@ -304,51 +298,51 @@ const Sidebar = ({ section }) => {
           path: "/dashboard/settings/taxt_list",
           icon: <FaUserTie size={24} />,
         },
-        {
-          text: "GST(Taxes)",
-          path: "/dashboard/settings/BenchStatus",
-          icon: <MdOutlineAirlineSeatLegroomNormal size={24} />,
-        },
-        {
-          text: "Hsn Codes",
-          path: "/dashboard/settings/RevenType",
-          icon: <MdAttachMoney size={24} />,
-        },
-        {
-          text: "Lead Checklists",
-          path: "/dashboard/settings/JobTitle",
-          icon: <FaBriefcase size={24} />,
-        },
-        {
-          text: "Lead Statuses",
-          path: "/dashboard/settings/Skills",
-          icon: <GiBrainstorm size={24} />,
-        },
-        {
-          text: "Oredr Checklists",
-          path: "/dashboard/settings/Industry",
-          icon: <FaIndustry size={24} />,
-        },
-        {
-          text: "Service Priority",
-          path: "/dashboard/settings/InterviewName",
-          icon: <FaChalkboardTeacher size={24} />,
-        },
-        {
-          text: "Service Status",
-          path: "/dashboard/settings/InterviewStatus",
-          icon: <MdQuestionAnswer size={24} />,
-        },
-        {
-          text: "State",
-          path: "/dashboard/settings/Languageproficiency",
-          icon: <MdTranslate size={24} />,
-        },
-        {
-          text: "Terms",
-          path: "/dashboard/settings/SourceSe",
-          icon: <MdTravelExplore size={24} />,
-        },
+        // {
+        //   text: "GST(Taxes)",
+        //   path: "/dashboard/settings/BenchStatus",
+        //   icon: <MdOutlineAirlineSeatLegroomNormal size={24} />,
+        // },
+        // {
+        //   text: "Hsn Codes",
+        //   path: "/dashboard/settings/RevenType",
+        //   icon: <MdAttachMoney size={24} />,
+        // },
+        // {
+        //   text: "Lead Checklists",
+        //   path: "/dashboard/settings/JobTitle",
+        //   icon: <FaBriefcase size={24} />,
+        // },
+        // {
+        //   text: "Lead Statuses",
+        //   path: "/dashboard/settings/Skills",
+        //   icon: <GiBrainstorm size={24} />,
+        // },
+        // {
+        //   text: "Oredr Checklists",
+        //   path: "/dashboard/settings/Industry",
+        //   icon: <FaIndustry size={24} />,
+        // },
+        // {
+        //   text: "Service Priority",
+        //   path: "/dashboard/settings/InterviewName",
+        //   icon: <FaChalkboardTeacher size={24} />,
+        // },
+        // {
+        //   text: "Service Status",
+        //   path: "/dashboard/settings/InterviewStatus",
+        //   icon: <MdQuestionAnswer size={24} />,
+        // },
+        // {
+        //   text: "State",
+        //   path: "/dashboard/settings/Languageproficiency",
+        //   icon: <MdTranslate size={24} />,
+        // },
+        // {
+        //   text: "Terms",
+        //   path: "/dashboard/settings/SourceSe",
+        //   icon: <MdTravelExplore size={24} />,
+        // },
       ];
       break;
 

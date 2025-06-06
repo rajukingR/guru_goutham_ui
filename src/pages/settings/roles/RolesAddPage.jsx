@@ -1,20 +1,83 @@
 import React, { useState } from 'react';
-import { ChevronDown } from 'lucide-react';
+import { ChevronDown, CheckCircle, X } from 'lucide-react';
+import axios from 'axios';
+import { useNavigate } from 'react-router-dom';
 
 const RolesAddPage = () => {
+  const navigate = useNavigate();
   const [formData, setFormData] = useState({
     roleName: '',
     description: '',
     activeStatus: true,
     userDefaultAccess: false
   });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState(null);
+  const [showSuccessSnackbar, setShowSuccessSnackbar] = useState(false);
 
   const handleInputChange = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }));
+    if (error) setError(null);
   };
 
   const handleToggleChange = (field) => {
     setFormData(prev => ({ ...prev, [field]: !prev[field] }));
+    if (error) setError(null);
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    
+    // Validation
+    if (!formData.roleName.trim()) {
+      setError('Role name is required');
+      return;
+    }
+    if (!formData.description.trim()) {
+      setError('Description is required');
+      return;
+    }
+
+    setIsSubmitting(true);
+    
+    try {
+      const response = await axios.post('http://localhost:5000/api/roles/create', {
+        role_name: formData.roleName,
+        description: formData.description,
+        is_active: formData.activeStatus,
+        user_default_access: formData.userDefaultAccess
+      }, {
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+
+      // Show success snackbar
+      setShowSuccessSnackbar(true);
+
+      // Reset form on success
+      setFormData({
+        roleName: '',
+        description: '',
+        activeStatus: true,
+        userDefaultAccess: false
+      });
+      
+      // Hide snackbar and navigate after delay
+      setTimeout(() => {
+        setShowSuccessSnackbar(false);
+        navigate('/dashboard/settings/roles');
+      }, 2000);
+    } catch (err) {
+      console.error('Error creating role:', err);
+      setError(err.response?.data?.error || 'Failed to create role. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleCloseSnackbar = () => {
+    setShowSuccessSnackbar(false);
   };
 
   return (
@@ -79,6 +142,9 @@ const RolesAddPage = () => {
                     }}
                   />
                 </div>
+                <span style={{ marginLeft: '8px', fontSize: '0.875rem' }}>
+                  {formData.activeStatus ? 'Active' : 'Inactive'}
+                </span>
               </div>
             </div>
           </div>
@@ -107,6 +173,9 @@ const RolesAddPage = () => {
                 }}
               />
             </div>
+            <span style={{ marginLeft: '8px', fontSize: '0.875rem' }}>
+              {formData.userDefaultAccess ? 'Enabled' : 'Disabled'}
+            </span>
           </div>
         </div>
       </div>
@@ -117,21 +186,54 @@ const RolesAddPage = () => {
           style={cancelBtnStyle}
           onMouseEnter={(e) => e.target.style.backgroundColor = '#e5e7eb'}
           onMouseLeave={(e) => e.target.style.backgroundColor = '#f3f4f6'}
+          onClick={() => navigate('/roles')}
         >
           Cancel
         </button>
         <button
-          style={createBtnStyle}
-          onMouseEnter={(e) => e.target.style.backgroundColor = '#1d4ed8'}
-          onMouseLeave={(e) => e.target.style.backgroundColor = '#2563eb'}
+          style={{
+            ...createBtnStyle,
+            opacity: isSubmitting ? 0.7 : 1,
+            cursor: isSubmitting ? 'not-allowed' : 'pointer'
+          }}
+          onMouseEnter={(e) => !isSubmitting && (e.target.style.backgroundColor = '#1d4ed8')}
+          onMouseLeave={(e) => !isSubmitting && (e.target.style.backgroundColor = '#2563eb')}
+          onClick={handleSubmit}
+          disabled={isSubmitting}
         >
-          Create Role
+          {isSubmitting ? 'Creating...' : 'Create Role'}
         </button>
       </div>
+
+      {/* Error Message */}
+      {error && (
+        <div style={errorMessageStyle}>
+          {error}
+        </div>
+      )}
+
+      {/* Success Snackbar */}
+      {showSuccessSnackbar && (
+        <div style={snackbarStyle}>
+          <div style={snackbarContentStyle}>
+            <CheckCircle style={snackbarIconStyle} />
+            <span style={snackbarTextStyle}>Role created successfully!</span>
+            <button
+              onClick={handleCloseSnackbar}
+              style={snackbarCloseButtonStyle}
+              onMouseEnter={(e) => e.target.style.backgroundColor = 'rgba(255, 255, 255, 0.2)'}
+              onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}
+            >
+              <X style={snackbarCloseIconStyle} />
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
 
+// Field Component
 const Field = ({ label, placeholder, type = 'text', required = false, value, onChange }) => (
   <div style={fieldContainerStyle}>
     <label style={labelStyle}>
@@ -254,17 +356,10 @@ const inputStyle = {
 };
 
 const textareaStyle = {
-  width: '100%',
-  padding: '0.75rem',
-  borderRadius: '8px',
-  border: '1px solid #d1d5db',
-  fontSize: '0.875rem',
-  backgroundColor: '#ffffff',
-  transition: 'all 0.2s ease',
-  outline: 'none',
-  boxSizing: 'border-box',
+  ...inputStyle,
   resize: 'vertical',
   fontFamily: 'inherit',
+  minHeight: '100px',
 };
 
 const controlSectionStyle = {
@@ -313,7 +408,6 @@ const userAccessCardStyle = {
   border: '1px solid #e2e8f0',
   maxWidth: '1400px',
   margin: '0 auto 1.5rem',
-  borderTop: '1px solid #e2e8f0',
 };
 
 const userAccessHeaderStyle = {
@@ -373,6 +467,69 @@ const createBtnStyle = {
   fontWeight: '500',
   transition: 'all 0.2s ease',
   outline: 'none',
+};
+
+const errorMessageStyle = {
+  color: '#ef4444',
+  marginTop: '1rem',
+  textAlign: 'center',
+  maxWidth: '1400px',
+  margin: '1rem auto 0',
+  padding: '0 1.5rem',
+  fontSize: '0.875rem'
+};
+
+// Snackbar Styles
+const snackbarStyle = {
+  position: 'fixed',
+  bottom: '20px',
+  right: '20px',
+  zIndex: 1000,
+  animation: 'slideInUp 0.3s ease-out',
+};
+
+const snackbarContentStyle = {
+  display: 'flex',
+  alignItems: 'center',
+  backgroundColor: '#2563eb',
+  color: 'white',
+  padding: '12px 16px',
+  borderRadius: '8px',
+  boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+  minWidth: '280px',
+  maxWidth: '400px',
+};
+
+const snackbarIconStyle = {
+  width: '20px',
+  height: '20px',
+  marginRight: '8px',
+  flexShrink: 0,
+};
+
+const snackbarTextStyle = {
+  fontSize: '0.875rem',
+  fontWeight: '500',
+  flex: 1,
+};
+
+const snackbarCloseButtonStyle = {
+  backgroundColor: 'transparent',
+  border: 'none',
+  color: 'white',
+  cursor: 'pointer',
+  padding: '4px',
+  borderRadius: '4px',
+  marginLeft: '8px',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  transition: 'background-color 0.2s ease',
+};
+
+const snackbarCloseIconStyle = {
+  width: '16px',
+  height: '16px',
 };
 
 export default RolesAddPage;

@@ -82,6 +82,10 @@ import ContactTypeTable from "../pages/settings/contacttype/ContactTypeTable.jsx
 import ContactTypeAdd from "../pages/settings/contacttype/ContactTypeAdd.jsx";
 import TaxListTable from "../pages/settings/taxlist/TaxListTable.jsx";
 import TaxListAdd from "../pages/settings/taxlist/TaxListAdd.jsx";
+import AddressTable from "../pages/settings/address/AddressTable.jsx";
+import AddressAddPage from "../pages/settings/address/AddressAddPage.jsx";
+import ContactTypeEdit from "../pages/settings/contacttype/ContactTypeEdit.jsx";
+import TaxListEdit from "../pages/settings/taxlist/TaxListEdit.jsx";
 const ProtectedRoute = ({ element }) => {
   const user = useSelector((state) => state.auth.user);
   return user ? element : <Navigate to="/signin" replace />;
@@ -170,9 +174,12 @@ const RoutesConfig = () => {
             <Route path="settings/branch/add" element={<BranchAddPage/>} />
             <Route path="settings/contact_type" element={<ContactTypeTable/>} />
             <Route path="settings/contact_type/add" element={<ContactTypeAdd/>} />
+            <Route path="settings/contact_type/edit/:id" element={<ContactTypeEdit/>} />
             <Route path="settings/taxt_list" element={<TaxListTable/>} />
             <Route path="settings/taxt_list/add" element={<TaxListAdd/>} />
-
+            <Route path="settings/taxt_list/edit/:id" element={<TaxListEdit/>} />
+            <Route path="settings/address" element={<AddressTable/>} />
+            <Route path="settings/address/add" element={<AddressAddPage/>} />
 
 
           </Route>

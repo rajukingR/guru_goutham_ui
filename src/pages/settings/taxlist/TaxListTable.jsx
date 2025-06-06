@@ -1,42 +1,46 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
+import axios from "axios";
 import DynamicTable from "../../../components/table-format/DynamicTable";
 
 const TaxListTable = () => {
+  const [data, setData] = useState([]);
+  const [loading, setLoading] = useState(true);
+
   const columns = [
     { id: "id", label: "S.No." },
-    { id: "tax_id", label: "Tax ID" },
+    { id: "tax_code", label: "Tax Code" },
     { id: "tax_name", label: "Tax Name" },
-    { id: "tax_percentage", label: "Tax (%)" },
-    { id: "description", label: "Description" },
+    { id: "percentage", label: "Tax (%)" },
+    { id: "is_active", label: "Active Status" },
   ];
 
-  const data = [
-    {
-      id: 1,
-      tax_id: "TX001",
-      tax_name: "GST",
-      tax_percentage: 18,
-      description: "Goods and Services Tax applicable across India.",
-    },
-    {
-      id: 2,
-      tax_id: "TX002",
-      tax_name: "VAT",
-      tax_percentage: 12.5,
-      description: "Value Added Tax used for goods at state level.",
-    },
-    {
-      id: 3,
-      tax_id: "TX003",
-      tax_name: "Service Tax",
-      tax_percentage: 15,
-      description: "Tax on services rendered.",
-    },
-  ];
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const response = await axios.get("http://localhost:5000/api/tax-list");
+
+        const formatted = response.data.map((item, index) => ({
+          id: index + 1,
+          tax_code: item.tax_code,
+          tax_name: item.tax_name,
+          percentage: item.percentage,
+          is_active: item.is_active ? "Active" : "Inactive",
+        }));
+
+        setData(formatted);
+      } catch (error) {
+        console.error("Failed to fetch tax list", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, []);
 
   return (
     <div>
-      <DynamicTable columns={columns} data={data} />
+      {loading ? <p>Loading tax list...</p> : <DynamicTable columns={columns} data={data} />}
     </div>
   );
 };

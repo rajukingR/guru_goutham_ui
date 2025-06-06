@@ -1,38 +1,40 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
+import axios from "axios";
 import DynamicTable from "../../../components/table-format/DynamicTable";
 
 const ContactTypeTable = () => {
+  const [data, setData] = useState([]);
+  const [loading, setLoading] = useState(true);
+
   const columns = [
     { id: "id", label: "S.No." },
-    { id: "contact_type_id", label: "Contact Type ID" },
     { id: "contact_type_name", label: "Contact Type Name" },
-    { id: "description", label: "Description" },
+    { id: "type", label: "Type" },
+    { id: "description", label: "Description" }
   ];
 
-  const data = [
-    {
-      id: 1,
-      contact_type_id: "CT001",
-      contact_type_name: "Client",
-      description: "Individuals or organizations purchasing services.",
-    },
-    {
-      id: 2,
-      contact_type_id: "CT002",
-      contact_type_name: "Vendor",
-      description: "Suppliers or service providers.",
-    },
-    {
-      id: 3,
-      contact_type_id: "CT003",
-      contact_type_name: "Partner",
-      description: "Collaborative business partners.",
-    },
-  ];
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const response = await axios.get("http://localhost:5000/api/contact-types");
+        setData(response.data);
+      } catch (error) {
+        console.error("Error fetching contact types:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, []);
 
   return (
     <div>
-      <DynamicTable columns={columns} data={data} />
+      {loading ? (
+        <p>Loading contact types...</p>
+      ) : (
+        <DynamicTable columns={columns} data={data} />
+      )}
     </div>
   );
 };
