@@ -86,6 +86,7 @@ import AddressTable from "../pages/settings/address/AddressTable.jsx";
 import AddressAddPage from "../pages/settings/address/AddressAddPage.jsx";
 import ContactTypeEdit from "../pages/settings/contacttype/ContactTypeEdit.jsx";
 import TaxListEdit from "../pages/settings/taxlist/TaxListEdit.jsx";
+import RolesEditPage from "../pages/settings/roles/RolesEditPage.jsx";
 const ProtectedRoute = ({ element }) => {
   const user = useSelector((state) => state.auth.user);
   return user ? element : <Navigate to="/signin" replace />;
@@ -170,6 +171,7 @@ const RoutesConfig = () => {
             <Route path="settings/users/add" element={<UsersAddPage/>} />
             <Route path="settings/roles" element={<RolesTablePage/>} />
             <Route path="settings/roles/add" element={<RolesAddPage/>} />
+            <Route path="settings/roles/edit/:id" element={<RolesEditPage/>} />
             <Route path="settings/branch" element={<BranchTablePage/>} />
             <Route path="settings/branch/add" element={<BranchAddPage/>} />
             <Route path="settings/contact_type" element={<ContactTypeTable/>} />

@@ -1,13 +1,14 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 import DynamicTable from "../../../components/table-format/DynamicTable";
+import { id } from "date-fns/locale";
 
 const TaxListTable = () => {
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
 
   const columns = [
-    { id: "id", label: "S.No." },
+    { id: "s_no", label: "S.No." },
     { id: "tax_code", label: "Tax Code" },
     { id: "tax_name", label: "Tax Name" },
     { id: "percentage", label: "Tax (%)" },
@@ -20,7 +21,8 @@ const TaxListTable = () => {
         const response = await axios.get("http://localhost:5000/api/tax-list");
 
         const formatted = response.data.map((item, index) => ({
-          id: index + 1,
+          s_no: index + 1,
+          id: item.id,
           tax_code: item.tax_code,
           tax_name: item.tax_name,
           percentage: item.percentage,

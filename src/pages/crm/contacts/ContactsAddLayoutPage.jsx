@@ -257,7 +257,6 @@ const ContactsAddLayoutPage = () => {
                 options={[
                   { value: "Prepaid", label: "Prepaid" },
                   { value: "Postpaid", label: "Postpaid" },
-                  { value: "Credit", label: "Credit" },
                 ]}
               />
             </div>

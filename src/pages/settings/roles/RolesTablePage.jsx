@@ -1,32 +1,38 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
+import axios from "axios";
 import DynamicTable from "../../../components/table-format/DynamicTable";
 
 const RolesTablePage = () => {
-  const columns = [
+  const [data, setData] = useState([]);
+  const [loading, setLoading] = useState(true);
+const columns = [
     { id: "id", label: "S.No." },
-    { id: "lead_id", label: "Lead ID" },
-    { id: "lead_title", label: "Title" },
-    { id: "transaction_type", label: "Transaction Type" },
+    { id: "role_name", label: "RoleName" },
+    { id: "description", label: "Description" },
   ];
 
-  const data = [
-    {
-      id: 1,
-      lead_id: "U001",
-      lead_title: "Office Lease",
-      transaction_type: "Lease",
-    },
-    {
-      id: 2,
-      lead_id: "U002",
-      lead_title: "Retail Space Rent",
-      transaction_type: "Rent",
-    },
-  ];
+  useEffect(() => {
+    const fetchRoles = async () => {
+      try {
+        const response = await axios.get("http://localhost:5000/api/roles");
+        setData(response.data); // assuming API returns an array of objects
+      } catch (error) {
+        console.error("Error fetching roles:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchRoles();
+  }, []);
 
   return (
     <div>
-      <DynamicTable columns={columns} data={data} />
+      {loading ? (
+        <p>Loading...</p>
+      ) : (
+        <DynamicTable columns={columns} data={data} />
+      )}
     </div>
   );
 };
