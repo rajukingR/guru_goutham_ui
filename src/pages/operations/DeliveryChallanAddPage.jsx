@@ -17,7 +17,7 @@ import {
 import { Add, Remove } from "@mui/icons-material";
 import { useNavigate } from "react-router-dom";
 
-const API_URL = "http://localhost:5000/api";
+import API_URL from "../../api/Api_url";
 
 const DeliveryChallanAddPage = () => {
   const navigate = useNavigate();

@@ -1,2 +1,3 @@
-const API_URL = 'http://localhost:5000/api';
+// apiConfig.js (or wherever you export API_URL)
+const API_URL = import.meta.env.VITE_API_URL;
 export default API_URL;

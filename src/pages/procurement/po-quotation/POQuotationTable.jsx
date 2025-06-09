@@ -2,9 +2,11 @@ import React, { useEffect, useState } from "react";
 import DynamicTable from "../../../components/table-format/DynamicTable";
 import axios from "axios";
 import API_URL from "../../../api/Api_url";
+import { useSelector } from "react-redux";
 
 const POQuotationTable = () => {
   const [data, setData] = useState([]);
+  const { user, token } = useSelector((state) => state.auth);
 
   const columns = [
     { id: "id", label: "S.No." },
@@ -20,8 +22,6 @@ const POQuotationTable = () => {
   useEffect(() => {
     const fetchQuotations = async () => {
       try {
-        const token = localStorage.getItem("token");
-
         const response = await axios.get(`${API_URL}/purchase-quotation`, {
           headers: {
             Authorization: `Bearer ${token}`,

@@ -21,13 +21,12 @@ import {
 } from "@mui/material";
 import { Add, Remove } from "@mui/icons-material";
 
-const API_URL = "http://localhost:5000/api";
+import API_URL from "../../../api/Api_url";
 
 const SalesOrdersEditLayoutPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
 
-  console.log(id, "kkkkkkkkkkkkkkkkk");
 
   // State for form data
   const [formData, setFormData] = useState({

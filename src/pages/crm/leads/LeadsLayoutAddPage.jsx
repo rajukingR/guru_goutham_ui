@@ -19,11 +19,11 @@ import {
   Alert
 } from '@mui/material';
 import { Add, Remove } from '@mui/icons-material';
+import API_URL from "../../../api/Api_url";
 
 const LeadsLayoutAddPage = () => {
   const { user } = useSelector((state) => state.auth);
   const LoginUserName = user.full_name;
-  const API_URL = "http://localhost:5000/api";
 
   const [formData, setFormData] = useState({
     leadId: '',

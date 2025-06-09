@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import Snackbar from "@mui/material/Snackbar";
 import Alert from "@mui/material/Alert";
 import { useSelector } from "react-redux";
+import API_URL from "../../../api/Api_url";
 
 const ContactsEditLayoutPage = () => {
   const { user } = useSelector((state) => state.auth);
@@ -56,7 +57,7 @@ const ContactsEditLayoutPage = () => {
     const fetchContactData = async () => {
       try {
         const response = await fetch(
-          `http://localhost:5000/api/contacts/${id}`
+          `${API_URL}/contacts/${id}`
         );
         const data = await response.json();
 
@@ -147,7 +148,7 @@ const ContactsEditLayoutPage = () => {
     e.preventDefault();
 
     try {
-      const response = await fetch(`http://localhost:5000/api/contacts/${id}`, {
+      const response = await fetch(`${API_URL}/contacts/${id}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
