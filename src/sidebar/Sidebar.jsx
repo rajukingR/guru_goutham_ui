@@ -298,11 +298,11 @@ const Sidebar = ({ section }) => {
           path: "/dashboard/settings/taxt_list",
           icon: <FaUserTie size={24} />,
         },
-        // {
-        //   text: "GST(Taxes)",
-        //   path: "/dashboard/settings/BenchStatus",
-        //   icon: <MdOutlineAirlineSeatLegroomNormal size={24} />,
-        // },
+        {
+          text: "Branch",
+          path: "/dashboard/settings/Branch",
+          icon: <MdOutlineAirlineSeatLegroomNormal size={24} />,
+        },
         // {
         //   text: "Hsn Codes",
         //   path: "/dashboard/settings/RevenType",

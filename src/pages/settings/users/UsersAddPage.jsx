@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ChevronDown } from 'lucide-react';
 
 const UsersAddPage = () => {
@@ -21,6 +21,34 @@ const UsersAddPage = () => {
     userAccess: false
   });
 
+  const [roles, setRoles] = useState([]);
+  const [branches, setBranches] = useState([]);
+
+  useEffect(() => {
+    const fetchRoles = async () => {
+      try {
+        const response = await fetch("http://localhost:5000/api/roles");
+        const result = await response.json();
+        setRoles(result);
+      } catch (error) {
+        console.error("Failed to fetch roles:", error);
+      }
+    };
+
+    const fetchBranches = async () => {
+      try {
+        const response = await fetch("http://localhost:5000/api/branches");
+        const result = await response.json();
+        setBranches(result);
+      } catch (error) {
+        console.error("Failed to fetch branches:", error);
+      }
+    };
+
+    fetchRoles();
+    fetchBranches();
+  }, []);
+
   const handleInputChange = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
@@ -29,52 +57,98 @@ const UsersAddPage = () => {
     setFormData(prev => ({ ...prev, [field]: !prev[field] }));
   };
 
+  const handlePincodeChange = async (value) => {
+    handleInputChange('pincode', value);
+    
+    // Clear address fields when pincode is cleared or invalid
+    if (value.length !== 6) {
+      handleInputChange('country', '');
+      handleInputChange('state', '');
+      handleInputChange('city', '');
+      return;
+    }
+
+    try {
+      const response = await fetch(`https://api.postalpincode.in/pincode/${value}`);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      const result = await response.json();
+      
+      if (result[0].Status === "Success") {
+        const postOffice = result[0].PostOffice[0];
+        handleInputChange('country', 'India');
+        handleInputChange('state', postOffice.State);
+        handleInputChange('city', postOffice.District);
+      } else {
+        console.error("Invalid pincode or no data found");
+        // Clear fields if pincode is invalid
+        handleInputChange('country', '');
+        handleInputChange('state', '');
+        handleInputChange('city', '');
+      }
+    } catch (error) {
+      console.error("Failed to fetch location data:", error);
+      // Clear fields on error
+      handleInputChange('country', '');
+      handleInputChange('state', '');
+      handleInputChange('city', '');
+    }
+  };
+
+  const Field = ({ label, placeholder, type = 'text', required = false, value, onChange, options = [], disabled = false }) => (
+    <div style={fieldContainerStyle}>
+      <label style={labelStyle}>
+        {label}
+        {required && <span style={requiredStyle}>*</span>}
+      </label>
+      {type === 'select' ? (
+        <div style={selectWrapperStyle}>
+          <select
+            style={selectStyle}
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+            required={required}
+            disabled={disabled}
+          >
+            <option value="">{placeholder}</option>
+            {options.map((opt, idx) => (
+              <option key={idx} value={opt.value}>{opt.label}</option>
+            ))}
+          </select>
+          <div style={selectArrowStyle}></div>
+        </div>
+      ) : (
+        <input
+          type={type}
+          placeholder={placeholder}
+          style={inputStyle}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          required={required}
+          disabled={disabled}
+        />
+      )}
+    </div>
+  );
+
   return (
     <div style={containerStyle}>
-      {/* Breadcrumb */}
       <div style={breadcrumbStyle}>
         Masters / Users / Add Users
       </div>
 
-      {/* Main Form Container */}
       <div style={formContainerStyle}>
-        
-        {/* Personal Details Section */}
         <div style={cardStyle}>
           <div style={cardHeaderContainerStyle}>
-            <div style={iconStyle}>👤</div>
+            <div style={iconStyle}></div>
             <h3 style={cardHeaderStyle}>Personal Details:</h3>
           </div>
           <div style={fieldsGridStyle}>
-            <Field
-              label="First Name"
-              placeholder="Enter First Name"
-              value={formData.firstName}
-              onChange={(value) => handleInputChange('firstName', value)}
-              required
-            />
-            <Field
-              label="Last Name"
-              placeholder="Enter Last Name"
-              value={formData.lastName}
-              onChange={(value) => handleInputChange('lastName', value)}
-              required
-            />
-            <Field
-              label="Login ID"
-              placeholder="Enter Login ID"
-              value={formData.loginId}
-              onChange={(value) => handleInputChange('loginId', value)}
-              required
-            />
-            <Field
-              label="Password"
-              type="password"
-              placeholder="Enter Password"
-              value={formData.password}
-              onChange={(value) => handleInputChange('password', value)}
-              required
-            />
+            <Field label="First Name" placeholder="Enter First Name" value={formData.firstName} onChange={(value) => handleInputChange('firstName', value)} required />
+            <Field label="Last Name" placeholder="Enter Last Name" value={formData.lastName} onChange={(value) => handleInputChange('lastName', value)} required />
+            <Field label="Login ID" placeholder="Enter Login ID" value={formData.loginId} onChange={(value) => handleInputChange('loginId', value)} required />
+            <Field label="Password" type="password" placeholder="Enter Password" value={formData.password} onChange={(value) => handleInputChange('password', value)} required />
             <Field
               label="Role Name"
               type="select"
@@ -82,6 +156,10 @@ const UsersAddPage = () => {
               value={formData.roleId}
               onChange={(value) => handleInputChange('roleId', value)}
               required
+              options={roles.map(role => ({
+                label: role.role_name || role.name,
+                value: role.id
+              }))}
             />
             <Field
               label="Branch"
@@ -90,84 +168,55 @@ const UsersAddPage = () => {
               value={formData.branch}
               onChange={(value) => handleInputChange('branch', value)}
               required
+              options={branches.map(branch => ({
+                label: branch.branch_name || branch.name,
+                value: branch.id
+              }))}
             />
-            <Field
-              label="Email ID"
-              type="email"
-              placeholder="Enter Email ID"
-              value={formData.emailId}
-              onChange={(value) => handleInputChange('emailId', value)}
-              required
-            />
-            <Field
-              label="Phone Number"
-              type="tel"
-              placeholder="Enter Phone Number"
-              value={formData.phoneNumber}
-              onChange={(value) => handleInputChange('phoneNumber', value)}
-              required
-            />
+            <Field label="Email ID" type="email" placeholder="Enter Email ID" value={formData.emailId} onChange={(value) => handleInputChange('emailId', value)} required />
+            <Field label="Phone Number" type="tel" placeholder="Enter Phone Number" value={formData.phoneNumber} onChange={(value) => handleInputChange('phoneNumber', value)} required />
           </div>
         </div>
 
-        {/* Address Section */}
         <div style={cardStyle}>
           <div style={cardHeaderContainerStyle}>
-            <div style={iconStyle}>📍</div>
+            <div style={iconStyle}></div>
             <h3 style={cardHeaderStyle}>Address:</h3>
           </div>
           <div style={fieldsGridStyle}>
-            <Field
-              label="Pincode"
-              placeholder="Enter Pincode"
-              value={formData.pincode}
-              onChange={(value) => handleInputChange('pincode', value)}
-              required
+            <Field label="Pincode" placeholder="Enter Pincode" value={formData.pincode} onChange={(value) => handlePincodeChange(value)} required />
+            <Field 
+              label="Country" 
+              placeholder="Country will auto-fill" 
+              value={formData.country} 
+              onChange={(value) => handleInputChange('country', value)} 
+              required 
+              disabled
             />
-            <Field
-              label="Country"
-              type="select"
-              placeholder="Select Country"
-              value={formData.country}
-              onChange={(value) => handleInputChange('country', value)}
-              required
+            <Field 
+              label="State" 
+              placeholder="State will auto-fill" 
+              value={formData.state} 
+              onChange={(value) => handleInputChange('state', value)} 
+              required 
+              disabled
             />
-            <Field
-              label="State"
-              type="select"
-              placeholder="Select State"
-              value={formData.state}
-              onChange={(value) => handleInputChange('state', value)}
-              required
+            <Field 
+              label="City" 
+              placeholder="City will auto-fill" 
+              value={formData.city} 
+              onChange={(value) => handleInputChange('city', value)} 
+              required 
+              disabled
             />
-            <Field
-              label="City"
-              type="select"
-              placeholder="Select City"
-              value={formData.city}
-              onChange={(value) => handleInputChange('city', value)}
-              required
-            />
-            <Field
-              label="Landmark"
-              placeholder="Enter Landmark"
-              value={formData.landmark}
-              onChange={(value) => handleInputChange('landmark', value)}
-            />
-            <Field
-              label="Street"
-              placeholder="Enter Address"
-              value={formData.street}
-              onChange={(value) => handleInputChange('street', value)}
-              required
-            />
+            <Field label="Landmark" placeholder="Enter Landmark" value={formData.landmark} onChange={(value) => handleInputChange('landmark', value)} />
+            <Field label="Street" placeholder="Enter Address" value={formData.street} onChange={(value) => handleInputChange('street', value)} required />
           </div>
         </div>
 
-        {/* Control Section */}
         <div style={cardStyle}>
           <div style={cardHeaderContainerStyle}>
-            <div style={iconStyle}>⚙️</div>
+            <div style={iconStyle}></div>
             <h3 style={cardHeaderStyle}>Control:</h3>
           </div>
           <div style={controlSectionStyle}>
@@ -197,7 +246,6 @@ const UsersAddPage = () => {
         </div>
       </div>
 
-      {/* User Access Section */}
       <div style={userAccessCardStyle}>
         <div style={userAccessHeaderStyle}>
           <div style={userAccessLabelStyle}>
@@ -223,7 +271,6 @@ const UsersAddPage = () => {
         </div>
       </div>
 
-      {/* Action Buttons */}
       <div style={buttonContainerStyle}>
         <button 
           style={cancelBtnStyle}
@@ -244,81 +291,7 @@ const UsersAddPage = () => {
   );
 };
 
-const Field = ({ label, placeholder, type = 'text', required = false, value, onChange }) => (
-  <div style={fieldContainerStyle}>
-    <label style={labelStyle}>
-      {label}
-      {required && <span style={requiredStyle}>*</span>}
-    </label>
-    {type === 'select' ? (
-      <div style={selectWrapperStyle}>
-        <select
-          style={selectStyle}
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          required={required}
-        >
-          <option value="">{placeholder}</option>
-          {label === "Role Name" && (
-            <>
-              <option value="admin">Admin</option>
-              <option value="user">User</option>
-              <option value="manager">Manager</option>
-              <option value="supervisor">Supervisor</option>
-            </>
-          )}
-          {label === "Branch" && (
-            <>
-              <option value="mumbai">Mumbai</option>
-              <option value="delhi">Delhi</option>
-              <option value="bangalore">Bangalore</option>
-              <option value="chennai">Chennai</option>
-              <option value="pune">Pune</option>
-            </>
-          )}
-          {label === "Country" && (
-            <>
-              <option value="india">India</option>
-              <option value="usa">USA</option>
-              <option value="uk">UK</option>
-              <option value="canada">Canada</option>
-            </>
-          )}
-          {label === "State" && (
-            <>
-              <option value="maharashtra">Maharashtra</option>
-              <option value="karnataka">Karnataka</option>
-              <option value="delhi">Delhi</option>
-              <option value="tamil-nadu">Tamil Nadu</option>
-              <option value="gujarat">Gujarat</option>
-            </>
-          )}
-          {label === "City" && (
-            <>
-              <option value="mumbai">Mumbai</option>
-              <option value="bangalore">Bangalore</option>
-              <option value="delhi">Delhi</option>
-              <option value="chennai">Chennai</option>
-              <option value="pune">Pune</option>
-            </>
-          )}
-        </select>
-        <div style={selectArrowStyle}>▼</div>
-      </div>
-    ) : (
-      <input
-        type={type}
-        placeholder={placeholder}
-        style={inputStyle}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        required={required}
-      />
-    )}
-  </div>
-);
-
-// Styles
+// Styles (same as before)
 const containerStyle = {
   padding: '2rem',
   fontFamily: '"Inter", "Segoe UI", -apple-system, BlinkMacSystemFont, sans-serif',
@@ -438,7 +411,7 @@ const selectArrowStyle = {
   transform: 'translateY(-50%)',
   pointerEvents: 'none',
   fontSize: '0.75rem',
-  color: '#6b7280',
+  color: '#6b728d0',
 };
 
 const controlSectionStyle = {

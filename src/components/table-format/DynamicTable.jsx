@@ -53,6 +53,7 @@ const apiEndpoints = {
   orders: `${API_URL}/orders`,
   contact_type: `${API_URL}/contact-types`,
   taxt_list: `${API_URL}/tax-list`,
+  Branch: `${API_URL}/branches`,
 };
 
 // Delivery Challan Dialog Component

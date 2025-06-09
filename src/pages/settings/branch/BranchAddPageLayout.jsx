@@ -1,6 +1,15 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import axios from 'axios';
+import { useNavigate } from 'react-router-dom';
+import Snackbar from '@mui/material/Snackbar';
+import MuiAlert from '@mui/material/Alert';
 
-const BranchAddPage = () => {
+const Alert = React.forwardRef(function Alert(props, ref) {
+  return <MuiAlert elevation={6} ref={ref} variant="filled" {...props} />;
+});
+
+const BranchAddPageLayout = () => {
+  const navigate = useNavigate();
   const [formData, setFormData] = useState({
     branchCode: '',
     branchName: '',
@@ -11,6 +20,9 @@ const BranchAddPage = () => {
     address: '',
     activeStatus: true
   });
+  const [openSnackbar, setOpenSnackbar] = useState(false);
+  const [snackbarMessage, setSnackbarMessage] = useState('');
+  const [snackbarSeverity, setSnackbarSeverity] = useState('success');
 
   const handleInputChange = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -20,17 +32,97 @@ const BranchAddPage = () => {
     setFormData(prev => ({ ...prev, [field]: !prev[field] }));
   };
 
+  useEffect(() => {
+    const fetchLocation = async () => {
+      if (formData.pincode.length === 6) {
+        try {
+          const response = await axios.get(`https://api.postalpincode.in/pincode/${formData.pincode}`);
+          const data = response.data;
+
+          if (data[0].Status === "Success") {
+            const postOffice = data[0].PostOffice[0];
+            setFormData(prev => ({
+              ...prev,
+              country: 'India',
+              state: postOffice.State || '',
+              city: postOffice.District || ''
+            }));
+          } else {
+            setFormData(prev => ({
+              ...prev,
+              country: '',
+              state: '',
+              city: ''
+            }));
+          }
+        } catch (error) {
+          console.error("Error fetching location from pincode:", error);
+          setFormData(prev => ({
+            ...prev,
+            country: '',
+            state: '',
+            city: ''
+          }));
+        }
+      }
+    };
+
+    fetchLocation();
+  }, [formData.pincode]);
+
+  const handleSubmit = async () => {
+    const payload = {
+      branch_code: formData.branchCode,
+      branch_name: formData.branchName,
+      pincode: formData.pincode,
+      country: formData.country,
+      state: formData.state,
+      city: formData.city,
+      address: formData.address,
+      is_active: formData.activeStatus
+    };
+
+    try {
+      const response = await axios.post('http://localhost:5000/api/branches/create', payload);
+      setSnackbarMessage('Branch created successfully!');
+      setSnackbarSeverity('success');
+      setOpenSnackbar(true);
+      setFormData({
+        branchCode: '',
+        branchName: '',
+        pincode: '',
+        country: '',
+        state: '',
+        city: '',
+        address: '',
+        activeStatus: true
+      });
+
+      setTimeout(() => {
+      navigate("/dashboard/settings/Branch");
+      }, 3000);
+    } catch (error) {
+      console.error('Error creating branch:', error);
+      setSnackbarMessage('Failed to create branch.');
+      setSnackbarSeverity('error');
+      setOpenSnackbar(true);
+    }
+  };
+
+  const handleCloseSnackbar = (event, reason) => {
+    if (reason === 'clickaway') {
+      return;
+    }
+    setOpenSnackbar(false);
+  };
+
   return (
     <div style={containerStyle}>
-      {/* Breadcrumb */}
       <div style={breadcrumbStyle}>
         Masters / Branches / Add Branches
       </div>
 
-      {/* Main Form Container */}
       <div style={formContainerStyle}>
-        
-        {/* Branch Details Section */}
         <div style={cardStyle}>
           <div style={cardHeaderContainerStyle}>
             <div style={iconStyle}>🏢</div>
@@ -54,7 +146,6 @@ const BranchAddPage = () => {
           </div>
         </div>
 
-        {/* Address Section */}
         <div style={cardStyle}>
           <div style={cardHeaderContainerStyle}>
             <div style={iconStyle}>📍</div>
@@ -70,27 +161,24 @@ const BranchAddPage = () => {
             />
             <Field
               label="Country"
-              type="select"
-              placeholder="Select Country"
+              placeholder="Auto Detected"
               value={formData.country}
-              onChange={(value) => handleInputChange('country', value)}
-              required
+              onChange={() => {}}
+              readOnly
             />
             <Field
               label="State"
-              type="select"
-              placeholder="Select State"
+              placeholder="Auto Detected"
               value={formData.state}
-              onChange={(value) => handleInputChange('state', value)}
-              required
+              onChange={() => {}}
+              readOnly
             />
             <Field
               label="City"
-              type="select"
-              placeholder="Select City"
+              placeholder="Auto Detected"
               value={formData.city}
-              onChange={(value) => handleInputChange('city', value)}
-              required
+              onChange={() => {}}
+              readOnly
             />
           </div>
           <div style={fullWidthFieldStyle}>
@@ -104,7 +192,6 @@ const BranchAddPage = () => {
           </div>
         </div>
 
-        {/* Control Section */}
         <div style={cardStyle}>
           <div style={cardHeaderContainerStyle}>
             <div style={iconStyle}>⚙️</div>
@@ -113,8 +200,7 @@ const BranchAddPage = () => {
           <div style={controlSectionStyle}>
             <div style={toggleFieldStyle}>
               <label style={labelStyle}>
-                Active Status
-                <span style={requiredStyle}>*</span>
+                Active Status<span style={requiredStyle}>*</span>
               </label>
               <div style={toggleContainerStyle}>
                 <div
@@ -137,9 +223,8 @@ const BranchAddPage = () => {
         </div>
       </div>
 
-      {/* Action Buttons */}
       <div style={buttonContainerStyle}>
-        <button 
+        <button
           style={cancelBtnStyle}
           onMouseEnter={(e) => e.target.style.backgroundColor = '#e5e7eb'}
           onMouseLeave={(e) => e.target.style.backgroundColor = '#f3f4f6'}
@@ -150,71 +235,43 @@ const BranchAddPage = () => {
           style={createBtnStyle}
           onMouseEnter={(e) => e.target.style.backgroundColor = '#1d4ed8'}
           onMouseLeave={(e) => e.target.style.backgroundColor = '#2563eb'}
+          onClick={handleSubmit}
         >
           Create Branch
         </button>
       </div>
+
+      <Snackbar
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+        open={openSnackbar}
+        autoHideDuration={3000}
+        onClose={handleCloseSnackbar}
+      >
+        <Alert onClose={handleCloseSnackbar} severity={snackbarSeverity} sx={{ width: '100%' }}>
+          {snackbarMessage}
+        </Alert>
+      </Snackbar>
     </div>
   );
 };
 
-const Field = ({ label, placeholder, type = 'text', required = false, value, onChange }) => (
+const Field = ({ label, placeholder, type = 'text', required = false, value, onChange, readOnly = false }) => (
   <div style={fieldContainerStyle}>
     <label style={labelStyle}>
       {label}
       {required && <span style={requiredStyle}>*</span>}
     </label>
-    {type === 'select' ? (
-      <div style={selectWrapperStyle}>
-        <select
-          style={selectStyle}
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          required={required}
-        >
-          <option value="">{placeholder}</option>
-          {label === "Country" && (
-            <>
-              <option value="india">India</option>
-              <option value="usa">USA</option>
-              <option value="uk">UK</option>
-              <option value="canada">Canada</option>
-            </>
-          )}
-          {label === "State" && (
-            <>
-              <option value="maharashtra">Maharashtra</option>
-              <option value="karnataka">Karnataka</option>
-              <option value="delhi">Delhi</option>
-              <option value="tamil-nadu">Tamil Nadu</option>
-              <option value="gujarat">Gujarat</option>
-            </>
-          )}
-          {label === "City" && (
-            <>
-              <option value="mumbai">Mumbai</option>
-              <option value="bangalore">Bangalore</option>
-              <option value="delhi">Delhi</option>
-              <option value="chennai">Chennai</option>
-              <option value="pune">Pune</option>
-            </>
-          )}
-        </select>
-        <div style={selectArrowStyle}>▼</div>
-      </div>
-    ) : (
-      <input
-        type={type}
-        placeholder={placeholder}
-        style={inputStyle}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        required={required}
-      />
-    )}
+    <input
+      type={type}
+      placeholder={placeholder}
+      style={inputStyle}
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      required={required}
+      readOnly={readOnly}
+    />
   </div>
 );
-
 // Styles
 const containerStyle = {
   padding: '2rem',
@@ -312,36 +369,6 @@ const inputStyle = {
   boxSizing: 'border-box',
 };
 
-const selectWrapperStyle = {
-  position: 'relative',
-  width: '100%',
-};
-
-const selectStyle = {
-  width: '100%',
-  padding: '0.75rem',
-  paddingRight: '2.5rem',
-  borderRadius: '8px',
-  border: '1px solid #d1d5db',
-  fontSize: '0.875rem',
-  backgroundColor: '#ffffff',
-  appearance: 'none',
-  transition: 'all 0.2s ease',
-  outline: 'none',
-  boxSizing: 'border-box',
-  cursor: 'pointer',
-};
-
-const selectArrowStyle = {
-  position: 'absolute',
-  right: '0.75rem',
-  top: '50%',
-  transform: 'translateY(-50%)',
-  pointerEvents: 'none',
-  fontSize: '0.75rem',
-  color: '#6b7280',
-};
-
 const controlSectionStyle = {
   display: 'flex',
   flexDirection: 'column',
@@ -415,4 +442,4 @@ const createBtnStyle = {
   outline: 'none',
 };
 
-export default BranchAddPage;
+export default BranchAddPageLayout;
