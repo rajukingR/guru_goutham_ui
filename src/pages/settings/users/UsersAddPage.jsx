@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ChevronDown } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 const UsersAddPage = () => {
   const [formData, setFormData] = useState({
@@ -20,151 +21,239 @@ const UsersAddPage = () => {
     activeStatus: true,
     userAccess: false
   });
+  const [roles, setRoles] = useState([]);
+  const [branches, setBranches] = useState([]);
+  const [snackbar, setSnackbar] = useState({ open: false, message: '', type: '' });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isFetchingPincode, setIsFetchingPincode] = useState(false);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const fetchRoles = async () => {
+      try {
+        const res = await fetch('http://localhost:5000/api/roles');
+        if (res.ok) {
+          const data = await res.json();
+          setRoles(data);
+        } else {
+          console.error('Failed to fetch roles');
+        }
+      } catch (err) {
+        console.error('Error fetching roles:', err);
+      }
+    };
+
+    const fetchBranches = async () => {
+      try {
+        const res = await fetch('http://localhost:5000/api/branches');
+        if (res.ok) {
+          const data = await res.json();
+          setBranches(data);
+        } else {
+          console.error('Failed to fetch branches');
+        }
+      } catch (err) {
+        console.error('Error fetching branches:', err);
+      }
+    };
+
+    fetchRoles();
+    fetchBranches();
+  }, []);
 
   const handleInputChange = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }));
+    
+    // If pincode field is changed and has 6 digits, fetch address details
+    if (field === 'pincode' && value.length === 6) {
+      fetchAddressFromPincode(value);
+    }
   };
 
-  const handleToggleChange = (field) => {
+  const fetchAddressFromPincode = async (pincode) => {
+    setIsFetchingPincode(true);
+    try {
+      const response = await fetch(`https://api.postalpincode.in/pincode/${pincode}`);
+      const data = await response.json();
+      
+      if (data[0].Status === 'Success') {
+        const postOffice = data[0].PostOffice[0];
+        setFormData(prev => ({
+          ...prev,
+          country: 'India', // Assuming all pincodes are from India
+          state: postOffice.State,
+          city: postOffice.District,
+          street: postOffice.Name
+        }));
+      }
+    } catch (error) {
+      console.error('Error fetching pincode details:', error);
+    } finally {
+      setIsFetchingPincode(false);
+    }
+  };
+
+  const handleToggleChange = (field) =>
     setFormData(prev => ({ ...prev, [field]: !prev[field] }));
+
+  const showSnackbar = (message, type) => {
+    setSnackbar({ open: true, message, type });
+    setTimeout(() => setSnackbar(prev => ({ ...prev, open: false })), 3000);
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    try {
+      const payload = {
+        first_name: formData.firstName,
+        last_name: formData.lastName,
+        full_name: `${formData.firstName} ${formData.lastName}`,
+        email: formData.emailId,
+        password: formData.password,
+        role_id: parseInt(formData.roleId),
+        role_name: '',
+        login_id: formData.loginId,
+        branch: formData.branch,
+        phone_number: formData.phoneNumber,
+        pincode: formData.pincode,
+        country: formData.country,
+        state: formData.state,
+        city: formData.city,
+        landmark: formData.landmark,
+        street: formData.street,
+        is_active: formData.activeStatus
+      };
+
+      const roleObj = roles.find(r => r.id === payload.role_id);
+      payload.role_name = roleObj ? roleObj.role_name : '';
+
+      const response = await fetch('http://localhost:5000/api/users/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      if (response.ok) {
+        await response.json();
+        showSnackbar('User created successfully', 'success');
+        setTimeout(() => navigate('/dashboard/settings/users'), 2000);
+      } else {
+        const err = await response.json();
+        showSnackbar(err.message || 'Failed to create user', 'error');
+      }
+    } catch (err) {
+      console.error(err);
+      showSnackbar('Error creating user', 'error');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
     <div style={containerStyle}>
-      {/* Breadcrumb */}
-      <div style={breadcrumbStyle}>
-        Masters / Users / Add Users
-      </div>
+      <div style={breadcrumbStyle}>Masters / Users / Add Users</div>
+      <form style={formContainerStyle} onSubmit={handleSubmit}>
 
-      {/* Main Form Container */}
-      <div style={formContainerStyle}>
-        
-        {/* Personal Details Section */}
         <div style={cardStyle}>
           <div style={cardHeaderContainerStyle}>
             <div style={iconStyle}>👤</div>
             <h3 style={cardHeaderStyle}>Personal Details:</h3>
           </div>
           <div style={fieldsGridStyle}>
-            <Field
-              label="First Name"
-              placeholder="Enter First Name"
+            <Field label="First Name" placeholder="Enter First Name"
               value={formData.firstName}
-              onChange={(value) => handleInputChange('firstName', value)}
+              onChange={(v) => handleInputChange('firstName', v)}
               required
             />
-            <Field
-              label="Last Name"
-              placeholder="Enter Last Name"
+            <Field label="Last Name" placeholder="Enter Last Name"
               value={formData.lastName}
-              onChange={(value) => handleInputChange('lastName', value)}
+              onChange={(v) => handleInputChange('lastName', v)}
               required
             />
-            <Field
-              label="Login ID"
-              placeholder="Enter Login ID"
+            <Field label="Login ID" placeholder="Enter Login ID"
               value={formData.loginId}
-              onChange={(value) => handleInputChange('loginId', value)}
+              onChange={(v) => handleInputChange('loginId', v)}
               required
             />
-            <Field
-              label="Password"
-              type="password"
-              placeholder="Enter Password"
+            <Field label="Password" type="password" placeholder="Enter Password"
               value={formData.password}
-              onChange={(value) => handleInputChange('password', value)}
+              onChange={(v) => handleInputChange('password', v)}
               required
             />
-            <Field
-              label="Role Name"
-              type="select"
-              placeholder="Select User Role"
+
+            <Field label="Role Name" type="select" placeholder="Select User Role"
               value={formData.roleId}
-              onChange={(value) => handleInputChange('roleId', value)}
+              onChange={(v) => handleInputChange('roleId', v)}
               required
+              options={roles.map(r => ({ value: r.id, label: r.role_name }))}
             />
-            <Field
-              label="Branch"
-              type="select"
-              placeholder="Select Branch"
+
+            <Field label="Branch" type="select" placeholder="Select Branch"
               value={formData.branch}
-              onChange={(value) => handleInputChange('branch', value)}
+              onChange={(v) => handleInputChange('branch', v)}
               required
+              options={branches.map(b => ({ value: b.id, label: b.branch_name }))}
             />
-            <Field
-              label="Email ID"
-              type="email"
-              placeholder="Enter Email ID"
+            <Field label="Email ID" type="email" placeholder="Enter Email ID"
               value={formData.emailId}
-              onChange={(value) => handleInputChange('emailId', value)}
+              onChange={(v) => handleInputChange('emailId', v)}
               required
             />
-            <Field
-              label="Phone Number"
-              type="tel"
-              placeholder="Enter Phone Number"
+            <Field label="Phone Number" type="tel" placeholder="Enter Phone Number"
               value={formData.phoneNumber}
-              onChange={(value) => handleInputChange('phoneNumber', value)}
+              onChange={(v) => handleInputChange('phoneNumber', v)}
               required
             />
           </div>
         </div>
 
-        {/* Address Section */}
         <div style={cardStyle}>
           <div style={cardHeaderContainerStyle}>
             <div style={iconStyle}>📍</div>
             <h3 style={cardHeaderStyle}>Address:</h3>
           </div>
           <div style={fieldsGridStyle}>
-            <Field
-              label="Pincode"
-              placeholder="Enter Pincode"
+            <Field label="Pincode" placeholder="Enter Pincode"
               value={formData.pincode}
-              onChange={(value) => handleInputChange('pincode', value)}
+              onChange={(v) => handleInputChange('pincode', v)}
               required
+              loading={isFetchingPincode}
+              maxLength={6}
             />
-            <Field
-              label="Country"
-              type="select"
-              placeholder="Select Country"
+            <Field label="Country" type="select" placeholder="Select Country"
               value={formData.country}
-              onChange={(value) => handleInputChange('country', value)}
+              onChange={(v) => handleInputChange('country', v)}
               required
+              options={[
+                { value: 'India', label: 'India' },
+                { value: 'USA', label: 'USA' },
+                { value: 'UK', label: 'UK' },
+                { value: 'Canada', label: 'Canada' }
+              ]}
             />
-            <Field
-              label="State"
-              type="select"
-              placeholder="Select State"
+            <Field label="State" placeholder="Enter State"
               value={formData.state}
-              onChange={(value) => handleInputChange('state', value)}
+              onChange={(v) => handleInputChange('state', v)}
               required
             />
-            <Field
-              label="City"
-              type="select"
-              placeholder="Select City"
+            <Field label="City" placeholder="Enter City"
               value={formData.city}
-              onChange={(value) => handleInputChange('city', value)}
+              onChange={(v) => handleInputChange('city', v)}
               required
             />
-            <Field
-              label="Landmark"
-              placeholder="Enter Landmark"
+            <Field label="Landmark" placeholder="Enter Landmark"
               value={formData.landmark}
-              onChange={(value) => handleInputChange('landmark', value)}
+              onChange={(v) => handleInputChange('landmark', v)}
             />
-            <Field
-              label="Street"
-              placeholder="Enter Address"
+            <Field label="Street" placeholder="Enter Address"
               value={formData.street}
-              onChange={(value) => handleInputChange('street', value)}
+              onChange={(v) => handleInputChange('street', v)}
               required
             />
           </div>
         </div>
 
-        {/* Control Section */}
         <div style={cardStyle}>
           <div style={cardHeaderContainerStyle}>
             <div style={iconStyle}>⚙️</div>
@@ -172,158 +261,118 @@ const UsersAddPage = () => {
           </div>
           <div style={controlSectionStyle}>
             <div style={toggleFieldStyle}>
-              <label style={labelStyle}>
-                Active Status
-                <span style={requiredStyle}>*</span>
-              </label>
+              <label style={labelStyle}>Active Status<span style={requiredStyle}>*</span></label>
               <div style={toggleContainerStyle}>
-                <div
-                  onClick={() => handleToggleChange('activeStatus')}
+                <div onClick={() => handleToggleChange('activeStatus')}
                   style={{
                     ...toggleStyle,
                     backgroundColor: formData.activeStatus ? '#10b981' : '#d1d5db'
-                  }}
-                >
-                  <div
-                    style={{
-                      ...toggleCircleStyle,
-                      transform: formData.activeStatus ? 'translateX(24px)' : 'translateX(2px)'
-                    }}
-                  />
+                  }}>
+                  <div style={{
+                    ...toggleCircleStyle,
+                    transform: formData.activeStatus ? 'translateX(24px)' : 'translateX(2px)'
+                  }} />
                 </div>
               </div>
             </div>
           </div>
         </div>
-      </div>
 
-      {/* User Access Section */}
-      <div style={userAccessCardStyle}>
-        <div style={userAccessHeaderStyle}>
-          <div style={userAccessLabelStyle}>
-            <span style={userAccessTextStyle}>User Access</span>
-            <ChevronDown style={chevronStyle} />
-          </div>
-          <div style={toggleContainerStyle}>
-            <div
-              onClick={() => handleToggleChange('userAccess')}
-              style={{
-                ...toggleStyle,
-                backgroundColor: formData.userAccess ? '#2563eb' : '#d1d5db'
-              }}
-            >
-              <div
+        <div style={userAccessCardStyle}>
+          <div style={userAccessHeaderStyle}>
+            <div style={userAccessLabelStyle}>
+              <span style={userAccessTextStyle}>User Access</span>
+              <ChevronDown style={chevronStyle} />
+            </div>
+            <div style={toggleContainerStyle}>
+              <div onClick={() => handleToggleChange('userAccess')}
                 style={{
+                  ...toggleStyle,
+                  backgroundColor: formData.userAccess ? '#2563eb' : '#d1d5db'
+                }}>
+                <div style={{
                   ...toggleCircleStyle,
                   transform: formData.userAccess ? 'translateX(24px)' : 'translateX(2px)'
-                }}
-              />
+                }} />
+              </div>
             </div>
           </div>
         </div>
-      </div>
 
-      {/* Action Buttons */}
-      <div style={buttonContainerStyle}>
-        <button 
-          style={cancelBtnStyle}
-          onMouseEnter={(e) => e.target.style.backgroundColor = '#e5e7eb'}
-          onMouseLeave={(e) => e.target.style.backgroundColor = '#f3f4f6'}
-        >
-          Cancel
-        </button>
-        <button
-          style={createBtnStyle}
-          onMouseEnter={(e) => e.target.style.backgroundColor = '#1d4ed8'}
-          onMouseLeave={(e) => e.target.style.backgroundColor = '#2563eb'}
-        >
-          Create User
-        </button>
-      </div>
+        <div style={buttonContainerStyle}>
+          <button type="button" style={cancelBtnStyle}
+            onClick={() => navigate('/dashboard/settings/users')}>
+            Cancel
+          </button>
+          <button type="submit" style={createBtnStyle} disabled={isSubmitting}>
+            {isSubmitting ? 'Creating...' : 'Create User'}
+          </button>
+        </div>
+      </form>
+
+      {snackbar.open && (
+        <div style={{
+          ...snackbarStyle,
+          backgroundColor: snackbar.type === 'success' ? '#10b981' : '#ef4444'
+        }}>
+          {snackbar.message}
+        </div>
+      )}
     </div>
   );
 };
 
-const Field = ({ label, placeholder, type = 'text', required = false, value, onChange }) => (
+const Field = ({ label, placeholder, type = 'text', required = false, value, onChange, options = [], loading = false, maxLength }) => (
   <div style={fieldContainerStyle}>
     <label style={labelStyle}>
-      {label}
-      {required && <span style={requiredStyle}>*</span>}
+      {label}{required && <span style={requiredStyle}>*</span>}
     </label>
     {type === 'select' ? (
       <div style={selectWrapperStyle}>
-        <select
-          style={selectStyle}
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          required={required}
-        >
+        <select style={selectStyle} value={value} onChange={(e) => onChange(e.target.value)} required={required}>
           <option value="">{placeholder}</option>
-          {label === "Role Name" && (
-            <>
-              <option value="admin">Admin</option>
-              <option value="user">User</option>
-              <option value="manager">Manager</option>
-              <option value="supervisor">Supervisor</option>
-            </>
-          )}
-          {label === "Branch" && (
-            <>
-              <option value="mumbai">Mumbai</option>
-              <option value="delhi">Delhi</option>
-              <option value="bangalore">Bangalore</option>
-              <option value="chennai">Chennai</option>
-              <option value="pune">Pune</option>
-            </>
-          )}
-          {label === "Country" && (
-            <>
-              <option value="india">India</option>
-              <option value="usa">USA</option>
-              <option value="uk">UK</option>
-              <option value="canada">Canada</option>
-            </>
-          )}
-          {label === "State" && (
-            <>
-              <option value="maharashtra">Maharashtra</option>
-              <option value="karnataka">Karnataka</option>
-              <option value="delhi">Delhi</option>
-              <option value="tamil-nadu">Tamil Nadu</option>
-              <option value="gujarat">Gujarat</option>
-            </>
-          )}
-          {label === "City" && (
-            <>
-              <option value="mumbai">Mumbai</option>
-              <option value="bangalore">Bangalore</option>
-              <option value="delhi">Delhi</option>
-              <option value="chennai">Chennai</option>
-              <option value="pune">Pune</option>
-            </>
-          )}
+          {options.map((opt, i) => (
+            <option key={i} value={opt.value}>{opt.label}</option>
+          ))}
         </select>
         <div style={selectArrowStyle}>▼</div>
       </div>
     ) : (
-      <input
-        type={type}
-        placeholder={placeholder}
-        style={inputStyle}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        required={required}
-      />
+      <div style={{ position: 'relative' }}>
+        <input
+          type={type}
+          placeholder={placeholder}
+          style={inputStyle}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          required={required}
+          maxLength={maxLength}
+        />
+        {loading && (
+          <div style={{
+            position: 'absolute',
+            right: '10px',
+            top: '50%',
+            transform: 'translateY(-50%)',
+            width: '16px',
+            height: '16px',
+            border: '2px solid #f3f3f3',
+            borderTop: '2px solid #3498db',
+            borderRadius: '50%',
+            animation: 'spin 1s linear infinite'
+          }}></div>
+        )}
+      </div>
     )}
   </div>
 );
 
-// Styles
 const containerStyle = {
   padding: '2rem',
   fontFamily: '"Inter", "Segoe UI", -apple-system, BlinkMacSystemFont, sans-serif',
   minHeight: '100vh',
   lineHeight: 1.6,
+  position: 'relative',
 };
 
 const breadcrumbStyle = {
@@ -547,6 +596,18 @@ const createBtnStyle = {
   fontWeight: '500',
   transition: 'all 0.2s ease',
   outline: 'none',
+};
+
+const snackbarStyle = {
+  position: 'fixed',
+  bottom: '20px',
+  right: '20px',
+  padding: '12px 24px',
+  borderRadius: '8px',
+  color: 'white',
+  boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
+  zIndex: 1000,
+  animation: 'fadeIn 0.3s ease-in-out',
 };
 
 export default UsersAddPage;

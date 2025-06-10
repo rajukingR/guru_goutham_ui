@@ -87,6 +87,7 @@ import RolesEditPage from "../pages/settings/roles/RolesEditPage.jsx";
 import BranchTablePageLayout from "../pages/settings/branch/BranchTablePageLayout.jsx";
 import BranchAddPageLayout from "../pages/settings/branch/BranchAddPageLayout.jsx";
 import BranchEditPageLayout from "../pages/settings/branch/BranchEditPageLayout.jsx";
+import UsersEditPage from "../pages/settings/users/UsersEditPage.jsx";
 const ProtectedRoute = ({ element }) => {
   const user = useSelector((state) => state.auth.user);
   return user ? element : <Navigate to="/signin" replace />;
@@ -169,6 +170,7 @@ const RoutesConfig = () => {
                                        {/* settings */}
             <Route path="settings/users" element={<UsersTablePage/>} />
             <Route path="settings/users/add" element={<UsersAddPage/>} />
+            <Route path="settings/users/edit/:id" element={<UsersEditPage/>} />
             <Route path="settings/roles" element={<RolesTablePage/>} />
             <Route path="settings/roles/add" element={<RolesAddPage/>} />
             <Route path="settings/roles/edit/:id" element={<RolesEditPage/>} />

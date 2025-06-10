@@ -6,6 +6,7 @@ const BranchTablePageLayout = () => {
   const [data, setData] = useState([]);
 
   const columns = [
+    { id: "id", label: "S.No." },
     { id: "branch_code", label: "Branch Code" },
     { id: "branch_name", label: "Branch Name" },
     { id: "address", label: "Address" },
