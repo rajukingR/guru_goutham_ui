@@ -72,6 +72,9 @@ import ProductCategoriesAddPage from "../pages/product_library/productcategories
 import DeliveryChallanTable from "../pages/operations/DeliveryChallanTable.jsx";
 import DeliveryChallanAddPage from "../pages/operations/DeliveryChallanAddPage.jsx";
 import DeliveryChallanEditPage from "../pages/operations/DeliveryChallanEditPage.jsx";
+import InvoicesTablePage from "../pages/operations/invoices/InvoicesTablePage.jsx";
+import InvoicesAddPage from "../pages/operations/invoices/InvoicesAddPage.jsx";
+import InvoicesEditPage from "../pages/operations/invoices/InvoicesEditPage.jsx";
 const ProtectedRoute = ({ element }) => {
   const user = useSelector((state) => state.auth.user);
   return user ? element : <Navigate to="/signin" replace />;
@@ -151,6 +154,9 @@ const RoutesConfig = () => {
             <Route path="operations" element={<DeliveryChallanTable />} />
             <Route path="operations/add" element={<DeliveryChallanAddPage />} />
             <Route path="operations/edit/:id" element={<DeliveryChallanEditPage />} />
+            <Route path="operations/invoices" element={<InvoicesTablePage />} />
+            <Route path="operations/invoices/add" element={<InvoicesAddPage />} />
+            <Route path="operations/invoices/edit/:id" element={<InvoicesEditPage />} />
 
           </Route>
         </Routes>

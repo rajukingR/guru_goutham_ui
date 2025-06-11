@@ -2,62 +2,73 @@ import React, { useState, useEffect } from "react";
 import {
   Box,
   TextField,
-  Table,
-  TableBody,
-  TableCell,
   TableContainer,
+  Table,
   TableHead,
   TableRow,
-  Paper,
-  IconButton,
+  TableCell,
+  TableBody,
   Checkbox,
+  IconButton,
+  Paper,
   Snackbar,
   Alert,
+  Select,
+  MenuItem,
+  InputLabel,
+  FormControl,
 } from "@mui/material";
 import { Add, Remove } from "@mui/icons-material";
-import { useNavigate } from "react-router-dom";
 
-import API_URL from "../../api/Api_url";
+import API_URL from "../../../api/Api_url";
 
-const DeliveryChallanAddPage = () => {
-  const navigate = useNavigate();
+const InvoicesAddPage = () => {
   const [formData, setFormData] = useState({
-    dc_id: "",
-    dc_title: "",
-    is_dc: false,
-    order_id: "",
-    customer_code: "",
-    order_number: "",
-    dc_date: new Date().toISOString().split("T")[0],
-    dc_status: "Dispatched",
-    dealer_reference: "",
+    invoice_number: "",
+    invoice_title: "",
+    customer_id: "",
+    customer_name: "",
+    invoice_date: new Date().toISOString().split("T")[0],
+    invoice_due_date: "",
+    purchase_order_date: "",
+    purchase_order_number: "",
+    customer_gst_number: "",
+    duration: "",
     email: "",
-    gst_number: "",
+    phone_number: "",
     pan_number: "",
-    remarks: "",
-    type: "Sale",
-    regular_dc: true,
+    payment_terms: "",
+    payment_mode: "NEFT",
+    approval_status: "Approved",
+    approval_date: new Date().toISOString().slice(0, 19).replace("T", " "),
+    amount: 0,
+    cgst: 0,
+    sgst: 0,
+    igst: 0,
+    total_tax: 0,
+    total_amount: 0,
+    invoice_consulting_by: "",
     industry: "",
-    shipping_ordered_by: "",
-    shipping_phone_number: "",
-    shipping_name: "",
-    street: "",
-    landmark: "",
-    pincode: "",
-    city: "",
-    state: "",
-    country: "India",
-    vehicle_number: "",
-    delivery_person_name: "",
-    delivery_person_phone_number: "",
-    receiver_name: "",
-    receiver_phone_number: "",
+    remarks: "",
     items: [],
+    shippingDetails: {
+      consignee_name: "",
+      country: "India",
+      state: "",
+      city: "",
+      street: "",
+      landmark: "",
+      pincode: "",
+      phone_number: "",
+      email: "",
+    },
   });
 
-  // State for UI and data
+
   const [orders, setOrders] = useState([]);
+
   const [products, setProducts] = useState([]);
+  const [taxTypes, setTaxTypes] = useState([]);
   const [selectedProductIds, setSelectedProductIds] = useState([]);
   const [quantities, setQuantities] = useState({});
   const [searchTerm, setSearchTerm] = useState("");
@@ -65,24 +76,33 @@ const DeliveryChallanAddPage = () => {
   const [snackbar, setSnackbar] = useState({
     open: false,
     message: "",
-    severity: "success",
+    severity: "info",
   });
 
-  // Fetch orders and products on component mount
+  // Fetch initial data
   useEffect(() => {
     const fetchData = async () => {
       try {
-        // Fetch approved orders
-        const orderResponse = await fetch(`${API_URL}/orders/order-approved`);
-        if (!orderResponse.ok) throw new Error("Failed to fetch orders");
-        const orderData = await orderResponse.json();
-        setOrders(orderData);
+        // Fetch orders
+        const orderApprovedResponse = await fetch(
+          `${API_URL}/orders/order-approved`
+        );
+        if (!orderApprovedResponse.ok)
+          throw new Error("Failed to fetch orders");
+        const orderApprovedData = await orderApprovedResponse.json();
+        setOrders(orderApprovedData);
 
         // Fetch products
         const prodResponse = await fetch(`${API_URL}/product-templete`);
         if (!prodResponse.ok) throw new Error("Failed to fetch products");
         const prodData = await prodResponse.json();
         setProducts(prodData);
+
+        // Fetch tax types
+        const taxResponse = await fetch(`${API_URL}/tax-types`);
+        if (!taxResponse.ok) throw new Error("Failed to fetch tax types");
+        const taxData = await taxResponse.json();
+        setTaxTypes(taxData);
       } catch (error) {
         console.error("Error fetching data:", error);
         setSnackbar({
@@ -95,57 +115,159 @@ const DeliveryChallanAddPage = () => {
 
     fetchData();
   }, []);
-
-  // Handle order selection
-  const handleOrderSelect = (orderId) => {
+  const handleCustomerSelect = (customerId) => {
     const selectedOrder = orders.find(
-      (order) => order.id === parseInt(orderId)
+      (order) => order.id === parseInt(customerId)
     );
     if (!selectedOrder) return;
 
-    const { personalDetails, address, items } = selectedOrder;
+    const personal = selectedOrder.personalDetails;
+    const address = selectedOrder.address;
+
+    // Extract product IDs and quantities from the order items
+    const orderItems = selectedOrder.items || [];
+    const productIds = orderItems.map((item) => item.product_id);
+    const productQuantities = {};
+
+    orderItems.forEach((item) => {
+      productQuantities[item.product_id] = item.requested_quantity;
+    });
+
+    // Set the selected products and quantities
+    setSelectedProductIds(productIds);
+    setQuantities(productQuantities);
+
+    // Calculate initial totals based on the order items
+    const selectedProducts = products.filter((product) =>
+      productIds.includes(product.id)
+    );
+
+    let amount = 0;
+    const items = selectedProducts.map((product) => {
+      const quantity = productQuantities[product.id] || 0;
+      let price = product.purchase_price;
+      if (selectedOrder.transaction_type === "Rent") {
+        const duration = selectedOrder.rental_duration;
+        const monthlyRate = product.rent_price_per_month || 0;
+
+        switch (duration) {
+          case "1":
+          case "2":
+          case "3":
+          case "4":
+          case "5":
+            price = monthlyRate * parseInt(duration);
+            break;
+          case "6":
+            price = product.rent_price_6_months || monthlyRate * 6;
+            break;
+          case "7":
+          case "8":
+          case "9":
+          case "10":
+          case "11":
+            price = monthlyRate * parseInt(duration);
+            break;
+          case "12":
+            price = product.rent_price_1_year || monthlyRate * 12;
+            break;
+          default:
+            price = product.rent_price_per_day || 0; // fallback
+        }
+      }
+
+      const totalPrice = quantity * price;
+      amount += totalPrice;
+      return {
+        product_id: product.id,
+        product_name: product.product_name,
+        quantity: quantity,
+        unit_price: price,
+        total_price: totalPrice,
+      };
+    });
+
+    // Calculate taxes
+    const cgstRate =
+      taxTypes.find((t) => t.tax_type_name === "CGST")?.percentage || 0;
+    const sgstRate =
+      taxTypes.find((t) => t.tax_type_name === "SGST")?.percentage || 0;
+    console.log(cgstRate,"kkkkkkkkkkkkkkkkkkkkk");
+    
+    const cgst = (amount * parseFloat(cgstRate)) / 100;
+    const sgst = (amount * parseFloat(sgstRate)) / 100;
+    const totalTax = cgst + sgst;
+    const totalAmount = amount + totalTax;
+    console.log(cgst,"llllllllllllllllll");
 
     setFormData({
       ...formData,
-      order_id: selectedOrder.id,
-      customer_code: selectedOrder.order_id, // Using order_id as customer code
-      order_number: selectedOrder.order_id,
-      email: personalDetails.email,
-      gst_number: personalDetails.gst_number,
-      shipping_ordered_by: `${personalDetails.first_name} ${personalDetails.last_name}`,
-      shipping_phone_number: personalDetails.phone_number,
-      shipping_name: `${personalDetails.first_name} ${personalDetails.last_name}`,
-      street: address.street || "",
-      landmark: address.landmark || "",
-      pincode: address.pincode,
-      city: address.city,
-      state: address.state,
-      country: address.country,
-      type: selectedOrder.transaction_type,
-      items: items.map((item) => ({
-        product_id: item.product_id,
-        product_name: item.product_name,
-        quantity: item.requested_quantity,
-        item_total_value: item.item_total_value,
-      })),
+      customer_id: selectedOrder.id,
+      customer_name: `${personal?.first_name || ""} ${
+        personal?.last_name || ""
+      }`,
+      email: personal?.email || "",
+      phone_number: personal?.phone_number || "",
+      customer_gst_number: personal?.gst_number || "",
+      pan_number: "",
+      order_id: selectedOrder.order_id,
+      transaction_type: selectedOrder.transaction_type || "Sale",
+      payment_type: selectedOrder.payment_type || "Postpaid",
+      rental_duration: selectedOrder.rental_duration || "",
+      purchase_order_date: selectedOrder.updated_at
+        ? new Date(selectedOrder.updated_at).toISOString().split("T")[0]
+        : "",
+      purchase_order_number: selectedOrder.order_id || "",
+      duration: selectedOrder.rental_duration || 0, // <- setting duration here
+      rental_start_date: selectedOrder.rental_start_date || "",
+      rental_end_date: selectedOrder.rental_end_date || "",
+      amount: amount,
+      cgst: cgst,
+      sgst: sgst,
+      total_tax: totalTax,
+      total_amount: totalAmount,
+      items: items,
+      shippingDetails: {
+        ...formData.shippingDetails,
+        consignee_name: `${personal?.first_name || ""} ${
+          personal?.last_name || ""
+        }`,
+        country: address?.country || "India",
+        state: address?.state || "",
+        city: address?.city || "",
+        street: address?.street || "",
+        pincode: address?.pincode || "",
+        phone_number: personal?.phone_number || "",
+        email: personal?.email || "",
+      },
     });
-
-    // Auto-select products from the order
-    const productIds = items.map((item) => item.product_id);
-    setSelectedProductIds(productIds);
-
-    // Set quantities
-    const newQuantities = {};
-    items.forEach((item) => {
-      newQuantities[item.product_id] = item.requested_quantity;
-    });
-    setQuantities(newQuantities);
   };
 
+  // Helper function to get rental price based on duration
+  const getRentalPrice = (product, duration) => {
+    switch (duration) {
+      case "1":
+        return product.rent_price_per_day;
+      case "30":
+        return product.rent_price_per_month;
+      case "180":
+        return product.rent_price_6_months;
+      case "365":
+        return product.rent_price_1_year;
+      default:
+        return product.rent_price_per_day;
+    }
+  };
+  // Add this effect to update the form data when selected products or quantities change
+  useEffect(() => {
+    if (selectedProductIds.length > 0) {
+      setShowProductTable(true); // Automatically show the product table when products are selected
+    }
+  }, [selectedProductIds]);
   // Fetch location data when pincode changes
   useEffect(() => {
     const fetchLocationFromPincode = async () => {
-      const pincode = formData.pincode;
+      const pincode = formData.shippingDetails.pincode;
 
       // Only make API call if pincode is 6 digits (India specific)
       if (pincode && pincode.length === 6) {
@@ -160,9 +282,12 @@ const DeliveryChallanAddPage = () => {
 
             setFormData((prev) => ({
               ...prev,
-              city: postOffice.District,
-              state: postOffice.State,
-              country: "India",
+              shippingDetails: {
+                ...prev.shippingDetails,
+                city: postOffice.District,
+                state: postOffice.State,
+                country: "India",
+              },
             }));
           } else {
             setSnackbar({
@@ -189,15 +314,42 @@ const DeliveryChallanAddPage = () => {
     }, 500);
 
     return () => clearTimeout(debounceTimer);
-  }, [formData.pincode]);
+  }, [formData.shippingDetails.pincode]);
 
   // Handle form field changes
   const handleInputChange = (e) => {
-    const { name, value, type, checked } = e.target;
+    const { name, value } = e.target;
     setFormData({
       ...formData,
-      [name]: type === "checkbox" ? checked : value,
+      [name]: value,
     });
+  };
+
+  // Handle shipping details changes
+  const handleShippingChange = (e) => {
+    const { name, value } = e.target;
+    setFormData({
+      ...formData,
+      shippingDetails: {
+        ...formData.shippingDetails,
+        [name]: value,
+      },
+    });
+  };
+
+  // Handle product selection
+  const handleProductSelection = (productId) => {
+    if (selectedProductIds.includes(productId)) {
+      setSelectedProductIds(
+        selectedProductIds.filter((id) => id !== productId)
+      );
+    } else {
+      setSelectedProductIds([...selectedProductIds, productId]);
+      setQuantities((prev) => ({
+        ...prev,
+        [productId]: prev[productId] || 1,
+      }));
+    }
   };
 
   // Handle quantity changes
@@ -228,164 +380,103 @@ const DeliveryChallanAddPage = () => {
       product.description?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  // Handle form submission
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  // Calculate totals when products or quantities change
+  useEffect(() => {
+    const calculateTotals = () => {
+      const selectedProducts = products.filter((product) =>
+        selectedProductIds.includes(product.id)
+      );
 
-    try {
-      // Prepare items data
-      const items = selectedProductIds.map((productId) => {
-        const product = products.find((p) => p.id === productId);
-        const quantity = quantities[productId] || 1;
+      let amount = 0;
+      const items = selectedProducts.map((product) => {
+        const quantity = quantities[product.id] || 0;
+        const price =
+          formData.transaction_type === "Rent"
+            ? getRentalPrice(product, formData.rental_duration)
+            : product.purchase_price;
 
-        let total_price = 0;
-        if (formData.type === "Rent") {
-         
-          const rentalDuration =
-            formData.items.find((item) => item.product_id === productId)
-              ?.rental_duration || 1;
-
-          if (rentalDuration === 12) {
-            total_price = product.rent_price_1_year * quantity;
-          } else if (rentalDuration === 6) {
-            total_price = product.rent_price_6_months * quantity;
-          } else {
-            total_price = product.rent_price_per_month * quantity;
-          }
-        } else {
-          // For Sale transactions
-          total_price = product.purchase_price * quantity;
-        }
-
+        const totalPrice = quantity * price;
+        amount += totalPrice;
         return {
-          product_id: productId,
+          product_id: product.id,
           product_name: product.product_name,
           quantity: quantity,
-          total_price: total_price,
+          unit_price: price,
+          total_price: totalPrice,
         };
       });
 
-      const payload = {
-        ...formData,
-        items,
-      };
+      // Calculate taxes
+      const cgstRate =
+        taxTypes.find((t) => t.tax_type_name === "CGST")?.percentage || 0;
+      const sgstRate =
+        taxTypes.find((t) => t.tax_type_name === "SGST")?.percentage || 0;
+      const cgst = (amount * parseFloat(cgstRate)) / 100;
+      const sgst = (amount * parseFloat(sgstRate)) / 100;
+      const totalTax = cgst + sgst;
+      const totalAmount = amount + totalTax;
 
+      console.log(cgst,"jjjjjjjjjjjjjjjjjjjjjjjjj");
+      
+
+      setFormData((prev) => ({
+        ...prev,
+        amount: amount,
+        cgst: cgst,
+        sgst: sgst,
+        total_tax: totalTax,
+        total_amount: totalAmount,
+        items: items,
+      }));
+    };
+
+    calculateTotals();
+  }, [
+    selectedProductIds,
+    quantities,
+    products,
+    taxTypes,
+    formData.transaction_type,
+    formData.rental_duration,
+  ]);
+  // Handle form submission
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    try {
       const response = await fetch(`${API_URL}/invoices/create`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(payload),
+        body: JSON.stringify(formData),
       });
 
-      if (!response.ok) throw new Error("Failed to create delivery challan");
+      if (!response.ok) throw new Error("Failed to create invoice");
 
       const result = await response.json();
       setSnackbar({
         open: true,
-        message: "Invoices created successfully!",
+        message: "Invoice created successfully!",
         severity: "success",
       });
-
-      setTimeout(() => {
-        navigate("/dashboard/operations/invoices");
-      }, 1500);
-
+      // Reset form or redirect as needed
     } catch (error) {
-      console.error("Error creating delivery challan:", error);
+      console.error("Error creating invoice:", error);
       setSnackbar({
         open: true,
-        message: "Error creating delivery challan: " + error.message,
+        message: "Error creating invoice: " + error.message,
         severity: "error",
       });
     }
   };
 
-  // Field component
-  const Field = ({
-    label,
-    name,
-    placeholder,
-    type = "text",
-    options = [],
-    required = false,
-    readOnly = false,
-    value,
-    onChange,
-    ...props
-  }) => (
-    <div style={fieldContainerStyle}>
-      <label style={labelStyle}>
-        {label}
-        {required && <span style={requiredStyle}>*</span>}
-      </label>
-      {type === "select" ? (
-        <div style={selectWrapperStyle}>
-          <select
-            style={selectStyle}
-            name={name}
-            value={value}
-            onChange={onChange}
-            disabled={readOnly}
-            {...props}
-          >
-            <option value="">{placeholder}</option>
-            {options.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-          <div style={selectArrowStyle}>▼</div>
-        </div>
-      ) : type === "textarea" ? (
-        <textarea
-          name={name}
-          placeholder={placeholder}
-          style={textareaStyle}
-          rows={3}
-          readOnly={readOnly}
-          value={value}
-          onChange={onChange}
-          {...props}
-        />
-      ) : type === "date" ? (
-        <input
-          type="date"
-          name={name}
-          placeholder={placeholder}
-          style={inputStyle}
-          value={value}
-          onChange={onChange}
-          readOnly={readOnly}
-          {...props}
-        />
-      ) : type === "checkbox" ? (
-        <input
-          type="checkbox"
-          name={name}
-          checked={value}
-          onChange={onChange}
-          style={checkboxStyle}
-          {...props}
-        />
-      ) : (
-        <input
-          type={type}
-          name={name}
-          placeholder={placeholder}
-          style={{
-            ...inputStyle,
-            backgroundColor: readOnly ? "#f3f4f6" : "#ffffff",
-          }}
-          readOnly={readOnly}
-          value={value}
-          onChange={onChange}
-          {...props}
-        />
-      )}
-    </div>
-  );
+
+  const formatINR = (number) =>
+  new Intl.NumberFormat("en-IN", {
+    style: "currency",
+    currency: "INR",
+    maximumFractionDigits: 2
+  }).format(number || 0);
 
   return (
     <div style={containerStyle}>
@@ -405,174 +496,144 @@ const DeliveryChallanAddPage = () => {
       </Snackbar>
 
       <div style={headerStyle}>
-        <h1 style={titleStyle}>Create Delivery Challan</h1>
+        <h1 style={titleStyle}>Create Invoice</h1>
         <p style={subtitleStyle}>
-          Fill in the details below to create a new delivery challan
+          Fill in the details below to create a new invoice
         </p>
       </div>
 
       <form onSubmit={handleSubmit}>
         <div style={formContainerStyle}>
-          {/* Delivery Details Section */}
+          {/* Basic Details Section */}
           <div style={cardStyle}>
             <div style={cardHeaderContainerStyle}>
-              <div style={iconStyle}>📦</div>
-              <h3 style={cardHeaderStyle}>Delivery Details</h3>
+              <div style={iconStyle}>📄</div>
+              <h3 style={cardHeaderStyle}>Basic Details</h3>
             </div>
             <div style={fieldsGridStyle}>
               <Field
-                label="DC ID"
-                name="dc_id"
-                placeholder="Enter DC ID"
-                value={formData.dc_id}
+                label="Invoice Number"
+                name="invoice_number"
+                value={formData.invoice_number}
                 onChange={handleInputChange}
+                placeholder="Enter Invoice Number"
               />
               <Field
-                label="DC Title"
-                name="dc_title"
-                placeholder="Enter DC Title"
-                value={formData.dc_title}
+                label="Invoice Title"
+                name="invoice_title"
+                value={formData.invoice_title}
                 onChange={handleInputChange}
+                placeholder="Enter Invoice Title"
               />
-              {/* <div style={checkboxContainerStyle}>
-                <label style={checkboxLabelStyle}>
-                  <Field
-                    type="checkbox"
-                    name="is_dc"
-                    checked={formData.is_dc}
-                    onChange={handleInputChange}
-                  />
-                  <div style={checkboxCustomStyle}>
-                    {formData.is_dc && <span style={checkmarkStyle}>✓</span>}
-                  </div>
-                  <div>
-                    <span style={checkboxTextStyle}>Is DC</span>
-                    <span style={checkboxDescStyle}>
-                      Check if this is a delivery challan
-                    </span>
-                  </div>
-                </label>
-              </div> */}
+
+              <FormControl fullWidth>
+                <InputLabel>Select Customer</InputLabel>
+                <Select
+                  value={formData.customer_id}
+                  onChange={(e) => handleCustomerSelect(e.target.value)}
+                  label="Select Customer"
+                >
+                  {orders.map((order) => (
+                    <MenuItem key={order.id} value={order.id}>
+                      {order.order_id} || {order.personalDetails?.first_name}{" "}
+                      {order.personalDetails?.last_name}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+
               <Field
-                label="Order Details"
-                name="order_id"
-                type="select"
-                placeholder="Select Order"
-                value={formData.order_id}
-                onChange={(e) => handleOrderSelect(e.target.value)}
-                options={orders.map((order) => ({
-                  value: order.id,
-                  label: `${order.order_id} - ${order.order_title}`,
-                }))}
-              />
-              <Field
-                label="Customer Code"
-                name="customer_code"
-                placeholder="Enter Customer Code"
-                value={formData.customer_code}
-                onChange={handleInputChange}
-              />
-              <Field
-                label="Order Number"
-                name="order_number"
-                placeholder="Enter Order Number"
-                value={formData.order_number}
-                onChange={handleInputChange}
-                required
-              />
-              <Field
-                label="DC Status"
-                name="dc_status"
-                type="select"
-                placeholder="Select Status"
-                value={formData.dc_status}
-                onChange={handleInputChange}
-                options={[
-                  { value: "Pending", label: "Pending" },
-                  { value: "Dispatched", label: "Dispatched" },
-                  { value: "Delivered", label: "Delivered" },
-                ]}
-                required
-              />
-              <Field
-                label="DC Date"
-                name="dc_date"
+                label="Invoice Date"
                 type="date"
-                value={formData.dc_date}
+                name="invoice_date"
+                value={formData.invoice_date}
                 onChange={handleInputChange}
               />
               <Field
-                label="Other Reference"
-                name="dealer_reference"
-                placeholder="Enter Reference"
-                value={formData.dealer_reference}
+                label="Due Date"
+                type="date"
+                name="invoice_due_date"
+                value={formData.invoice_due_date}
                 onChange={handleInputChange}
+              />
+              <Field
+                label="PO Number"
+                name="purchase_order_number"
+                value={formData.purchase_order_number}
+                onChange={handleInputChange}
+                placeholder="Enter PO Number"
+              />
+              <Field
+                label="PO Date"
+                type="date"
+                name="purchase_order_date"
+                value={formData.purchase_order_date}
+                onChange={handleInputChange}
+              />
+              <Field
+                label="Customer GST"
+                name="customer_gst_number"
+                value={formData.customer_gst_number}
+                onChange={handleInputChange}
+                placeholder="Enter GST Number"
               />
               <Field
                 label="Email"
                 name="email"
-                type="email"
-                placeholder="Enter Email"
                 value={formData.email}
                 onChange={handleInputChange}
-                required
+                placeholder="Enter Email"
+                type="email"
               />
               <Field
-                label="GST Number"
-                name="gst_number"
-                placeholder="Enter GST Number"
-                value={formData.gst_number}
+                label="Phone"
+                name="phone_number"
+                value={formData.phone_number}
                 onChange={handleInputChange}
-                required
+                placeholder="Enter Phone"
+                type="tel"
               />
               <Field
                 label="PAN"
                 name="pan_number"
-                placeholder="Enter PAN"
                 value={formData.pan_number}
                 onChange={handleInputChange}
-                required
+                placeholder="Enter PAN"
               />
               <Field
-                label="Remarks"
-                name="remarks"
-                placeholder="Enter Remarks"
-                type="textarea"
-                value={formData.remarks}
+                label="Payment Terms"
+                name="payment_terms"
+                value={formData.payment_terms}
                 onChange={handleInputChange}
-              />
-              <div style={fileUploadContainer}>
-                <label style={fileUploadLabel}>
-                  <input type="file" style={{ display: "none" }} />
-                  <span style={fileUploadButton}>Choose File</span>
-                </label>
-              </div>
-              <Field
-                label="DC Type"
-                name="regular_dc"
-                type="checkbox"
-                checked={formData.regular_dc}
-                onChange={handleInputChange}
+                placeholder="Enter Payment Terms"
               />
               <Field
-                label="Transaction Type"
-                name="type"
-                type="select"
-                placeholder="Select Type"
-                value={formData.type}
+                label="Payment Mode"
+                name="payment_mode"
+                value={formData.payment_mode}
                 onChange={handleInputChange}
-                options={[
-                  { value: "Rent", label: "Rent" },
-                  { value: "Sale", label: "Sale" },
-                  { value: "Lease", label: "Lease" },
-                ]}
+                placeholder="Enter Payment Mode"
+              />
+              <Field
+                label="Consultant"
+                name="invoice_consulting_by"
+                value={formData.invoice_consulting_by}
+                onChange={handleInputChange}
+                placeholder="Enter Consultant Name"
               />
               <Field
                 label="Industry"
                 name="industry"
-                placeholder="Enter Industry"
                 value={formData.industry}
                 onChange={handleInputChange}
+                placeholder="Enter Industry"
+              />
+              <Field
+                label="Remarks"
+                name="remarks"
+                value={formData.remarks}
+                onChange={handleInputChange}
+                placeholder="Enter Remarks"
               />
             </div>
           </div>
@@ -580,125 +641,75 @@ const DeliveryChallanAddPage = () => {
           {/* Shipping Details Section */}
           <div style={cardStyle}>
             <div style={cardHeaderContainerStyle}>
-              <div style={iconStyle}>🚚</div>
+              <div style={iconStyle}>🏢</div>
               <h3 style={cardHeaderStyle}>Shipping Details</h3>
             </div>
             <div style={fieldsGridStyle}>
               <Field
-                label="Order Placed by"
-                name="shipping_ordered_by"
-                placeholder="Enter name"
-                value={formData.shipping_ordered_by}
-                onChange={handleInputChange}
-              />
-              <Field
-                label="Phone Number"
-                name="shipping_phone_number"
-                placeholder="Enter Phone Number"
-                type="tel"
-                value={formData.shipping_phone_number}
-                onChange={handleInputChange}
-              />
-              <Field
-                label="Shipping Name"
-                name="shipping_name"
-                placeholder="Enter Shipping Name"
-                value={formData.shipping_name}
-                onChange={handleInputChange}
-              />
-              <Field
-                label="Street"
-                name="street"
-                placeholder="Enter Street"
-                value={formData.street}
-                onChange={handleInputChange}
-              />
-              <Field
-                label="Landmark"
-                name="landmark"
-                placeholder="Enter Landmark"
-                value={formData.landmark}
-                onChange={handleInputChange}
+                label="Consignee Name"
+                name="consignee_name"
+                value={formData.shippingDetails.consignee_name}
+                onChange={handleShippingChange}
+                placeholder="Enter Consignee Name"
               />
               <Field
                 label="Pincode"
                 name="pincode"
+                value={formData.shippingDetails.pincode}
+                onChange={handleShippingChange}
                 placeholder="Enter Pincode"
                 type="number"
-                value={formData.pincode}
-                onChange={handleInputChange}
-              />
-              <Field
-                label="City"
-                name="city"
-                placeholder="Enter City"
-                value={formData.city}
-                onChange={handleInputChange}
-                readOnly
-              />
-              <Field
-                label="State"
-                name="state"
-                placeholder="Enter State"
-                value={formData.state}
-                onChange={handleInputChange}
-                readOnly
               />
               <Field
                 label="Country"
                 name="country"
+                value={formData.shippingDetails.country}
+                onChange={handleShippingChange}
                 placeholder="Enter Country"
-                value={formData.country}
-                onChange={handleInputChange}
-                readOnly
-              />
-            </div>
-          </div>
-
-          {/* Other Details Section */}
-          <div style={cardStyle}>
-            <div style={cardHeaderContainerStyle}>
-              <div style={iconStyle}>📝</div>
-              <h3 style={cardHeaderStyle}>Other Details</h3>
-            </div>
-            <div style={fieldsGridStyle}>
-              <Field
-                label="Vehicle Number"
-                name="vehicle_number"
-                placeholder="Enter Vehicle Number"
-                value={formData.vehicle_number}
-                onChange={handleInputChange}
-                required
               />
               <Field
-                label="Delivery Person Name"
-                name="delivery_person_name"
-                placeholder="Enter Name"
-                value={formData.delivery_person_name}
-                onChange={handleInputChange}
+                label="State"
+                name="state"
+                value={formData.shippingDetails.state}
+                onChange={handleShippingChange}
+                placeholder="Enter State"
               />
               <Field
-                label="Delivery Person Phone"
-                name="delivery_person_phone_number"
+                label="City"
+                name="city"
+                value={formData.shippingDetails.city}
+                onChange={handleShippingChange}
+                placeholder="Enter City"
+              />
+              <Field
+                label="Street"
+                name="street"
+                value={formData.shippingDetails.street}
+                onChange={handleShippingChange}
+                placeholder="Enter Street"
+              />
+              <Field
+                label="Landmark"
+                name="landmark"
+                value={formData.shippingDetails.landmark}
+                onChange={handleShippingChange}
+                placeholder="Enter Landmark"
+              />
+              <Field
+                label="Shipping Phone"
+                name="phone_number"
+                value={formData.shippingDetails.phone_number}
+                onChange={handleShippingChange}
                 placeholder="Enter Phone"
                 type="tel"
-                value={formData.delivery_person_phone_number}
-                onChange={handleInputChange}
               />
               <Field
-                label="Receiver Name"
-                name="receiver_name"
-                placeholder="Enter Name"
-                value={formData.receiver_name}
-                onChange={handleInputChange}
-              />
-              <Field
-                label="Receiver Phone Number"
-                name="receiver_phone_number"
-                placeholder="Enter Phone"
-                type="tel"
-                value={formData.receiver_phone_number}
-                onChange={handleInputChange}
+                label="Shipping Email"
+                name="email"
+                value={formData.shippingDetails.email}
+                onChange={handleShippingChange}
+                placeholder="Enter Email"
+                type="email"
               />
             </div>
           </div>
@@ -784,13 +795,17 @@ const DeliveryChallanAddPage = () => {
                           Product Name
                         </TableCell>
                         <TableCell sx={{ color: "#fff" }}>Brand</TableCell>
-                        <TableCell sx={{ color: "#fff" }}>Model</TableCell>
-                        <TableCell sx={{ color: "#fff" }}>Processor</TableCell>
-                        <TableCell sx={{ color: "#fff" }}>RAM</TableCell>
-                        <TableCell sx={{ color: "#fff" }}>Storage</TableCell>
-                        <TableCell sx={{ color: "#fff" }}>Graphics</TableCell>
+                        <TableCell sx={{ color: "#fff" }}>
+                          Specifications
+                        </TableCell>
+
                         <TableCell sx={{ color: "#fff" }}>Quantity</TableCell>
-                        <TableCell sx={{ color: "#fff" }}>Price</TableCell>
+                        <TableCell sx={{ color: "#fff" }}>
+                          Purchase Price
+                        </TableCell>
+                        <TableCell sx={{ color: "#fff" }}>
+                          Price for Durations
+                        </TableCell>
                       </TableRow>
                     </TableHead>
                     <TableBody>
@@ -806,11 +821,19 @@ const DeliveryChallanAddPage = () => {
                           </TableCell>
                           <TableCell>{product.product_name}</TableCell>
                           <TableCell>{product.brand}</TableCell>
-                          <TableCell>{product.model}</TableCell>
-                          <TableCell>{product.processor}</TableCell>
-                          <TableCell>{product.ram}</TableCell>
-                          <TableCell>{product.storage}</TableCell>
-                          <TableCell>{product.graphics}</TableCell>
+
+                          <TableCell>
+                            {[
+                              product.model,
+                              product.processor,
+                              product.ram,
+                              product.storage,
+                              product.graphics,
+                            ]
+                              .filter(Boolean) // Remove undefined/null values
+                              .join(" | ")}
+                          </TableCell>
+
                           <TableCell>
                             <Box display="flex" alignItems="center">
                               <IconButton
@@ -852,8 +875,10 @@ const DeliveryChallanAddPage = () => {
                               </IconButton>
                             </Box>
                           </TableCell>
+                          <TableCell>{product.purchase_price}</TableCell>
+
                           <TableCell>
-                            {formData.type === "Rent" ? (
+                            {formData.transaction_type === "Rent" ? (
                               <>
                                 <div>Day: {product.rent_price_per_day}</div>
                                 <div>Month: {product.rent_price_per_month}</div>
@@ -865,7 +890,7 @@ const DeliveryChallanAddPage = () => {
                             ) : (
                               product.purchase_price
                             )}
-                          </TableCell>{" "}
+                          </TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
@@ -876,6 +901,22 @@ const DeliveryChallanAddPage = () => {
           </div>
         </div>
 
+        {/* Totals Section */}
+        <div style={cardStyle}>
+          <div style={cardHeaderContainerStyle}>
+            <div style={iconStyle}>💰</div>
+            <h3 style={cardHeaderStyle}>Invoice Totals</h3>
+          </div>
+          <div style={fieldsGridStyle}>
+  <Field label="Subtotal" name="amount" value={formatINR(formData.amount)} readOnly />
+  <Field label="CGST (9%)" name="cgst" value={formatINR(formData.cgst)} readOnly />
+  <Field label="SGST (9%)" name="sgst" value={formatINR(formData.sgst)} readOnly />
+  {/* <Field label="IGST" name="igst" value={formatINR(formData.igst)} readOnly /> */}
+  <Field label="Total Tax" name="total_tax" value={formatINR(formData.total_tax)} readOnly />
+  <Field label="Total Amount" name="total_amount" value={formatINR(formData.total_amount)} readOnly />
+</div>
+
+        </div>
         {/* Action Buttons */}
         <div style={buttonContainerStyle}>
           <button
@@ -886,29 +927,73 @@ const DeliveryChallanAddPage = () => {
           >
             Cancel
           </button>
-          <Box mt={4}>
-            <button
-              type="submit"
-              style={{
-                backgroundColor: "#2563eb",
-                color: "#fff",
-                padding: "0.75rem 1.5rem",
-                border: "none",
-                borderRadius: "6px",
-                cursor: "pointer",
-                fontSize: "1rem",
-              }}
-            >
-              Create Delivery Challan
-            </button>
-          </Box>
+          <button
+            type="submit"
+            style={submitBtnStyle}
+            onMouseEnter={(e) => (e.target.style.backgroundColor = "#1d4ed8")}
+            onMouseLeave={(e) => (e.target.style.backgroundColor = "#2563eb")}
+          >
+            Submit Invoice
+          </button>
         </div>
       </form>
     </div>
   );
 };
 
-// Styles (same as in your original code)
+const Field = ({
+  label,
+  name,
+  value,
+  onChange,
+  placeholder,
+  type = "text",
+  readOnly = false,
+}) => (
+  <div style={fieldContainerStyle}>
+    <label style={labelStyle}>{label}</label>
+    {type === "select" ? (
+      <div style={selectWrapperStyle}>
+        <select
+          style={selectStyle}
+          name={name}
+          value={value}
+          onChange={onChange}
+          disabled={readOnly}
+        >
+          <option value="" disabled>
+            {placeholder}
+          </option>
+        </select>
+        <div style={selectArrowStyle}>▼</div>
+      </div>
+    ) : type === "date" ? (
+      <input
+        type="date"
+        style={inputStyle}
+        name={name}
+        value={value}
+        onChange={onChange}
+        disabled={readOnly}
+      />
+    ) : (
+      <input
+        type={type}
+        name={name}
+        value={value}
+        onChange={onChange}
+        placeholder={placeholder}
+        style={{
+          ...inputStyle,
+          backgroundColor: readOnly ? "#f3f4f6" : "#ffffff",
+        }}
+        readOnly={readOnly}
+      />
+    )}
+  </div>
+);
+
+// Styles
 const containerStyle = {
   padding: "2rem",
   fontFamily:
@@ -923,7 +1008,7 @@ const headerStyle = {
 };
 
 const titleStyle = {
-  fontSize: "2rem",
+  fontSize: "20px",
   fontWeight: "700",
   color: "#1e293b",
   margin: "0 0 0.5rem 0",
@@ -995,11 +1080,6 @@ const labelStyle = {
   letterSpacing: "0.025em",
 };
 
-const requiredStyle = {
-  color: "#ef4444",
-  marginLeft: "0.25rem",
-};
-
 const inputStyle = {
   width: "100%",
   padding: "0.75rem",
@@ -1042,78 +1122,15 @@ const selectArrowStyle = {
   color: "#6b7280",
 };
 
-const textareaStyle = {
-  width: "100%",
-  padding: "0.75rem",
-  borderRadius: "8px",
-  border: "1px solid #d1d5db",
-  fontSize: "0.875rem",
-  backgroundColor: "#ffffff",
-  transition: "all 0.2s ease",
-  outline: "none",
-  resize: "vertical",
-  fontFamily: "inherit",
-  boxSizing: "border-box",
-};
-
-const checkboxContainerStyle = {
-  marginTop: "0.5rem",
-  gridColumn: "1 / -1",
-};
-
-const checkboxLabelStyle = {
-  display: "flex",
-  alignItems: "flex-start",
-  cursor: "pointer",
-  gap: "0.75rem",
-};
-
-const checkboxStyle = {
-  display: "none",
-};
-
-const checkboxCustomStyle = {
-  width: "20px",
-  height: "20px",
-  borderRadius: "4px",
-  border: "2px solid #d1d5db",
-  backgroundColor: "#ffffff",
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  transition: "all 0.2s ease",
-  flexShrink: 0,
-  marginTop: "2px",
-};
-
-const checkmarkStyle = {
-  color: "#ffffff",
-  fontSize: "12px",
-  fontWeight: "bold",
-};
-
-const checkboxTextStyle = {
-  fontSize: "0.875rem",
-  fontWeight: "500",
-  color: "#374151",
-  display: "block",
-};
-
-const checkboxDescStyle = {
-  fontSize: "0.75rem",
-  color: "#6b7280",
-  display: "block",
-  marginTop: "0.25rem",
-};
-
 const buttonContainerStyle = {
   display: "flex",
-  justifyContent: "flex-end",
-  gap: "0.75rem",
+  justifyContent: "center",
+  gap: "1rem",
   marginTop: "2rem",
   maxWidth: "1200px",
   margin: "2rem auto 0",
   padding: "0 1.5rem",
+  flexWrap: "wrap",
 };
 
 const cancelBtnStyle = {
@@ -1129,7 +1146,7 @@ const cancelBtnStyle = {
   outline: "none",
 };
 
-const createBtnStyle = {
+const submitBtnStyle = {
   padding: "0.75rem 1.5rem",
   backgroundColor: "#2563eb",
   color: "white",
@@ -1142,39 +1159,4 @@ const createBtnStyle = {
   outline: "none",
 };
 
-const selectProductBtnStyle = {
-  padding: "0.75rem 1.5rem",
-  backgroundColor: "#ffffff",
-  color: "#2563eb",
-  border: "1px solid #2563eb",
-  borderRadius: "8px",
-  cursor: "pointer",
-  fontSize: "0.875rem",
-  fontWeight: "500",
-  transition: "all 0.2s ease",
-  outline: "none",
-  width: "100%",
-};
-
-const fileUploadContainer = {
-  gridColumn: "1 / -1",
-};
-
-const fileUploadLabel = {
-  display: "block",
-  cursor: "pointer",
-};
-
-const fileUploadButton = {
-  display: "inline-block",
-  padding: "0.75rem 1.5rem",
-  backgroundColor: "#ffffff",
-  color: "#374151",
-  border: "1px solid #d1d5db",
-  borderRadius: "8px",
-  fontSize: "0.875rem",
-  fontWeight: "500",
-  transition: "all 0.2s ease",
-};
-
-export default DeliveryChallanAddPage;
+export default InvoicesAddPage;

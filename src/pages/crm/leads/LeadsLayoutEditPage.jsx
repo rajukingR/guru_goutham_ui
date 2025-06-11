@@ -83,64 +83,63 @@ const LeadsLayoutEditPage = () => {
     severity: "success",
   });
 
-  // Fetch lead data
-  useEffect(() => {
-    const fetchLead = async () => {
-      try {
-        const response = await fetch(`${API_URL}/leads/${id}`);
-        if (!response.ok) {
-          throw new Error("Failed to fetch lead");
-        }
-        const data = await response.json();
+ useEffect(() => {
+  const fetchLead = async () => {
+    try {
+      const response = await fetch(`${API_URL}/leads/${id}`);
+      if (!response.ok) {
+        throw new Error("Failed to fetch lead");
+      }
+      const data = await response.json();
 
-        // Format dates
-        const rentalStartDate = data.rental_start_date
-          ? new Date(data.rental_start_date)
-          : new Date();
-        const rentalEndDate = data.rental_end_date
-          ? new Date(data.rental_end_date)
-          : new Date();
-        const leadDate = data.lead_date ? new Date(data.lead_date) : new Date();
+      // Format dates
+      const rentalStartDate = data.rental_start_date
+        ? new Date(data.rental_start_date)
+        : new Date();
+      const rentalEndDate = data.rental_end_date
+        ? new Date(data.rental_end_date)
+        : new Date();
+      const leadDate = data.lead_date ? new Date(data.lead_date) : new Date();
 
-        // Set form data
-        // In your fetchLead useEffect, replace the formData setting with this:
-        setFormData({
-          leadId: data.lead_id || "",
-          leadTitle: data.lead_title || "",
-          transactionType: data.transaction_type || "",
-          leadStatus: data.lead_source || "",
-          sourceOfEnquiry: data.source_of_enquiry || "",
-          rentalDuration: data.rental_duration_months || "",
-          rentalStartDate,
-          rentalEndDate,
-          leadDate,
-          owner: data.owner || "",
-          remarks: data.remarks || "",
-          leadGeneratedBy: data.lead_generated_by || LoginUserName,
-          activeStatus: !!data.is_active,
-          selectedCustomer: data.contact_id ? data.contact_id.toString() : "",
-          customerId: data.contact?.customer_id || "",
-          firstName: data.contact?.first_name || "",
-          lastName: data.contact?.last_name || "",
-          email: data.contact?.email || "",
-          phoneNumber: data.contact?.phone_number || "",
-          companyName: data.contact?.company_name || "",
-          industry: data.contact?.industry || "",
-          street: data.contact?.address?.street || "",
-          landmark: data.contact?.address?.landmark || "",
-          pincode: data.contact?.address?.zip || "",
-          city: data.contact?.address?.city || "",
-          state: data.contact?.address?.state || "",
-          country: data.contact?.address?.country || "",
-          gst: data.contact?.gst || "",
-          panNo: data.contact?.pan_no || "",
-          paymentType: data.contact?.payment_type || "",
-        });
+      // Set form data
+      setFormData({
+        leadId: data.lead_id || "",
+        leadTitle: data.lead_title || "",
+        transactionType: data.transaction_type || "",
+        leadStatus: data.lead_source || "",
+        sourceOfEnquiry: data.source_of_enquiry || "",
+        rentalDuration: data.rental_duration_months || "",
+        rentalStartDate,
+        rentalEndDate,
+        leadDate,
+        owner: data.owner || "",
+        remarks: data.remarks || "",
+        leadGeneratedBy: data.lead_generated_by || LoginUserName,
+        activeStatus: !!data.is_active,
+        selectedCustomer: data.contact_id ? data.contact_id.toString() : "",
+        customerId: data.contact?.customer_id || "",
+        firstName: data.contact?.first_name || "",
+        lastName: data.contact?.last_name || "",
+        email: data.contact?.email || "",
+        phoneNumber: data.contact?.phone_number || "",
+        companyName: data.contact?.company_name || "",
+        industry: data.contact?.industry || "",
+        street: data.contact?.address?.street || "",
+        landmark: data.contact?.address?.landmark || "",
+        pincode: data.contact?.address?.zip || "",
+        city: data.contact?.address?.city || "",
+        state: data.contact?.address?.state || "",
+        country: data.contact?.address?.country || "",
+        gst: data.contact?.gst || "",
+        panNo: data.contact?.pan_no || "",
+        paymentType: data.contact?.payment_type || "",
+      });
 
-         if (data.products && data.products.length > 0) {
-        const productIds = data.products.map((p) => p.id);
-        const productQuantities = data.products.reduce((acc, product) => {
-          acc[product.id] = product.LeadProduct.quantity;
+      // Fixed product selection part
+      if (data.lead_products && data.lead_products.length > 0) {
+        const productIds = data.lead_products.map((lp) => lp.product_id);
+        const productQuantities = data.lead_products.reduce((acc, lp) => {
+          acc[lp.product_id] = lp.quantity;
           return acc;
         }, {});
 
@@ -148,20 +147,20 @@ const LeadsLayoutEditPage = () => {
         setQuantities(productQuantities);
       }
 
-        setLoading((prev) => ({ ...prev, lead: false }));
-      } catch (err) {
-        setError((prev) => ({ ...prev, lead: err.message }));
-        setLoading((prev) => ({ ...prev, lead: false }));
-        setSnackbar({
-          open: true,
-          message: "Failed to load lead data",
-          severity: "error",
-        });
-      }
-    };
+      setLoading((prev) => ({ ...prev, lead: false }));
+    } catch (err) {
+      setError((prev) => ({ ...prev, lead: err.message }));
+      setLoading((prev) => ({ ...prev, lead: false }));
+      setSnackbar({
+        open: true,
+        message: "Failed to load lead data",
+        severity: "error",
+      });
+    }
+  };
 
-    fetchLead();
-  }, [id, LoginUserName]);
+  fetchLead();
+}, [id, LoginUserName]);
 
   // Fetch active contacts
   useEffect(() => {
@@ -332,7 +331,7 @@ const LeadsLayoutEditPage = () => {
         lead_generated_by: formData.leadGeneratedBy,
         is_active: formData.activeStatus,
         contact_id: parseInt(formData.selectedCustomer),
-        selected_products: selectedProducts,
+      lead_products: selectedProducts,  // Changed from selected_products to lead_products
       };
 
       const response = await fetch(`${API_URL}/leads/${id}`, {

@@ -16,7 +16,7 @@ import {
   Alert,
 } from "@mui/material";
 import { Add, Remove } from "@mui/icons-material";
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from "react-router-dom";
 
 const PoOperationAddPageLayout = () => {
   const [purchaseRequests, setPurchaseRequests] = useState([]);
@@ -25,17 +25,17 @@ const PoOperationAddPageLayout = () => {
   const [products, setProducts] = useState([]);
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
-  purchaseQuotationId: "",
-  purchaseRequestId: "",
-  purchaseQuotationDate: new Date().toISOString().split("T")[0],
-  purchaseType: "",
-  poQuotationStatus: "Pending",
-  owner: "",
-  supplier_id: "",
-  supplierName: "",
-  description: "",
-  isSupplierLocked: false,
-});
+    purchaseQuotationId: "",
+    purchaseRequestId: "",
+    purchaseQuotationDate: new Date().toISOString().split("T")[0],
+    purchaseType: "",
+    poQuotationStatus: "Pending",
+    owner: "",
+    supplier_id: "",
+    supplierName: "",
+    description: "",
+    isSupplierLocked: false,
+  });
 
   const [selectedProductIds, setSelectedProductIds] = useState([]);
   const [quantities, setQuantities] = useState({});
@@ -182,63 +182,62 @@ const PoOperationAddPageLayout = () => {
     }));
   };
 
-const handleSubmit = async () => {
-  try {
-    const payload = {
-      purchase_quotation_id: formData.purchaseQuotationId,
-      purchase_request_id: formData.purchaseRequestId,
-      supplier_id: formData.supplier_id,
-      purchase_quotation_date: formData.purchaseQuotationDate,
-      purchase_type: formData.purchaseType,
-      po_quotation_status: formData.poQuotationStatus,
-      owner: formData.owner,
-      description: formData.description,
-      selected_products: selectedProductIds.map((id) => {
-        const product = products.find((p) => p.id === id);
-        const quantity = quantities[id] || 0;
-        const price_per_unit = product?.unit_price || 0;
-        const gst_percentage = product?.gst_percentage || 18;
-        const total_price =
-          quantity * price_per_unit * (1 + gst_percentage / 100);
+  const handleSubmit = async () => {
+    try {
+      const payload = {
+        purchase_quotation_id: formData.purchaseQuotationId,
+        purchase_request_id: formData.purchaseRequestId,
+        supplier_id: formData.supplier_id,
+        purchase_quotation_date: formData.purchaseQuotationDate,
+        purchase_type: formData.purchaseType,
+        po_quotation_status: formData.poQuotationStatus,
+        owner: formData.owner,
+        description: formData.description,
+        selected_products: selectedProductIds.map((id) => {
+          const product = products.find((p) => p.id === id);
+          const quantity = quantities[id] || 0;
+          const price_per_unit = product?.unit_price || 0;
+          const gst_percentage = product?.gst_percentage || 18;
+          const total_price =
+            quantity * price_per_unit * (1 + gst_percentage / 100);
 
-        return {
-          product_id: id,
-          product_name: product?.name || "",
-          quantity,
-          price_per_unit,
-          gst_percentage,
-          total_price,
-        };
-      }),
-    };
+          return {
+            product_id: id,
+            product_name: product?.name || "",
+            quantity,
+            price_per_unit,
+            gst_percentage,
+            total_price,
+          };
+        }),
+      };
 
-    const response = await fetch(`${API_URL}/purchase-quotation/create`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
+      const response = await fetch(`${API_URL}/purchase-quotation/create`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
 
-    if (!response.ok) {
-      throw new Error("Failed to create purchase quotation");
-    }
+      if (!response.ok) {
+        throw new Error("Failed to create purchase quotation");
+      }
 
-    setSnackbar({
-      open: true,
-      message: "Purchase quotation created successfully!",
-      severity: "success",
-    });
-    setTimeout(() => {
-        navigate('/dashboard/procurement/po-quotations');
+      setSnackbar({
+        open: true,
+        message: "Purchase quotation created successfully!",
+        severity: "success",
+      });
+      setTimeout(() => {
+        navigate("/dashboard/procurement/po-quotations");
       }, 1500);
-  } catch (err) {
-    setSnackbar({
-      open: true,
-      message: err.message,
-      severity: "error",
-    });
-  }
-};
-
+    } catch (err) {
+      setSnackbar({
+        open: true,
+        message: err.message,
+        severity: "error",
+      });
+    }
+  };
 
   return (
     <div style={containerStyle}>
@@ -442,37 +441,37 @@ const handleSubmit = async () => {
                         <Checkbox sx={{ color: "#fff" }} />
                       </TableCell>
                       <TableCell sx={{ color: "#fff" }}>Product Name</TableCell>
-                                            <TableCell sx={{ color: "#fff" }}>Brand</TableCell>
-                                            <TableCell sx={{ color: "#fff" }}>Model</TableCell>
-                                            <TableCell sx={{ color: "#fff" }}>Processor</TableCell>
-                                            <TableCell sx={{ color: "#fff" }}>RAM</TableCell>
-                                            <TableCell sx={{ color: "#fff" }}>Storage</TableCell>
-                                            <TableCell sx={{ color: "#fff" }}>Graphics</TableCell>
-                                            <TableCell sx={{ color: "#fff" }}>Quantity</TableCell>
-                                          </TableRow>
-                                        </TableHead>
-                                        <TableBody>
-                                          {filteredProducts.map((product) => (
-                                            <TableRow key={product.id}>
-                                              <TableCell padding="checkbox">
-                                                <Checkbox
-                                                  checked={selectedProductIds.includes(product.id)}
-                                                  onChange={() => {
-                                                    setSelectedProductIds((prev) =>
-                                                      prev.includes(product.id)
-                                                        ? prev.filter((id) => id !== product.id)
-                                                        : [...prev, product.id]
-                                                    );
-                                                  }}
-                                                />
-                                              </TableCell>
-                                              <TableCell>{product.product_name}</TableCell>
-                                              <TableCell>{product.brand}</TableCell>
-                                              <TableCell>{product.model}</TableCell>
-                                              <TableCell>{product.processor}</TableCell>
-                                              <TableCell>{product.ram}</TableCell>
-                                              <TableCell>{product.storage}</TableCell>
-                                              <TableCell>{product.graphics}</TableCell>
+                      <TableCell sx={{ color: "#fff" }}>Brand</TableCell>
+                      <TableCell sx={{ color: "#fff" }}>Model</TableCell>
+                      <TableCell sx={{ color: "#fff" }}>Processor</TableCell>
+                      <TableCell sx={{ color: "#fff" }}>RAM</TableCell>
+                      <TableCell sx={{ color: "#fff" }}>Storage</TableCell>
+                      <TableCell sx={{ color: "#fff" }}>Graphics</TableCell>
+                      <TableCell sx={{ color: "#fff" }}>Quantity</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {filteredProducts.map((product) => (
+                      <TableRow key={product.id}>
+                        <TableCell padding="checkbox">
+                          <Checkbox
+                            checked={selectedProductIds.includes(product.id)}
+                            onChange={() => {
+                              setSelectedProductIds((prev) =>
+                                prev.includes(product.id)
+                                  ? prev.filter((id) => id !== product.id)
+                                  : [...prev, product.id]
+                              );
+                            }}
+                          />
+                        </TableCell>
+                        <TableCell>{product.product_name}</TableCell>
+                        <TableCell>{product.brand}</TableCell>
+                        <TableCell>{product.model}</TableCell>
+                        <TableCell>{product.processor}</TableCell>
+                        <TableCell>{product.ram}</TableCell>
+                        <TableCell>{product.storage}</TableCell>
+                        <TableCell>{product.graphics}</TableCell>
                         <TableCell>
                           <Box display="flex" alignItems="center">
                             <IconButton

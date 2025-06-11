@@ -11,11 +11,8 @@ const InventoryTable = () => {
     { id: "id", label: "S.No." },
     { id: "name", label: "Product Name" },
     { id: "model", label: "Model" },
-    { id: "processor", label: "Processor" },
-    { id: "ram", label: "RAM" },
-    { id: "storage", label: "Storage" },
-    { id: "graphics", label: "Graphics" },
-    { id: "display", label: "Display" },
+   
+    { id: "specifications", label: "Specifications" },
     { id: "total_quantity", label: "Total Quantity" },
     { id: "available_quantity", label: "Available Quantity" },
     { id: "rented_qty", label: "Rented Quantity" },
@@ -25,6 +22,8 @@ const InventoryTable = () => {
     { id: "used_rent_value", label: "Used Rent Value (₹)" },
     { id: "used_buy_value", label: "Used Buy Value (₹)" },
   ];
+
+  const formatBoolean = (value) => (value ? "Yes" : "No");
 
   useEffect(() => {
     const fetchInventory = async () => {
@@ -40,24 +39,44 @@ const InventoryTable = () => {
         if (response.status === 200) {
           const { products, summary } = response.data;
 
-          const formattedData = products.map((item, index) => ({
-            id: index + 1,
-            name: item.product?.product_name || "",
-            model: item.product?.model || "",
-            processor: item.product?.processor || "",
-            ram: item.product?.ram || "",
-            storage: item.product?.storage || "",
-            graphics: item.product?.graphics || "",
-            display: item.product?.display || "",
-            total_quantity: item.total_quantity,
-            available_quantity: item.available_quantity,
-            rented_qty: item.rented_qty,
-            buy_qty: item.buy_qty,
-            purchase_price: `₹${item.purchase_price.toLocaleString("en-IN")}`,
-            total_value: `₹${item.total_value.toLocaleString("en-IN")}`,
-            used_rent_value: `₹${item.used_rent_value.toLocaleString("en-IN")}`,
-            used_buy_value: `₹${item.used_buy_value.toLocaleString("en-IN")}`,
-          }));
+          const formattedData = products.map((item, index) => {
+            const p = item.product || {};
+
+            const specifications = `
+              RAM: ${p.ram || "N/A"}, 
+              Storage: ${p.storage || "N/A"}, 
+              Disk: ${p.disk_type || "N/A"}, 
+              Processor: ${p.processor || "N/A"}, 
+              Graphics: ${p.graphics || "N/A"}, 
+              OS: ${p.os || "N/A"}, 
+              Mouse: ${formatBoolean(p.mouse)}, 
+              Keyboard: ${formatBoolean(p.keyboard)}, 
+              Speaker: ${formatBoolean(p.speaker)}, 
+              Webcam: ${formatBoolean(p.webcam)}, 
+              DVD: ${formatBoolean(p.dvd)}
+            `
+              .trim()
+              .replace(/\s+/g, " ");
+
+            return {
+              id: index + 1,
+              name: p.product_name || "",
+              model: p.model || "",
+              processor: p.processor || "",
+              ram: p.ram || "",
+              storage: p.storage || "",
+              graphics: p.graphics || "",
+              specifications,
+              total_quantity: item.total_quantity,
+              available_quantity: item.available_quantity,
+              rented_qty: item.rented_qty,
+              buy_qty: item.buy_qty,
+              purchase_price: `₹${item.purchase_price.toLocaleString("en-IN")}`,
+              total_value: `₹${item.total_value.toLocaleString("en-IN")}`,
+              used_rent_value: `₹${item.used_rent_value.toLocaleString("en-IN")}`,
+              used_buy_value: `₹${item.used_buy_value.toLocaleString("en-IN")}`,
+            };
+          });
 
           setData(formattedData);
           setSummary(summary);
