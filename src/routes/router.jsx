@@ -72,6 +72,9 @@ import ProductCategoriesAddPage from "../pages/product_library/productcategories
 import DeliveryChallanTable from "../pages/operations/DeliveryChallanTable.jsx";
 import DeliveryChallanAddPage from "../pages/operations/DeliveryChallanAddPage.jsx";
 import DeliveryChallanEditPage from "../pages/operations/DeliveryChallanEditPage.jsx";
+import InvoicesTablePage from "../pages/operations/invoices/InvoicesTablePage.jsx";
+import InvoicesAddPage from "../pages/operations/invoices/InvoicesAddPage.jsx";
+import InvoicesEditPage from "../pages/operations/invoices/InvoicesEditPage.jsx";
 import UsersTablePage from "../pages/settings/users/UsersTablePage.jsx";
 import UsersAddPage from "../pages/settings/users/UsersAddPage.jsx";
 import RolesTablePage from "../pages/settings/roles/RolesTablePage.jsx";
@@ -167,6 +170,9 @@ const RoutesConfig = () => {
             <Route path="operations" element={<DeliveryChallanTable />} />
             <Route path="operations/add" element={<DeliveryChallanAddPage />} />
             <Route path="operations/edit/:id" element={<DeliveryChallanEditPage />} />
+            <Route path="operations/invoices" element={<InvoicesTablePage />} />
+            <Route path="operations/invoices/add" element={<InvoicesAddPage />} />
+            <Route path="operations/invoices/edit/:id" element={<InvoicesEditPage />} />
                                        {/* settings */}
             <Route path="settings/users" element={<UsersTablePage/>} />
             <Route path="settings/users/add" element={<UsersAddPage/>} />
