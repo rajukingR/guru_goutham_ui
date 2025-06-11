@@ -356,99 +356,59 @@ const Sidebar = ({ section }) => {
   useEffect(() => {
     setSelected(location.pathname);
   }, [location.pathname]);
-
   return (
     <Drawer
       variant="permanent"
       sx={{
         width: drawerWidth,
-
         flexShrink: 0,
-
         [`& .MuiDrawer-paper`]: {
           width: drawerWidth,
-
           boxSizing: "border-box",
-
           height: "calc(100vh - 65px)",
-
           background: `
-
             radial-gradient(ellipse at top left, rgba(26, 35, 126, 0.95) 0%, transparent 50%),
-
             radial-gradient(ellipse at bottom right, rgba(1, 87, 155, 0.9) 0%, transparent 50%),
-
             linear-gradient(155deg,
-
               #1a237e 0%,
-
               #283593 15%,
-
               #1565c0 35%,
-
               #0d47a1 65%,
-
               #01579b 85%,
-
               #0d47a1 100%
-
             )
 
           `,
-
           borderRight: "1px solid rgba(255, 255, 255, 0.08)",
-
           backdropFilter: "blur(30px) saturate(150%)",
-
           boxShadow: `
-
             0 0 0 1px rgba(255, 255, 255, 0.05),
-
             24px 0 64px rgba(13, 71, 161, 0.35),
-
             12px 0 32px rgba(1, 87, 155, 0.25),
-
             0 0 0 0.5px rgba(100, 181, 246, 0.1)
-
           `,
-
           paddingTop: "0",
-
           overflowX: "hidden",
-
           overflowY: "auto",
-
           position: "relative",
-
           // Enhanced scrollbar
-
           "&::-webkit-scrollbar": {
             width: "6px",
           },
-
           "&::-webkit-scrollbar-track": {
             background: "rgba(255, 255, 255, 0.03)",
-
             borderRadius: "12px",
-
             margin: "8px 0",
           },
-
           "&::-webkit-scrollbar-thumb": {
             background: `linear-gradient(180deg,
-
               rgba(100, 181, 246, 0.7) 0%,
-
               rgba(63, 81, 181, 0.5) 50%,
-
               rgba(25, 118, 210, 0.4) 100%
-
             )`,
 
             borderRadius: "12px",
-
             border: "1px solid rgba(255, 255, 255, 0.1)",
-
             "&:hover": {
               background: `linear-gradient(180deg,
 
@@ -456,70 +416,44 @@ const Sidebar = ({ section }) => {
 
                 rgba(63, 81, 181, 0.7) 50%,
 
-                rgba(25, 118, 210, 0.6) 100%
+                hsl(56, 100.00%, 50.00%) 100%
 
               )`,
             },
           },
-
           // Glass morphism overlay
-
           "&::before": {
             content: '""',
-
             position: "absolute",
-
             top: 0,
-
             left: 0,
-
             right: 0,
-
             bottom: 0,
-
             background: `
-
               radial-gradient(circle at 25% 25%, rgba(100, 181, 246, 0.12) 0%, transparent 50%),
-
               radial-gradient(circle at 75% 75%, rgba(63, 81, 181, 0.08) 0%, transparent 50%),
-
               linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.02) 50%, transparent 100%)
-
             `,
-
             pointerEvents: "none",
-
             zIndex: 0,
           },
         },
       }}
     >
       {/* Section Header */}
-
       <Box
         sx={{
           padding: "24px 20px 16px",
-
           borderBottom: "1px solid rgba(255, 255, 255, 0.08)",
-
           marginBottom: "8px",
-
           position: "relative",
-
           zIndex: 2,
-
           background: `
-
             linear-gradient(135deg,
-
               rgba(255, 255, 255, 0.08) 0%,
-
               rgba(100, 181, 246, 0.05) 100%
-
             )
-
           `,
-
           backdropFilter: "blur(10px)",
         }}
       >
