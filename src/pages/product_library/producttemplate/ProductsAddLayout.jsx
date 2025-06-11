@@ -195,7 +195,7 @@ const ProductsAddLayout = () => {
       showSnackbar("Product added successfully!", "success");
 
       setTimeout(() => {
-        navigate("/dashboard/product_library/product_template");
+        navigate("/dashboard/product_library");
       }, 1500);
 
       // Reset form after success
@@ -608,9 +608,7 @@ const ProductsAddLayout = () => {
             </Field>
 
             <div style={{ gridColumn: "1 / -1" }}>
-              <label style={{ fontWeight: "bold" }}>
-                Add Images <span style={{ color: "red" }}>*</span>
-              </label>
+              <label style={{ fontWeight: "bold" }}>Add Images</label>
 
               <div
                 onClick={() =>
@@ -812,7 +810,10 @@ const ProductsAddLayout = () => {
                     onChange={handlePriceChange}
                     required
                   >
-                    <option value="0">0%</option>
+                    <option value="1">1%</option>
+                    <option value="2">2%</option>
+                    <option value="3">3%</option>
+                    <option value="4">4%</option>
                     <option value="5">5%</option>
                     <option value="8">8%</option>
                     <option value="10">10%</option>

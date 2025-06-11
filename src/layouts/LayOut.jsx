@@ -50,14 +50,18 @@ const LayOut = () => {
       return "product_library";
     if (location.pathname.includes("/dashboard/procurement"))
       return "procurement";
-    if (location.pathname.includes("/dashboard/inventory")) return "inventory";
-    if (location.pathname.includes("/dashboard/crm")) return "crm";
+    if (location.pathname.includes("/dashboard/inventory"))
+       return "inventory";
+    if (location.pathname.includes("/dashboard/crm")) 
+      return "crm";
     if (location.pathname.includes("/dashboard/operations"))
       return "operations";
     if (location.pathname.includes("/dashboard/users_performance"))
       return "users_performance";
-    if (location.pathname.includes("/dashboard/client")) return "client";
-    if (location.pathname.includes("/dashboard/settings")) return "settings";
+    if (location.pathname.includes("/dashboard/client"))
+       return "client";
+    if (location.pathname.includes("/dashboard/settings"))
+       return "settings";
 
     return "dashboard";
   };
@@ -213,7 +217,7 @@ const LayOut = () => {
             <IconButton
               onClick={() => {
                 setSection("settings"); // Set section to settings
-                navigate("/dashboard/settings"); // Navigate to settings page
+                navigate("/dashboard/settings/users"); // Navigate to settings page
               }}
             >
               <Box

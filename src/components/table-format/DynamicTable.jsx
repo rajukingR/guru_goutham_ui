@@ -37,8 +37,23 @@ import API_URL from "../../api/Api_url";
 const apiEndpoints = {
   settings: `${API_URL}/users`,
   roles: `${API_URL}/roles`,
-  product_categories: `${API_URL}/product-categories`,
   operations: `${API_URL}/delivery-challans`,
+  supplier: `${API_URL}/supplier`,
+  goodsreceipt: `${API_URL}/goods-receipts`,
+  "po-quotations": `${API_URL}/purchase-quotation`,
+  "purchase-requests": `${API_URL}/purchase-requests`,
+  product_library: `${API_URL}/product-templete`,
+  brands: `${API_URL}/product-brands`,
+  product_categories: `${API_URL}/product-categories`,
+  stock_locations: `${API_URL}/stock-location`,
+  "purchase-orders": `${API_URL}/purchase-orders`,
+  "client-list": `${API_URL}/clients`,
+  leads: `${API_URL}/leads`,
+  orders: `${API_URL}/orders`,
+  contact_type: `${API_URL}/contact-types`,
+  taxt_list: `${API_URL}/tax-list`,
+  Branch: `${API_URL}/branches`,
+  users: `${API_URL}/users`,
 };
 
 // Delivery Challan Dialog Component

@@ -72,9 +72,22 @@ import ProductCategoriesAddPage from "../pages/product_library/productcategories
 import DeliveryChallanTable from "../pages/operations/DeliveryChallanTable.jsx";
 import DeliveryChallanAddPage from "../pages/operations/DeliveryChallanAddPage.jsx";
 import DeliveryChallanEditPage from "../pages/operations/DeliveryChallanEditPage.jsx";
-import InvoicesTablePage from "../pages/operations/invoices/InvoicesTablePage.jsx";
-import InvoicesAddPage from "../pages/operations/invoices/InvoicesAddPage.jsx";
-import InvoicesEditPage from "../pages/operations/invoices/InvoicesEditPage.jsx";
+import UsersTablePage from "../pages/settings/users/UsersTablePage.jsx";
+import UsersAddPage from "../pages/settings/users/UsersAddPage.jsx";
+import RolesTablePage from "../pages/settings/roles/RolesTablePage.jsx";
+import RolesAddPage from "../pages/settings/roles/RolesAddPage.jsx";
+import ContactTypeTable from "../pages/settings/contacttype/ContactTypeTable.jsx";
+import ContactTypeAdd from "../pages/settings/contacttype/ContactTypeAdd.jsx";
+import TaxListTable from "../pages/settings/taxlist/TaxListTable.jsx";
+import TaxListAdd from "../pages/settings/taxlist/TaxListAdd.jsx";
+import AddressTable from "../pages/settings/address/AddressTable.jsx";
+import ContactTypeEdit from "../pages/settings/contacttype/ContactTypeEdit.jsx";
+import TaxListEdit from "../pages/settings/taxlist/TaxListEdit.jsx";
+import RolesEditPage from "../pages/settings/roles/RolesEditPage.jsx";
+import BranchTablePageLayout from "../pages/settings/branch/BranchTablePageLayout.jsx";
+import BranchAddPageLayout from "../pages/settings/branch/BranchAddPageLayout.jsx";
+import BranchEditPageLayout from "../pages/settings/branch/BranchEditPageLayout.jsx";
+import UsersEditPage from "../pages/settings/users/UsersEditPage.jsx";
 const ProtectedRoute = ({ element }) => {
   const user = useSelector((state) => state.auth.user);
   return user ? element : <Navigate to="/signin" replace />;
@@ -154,9 +167,25 @@ const RoutesConfig = () => {
             <Route path="operations" element={<DeliveryChallanTable />} />
             <Route path="operations/add" element={<DeliveryChallanAddPage />} />
             <Route path="operations/edit/:id" element={<DeliveryChallanEditPage />} />
-            <Route path="operations/invoices" element={<InvoicesTablePage />} />
-            <Route path="operations/invoices/add" element={<InvoicesAddPage />} />
-            <Route path="operations/invoices/edit/:id" element={<InvoicesEditPage />} />
+                                       {/* settings */}
+            <Route path="settings/users" element={<UsersTablePage/>} />
+            <Route path="settings/users/add" element={<UsersAddPage/>} />
+            <Route path="settings/users/edit/:id" element={<UsersEditPage/>} />
+            <Route path="settings/roles" element={<RolesTablePage/>} />
+            <Route path="settings/roles/add" element={<RolesAddPage/>} />
+            <Route path="settings/roles/edit/:id" element={<RolesEditPage/>} />
+            
+            <Route path="settings/contact_type" element={<ContactTypeTable/>} />
+            <Route path="settings/contact_type/add" element={<ContactTypeAdd/>} />
+            <Route path="settings/contact_type/edit/:id" element={<ContactTypeEdit/>} />
+            <Route path="settings/taxt_list" element={<TaxListTable/>} />
+            <Route path="settings/taxt_list/add" element={<TaxListAdd/>} />
+            <Route path="settings/taxt_list/edit/:id" element={<TaxListEdit/>} />
+            <Route path="settings/address" element={<AddressTable/>} />
+            <Route path="settings/branch" element={<BranchTablePageLayout/>} />
+            <Route path="settings/branch/add" element={<BranchAddPageLayout/>} />
+            <Route path="settings/branch/edit/:id" element={<BranchEditPageLayout/>} />
+
 
           </Route>
         </Routes>

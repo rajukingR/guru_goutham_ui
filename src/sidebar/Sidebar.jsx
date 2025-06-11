@@ -275,7 +275,7 @@ const Sidebar = ({ section }) => {
       menuItems = [
         {
           text: "Users",
-          path: "/dashboard/settings",
+          path: "/dashboard/settings/users",
           icon: <PeopleIcon size={24} />,
         },
         {
@@ -284,100 +284,65 @@ const Sidebar = ({ section }) => {
           icon: <AdminPanelSettingsIcon size={24} />,
         },
         {
-          text: "Experience Range",
-          path: "/dashboard/settings/experience-range",
+          text: "Address",
+          path: "/dashboard/settings/address",
           icon: <TimelineIcon size={24} />,
         },
         {
-          text: "Department",
-          path: "/dashboard/settings/department",
-          icon: <BusinessIcon size={24} />,
-        },
-        {
-          text: "Branches",
-          path: "/dashboard/settings/branch",
-          icon: <ApartmentIcon size={24} />,
-        },
-        {
-          text: "Work Layout",
-          path: "/dashboard/settings/WorkLayout",
+          text: "Contact Type",
+          path: "/dashboard/settings/contact_type",
           icon: <MdOutlineComputer size={24} />,
         },
         {
-          text: "Candidate Status",
-          path: "/dashboard/settings/CandidateStatus",
+          text: "Tax List",
+          path: "/dashboard/settings/taxt_list",
           icon: <FaUserTie size={24} />,
         },
         {
-          text: "Bench Status",
-          path: "/dashboard/settings/BenchStatus",
+          text: "Branch",
+          path: "/dashboard/settings/Branch",
           icon: <MdOutlineAirlineSeatLegroomNormal size={24} />,
         },
-        {
-          text: "Revenue Model",
-          path: "/dashboard/settings/RevenType",
-          icon: <MdAttachMoney size={24} />,
-        },
-        {
-          text: "Job Title",
-          path: "/dashboard/settings/JobTitle",
-          icon: <FaBriefcase size={24} />,
-        },
-        {
-          text: "Skills",
-          path: "/dashboard/settings/Skills",
-          icon: <GiBrainstorm size={24} />,
-        },
-        {
-          text: "Industry",
-          path: "/dashboard/settings/Industry",
-          icon: <FaIndustry size={24} />,
-        },
-        {
-          text: "Interview Name",
-          path: "/dashboard/settings/InterviewName",
-          icon: <FaChalkboardTeacher size={24} />,
-        },
-        {
-          text: "Interview Status",
-          path: "/dashboard/settings/InterviewStatus",
-          icon: <MdQuestionAnswer size={24} />,
-        },
-        {
-          text: "Language Proficiency",
-          path: "/dashboard/settings/Languageproficiency",
-          icon: <MdTranslate size={24} />,
-        },
-        {
-          text: "Source",
-          path: "/dashboard/settings/SourceSe",
-          icon: <MdTravelExplore size={24} />,
-        },
-        {
-          text: "Overall Status",
-          path: "/dashboard/settings/OverallStatus",
-          icon: <MdDonutLarge size={24} />,
-        },
-        {
-          text: "Availability",
-          path: "/dashboard/settings/Availability",
-          icon: <MdAccessTime size={24} />,
-        },
-        {
-          text: "OffBoarding Reasons",
-          path: "/dashboard/settings/OffBoardingReasons",
-          icon: <FaUserMinus size={24} />,
-        },
-        {
-          text: "Currency",
-          path: "/dashboard/settings/Currency",
-          icon: <RiCurrencyFill size={24} />,
-        },
-        {
-          text: "RateType",
-          path: "/dashboard/settings/RateType",
-          icon: <FaMoneyCheckAlt size={24} />,
-        },
+        // {
+        //   text: "Hsn Codes",
+        //   path: "/dashboard/settings/RevenType",
+        //   icon: <MdAttachMoney size={24} />,
+        // },
+        // {
+        //   text: "Lead Checklists",
+        //   path: "/dashboard/settings/JobTitle",
+        //   icon: <FaBriefcase size={24} />,
+        // },
+        // {
+        //   text: "Lead Statuses",
+        //   path: "/dashboard/settings/Skills",
+        //   icon: <GiBrainstorm size={24} />,
+        // },
+        // {
+        //   text: "Oredr Checklists",
+        //   path: "/dashboard/settings/Industry",
+        //   icon: <FaIndustry size={24} />,
+        // },
+        // {
+        //   text: "Service Priority",
+        //   path: "/dashboard/settings/InterviewName",
+        //   icon: <FaChalkboardTeacher size={24} />,
+        // },
+        // {
+        //   text: "Service Status",
+        //   path: "/dashboard/settings/InterviewStatus",
+        //   icon: <MdQuestionAnswer size={24} />,
+        // },
+        // {
+        //   text: "State",
+        //   path: "/dashboard/settings/Languageproficiency",
+        //   icon: <MdTranslate size={24} />,
+        // },
+        // {
+        //   text: "Terms",
+        //   path: "/dashboard/settings/SourceSe",
+        //   icon: <MdTravelExplore size={24} />,
+        // },
       ];
       break;
 

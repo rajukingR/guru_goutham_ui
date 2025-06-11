@@ -12,7 +12,8 @@ import {
   TableCell,
   TableHead,
   TableRow,
-  Paper
+  Paper,
+  Button
 } from "@mui/material";
 import { 
   Chart as ChartJS, 
@@ -43,45 +44,36 @@ const DashBoard = () => {
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const [token] = useState(localStorage.getItem("token") || null);
 
+  // Updated stats for laptop rental/sale
   const stats = [
-    { title: "Client Request", value30: 5, value90: 24, color: "#E57373", icon: "📋" },
-    { title: "Hiring Engineer", value30: 2, value90: 8, color: "#9575CD", icon: "👨‍💻" },
-    { title: "Placement", value30: 0, value90: 2, color: "#4DB6AC", icon: "✅" },
-    { title: "Return to Bench", value30: 0, value90: 4, color: "#FF8A65", icon: "🔄" },
+    { title: "Active Rentals", value30: 12, value90: 45, color: "#4DB6AC", icon: "💻" },
+    { title: "Laptops Sold", value30: 8, value90: 32, color: "#9575CD", icon: "💰" },
+    { title: "Available Stock", value30: 25, value90: 89, color: "#64B5F6", icon: "📦" },
+    { title: "Overdue Rentals", value30: 3, value90: 11, color: "#E57373", icon: "⚠️" },
   ];
 
+  // Doughnut chart for laptop categories
   const doughnutData = {
-    labels: ["SOC Integ", "RTL", "Design Quality", "DFT", "Integ", "ATPG", "SCAN", "Power Mgmt", "Design Emulation", "Core Data Path"],
+    labels: ["Gaming", "Business", "Ultrabooks", "Budget", "Workstations", "Chromebooks"],
     datasets: [
       {
-        data: [20, 30, 15, 25, 10, 18, 22, 12, 28, 14],
+        data: [15, 25, 18, 22, 12, 8],
         backgroundColor: [
-          "#E57373", "#9575CD", "#F06292", "#FF8A65", 
-          "#64B5F6", "#4DB6AC", "#FFB74D", "#AED581", 
-          "#7986CB", "#BA68C8"
+          "#FF8A65", "#7986CB", "#4DB6AC", "#F06292", 
+          "#FFB74D", "#BA68C8"
         ],
         borderWidth: 0,
       },
     ],
   };
+
+  // Line chart for rental/sales trends
   const lineData = {
     labels: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"],
     datasets: [
       {
-        label: "Placement",
-        data: [200, 250, 220, 280, 300, 320, 340, 360, 380, 400, 420, 440],
-        borderColor: "#ff4d4d",
-        backgroundColor: "rgba(255, 77, 77, 0.1)",
-        borderWidth: 3,
-        tension: 0.4,
-        fill: true,
-        pointBackgroundColor: "#fff",
-        pointBorderColor: "#ff4d4d",
-        pointBorderWidth: 2,
-      },
-      {
-        label: "Hiring",
-        data: [0, 50, 100, 200, 300, 400, 500, 600, 700],
+        label: "Rentals",
+        data: [120, 150, 180, 210, 240, 270, 300, 280, 250, 230, 200, 180],
         borderColor: "#625ac4",
         backgroundColor: "rgba(98, 90, 196, 0.1)",
         borderWidth: 3,
@@ -89,6 +81,18 @@ const DashBoard = () => {
         fill: true,
         pointBackgroundColor: "#fff",
         pointBorderColor: "#625ac4",
+        pointBorderWidth: 2,
+      },
+      {
+        label: "Sales",
+        data: [80, 90, 100, 110, 120, 130, 140, 150, 140, 130, 120, 110],
+        borderColor: "#ff4d4d",
+        backgroundColor: "rgba(255, 77, 77, 0.1)",
+        borderWidth: 3,
+        tension: 0.4,
+        fill: true,
+        pointBackgroundColor: "#fff",
+        pointBorderColor: "#ff4d4d",
         pointBorderWidth: 2,
       },
     ],
@@ -140,22 +144,22 @@ const DashBoard = () => {
     }
   };
 
-  // Table data for High Paying Clients
-  const highPayingClients = [
-    { customerCode: '1620', name: 'Anand', companyName: 'Anand Technologies Pvt Ltd', totalCost: '150K' },
-    { customerCode: '1620', name: 'Anand', companyName: 'Anand Technologies Pvt Ltd', totalCost: '150K' },
-    { customerCode: '1620', name: 'Anand', companyName: 'Anand Technologies Pvt Ltd', totalCost: '150K' },
-    { customerCode: '1620', name: 'Anand', companyName: 'Anand Technologies Pvt Ltd', totalCost: '150K' },
-    { customerCode: '1620', name: 'Anand', companyName: 'Anand Technologies Pvt Ltd', totalCost: '150K' },
+  // Table data for Recent Rentals
+  const recentRentals = [
+    { id: 'R1001', customer: 'John Doe', model: 'Dell XPS 15', startDate: '2023-06-01', endDate: '2023-07-01', status: 'Active' },
+    { id: 'R1002', customer: 'Jane Smith', model: 'MacBook Pro M2', startDate: '2023-06-05', endDate: '2023-07-05', status: 'Active' },
+    { id: 'R1003', customer: 'Mike Johnson', model: 'HP Spectre x360', startDate: '2023-05-20', endDate: '2023-06-20', status: 'Completed' },
+    { id: 'R1004', customer: 'Sarah Williams', model: 'Lenovo ThinkPad X1', startDate: '2023-06-10', endDate: '2023-07-10', status: 'Active' },
+    { id: 'R1005', customer: 'David Brown', model: 'Asus ROG Zephyrus', startDate: '2023-05-15', endDate: '2023-06-15', status: 'Overdue' },
   ];
 
-  // Table data for Pending Payments
-  const pendingPayments = [
-    { customerCode: '1620', name: 'Anand', companyName: 'Anand Technologies Pvt Ltd', balanceCost: '150 K' },
-    { customerCode: '1620', name: 'Anand', companyName: 'Anand Technologies Pvt Ltd', balanceCost: '150 K' },
-    { customerCode: '1620', name: 'Anand', companyName: 'Anand Technologies Pvt Ltd', balanceCost: '150 K' },
-    { customerCode: '1620', name: 'Anand', companyName: 'Anand Technologies Pvt Ltd', balanceCost: '150 K' },
-    { customerCode: '1620', name: 'Anand', companyName: 'Anand Technologies Pvt Ltd', balanceCost: '150 K' },
+  // Table data for Recent Sales
+  const recentSales = [
+    { id: 'S2001', customer: 'Alex Green', model: 'MacBook Air M1', date: '2023-06-12', price: '$999', status: 'Completed' },
+    { id: 'S2002', customer: 'Emily White', model: 'Surface Laptop 4', date: '2023-06-08', price: '$1,299', status: 'Completed' },
+    { id: 'S2003', customer: 'Robert Black', model: 'Acer Swift 3', date: '2023-06-05', price: '$699', status: 'Completed' },
+    { id: 'S2004', customer: 'Lisa Gray', model: 'LG Gram 17', date: '2023-05-28', price: '$1,599', status: 'Completed' },
+    { id: 'S2005', customer: 'Thomas Blue', model: 'Razer Blade 15', date: '2023-05-22', price: '$2,199', status: 'Completed' },
   ];
 
   return (
@@ -164,9 +168,19 @@ const DashBoard = () => {
       backgroundColor: "#F4F1FA", 
       minHeight: "100vh"
     }}>
-      <Typography variant="h6" fontWeight="bold" mb={3} color="#000">
-        Dashboard 
-      </Typography>
+      <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
+        <Typography variant="h6" fontWeight="bold" color="#000">
+          Laptop Rental & Sales Dashboard
+        </Typography>
+        <Box>
+          <Button variant="contained" color="primary" sx={{ mr: 2 }}>
+            Add New Laptop
+          </Button>
+          <Button variant="outlined" color="primary">
+            Process Rental
+          </Button>
+        </Box>
+      </Box>
       
       {/* Stats Cards */}
       <Grid container spacing={2}>
@@ -244,7 +258,7 @@ const DashBoard = () => {
 
       {/* Charts and Tables Section */}
       <Grid container spacing={3} mt={3}>
-        {/* Left Column - Doughnut Chart and High Paying Clients */}
+        {/* Left Column - Doughnut Chart and Recent Rentals */}
         <Grid item xs={12} md={6}>
           <Grid container spacing={3} direction="column">
             <Grid item>
@@ -258,7 +272,7 @@ const DashBoard = () => {
               }}>
                 <CardContent sx={{ flexGrow: 1 }}>
                   <Typography variant="h6" mb={2} color="text.secondary">
-                    Bench Status
+                    Laptop Categories
                   </Typography>
                   <Box sx={{ height: isMobile ? '300px' : '350px' }}>
                     <Doughnut 
@@ -278,25 +292,40 @@ const DashBoard = () => {
               }}>
                 <CardContent>
                   <Typography variant="h6" mb={2} color="text.secondary">
-                    High Paying Clients
+                    Recent Rentals
                   </Typography>
                   <Paper sx={{ width: '100%', overflow: 'hidden' }}>
-                    <Table size="small" aria-label="high paying clients table">
+                    <Table size="small" aria-label="recent rentals table">
                       <TableHead>
                         <TableRow sx={{ backgroundColor: theme.palette.grey[100] }}>
-                          <TableCell>Customer Code</TableCell>
-                          <TableCell>Name</TableCell>
-                          <TableCell>Company Name</TableCell>
-                          <TableCell align="right">Total Cost</TableCell>
+                          <TableCell>Rental ID</TableCell>
+                          <TableCell>Customer</TableCell>
+                          <TableCell>Model</TableCell>
+                          <TableCell>Start Date</TableCell>
+                          <TableCell>End Date</TableCell>
+                          <TableCell align="right">Status</TableCell>
                         </TableRow>
                       </TableHead>
                       <TableBody>
-                        {highPayingClients.map((row, index) => (
+                        {recentRentals.map((row, index) => (
                           <TableRow key={index}>
-                            <TableCell>{row.customerCode}</TableCell>
-                            <TableCell>{row.name}</TableCell>
-                            <TableCell>{row.companyName}</TableCell>
-                            <TableCell align="right">{row.totalCost}</TableCell>
+                            <TableCell>{row.id}</TableCell>
+                            <TableCell>{row.customer}</TableCell>
+                            <TableCell>{row.model}</TableCell>
+                            <TableCell>{row.startDate}</TableCell>
+                            <TableCell>{row.endDate}</TableCell>
+                            <TableCell align="right">
+                              <Typography 
+                                variant="body2" 
+                                sx={{
+                                  color: row.status === 'Overdue' ? 'error.main' : 
+                                        row.status === 'Active' ? 'success.main' : 'text.secondary',
+                                  fontWeight: 'bold'
+                                }}
+                              >
+                                {row.status}
+                              </Typography>
+                            </TableCell>
                           </TableRow>
                         ))}
                       </TableBody>
@@ -308,7 +337,7 @@ const DashBoard = () => {
           </Grid>
         </Grid>
 
-        {/* Right Column - Line Chart and Pending Payments */}
+        {/* Right Column - Line Chart and Recent Sales */}
         <Grid item xs={12} md={6}>
           <Grid container spacing={3} direction="column">
             <Grid item>
@@ -322,7 +351,7 @@ const DashBoard = () => {
               }}>
                 <CardContent sx={{ flexGrow: 1 }}>
                   <Typography variant="h6" mb={2} color="text.secondary">
-                    Yearly Overview
+                    Rental & Sales Trends
                   </Typography>
                   <Box sx={{ height: isMobile ? '300px' : '350px' }}>
                     <Line 
@@ -342,25 +371,37 @@ const DashBoard = () => {
               }}>
                 <CardContent>
                   <Typography variant="h6" mb={2} color="text.secondary">
-                    Pending Payments
+                    Recent Sales
                   </Typography>
                   <Paper sx={{ width: '100%', overflow: 'hidden' }}>
-                    <Table size="small" aria-label="pending payments table">
+                    <Table size="small" aria-label="recent sales table">
                       <TableHead>
                         <TableRow sx={{ backgroundColor: theme.palette.grey[100] }}>
-                          <TableCell>Customer Code</TableCell>
-                          <TableCell>Name</TableCell>
-                          <TableCell>Company Name</TableCell>
-                          <TableCell align="right">Balance Cost</TableCell>
+                          <TableCell>Sale ID</TableCell>
+                          <TableCell>Customer</TableCell>
+                          <TableCell>Model</TableCell>
+                          <TableCell>Date</TableCell>
+                          <TableCell align="right">Price</TableCell>
+                          <TableCell align="right">Status</TableCell>
                         </TableRow>
                       </TableHead>
                       <TableBody>
-                        {pendingPayments.map((row, index) => (
+                        {recentSales.map((row, index) => (
                           <TableRow key={index}>
-                            <TableCell>{row.customerCode}</TableCell>
-                            <TableCell>{row.name}</TableCell>
-                            <TableCell>{row.companyName}</TableCell>
-                            <TableCell align="right">{row.balanceCost}</TableCell>
+                            <TableCell>{row.id}</TableCell>
+                            <TableCell>{row.customer}</TableCell>
+                            <TableCell>{row.model}</TableCell>
+                            <TableCell>{row.date}</TableCell>
+                            <TableCell align="right">{row.price}</TableCell>
+                            <TableCell align="right">
+                              <Typography 
+                                variant="body2" 
+                                color="success.main"
+                                fontWeight="bold"
+                              >
+                                {row.status}
+                              </Typography>
+                            </TableCell>
                           </TableRow>
                         ))}
                       </TableBody>
