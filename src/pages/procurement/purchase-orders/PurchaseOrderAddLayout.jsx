@@ -32,7 +32,7 @@ const PurchaseOrderAddLayout = () => {
     purchaseQuotationId: "",
     purchaseQuotationStatus: "Pending",
     purchaseOrderDate: new Date().toISOString().split("T")[0],
-    purchaseType: "Buy",
+    purchaseType: "",
     poStatus: "Pending",
     owner: "",
     supplierId: "",
@@ -40,6 +40,9 @@ const PurchaseOrderAddLayout = () => {
     description: "",
     isSupplierLocked: false,
   });
+
+  console.log(formData,"kkkkkkkkkkkkkkkkkk");
+  
 
   const [selectedProductIds, setSelectedProductIds] = useState([]);
   const [quantities, setQuantities] = useState({});
@@ -393,41 +396,7 @@ const PurchaseOrderAddLayout = () => {
             {showProductTable ? "Hide Product List" : "Add Products"}
           </button>
 
-          {/* Display selected products summary */}
-          {selectedPurchaseQuotation && (
-            <TableContainer component={Paper} style={{ marginBottom: "1rem" }}>
-              <Table size="small">
-                <TableHead>
-                  <TableRow sx={{ backgroundColor: "#0d47a1" }}>
-                    <TableCell sx={{ color: "#fff" }}>Product ID</TableCell>
-                    <TableCell sx={{ color: "#fff" }}>Product Name</TableCell>
-                    <TableCell sx={{ color: "#fff" }}>Quantity</TableCell>
-                    <TableCell sx={{ color: "#fff" }}>Price/Unit</TableCell>
-                    <TableCell sx={{ color: "#fff" }}>GST %</TableCell>
-                    <TableCell sx={{ color: "#fff" }}>Total</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {selectedPurchaseQuotation.selected_products.map((item) => (
-                    <TableRow key={item.product_id}>
-                      <TableCell>{item.product_id}</TableCell>
-                      <TableCell>{item.product_name}</TableCell>
-                      <TableCell>
-                        {quantities[item.product_id] || item.quantity}
-                      </TableCell>
-                      <TableCell>{item.price_per_unit}</TableCell>
-                      <TableCell>{item.gst_percentage}%</TableCell>
-                      <TableCell>
-                        {(quantities[item.product_id] || item.quantity) *
-                          (item.price_per_unit || 0)}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </TableContainer>
-          )}
-
+        
           {showProductTable && (
             <Box p={2}>
               <Box display="flex" gap={2} mb={2} alignItems="center">

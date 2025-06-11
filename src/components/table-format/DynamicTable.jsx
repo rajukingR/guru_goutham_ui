@@ -28,7 +28,6 @@ import html2canvas from "html2canvas";
 import DeleteIcon from "../../assets/logos/delete.png";
 import EditIcon from "../../assets/logos/edit.png";
 import ViewDC from "../../assets/logos/ViewDC.png";
-import ViewDCLogo from "../../../public/SORT-ICON.png";
 
 import StatusOff from "../../assets/logos/turnoff.png";
 import StatusOn from "../../assets/logos/turnon.png";
@@ -62,20 +61,20 @@ const DeliveryChallanDialog = ({ open, onClose, dcData }) => {
   if (!dcData) return null;
 
   const handleDownloadPDF = () => {
-    const input = document.getElementById('delivery-challan-container');
-    
+    const input = document.getElementById("delivery-challan-container");
+
     html2canvas(input, {
       scale: 2,
       logging: false,
       useCORS: true,
-      allowTaint: true
-    }).then(canvas => {
-      const imgData = canvas.toDataURL('image/png');
-      const pdf = new jsPDF('p', 'mm', 'a4');
+      allowTaint: true,
+    }).then((canvas) => {
+      const imgData = canvas.toDataURL("image/png");
+      const pdf = new jsPDF("p", "mm", "a4");
       const imgWidth = 210;
-      const imgHeight = canvas.height * imgWidth / canvas.width;
-      
-      pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+
+      pdf.addImage(imgData, "PNG", 0, 0, imgWidth, imgHeight);
       pdf.save(`delivery-challan-${dcData.dc_id}.pdf`);
     });
   };
@@ -88,39 +87,55 @@ const DeliveryChallanDialog = ({ open, onClose, dcData }) => {
           <div id="delivery-challan-container" style={receiptContainerStyle}>
             {/* Header Color Bar */}
             <div style={headerBarStyle}></div>
-            
+
             {/* Company Header */}
             <div style={companyHeaderStyle}>
               <div style={companyInfoContainerStyle}>
                 <div style={logoStyle}>
-                  <img src={ViewDCLogo} alt="Company Logo" style={{ width: "100%", height: "100%", objectFit: "contain" }} />
+                  <img
+                    src="/SORT-ICON.png"
+                    alt="Company Logo"
+                    style={{
+                      width: "100%",
+                      height: "100%",
+                      objectFit: "contain",
+                    }}
+                  />
                 </div>
                 <div>
-                  <div style={companyNameStyle}>Guru Goutam Infotech Pvt. Ltd.</div>
+                  <div style={companyNameStyle}>
+                    Guru Goutam Infotech Pvt. Ltd.
+                  </div>
                   <div style={companyDetailsStyle}>
-                    CIN: U72200KA2008PTC047679<br />
-                    GST: {dcData.gst_number || '29AADCG2608Q1Z6'}
+                    CIN: U72200KA2008PTC047679
+                    <br />
+                    GST: {dcData.gst_number || "29AADCG2608Q1Z6"}
                   </div>
                 </div>
               </div>
               <div style={challanHeaderStyle}>
                 <div style={challanTitleStyle}>DELIVERY CHALLAN</div>
                 <div style={challanDetailsStyle}>
-                  Challan No. &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;: {dcData.dc_id}<br />
-                  Challan Date. &nbsp;&nbsp;&nbsp;: {new Date(dcData.dc_date).toLocaleDateString('en-GB')}
+                  Challan No. &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;:{" "}
+                  {dcData.dc_id}
+                  <br />
+                  Challan Date. &nbsp;&nbsp;&nbsp;:{" "}
+                  {new Date(dcData.dc_date).toLocaleDateString("en-GB")}
                 </div>
               </div>
             </div>
-            
+
             {/* Recipient Section */}
             <div style={recipientSectionStyle}>
               <div style={recipientContainerStyle}>
                 <div style={recipientAddressStyle}>
                   <div style={recipientLabelStyle}>To</div>
-                  {dcData.shipping_name}<br />
+                  {dcData.shipping_name}
+                  <br />
                   {dcData.street && `${dcData.street}, `}
                   {dcData.landmark && `${dcData.landmark}, `}
-                  {dcData.city}, {dcData.state}<br />
+                  {dcData.city}, {dcData.state}
+                  <br />
                   {dcData.country} - {dcData.pincode}
                 </div>
                 <div style={recipientDetailsGridStyle}>
@@ -142,7 +157,7 @@ const DeliveryChallanDialog = ({ open, onClose, dcData }) => {
                   </div>
                   <div>
                     <div style={detailLabelStyle}>PO Number:</div>
-                    {dcData.order_number || 'N/A'}
+                    {dcData.order_number || "N/A"}
                   </div>
                   <div>
                     <div style={detailLabelStyle}>Contact Number :</div>
@@ -159,7 +174,7 @@ const DeliveryChallanDialog = ({ open, onClose, dcData }) => {
                 </div>
               </div>
             </div>
-            
+
             {/* Items Table */}
             <table style={tableStyle}>
               <thead>
@@ -167,85 +182,377 @@ const DeliveryChallanDialog = ({ open, onClose, dcData }) => {
                   <th style={tableHeaderNoStyle}>NO.</th>
                   <th style={tableHeaderParticularsStyle}>PARTICULARS</th>
                   <th style={tableHeaderQtyStyle}>QTY</th>
-                  <th style={tableHeaderQtyStyle}>Price</th>
                 </tr>
               </thead>
               <tbody>
                 {dcData.items?.map((item, index) => (
-                  <tr key={item.id} style={index % 2 === 0 ? tableRowOddStyle : tableRowEvenStyle}>
+                  <tr
+                    key={item.id}
+                    style={
+                      index % 2 === 0 ? tableRowOddStyle : tableRowEvenStyle
+                    }
+                  >
                     <td style={tableCellCenterStyle}>{index + 1}</td>
                     <td style={tableCellStyle}>
                       <div style={itemTitleStyle}>{item.product_name}</div>
                     </td>
                     <td style={tableCellCenterStyle}>{item.quantity}</td>
-                    <td style={tableCellCenterStyle}>
-                      ₹{Number(item.total_price).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
-                    </td>
                   </tr>
                 ))}
               </tbody>
             </table>
-            
+
             {/* Footer Info */}
             <div style={footerInfoStyle}>
               <div style={taxDetailsStyle}>
-                PAN No. &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;: {dcData.pan_number}<br />
-                GST No. &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;: {dcData.gst_number}
+                PAN No. &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;:{" "}
+                {dcData.pan_number}
+                <br />
+                GST No. &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;:{" "}
+                {dcData.gst_number}
               </div>
-              
+
               <div style={totalContainerStyle}>
                 <div style={totalLabelStyle}>TOTAL QTY :</div>
                 <div style={totalValueStyle}>{dcData.totalQuantity}</div>
               </div>
-              <div style={totalContainerStyle}>
-                <div style={totalLabelStyle}>Total Amount :</div>
-                <div style={totalValueStyle}>
-                  ₹{Number(dcData.totalPrice).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
-                </div>
-              </div>
             </div>
-            
+
             {/* Not For Sale */}
             <div style={notForSaleStyle}>
-              {dcData.type === 'Rent' ? 'NOT FOR SALE - RETURNABLE BASIS ONLY' : 'FOR SALE'}
+              {dcData.type === "Rent"
+                ? "NOT FOR SALE - RETURNABLE BASIS ONLY"
+                : "FOR SALE"}
             </div>
-            
+
             {/* Signature Section */}
             <div style={signatureSectionStyle}>
               <div style={leftSignatureAreaStyle}>
-                <div style={jurisdictionNoteStyle}>Note: Subjected to Bengaluru Jurisdiction</div>
+                <div style={jurisdictionNoteStyle}>
+                  Note: Subjected to Bengaluru Jurisdiction
+                </div>
                 <table style={signatureTableStyle}>
                   <tbody>
                     <tr>
-                      <td style={signatureTableHeaderStyle}>Delivery Address</td>
-                      <td style={signatureTableHeaderStyle}>Receiver Date and Signature</td>
+                      <td style={signatureTableHeaderStyle}>
+                        Delivery Address
+                      </td>
+                      <td style={signatureTableHeaderStyle}>
+                        Receiver Date and Signature
+                      </td>
                     </tr>
                     <tr>
-                      <td style={signatureTableCellStyle}>{dcData.shipping_name}<br />
-                  {dcData.street && `${dcData.street}, `}
-                  {dcData.landmark && `${dcData.landmark}, `}
-                  {dcData.city}, {dcData.state}<br />
-                  {dcData.country} - {dcData.pincode}</td>
+                      <td style={signatureTableCellStyle}>
+                        {dcData.shipping_name}
+                        <br />
+                        {dcData.street && `${dcData.street}, `}
+                        {dcData.landmark && `${dcData.landmark}, `}
+                        {dcData.city}, {dcData.state}
+                        <br />
+                        {dcData.country} - {dcData.pincode}
+                      </td>
                       <td style={signatureTableCellStyle}></td>
                     </tr>
                   </tbody>
                 </table>
               </div>
               <div style={rightSignatureAreaStyle}>
-                <div style={companySignatureLabelStyle}>For Guru Goutham Infotech Private Limited</div>
-                <div style={signatureBoxStyle}>
-                  SD/-
+                <div style={companySignatureLabelStyle}>
+                  For Guru Goutham Infotech Private Limited
                 </div>
-                <div style={signatureDesignationStyle}>Authorised Signatory</div>
+                <div style={signatureBoxStyle}>SD/-</div>
+                <div style={signatureDesignationStyle}>
+                  Authorised Signatory
+                </div>
               </div>
             </div>
-            
+
             {/* Company Footer */}
             <div style={companyFooterStyle}>
               <div style={footerAddressStyle}>
                 <span>📍</span>
                 <span>
-                  No. 8, 2nd Cross, Diagonal Road, 3rd Block,<br />
+                  No. 8, 2nd Cross, Diagonal Road, 3rd Block,
+                  <br />
+                  Jayanagar Bengaluru-560011.
+                </span>
+              </div>
+              <div style={footerContactStyle}>
+                <div style={footerContactItemStyle}>
+                  <span>🌐</span>
+                  <span>gurugoutam.com</span>
+                </div>
+                <div style={footerContactItemStyle}>
+                  <span>📞</span>
+                  <span>080-2242 9955, +91 9449 0789 55</span>
+                </div>
+                <div style={footerContactItemStyle}>
+                  <span>✉️</span>
+                  <span>info@gurugoutam.com</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={onClose}>Close</Button>
+        <Button onClick={handleDownloadPDF} variant="contained" color="primary">
+          Download PDF
+        </Button>
+        <Button onClick={() => window.print()}>Print</Button>
+      </DialogActions>
+    </Dialog>
+  );
+};
+
+const formatINRCurrency = (value) => {
+  return new Intl.NumberFormat("en-IN", {
+    style: "currency",
+    currency: "INR",
+    maximumFractionDigits: 2,
+  }).format(value);
+};
+
+// Invoice Dialog Component
+const InvoiceDialog = ({ open, onClose, invoiceData }) => {
+  if (!invoiceData) return null;
+
+  const handleDownloadPDF = () => {
+    const input = document.getElementById("invoice-container");
+
+    html2canvas(input, {
+      scale: 2,
+      logging: false,
+      useCORS: true,
+      allowTaint: true,
+    }).then((canvas) => {
+      const imgData = canvas.toDataURL("image/png");
+      const pdf = new jsPDF("p", "mm", "a4");
+      const imgWidth = 210;
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+
+      pdf.addImage(imgData, "PNG", 0, 0, imgWidth, imgHeight);
+      pdf.save(`invoice-${invoiceData.invoice_number}.pdf`);
+    });
+  };
+
+  return (
+    <Dialog open={open} onClose={onClose} maxWidth="lg" fullWidth>
+      <DialogTitle>Invoice Details</DialogTitle>
+      <DialogContent>
+        <div style={containerStyle}>
+          <div id="invoice-container" style={receiptContainerStyle}>
+            {/* Header Color Bar */}
+            <div style={headerBarStyle}></div>
+
+            {/* Company Header */}
+            <div style={companyHeaderStyle}>
+              <div style={companyInfoContainerStyle}>
+                <div style={logoStyle}>
+                  <img
+                    src="/SORT-ICON.png"
+                    alt="Company Logo"
+                    style={{
+                      width: "100%",
+                      height: "100%",
+                      objectFit: "contain",
+                    }}
+                  />
+                </div>
+                <div>
+                  <div style={companyNameStyle}>
+                    Guru Goutam Infotech Pvt. Ltd.
+                  </div>
+                  <div style={companyDetailsStyle}>
+                    CIN: U72200KA2008PTC047679
+                    <br />
+                    GST: {invoiceData.customer_gst_number || "29AADCG2608Q1Z6"}
+                  </div>
+                </div>
+              </div>
+              <div style={challanHeaderStyle}>
+                <div style={challanTitleStyle}>TAX INVOICE</div>
+                <div style={challanDetailsStyle}>
+                  Invoice No. &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;:{" "}
+                  {invoiceData.invoice_number}
+                  <br />
+                  Invoice Date &nbsp;&nbsp;: {invoiceData.invoice_date}
+                  <br />
+                  Due Date &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;:{" "}
+                  {invoiceData.invoice_due_date}
+                </div>
+              </div>
+            </div>
+
+            {/* Recipient Section */}
+            <div style={recipientSectionStyle}>
+              <div style={recipientContainerStyle}>
+                <div style={recipientAddressStyle}>
+                  <div style={recipientLabelStyle}>Bill To</div>
+                  {invoiceData.customer_name}
+                  <br />
+                  {invoiceData.shippingDetail?.street &&
+                    `${invoiceData.shippingDetail.street}, `}
+                  {invoiceData.shippingDetail?.landmark &&
+                    `${invoiceData.shippingDetail.landmark}, `}
+                  {invoiceData.shippingDetail?.city},{" "}
+                  {invoiceData.shippingDetail?.state}
+                  <br />
+                  {invoiceData.shippingDetail?.country} -{" "}
+                  {invoiceData.shippingDetail?.pincode}
+                </div>
+                <div style={recipientDetailsGridStyle}>
+                  <div>
+                    <div style={detailLabelStyle}>Customer GST :</div>
+                    {invoiceData.customer_gst_number}
+                  </div>
+                  <div>
+                    <div style={detailLabelStyle}>PAN Number :</div>
+                    {invoiceData.pan_number}
+                  </div>
+                  <div>
+                    <div style={detailLabelStyle}>PO Number :</div>
+                    {invoiceData.purchase_order_number}
+                  </div>
+                  <div>
+                    <div style={detailLabelStyle}>PO Date :</div>
+                    {invoiceData.purchase_order_date}
+                  </div>
+                  <div>
+                    <div style={detailLabelStyle}>Email :</div>
+                    {invoiceData.email}
+                  </div>
+                  <div>
+                    <div style={detailLabelStyle}>Phone :</div>
+                    {invoiceData.phone_number}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Items Table */}
+            <table style={tableStyle}>
+              <thead>
+                <tr>
+                  <th style={tableHeaderNoStyle}>NO.</th>
+                  <th style={tableHeaderParticularsStyle}>Product Name</th>
+                  <th style={tableHeaderQtyStyle}>QTY</th>
+                  <th style={tableHeaderRateStyle}>RATE</th>
+                  <th style={tableHeaderAmountStyle}>AMOUNT</th>
+                </tr>
+              </thead>
+              <tbody>
+                {invoiceData.items?.map((item, index) => (
+                  <tr
+                    key={item.id}
+                    style={
+                      index % 2 === 0 ? tableRowOddStyle : tableRowEvenStyle
+                    }
+                  >
+                    <td style={tableCellCenterStyle}>{index + 1}</td>
+                    <td style={tableCellStyle}>
+                      <div style={itemTitleStyle}>{item.product_name}</div>
+                    </td>
+                    <td style={tableCellCenterStyle}>{item.quantity}</td>
+                    <td style={tableCellRightStyle}>
+                      {formatINRCurrency(item.unit_price)}
+                    </td>
+                    <td style={tableCellRightStyle}>
+                      {formatINRCurrency(item.total_price)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+
+            {/* Tax and Total Section */}
+            <div style={taxTotalContainerStyle}>
+              <div style={taxDetailsStyle}>
+                <div style={taxRowStyle}>
+                  <span>Subtotal:</span>
+                  <span>{formatINRCurrency(invoiceData.amount)}</span>
+                </div>
+                <div style={taxRowStyle}>
+                  <span>CGST @9%:</span>
+                  <span>{formatINRCurrency(invoiceData.cgst)}</span>
+                </div>
+                <div style={taxRowStyle}>
+                  <span>SGST @9%:</span>
+                  <span>{formatINRCurrency(invoiceData.sgst)}</span>
+                </div>
+                {/* <div style={taxRowStyle}>
+                  <span>IGST @0%:</span>
+                  <span>₹{invoiceData.igst}</span>
+                </div> */}
+                <div style={taxRowTotalStyle}>
+                  <span>Total Tax:</span>
+                  <span>{formatINRCurrency(invoiceData.total_tax)}</span>
+                </div>
+                <div style={grandTotalStyle}>
+                  <span>Grand Total:</span>
+                  <span>{formatINRCurrency(invoiceData.total_amount)}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Bank Details Section */}
+            <div style={bankDetailsContainerStyle}>
+              <div style={bankDetailsTitleStyle}>Bank Details:</div>
+              <div style={bankLineStyle}>
+                Guru Goutham Infotech Pvt. Ltd., HDFC Bank Ltd, Jayanagar Branch
+              </div>
+              <div style={bankLineStyle}>
+                Current A/c No: 50200066787843. &nbsp;&nbsp; IFSC Code:
+                HDFC0000261
+              </div>
+
+              <div style={amountWordsStyle}>
+                Amt. in Words:{" "}
+                <span style={highlightTextStyle}>
+                  Rupees Twenty Six Thousand Seven Hundred and Twelve Only
+                </span>
+              </div>
+
+              <div style={jurisdictionNoteStyle}>
+                Note:{" "}
+                <span style={highlightTextStyle}>
+                  Subject to Bengaluru Jurisdiction
+                </span>
+              </div>
+            </div>
+
+            {/* Signature Section */}
+            <div style={signatureSectionStyle}>
+              {/* Left: Receiver Signature */}
+              <div style={leftSignatureAreaStyle}>
+                <div style={companySignatureLabelStyle}></div>
+                <div style={signatureBoxStyle}></div>
+                <div style={signatureDesignationStyle}>
+                  {" "}
+                  Receiver Signature with Seal
+                </div>
+              </div>
+
+              {/* Right: Authorised Signatory */}
+              <div style={rightSignatureAreaStyle}>
+                <div style={companySignatureLabelStyle}>
+                  For Guru Goutham Infotech Private Limited
+                </div>
+                <div style={signatureBoxStyle}>SD/-</div>
+                <div style={signatureDesignationStyle}>
+                  Authorised Signatory
+                </div>
+              </div>
+            </div>
+
+            {/* Company Footer */}
+            <div style={companyFooterStyle}>
+              <div style={footerAddressStyle}>
+                <span>📍</span>
+                <span>
+                  No. 8, 2nd Cross, Diagonal Road, 3rd Block,
+                  <br />
                   Jayanagar Bengaluru-560011.
                 </span>
               </div>
@@ -296,9 +603,10 @@ const DynamicTable = ({
   const [selectedRow, setSelectedRow] = useState(null);
   const [openViewDialog, setOpenViewDialog] = useState(false);
   const [selectedDCRow, setSelectedDCRow] = useState(null);
-
+  // Then in your DynamicTable component, add the state and handler for the invoice dialog:
+  const [openInvoiceDialog, setOpenInvoiceDialog] = useState(false);
+  const [selectedInvoiceRow, setSelectedInvoiceRow] = useState(null);
   useEffect(() => {
-
     if (Array.isArray(initialData) && initialData.length > 0) {
       setData(initialData);
       setStatus(initialData.map((row) => row.status === "Active"));
@@ -347,12 +655,25 @@ const DynamicTable = ({
 
   const handleViewDC = async (row) => {
     try {
-      const response = await axios.get(`${API_URL}/delivery-challans/${row.id}`);
+      const response = await axios.get(
+        `${API_URL}/delivery-challans/${row.id}`
+      );
       console.log("DC Data Response:", response.data);
       setSelectedDCRow(response.data);
       setOpenViewDialog(true);
     } catch (error) {
       console.error("Error fetching DC details:", error);
+    }
+  };
+
+  const handleViewInvoice = async (row) => {
+    try {
+      const response = await axios.get(`${API_URL}/invoices/${row.id}`);
+      console.log("Invoice Data Response:", response.data);
+      setSelectedInvoiceRow(response.data);
+      setOpenInvoiceDialog(true);
+    } catch (error) {
+      console.error("Error fetching invoice details:", error);
     }
   };
 
@@ -553,6 +874,20 @@ const DynamicTable = ({
                             />
                           </Button>
                         )}
+
+                        {tableType === "invoices" && (
+                          <Button
+                            onClick={() => handleViewInvoice(row)}
+                            sx={{ minWidth: "30px", p: 0 }}
+                          >
+                            <img
+                              src={ViewDC}
+                              alt="ViewDC"
+                              width="45"
+                              height="35"
+                            />
+                          </Button>
+                        )}
                         <Button
                           onClick={() => handleEdit(row)}
                           sx={{ minWidth: "30px", p: 0 }}
@@ -630,10 +965,15 @@ const DynamicTable = ({
       </Dialog>
 
       {/* Delivery Challan Dialog */}
-      <DeliveryChallanDialog 
-        open={openViewDialog} 
-        onClose={() => setOpenViewDialog(false)} 
-        dcData={selectedDCRow} 
+      <DeliveryChallanDialog
+        open={openViewDialog}
+        onClose={() => setOpenViewDialog(false)}
+        dcData={selectedDCRow}
+      />
+      <InvoiceDialog
+        open={openInvoiceDialog}
+        onClose={() => setOpenInvoiceDialog(false)}
+        invoiceData={selectedInvoiceRow}
       />
     </Box>
   );
@@ -641,314 +981,415 @@ const DynamicTable = ({
 
 // Styles (keep all your existing styles exactly as they are)
 const containerStyle = {
-  minHeight: '100vh',
-  backgroundColor: '#f3f4f6',
-  padding: '1.25rem',
+  minHeight: "100vh",
+  backgroundColor: "#f3f4f6",
+  padding: "1.25rem",
 };
 
 const receiptContainerStyle = {
-  maxWidth: '64rem',
-  margin: '0 auto',
-  backgroundColor: '#ffffff',
-  boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
+  maxWidth: "64rem",
+  margin: "0 auto",
+  backgroundColor: "#ffffff",
+  boxShadow:
+    "0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)",
 };
 
 const headerBarStyle = {
-  height: '0.5rem',
-  background: 'linear-gradient(to right, #475569, #475569, #60a5fa)',
+  height: "0.5rem",
+  background: "linear-gradient(to right, #475569, #475569, #60a5fa)",
 };
 
 const companyHeaderStyle = {
-  padding: '1.25rem',
-  display: 'flex',
-  justifyContent: 'space-between',
-  alignItems: 'flex-start',
+  padding: "1.25rem",
+  display: "flex",
+  justifyContent: "space-between",
+  alignItems: "flex-start",
 };
 
 const companyInfoContainerStyle = {
-  display: 'flex',
-  alignItems: 'center',
-  gap: '1rem',
+  display: "flex",
+  alignItems: "center",
+  gap: "1rem",
 };
 
 const logoStyle = {
-  width: '3rem',
-  height: '3rem',
-  backgroundColor: 'white',
-  borderRadius: '50%',
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  color: '#ffffff',
-  fontWeight: 'bold',
-  fontSize: '0.875rem',
+  width: "3rem",
+  height: "3rem",
+  backgroundColor: "white",
+  borderRadius: "50%",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  color: "#ffffff",
+  fontWeight: "bold",
+  fontSize: "0.875rem",
 };
 
 const companyNameStyle = {
-  color: '#f97316',
-  fontSize: '1.5rem',
-  fontWeight: 'bold',
+  color: "#f97316",
+  fontSize: "1.5rem",
+  fontWeight: "bold",
 };
 
 const companyDetailsStyle = {
-  fontSize: '0.75rem',
-  color: '#4b5563',
-  marginTop: '0.25rem',
+  fontSize: "0.75rem",
+  color: "#4b5563",
+  marginTop: "0.25rem",
 };
 
 const challanHeaderStyle = {
-  textAlign: 'right',
+  textAlign: "right",
 };
 
 const challanTitleStyle = {
-  color: '#60a5fa',
-  fontSize: '2.25rem',
-  fontWeight: 'bold',
-  letterSpacing: '0.1em',
+  color: "#60a5fa",
+  fontSize: "2.25rem",
+  fontWeight: "bold",
+  letterSpacing: "0.1em",
 };
 
 const challanDetailsStyle = {
-  fontSize: '0.75rem',
-  color: '#4b5563',
-  marginTop: '0.5rem',
+  fontSize: "0.75rem",
+  color: "#4b5563",
+  marginTop: "0.5rem",
 };
 
 const recipientSectionStyle = {
-  backgroundColor: '#e2e8f0',
-  padding: '1rem 1.25rem',
+  backgroundColor: "#e2e8f0",
+  padding: "1rem 1.25rem",
 };
 
 const recipientContainerStyle = {
-  display: 'flex',
-  justifyContent: 'space-between',
+  display: "flex",
+  justifyContent: "space-between",
 };
 
 const recipientAddressStyle = {
-  fontSize: '0.75rem',
-  color: '#1f2937',
+  fontSize: "0.75rem",
+  color: "#1f2937",
 };
 
 const recipientLabelStyle = {
-  fontWeight: 'bold',
-  marginBottom: '0.25rem',
+  fontWeight: "bold",
+  marginBottom: "0.25rem",
 };
 
 const recipientDetailsGridStyle = {
-  display: 'grid',
-  gridTemplateColumns: 'repeat(4, 1fr)',
-  gap: '1.25rem',
-  fontSize: '0.75rem',
-  color: '#4b5563',
+  display: "grid",
+  gridTemplateColumns: "repeat(4, 1fr)",
+  gap: "1.25rem",
+  fontSize: "0.75rem",
+  color: "#4b5563",
 };
 
 const detailLabelStyle = {
-  fontWeight: 'bold',
-  color: '#1f2937',
-  marginBottom: '0.25rem',
+  fontWeight: "bold",
+  color: "#1f2937",
+  marginBottom: "0.25rem",
+};
+
+// Add these new styles to your existing styles
+const tableHeaderRateStyle = {
+  backgroundColor: "#60a5fa",
+  color: "#ffffff",
+  padding: "0.75rem",
+  textAlign: "center",
+  fontWeight: "bold",
+  fontSize: "0.75rem",
+  width: "6rem",
+};
+
+const tableHeaderAmountStyle = {
+  backgroundColor: "#60a5fa",
+  color: "#ffffff",
+  padding: "0.75rem",
+  textAlign: "center",
+  fontWeight: "bold",
+  fontSize: "0.75rem",
+  width: "7rem",
+};
+
+const tableCellRightStyle = {
+  padding: "1rem",
+  textAlign: "right",
+  fontWeight: "bold",
+  fontSize: "0.75rem",
+};
+
+const taxTotalContainerStyle = {
+  padding: "1.25rem",
+  display: "flex",
+  justifyContent: "flex-end",
+};
+
+const taxRowStyle = {
+  display: "flex",
+  justifyContent: "space-between",
+  width: "20rem",
+  marginBottom: "0.5rem",
+  fontSize: "0.875rem",
+};
+
+const taxRowTotalStyle = {
+  display: "flex",
+  justifyContent: "space-between",
+  width: "20rem",
+  margin: "0.5rem 0",
+  paddingTop: "0.5rem",
+  borderTop: "1px solid #d1d5db",
+  fontSize: "0.875rem",
+  fontWeight: "bold",
+};
+
+const grandTotalStyle = {
+  display: "flex",
+  justifyContent: "space-between",
+  width: "20rem",
+  marginTop: "1rem",
+  paddingTop: "0.5rem",
+  borderTop: "2px solid #d1d5db",
+  fontSize: "1rem",
+  fontWeight: "bold",
+};
+
+const bankDetailsContainerStyle = {
+  marginTop: "2rem",
+  padding: "1rem",
+  fontSize: "0.875rem",
+  color: "#1f2937", // gray-800
+  backgroundColor: "#f9fafb", // light gray background for neatness
+  borderRadius: "0.5rem",
+  border: "1px solid #e5e7eb", // soft border (gray-200)
+};
+
+const bankDetailsTitleStyle = {
+  fontWeight: "bold",
+  marginBottom: "0.5rem",
+  color: "#111827", // gray-900
+};
+
+const bankLineStyle = {
+  marginBottom: "0.25rem",
+};
+
+const amountWordsStyle = {
+  marginTop: "1rem",
+  marginBottom: "0.25rem",
+};
+
+const highlightTextStyle = {
+  fontWeight: "600",
+};
+
+const paymentTermsStyle = {
+  padding: "0 1.25rem 1.25rem",
+  fontSize: "0.875rem",
+};
+
+const termsTitleStyle = {
+  fontWeight: "bold",
+  marginBottom: "0.5rem",
 };
 
 const tableStyle = {
-  width: '100%',
-  borderCollapse: 'collapse',
+  width: "100%",
+  borderCollapse: "collapse",
 };
 
 const tableHeaderNoStyle = {
-  backgroundColor: '#475569',
-  color: '#ffffff',
-  padding: '0.75rem',
-  textAlign: 'center',
-  fontWeight: 'bold',
-  fontSize: '0.75rem',
-  width: '4rem',
+  backgroundColor: "#475569",
+  color: "#ffffff",
+  padding: "0.75rem",
+  textAlign: "center",
+  fontWeight: "bold",
+  fontSize: "0.75rem",
+  width: "4rem",
 };
 
 const tableHeaderParticularsStyle = {
-  backgroundColor: '#60a5fa',
-  color: '#ffffff',
-  padding: '0.75rem',
-  textAlign: 'left',
-  fontWeight: 'bold',
-  fontSize: '0.75rem',
+  backgroundColor: "#60a5fa",
+  color: "#ffffff",
+  padding: "0.75rem",
+  textAlign: "left",
+  fontWeight: "bold",
+  fontSize: "0.75rem",
 };
 
 const tableHeaderQtyStyle = {
-  backgroundColor: '#60a5fa',
-  color: '#ffffff',
-  padding: '0.75rem',
-  textAlign: 'center',
-  fontWeight: 'bold',
-  fontSize: '0.75rem',
-  width: '5rem',
+  backgroundColor: "#60a5fa",
+  color: "#ffffff",
+  padding: "0.75rem",
+  textAlign: "center",
+  fontWeight: "bold",
+  fontSize: "0.75rem",
+  width: "5rem",
 };
 
 const tableRowOddStyle = {
-  borderBottom: '1px solid #e2e8f0',
-  backgroundColor: '#f1f5f9',
+  borderBottom: "1px solid #e2e8f0",
+  backgroundColor: "#f1f5f9",
 };
 
 const tableRowEvenStyle = {
-  borderBottom: '1px solid #e2e8f0',
-  backgroundColor: '#e2e8f0',
+  borderBottom: "1px solid #e2e8f0",
+  backgroundColor: "#e2e8f0",
 };
 
 const tableCellStyle = {
-  padding: '1rem',
-  fontSize: '0.75rem',
+  padding: "1rem",
+  fontSize: "0.75rem",
 };
 
 const tableCellCenterStyle = {
-  padding: '1rem',
-  textAlign: 'center',
-  fontWeight: 'bold',
-  fontSize: '0.75rem',
+  padding: "1rem",
+  textAlign: "center",
+  fontWeight: "bold",
+  fontSize: "0.75rem",
 };
 
 const itemTitleStyle = {
-  fontWeight: 'bold',
-  marginBottom: '0.25rem',
+  fontWeight: "bold",
+  marginBottom: "0.25rem",
 };
 
 const footerInfoStyle = {
-  padding: '1.25rem',
-  display: 'flex',
-  justifyContent: 'space-between',
-  alignItems: 'flex-end',
+  padding: "1.25rem",
+  display: "flex",
+  justifyContent: "space-between",
+  alignItems: "flex-end",
 };
 
 const taxDetailsStyle = {
-  fontSize: '0.75rem',
-  color: '#4b5563',
+  fontSize: "0.75rem",
+  color: "#4b5563",
 };
 
 const totalContainerStyle = {
-  display: 'flex',
-  alignItems: 'center',
+  display: "flex",
+  alignItems: "center",
 };
 
 const totalLabelStyle = {
-  backgroundColor: '#60a5fa',
-  color: '#ffffff',
-  padding: '0.5rem 1rem',
-  fontSize: '0.875rem',
-  fontWeight: 'bold',
+  backgroundColor: "#60a5fa",
+  color: "#ffffff",
+  padding: "0.5rem 1rem",
+  fontSize: "0.875rem",
+  fontWeight: "bold",
 };
 
 const totalValueStyle = {
-  backgroundColor: '#475569',
-  color: '#ffffff',
-  padding: '0.5rem 1rem',
-  fontSize: '1.125rem',
-  fontWeight: 'bold',
-  minWidth: '3rem',
-  textAlign: 'center',
+  backgroundColor: "#475569",
+  color: "#ffffff",
+  padding: "0.5rem 1rem",
+  fontSize: "1.125rem",
+  fontWeight: "bold",
+  minWidth: "3rem",
+  textAlign: "center",
 };
 
 const notForSaleStyle = {
-  textAlign: 'center',
-  fontSize: '0.875rem',
-  fontWeight: 'bold',
-  color: '#1f2937',
-  margin: '1.25rem 0',
+  textAlign: "center",
+  fontSize: "0.875rem",
+  fontWeight: "bold",
+  color: "#1f2937",
+  margin: "1.25rem 0",
 };
 
 const signatureSectionStyle = {
-  padding: '0 1.25rem 1.25rem',
-  display: 'flex',
-  justifyContent: 'space-between',
-  alignItems: 'flex-start',
-  fontSize: '0.75rem',
-  color: '#4b5563',
+  padding: "0 1.25rem 1.25rem",
+  display: "flex",
+  justifyContent: "space-between",
+  alignItems: "flex-start",
+  fontSize: "0.75rem",
+  color: "#4b5563",
 };
 
 const leftSignatureAreaStyle = {
-  width: '50%',
+  width: "50%",
 };
 
 const jurisdictionNoteStyle = {
-  marginBottom: '0.75rem',
-  color: '#1f2937',
+  marginBottom: "0.75rem",
+  color: "#1f2937",
 };
 
 const signatureTableStyle = {
-  width: '100%',
-  borderCollapse: 'collapse',
-  border: '1px solid #d1d5db',
+  width: "100%",
+  borderCollapse: "collapse",
+  border: "1px solid #d1d5db",
 };
 
 const signatureTableHeaderStyle = {
-  border: '1px solid #d1d5db',
-  padding: '1rem',
-  fontWeight: 'bold',
-  backgroundColor: '#ffffff',
+  border: "1px solid #d1d5db",
+  padding: "1rem",
+  fontWeight: "bold",
+  backgroundColor: "#ffffff",
 };
 
 const signatureTableCellStyle = {
-  border: '1px solid #d1d5db',
-  padding: '1rem',
-  height: '5rem',
-  backgroundColor: '#ffffff',
+  border: "1px solid #d1d5db",
+  padding: "1rem",
+  height: "5rem",
+  backgroundColor: "#ffffff",
 };
 
 const rightSignatureAreaStyle = {
-  textAlign: 'center',
-  marginLeft: '2rem',
+  textAlign: "center",
+  marginLeft: "2rem",
 };
 
 const companySignatureLabelStyle = {
-  marginBottom: '0.75rem',
-  color: '#1f2937',
+  marginBottom: "0.75rem",
+  color: "#1f2937",
 };
 
 const signatureBoxStyle = {
-  width: '12rem',
-  height: '6rem',
-  border: '1px solid #d1d5db',
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  color: '#4b5563',
-  fontSize: '0.875rem',
-  backgroundColor: '#ffffff',
+  width: "12rem",
+  height: "6rem",
+  border: "1px solid #d1d5db",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  color: "#4b5563",
+  fontSize: "0.875rem",
+  backgroundColor: "#ffffff",
 };
 
 const signatureDesignationStyle = {
-  marginTop: '0.75rem',
-  fontSize: '0.75rem',
-  color: '#1f2937',
+  marginTop: "0.75rem",
+  fontSize: "0.75rem",
+  color: "#1f2937",
 };
 
 const companyFooterStyle = {
-  backgroundColor: '#334155',
-  color: '#ffffff',
-  padding: '1rem 1.25rem',
-  display: 'flex',
-  justifyContent: 'space-between',
-  alignItems: 'center',
-  fontSize: '0.75rem',
+  backgroundColor: "#334155",
+  color: "#ffffff",
+  padding: "1rem 1.25rem",
+  display: "flex",
+  justifyContent: "space-between",
+  alignItems: "center",
+  fontSize: "0.75rem",
 };
 
 const footerAddressStyle = {
-  display: 'flex',
-  alignItems: 'center',
-  gap: '0.5rem',
+  display: "flex",
+  alignItems: "center",
+  gap: "0.5rem",
 };
 
 const footerContactStyle = {
-  display: 'flex',
-  alignItems: 'center',
-  gap: '1.25rem',
+  display: "flex",
+  alignItems: "center",
+  gap: "1.25rem",
 };
 
 const footerContactItemStyle = {
-  display: 'flex',
-  alignItems: 'center',
-  gap: '0.5rem',
+  display: "flex",
+  alignItems: "center",
+  gap: "0.5rem",
 };
 
 export default DynamicTable;
-
-
-
 
 // import React, { useEffect, useState } from "react";
 // import {
@@ -1138,7 +1579,7 @@ export default DynamicTable;
 //                 tableType !== "supplier" &&
 //                 tableType !== "inventory" &&
 //                 tableType !== "quotations" &&
-//                 tableType !== "orders" && 
+//                 tableType !== "orders" &&
 //                 tableType !== "operations" && (
 //                   <TableCell align="center" sx={{ fontWeight: "bold" }}>
 //                     Active Status
@@ -1223,7 +1664,7 @@ export default DynamicTable;
 //                     tableType !== "supplier" &&
 //                     tableType !== "inventory" &&
 //                     tableType !== "quotations" &&
-//                     tableType !== "orders" && 
+//                     tableType !== "orders" &&
 //                     tableType !== "operations" && (
 //                       <TableCell align="center">
 //                         <Button onClick={() => toggleStatus(rowIndex)}>

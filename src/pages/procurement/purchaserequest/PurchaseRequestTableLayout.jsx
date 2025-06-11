@@ -2,9 +2,11 @@ import React, { useState, useEffect } from "react";
 import DynamicTable from "../../../components/table-format/DynamicTable";
 import axios from "axios";
 import API_URL from "../../../api/Api_url";
+import { useSelector } from "react-redux";
 
 const PurchaseRequestTable = () => {
   const [data, setData] = useState([]);
+  const { user, token } = useSelector((state) => state.auth);
 
   // Change column from supplier_id to supplier_name
   const columns = [
@@ -21,7 +23,6 @@ const PurchaseRequestTable = () => {
   useEffect(() => {
     const fetchPurchaseRequests = async () => {
       try {
-        const token = localStorage.getItem("token");
 
         const response = await axios.get(`${API_URL}/purchase-requests`, {
           headers: {

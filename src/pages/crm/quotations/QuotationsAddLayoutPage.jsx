@@ -16,7 +16,7 @@ import {
 } from "@mui/material";
 import { Add, Remove } from "@mui/icons-material";
 
-const API_URL = "http://localhost:5000/api";
+import API_URL from "../../../api/Api_url";
 
 const QuotationsAddLayoutPage = () => {
   const [leads, setLeads] = useState([]);
@@ -119,50 +119,51 @@ const QuotationsAddLayoutPage = () => {
   }, []);
 
   // Handle lead selection change
-  const handleLeadChange = (leadId) => {
-    setSelectedLeadId(leadId);
-    const selectedLead = leads.find((lead) => lead.id === parseInt(leadId));
+const handleLeadChange = (leadId) => {
+  setSelectedLeadId(leadId);
+  const selectedLead = leads.find((lead) => lead.id === parseInt(leadId));
 
-    if (selectedLead) {
-      setFormData((prev) => ({
-        ...prev,
-        leadId: selectedLead.lead_id,
-        leadTitle: selectedLead.lead_title,
-        transactionType: selectedLead.transaction_type,
-        sourceOfEnquiry: selectedLead.source_of_enquiry,
-        owner: selectedLead.owner,
-        remarks: selectedLead.remarks,
-        quotationGeneratedBy: selectedLead.lead_generated_by,
-        activeStatus: selectedLead.is_active,
-        firstName: selectedLead.contact?.first_name || "",
-        lastName: selectedLead.contact?.last_name || "",
-        email: selectedLead.contact?.email || "",
-        phoneNumber: selectedLead.contact?.phone_number || "",
-        rentalDurationMonths: selectedLead.rental_duration_months || "",
-        rentalStartDate: selectedLead.rental_start_date || "",
-        rentalEndDate: selectedLead.rental_end_date || "",
-        industry: selectedLead.contact?.industry || "",
-        street: selectedLead.contact?.address?.street || "",
-        pincode: selectedLead.contact?.address?.zip || "",
-        city: selectedLead.contact?.address?.city || "",
-        state: selectedLead.contact?.address?.state || "",
-        country: selectedLead.contact?.address?.country || "India",
-      }));
+  if (selectedLead) {
+    setFormData((prev) => ({
+      ...prev,
+      leadId: selectedLead.lead_id,
+      leadTitle: selectedLead.lead_title,
+      transactionType: selectedLead.transaction_type,
+      sourceOfEnquiry: selectedLead.source_of_enquiry,
+      owner: selectedLead.owner,
+      remarks: selectedLead.remarks,
+      quotationGeneratedBy: selectedLead.lead_generated_by,
+      activeStatus: selectedLead.is_active,
+      firstName: selectedLead.contact?.first_name || "",
+      lastName: selectedLead.contact?.last_name || "",
+      email: selectedLead.contact?.email || "",
+      phoneNumber: selectedLead.contact?.phone_number || "",
+      rentalDurationMonths: selectedLead.rental_duration_months || "",
+      rentalStartDate: selectedLead.rental_start_date || "",
+      rentalEndDate: selectedLead.rental_end_date || "",
+      industry: selectedLead.contact?.industry || "",
+      street: selectedLead.contact?.address?.street || "",
+      pincode: selectedLead.contact?.address?.zip || "",
+      city: selectedLead.contact?.address?.city || "",
+      state: selectedLead.contact?.address?.state || "",
+      country: selectedLead.contact?.address?.country || "India",
+    }));
 
-      // Auto-select products from the lead
-      if (selectedLead.products && selectedLead.products.length > 0) {
-        const productIds = selectedLead.products.map((product) => product.id);
-        setSelectedProductIds(productIds);
+    // Auto-select products from the lead - UPDATED CODE
+    if (selectedLead.lead_products && selectedLead.lead_products.length > 0) {
+      const productIds = selectedLead.lead_products.map(
+        (product) => product.product_id
+      );
+      setSelectedProductIds(productIds);
 
-        const productQuantities = {};
-        selectedLead.products.forEach((product) => {
-          productQuantities[product.id] = product.LeadProduct.quantity;
-        });
-        setQuantities(productQuantities);
-      }
+      const productQuantities = {};
+      selectedLead.lead_products.forEach((product) => {
+        productQuantities[product.product_id] = product.quantity;
+      });
+      setQuantities(productQuantities);
     }
-  };
-
+  }
+};
   // Handle input changes
   const handleInputChange = (field, value) => {
     setFormData((prev) => ({
@@ -239,26 +240,33 @@ const QuotationsAddLayoutPage = () => {
 
     try {
       const quotationPayload = {
-        quotation_id: formData.quotationId,
-        quotation_title: formData.quotationTitle,
-        lead_id: selectedLeadId, // ✅ Use the numeric ID
-        rental_start_date: formData.rentalStartDate,
-        rental_end_date: formData.rentalEndDate,
-        quotation_date: formData.quotationDate,
-        rental_duration: parseInt(formData.rentalDurationMonths) || 0,
-        remarks: formData.remarks,
-        quotation_generated_by: formData.quotationGeneratedBy,
-        status: formData.quotationStatus,
-        items: selectedProductIds.map((productId) => {
-          const product = products.find((p) => p.id === productId);
-          return {
-            product_id: productId,
-            requested_quantity: product?.LeadProduct?.quantity || 1,
-            quotation_quantity: quantities[productId] || 0,
-            product_name: product?.name || "",
-          };
-        }),
-      };
+      quotation_id: formData.quotationId,
+      quotation_title: formData.quotationTitle,
+      lead_id: selectedLeadId,
+      rental_start_date: formData.rentalStartDate,
+      rental_end_date: formData.rentalEndDate,
+      quotation_date: formData.quotationDate,
+      rental_duration: parseInt(formData.rentalDurationMonths) || 0,
+      remarks: formData.remarks,
+      quotation_generated_by: formData.quotationGeneratedBy,
+      status: formData.quotationStatus,
+      items: selectedProductIds.map((productId) => {
+        const product = products.find((p) => p.id === productId);
+        // Get quantity from lead products if available
+        const leadProduct = selectedLeadId
+          ? leads
+              .find((lead) => lead.id === parseInt(selectedLeadId))
+              ?.lead_products?.find((lp) => lp.product_id === productId)
+          : null;
+        
+        return {
+          product_id: productId,
+          requested_quantity: leadProduct?.quantity || 1,
+          quotation_quantity: quantities[productId] || 0,
+          product_name: product?.product_name || "",
+        };
+      }),
+    };
 
       const response = await fetch(`${API_URL}/quotations/create`, {
         method: "POST",
@@ -356,7 +364,7 @@ const QuotationsAddLayoutPage = () => {
                 onChange={(e) => handleLeadChange(e.target.value)}
                 options={leads.map((lead) => ({
                   value: lead.id,
-                  label: `${lead.lead_id} - ${lead.lead_title}`,
+                  label: `${lead.lead_id} - ${lead.contact.first_name} ${lead.contact.last_name}`,
                 }))}
               />
               <Field

@@ -12,7 +12,7 @@ import { useSelector } from "react-redux";
 const ProfilePage = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
-  const { user, token } = useSelector((state) => state.auth); // get token here
+  const { user, token } = useSelector((state) => state.auth);
   
 
   // Hardcoded userId for demo (replace with dynamic later if needed)

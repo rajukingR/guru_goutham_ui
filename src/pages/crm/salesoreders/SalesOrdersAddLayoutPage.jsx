@@ -19,11 +19,14 @@ import {
   Alert,
 } from "@mui/material";
 import { Add, Remove } from "@mui/icons-material";
+import { useParams, useNavigate } from "react-router-dom";
 
-const API_URL = "http://localhost:5000/api";
+import API_URL from "../../../api/Api_url";
 
 const SalesOrdersAddLayoutPage = () => {
   // State for form data
+    const navigate = useNavigate();
+  
   const [formData, setFormData] = useState({
     order_id: "",
     order_title: "",
@@ -131,6 +134,9 @@ const SalesOrdersAddLayoutPage = () => {
     fetchProducts();
   }, []);
 
+
+  console.log(formData,"kkkkkkkkkkkkkkkkkkkkkkkk");
+  
   // Handle quotation selection
   const handleQuotationSelect = async (quotationId) => {
     if (!quotationId) return;
@@ -331,17 +337,20 @@ const SalesOrdersAddLayoutPage = () => {
 
   // Handle form submission
   const handleSubmit = async (e) => {
+
+
+    
     e.preventDefault();
 
     // Prepare items array from selected products and quantities
-    const orderItems = selectedProductIds.map((productId) => {
-      const product = products.find((p) => p.id === productId);
-      return {
-        product_id: productId,
-        product_name: product.name,
-        requested_quantity: quantities[productId] || 1,
-      };
-    });
+  const orderItems = selectedProductIds.map((productId) => {
+    const product = products.find((p) => p.id === productId);
+    return {
+      product_id: productId,
+      product_name: product?.product_name || "Unknown Product",
+      requested_quantity: quantities[productId] || 1,
+    };
+  });
 
     const payload = {
       ...formData,

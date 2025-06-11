@@ -3,7 +3,7 @@ import Snackbar from "@mui/material/Snackbar";
 import Alert from "@mui/material/Alert";
 import { useNavigate } from "react-router-dom";
 import { useSelector } from "react-redux";
-
+import API_URL from "../../../api/Api_url"
 const ContactsAddLayoutPage = () => {
   const { user } = useSelector((state) => state.auth);
   const LoginUserName = user.full_name;
@@ -116,7 +116,7 @@ const ContactsAddLayoutPage = () => {
 
     try {
       const response = await fetch(
-        "http://localhost:5000/api/contacts/create",
+        `${API_URL}/contacts/create`,
         {
           method: "POST",
           headers: {
