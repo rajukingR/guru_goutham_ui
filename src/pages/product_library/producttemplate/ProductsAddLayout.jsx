@@ -5,6 +5,16 @@ import Snackbar from "@mui/material/Snackbar";
 import MuiAlert from "@mui/material/Alert";
 import { useNavigate } from "react-router-dom";
 
+const generateProductId = () => {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  let randomPart = '';
+  for (let i = 0; i < 5; i++) {
+    randomPart += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return `PRD-${randomPart}`;
+};
+
+
 // Add this Alert component (optional but recommended for better styling)
 const Alert = React.forwardRef(function Alert(props, ref) {
   return <MuiAlert elevation={6} ref={ref} variant="filled" {...props} />;
@@ -71,14 +81,21 @@ const ProductsAddLayout = () => {
   const [snackbar, setSnackbar] = useState({
     open: false,
     message: "",
-    severity: "info", // can be "error", "warning", "info", "success"
+    severity: "info", 
   });
 
-  // Show snackbar helper function
   const showSnackbar = (message, severity = "info") => {
     setSnackbar({ open: true, message, severity });
   };
-  // Fetch brands and categories on component mount
+
+  useEffect(() => {
+  setFormData(prev => ({
+    ...prev,
+    product_id: generateProductId()
+  }));
+}, []);
+
+
   useEffect(() => {
     const fetchData = async () => {
       try {

@@ -20,6 +20,15 @@ import {
 } from '@mui/material';
 import { Add, Remove } from '@mui/icons-material';
 import API_URL from "../../../api/Api_url";
+const generateLeadId = () => {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  let randomPart = '';
+  for (let i = 0; i < 6; i++) { // 6 characters for lead ID
+    randomPart += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return `LD-${randomPart}`; // LD- prefix for Lead
+};
+
 
 const LeadsLayoutAddPage = () => {
   const { user } = useSelector((state) => state.auth);
@@ -77,6 +86,12 @@ const LeadsLayoutAddPage = () => {
     message: '',
     severity: 'success'
   });
+useEffect(() => {
+  setFormData(prev => ({
+    ...prev,
+    leadId: generateLeadId() // Auto-generate on component mount
+  }));
+}, []);
 
   useEffect(() => {
     if (LoginUserName) {

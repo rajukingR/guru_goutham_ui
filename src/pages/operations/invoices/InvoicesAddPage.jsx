@@ -19,8 +19,17 @@ import {
   FormControl,
 } from "@mui/material";
 import { Add, Remove } from "@mui/icons-material";
-
 import API_URL from "../../../api/Api_url";
+
+const generateInvoiceId = () => {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  let randomPart = '';
+  for (let i = 0; i < 7; i++) {
+    randomPart += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return `INV-${randomPart}`;
+};
+
 
 const InvoicesAddPage = () => {
   const [formData, setFormData] = useState({
@@ -78,6 +87,13 @@ const InvoicesAddPage = () => {
     message: "",
     severity: "info",
   });
+  useEffect(() => {
+  setFormData(prev => ({
+    ...prev,
+    invoice_number: generateInvoiceId()
+  }));
+}, []);
+
 
   // Fetch initial data
   useEffect(() => {
@@ -512,11 +528,11 @@ const InvoicesAddPage = () => {
             </div>
             <div style={fieldsGridStyle}>
               <Field
-                label="Invoice Number"
+                label="Invoice ID"
                 name="invoice_number"
                 value={formData.invoice_number}
                 onChange={handleInputChange}
-                placeholder="Enter Invoice Number"
+                placeholder="Enter Invoice Id"
               />
               <Field
                 label="Invoice Title"

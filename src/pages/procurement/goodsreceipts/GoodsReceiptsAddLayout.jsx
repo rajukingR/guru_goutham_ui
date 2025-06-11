@@ -18,6 +18,14 @@ import {
 import { Add, Remove } from "@mui/icons-material";
 
 import API_URL from "../../../api/Api_url";
+const generateRandomId = () => {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  let randomPart = '';
+  for (let i = 0; i < 5; i++) {
+    randomPart += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return `GR-${randomPart}`; // Changed prefix from PO- to GR- for Goods Receipt
+};
 
 const GoodsReceiptsAddLayout = () => {
   const [purchaseOrders, setPurchaseOrders] = useState([]);
@@ -60,6 +68,14 @@ const GoodsReceiptsAddLayout = () => {
     message: "",
     severity: "success",
   });
+ useEffect(() => {
+  setFormData(prev => ({
+    ...prev,
+    goodsReceiptId: generateRandomId() // Changed field name to match your Goods Receipt form
+  }));
+
+  // Include any fetch calls specific to Goods Receipt here
+}, []);
 
   useEffect(() => {
     const fetchData = async () => {

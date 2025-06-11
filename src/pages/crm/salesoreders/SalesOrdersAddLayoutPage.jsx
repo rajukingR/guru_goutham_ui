@@ -20,8 +20,17 @@ import {
 } from "@mui/material";
 import { Add, Remove } from "@mui/icons-material";
 import { useParams, useNavigate } from "react-router-dom";
-
 import API_URL from "../../../api/Api_url";
+
+const generateSalesOrderId = () => {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  let randomPart = '';
+  for (let i = 0; i < 6; i++) {
+    randomPart += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return `SO-${randomPart}`;
+};
+
 
 const SalesOrdersAddLayoutPage = () => {
   // State for form data
@@ -83,6 +92,14 @@ const SalesOrdersAddLayoutPage = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedProductIds, setSelectedProductIds] = useState([]);
   const [quantities, setQuantities] = useState({});
+
+
+useEffect(() => {
+  setFormData(prev => ({
+    ...prev,
+    order_id: generateSalesOrderId()  // Match key used in form
+  }));
+}, []);
 
   // Fetch approved quotations
   useEffect(() => {

@@ -4,6 +4,15 @@ import Snackbar from "@mui/material/Snackbar";
 import Alert from "@mui/material/Alert";
 import { useNavigate } from 'react-router-dom';
 
+const supplier_code = () => {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  let randomPart = '';
+  for (let i = 0; i < 5; i++) {
+    randomPart += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return `SUP-${randomPart}`; // Using SUP- prefix for suppliers
+};
+
 const SupplierAddLayout = () => {
   const navigate = useNavigate();
     
@@ -51,6 +60,15 @@ const SupplierAddLayout = () => {
     message: "",
     severity: "success",
   });
+
+  useEffect(() => {
+  setFormData(prev => ({
+    ...prev,
+    supplier_code: supplier_code() // Using supplierId as the field name
+  }));
+
+  // Include any supplier-specific fetch calls here
+}, []);
 
   // Handle form input changes
   const handleChange = (e) => {

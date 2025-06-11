@@ -18,6 +18,18 @@ import {
 import { Add, Remove } from "@mui/icons-material";
 import { useNavigate } from "react-router-dom";
 
+// ✅ Put this at the top of PoOperationAddPageLayout.jsx
+const generateRandomId = () => {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  let code = '';
+  for (let i = 0; i < 5; i++) {
+    code += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return `PQ-${code}`;
+};
+
+
+
 const PoOperationAddPageLayout = () => {
   const [purchaseRequests, setPurchaseRequests] = useState([]);
   const [selectedPurchaseRequest, setSelectedPurchaseRequest] = useState(null);
@@ -56,50 +68,51 @@ const PoOperationAddPageLayout = () => {
     message: "",
     severity: "success",
   });
+useEffect(() => {
+  setFormData((prev) => ({
+    ...prev,
+    purchaseQuotationId: generateRandomId()
+  }));
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        // Fetch approved purchase requests
-        const prResponse = await fetch(`${API_URL}/purchase-requests/approved`);
-        if (!prResponse.ok)
-          throw new Error("Failed to fetch purchase requests");
-        const prData = await prResponse.json();
-        setPurchaseRequests(prData);
+  const fetchData = async () => {
+    try {
+      const prResponse = await fetch(`${API_URL}/purchase-requests/approved`);
+      if (!prResponse.ok) throw new Error("Failed to fetch purchase requests");
+      const prData = await prResponse.json();
+      setPurchaseRequests(prData);
 
-        // Fetch suppliers
-        const supResponse = await fetch(`${API_URL}/supplier`);
-        if (!supResponse.ok) throw new Error("Failed to fetch suppliers");
-        const supData = await supResponse.json();
-        setSuppliers(supData);
+      const supResponse = await fetch(`${API_URL}/supplier`);
+      if (!supResponse.ok) throw new Error("Failed to fetch suppliers");
+      const supData = await supResponse.json();
+      setSuppliers(supData);
 
-        // Fetch products
-        const prodResponse = await fetch(`${API_URL}/product-templete`);
-        if (!prodResponse.ok) throw new Error("Failed to fetch products");
-        const prodData = await prodResponse.json();
-        setProducts(prodData);
+      const prodResponse = await fetch(`${API_URL}/product-templete`);
+      if (!prodResponse.ok) throw new Error("Failed to fetch products");
+      const prodData = await prodResponse.json();
+      setProducts(prodData);
 
-        setLoading({
-          purchaseRequests: false,
-          suppliers: false,
-          products: false,
-        });
-      } catch (err) {
-        setError({
-          purchaseRequests: err.message,
-          suppliers: err.message,
-          products: err.message,
-        });
-        setLoading({
-          purchaseRequests: false,
-          suppliers: false,
-          products: false,
-        });
-      }
-    };
+      setLoading({
+        purchaseRequests: false,
+        suppliers: false,
+        products: false,
+      });
+    } catch (err) {
+      setError({
+        purchaseRequests: err.message,
+        suppliers: err.message,
+        products: err.message,
+      });
+      setLoading({
+        purchaseRequests: false,
+        suppliers: false,
+        products: false,
+      });
+    }
+  };
 
-    fetchData();
-  }, []);
+  fetchData();
+}, []);
+
 
   const handlePurchaseRequestChange = (e) => {
     const selectedId = e.target.value;
@@ -273,6 +286,7 @@ const PoOperationAddPageLayout = () => {
               onChange={(e) =>
                 handleInputChange("purchaseQuotationId", e.target.value)
               }
+              disabled
             />
 
             <Field
@@ -291,11 +305,11 @@ const PoOperationAddPageLayout = () => {
             </Field>
 
             <Field
-              label="Purchase Request ID"
-              placeholder="Enter Purchase Request ID"
-              value={formData.purchaseRequestId}
-              disabled
-            />
+  label="Purchase Receipt ID"
+  value={formData.purchaseReceiptId}
+  InputProps={{ readOnly: true }}
+/>
+
 
             <Field
               label="Purchase Request Status"

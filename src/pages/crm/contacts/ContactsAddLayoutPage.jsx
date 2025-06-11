@@ -4,6 +4,18 @@ import Alert from "@mui/material/Alert";
 import { useNavigate } from "react-router-dom";
 import { useSelector } from "react-redux";
 import API_URL from "../../../api/Api_url"
+
+
+ const generateCustomerId = () => {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    let randomPart = '';
+    for (let i = 0; i < 5; i++) {
+      randomPart += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return `CT-${randomPart}`; // CT- prefix for Customer
+  };
+
+
 const ContactsAddLayoutPage = () => {
   const { user } = useSelector((state) => state.auth);
   const LoginUserName = user.full_name;
@@ -33,6 +45,13 @@ const ContactsAddLayoutPage = () => {
     contact_generated_by: "",
     status: "Inactive",
   });
+
+  useEffect(() => {
+    setFormData(prev => ({
+      ...prev,
+      customer_id: generateCustomerId()
+    }));
+  }, []);
 
   useEffect(() => {
     if (LoginUserName) {

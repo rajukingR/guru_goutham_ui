@@ -18,6 +18,16 @@ import {
 import { Add, Remove } from "@mui/icons-material";
 import { useNavigate } from "react-router-dom";
 
+const generateRandomId = () => {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  let randomPart = '';
+  for (let i = 0; i < 5; i++) {
+    randomPart += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return `PO-${randomPart}`;
+};
+
+
 const PurchaseOrderAddLayout = () => {
   const [purchaseQuotations, setPurchaseQuotations] = useState([]);
   const [selectedPurchaseQuotation, setSelectedPurchaseQuotation] =
@@ -63,6 +73,15 @@ const PurchaseOrderAddLayout = () => {
     message: "",
     severity: "success",
   });
+  useEffect(() => {
+  setFormData(prev => ({
+    ...prev,
+    purchaseOrderId: generateRandomId()
+  }));
+
+  // You can also include your fetch calls here if needed
+}, []);
+
 
   useEffect(() => {
     const fetchData = async () => {
