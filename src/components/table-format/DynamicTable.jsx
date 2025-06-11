@@ -511,13 +511,11 @@ const InvoiceDialog = ({ open, onClose, invoiceData }) => {
             <div style={signatureSectionStyle}>
               {/* Left: Receiver Signature */}
               <div style={leftSignatureAreaStyle}>
-                <div style={companySignatureLabelStyle}>
-                  Receiver Signature with Seal
-                </div>
+                <div style={companySignatureLabelStyle}></div>
                 <div style={signatureBoxStyle}></div>
-                <div style={signatureDesignationStyle}>Receiver</div>
-                <div style={jurisdictionNoteStyle}>
-                  Note: Subjected to Bengaluru Jurisdiction
+                <div style={signatureDesignationStyle}>
+                  {" "}
+                  Receiver Signature with Seal
                 </div>
               </div>
 
