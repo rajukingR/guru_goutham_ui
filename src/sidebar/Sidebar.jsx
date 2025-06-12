@@ -67,6 +67,7 @@ import ChevronRightIcon from "@mui/icons-material/ChevronRight";
 
 import { MdAttachMoney, MdOutlineComputer } from "react-icons/md";
 
+
 import {
   FaUserTie,
   FaBriefcase,
@@ -88,6 +89,8 @@ import {
 import { GiBrainstorm } from "react-icons/gi";
 
 import { RiCurrencyFill } from "react-icons/ri";
+import TravelExploreIcon from '@mui/icons-material/TravelExplore';   // for Client Journey
+
 
 const drawerWidth = 300;
 
@@ -102,7 +105,7 @@ const Sidebar = ({ section }) => {
 
   switch (section) {
     case "product_library":
-                              sectionTitle = "Product Library";
+      sectionTitle = "Product Library";
 
       menuItems = [
         {
@@ -154,7 +157,7 @@ const Sidebar = ({ section }) => {
       break;
 
     case "procurement":
-                        sectionTitle = "Procurement";
+      sectionTitle = "Procurement";
 
       menuItems = [
         {
@@ -166,7 +169,6 @@ const Sidebar = ({ section }) => {
           text: "PO Quotations",
           path: "/dashboard/procurement/po-quotations",
           icon: <POQuotationsIcon />,
-
         },
         {
           text: "Purchase Orders",
@@ -187,7 +189,7 @@ const Sidebar = ({ section }) => {
       break;
 
     case "inventory":
-                        sectionTitle = "Inventory";
+      sectionTitle = "Inventory";
 
       menuItems = [
         {
@@ -199,7 +201,7 @@ const Sidebar = ({ section }) => {
       break;
 
     case "crm":
-                        sectionTitle = "Customer Relationship";
+      sectionTitle = "Customer Relationship";
 
       menuItems = [
         {
@@ -231,7 +233,7 @@ const Sidebar = ({ section }) => {
       break;
 
     case "operations":
-                  sectionTitle = "Operations";
+      sectionTitle = "Operations";
 
       menuItems = [
         {
@@ -244,11 +246,31 @@ const Sidebar = ({ section }) => {
           path: "/dashboard/operations/invoices",
           icon: <ReceiptIcon />,
         },
+        {
+          text: "GRN",
+          path: "/dashboard/operations/grn",
+          icon: <ReceiptLongIcon />,
+        },
+        {
+          text: "Asset Modification Tracker",
+          path: "/dashboard/operations/asset_modification_tracker",
+          icon: <BuildCircleIcon/>,
+        },
+        {
+          text: "Service",
+          path: "/dashboard/operations/service",
+          icon: <MiscellaneousServicesIcon />,
+        },
+        {
+          text: "Client Journey",
+          path: "/dashboard/operations/client_journey",
+          icon: <TravelExploreIcon />,
+        },
       ];
       break;
 
     case "users_performance":
-            sectionTitle = "Users Performance";
+      sectionTitle = "Users Performance";
 
       menuItems = [
         {
@@ -873,7 +895,5 @@ const Sidebar = ({ section }) => {
     </Drawer>
   );
 };
-
-
 
 export default Sidebar;

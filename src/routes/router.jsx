@@ -91,6 +91,16 @@ import BranchTablePageLayout from "../pages/settings/branch/BranchTablePageLayou
 import BranchAddPageLayout from "../pages/settings/branch/BranchAddPageLayout.jsx";
 import BranchEditPageLayout from "../pages/settings/branch/BranchEditPageLayout.jsx";
 import UsersEditPage from "../pages/settings/users/UsersEditPage.jsx";
+import GrnLayoutTableContent from "../pages/operations/grn/GrnLayoutTableContent.jsx";
+import AssetTrackerOp from "../pages/operations/assetmodificationtracker/AssetTrackerOp.jsx";
+import ServiceTableOp from "../pages/operations/service/ServiceTableOp.jsx";
+import ClientJourneyOp from "../pages/operations/clientjourney/ClientJourneyOp.jsx";
+import GrnAddForm from "../pages/operations/grn/GrnAddForm.jsx";
+import ServiceAdd from "../pages/operations/service/ServiceAdd.jsx";
+import AssetModificationTrackerAdd from "../pages/operations/assetmodificationtracker/AssetModificationTrackerAdd.jsx";
+import GrnEditForm from "../pages/operations/grn/GrnEditForm.jsx";
+import ServiceEdit from "../pages/operations/service/ServiceEdit.jsx";
+import AssetModificationTrackerEdit from "../pages/operations/assetmodificationtracker/AssetModificationTrackerEdit.jsx";
 const ProtectedRoute = ({ element }) => {
   const user = useSelector((state) => state.auth.user);
   return user ? element : <Navigate to="/signin" replace />;
@@ -173,6 +183,16 @@ const RoutesConfig = () => {
             <Route path="operations/invoices" element={<InvoicesTablePage />} />
             <Route path="operations/invoices/add" element={<InvoicesAddPage />} />
             <Route path="operations/invoices/edit/:id" element={<InvoicesEditPage />} />
+            <Route path="operations/grn" element={<GrnLayoutTableContent />} />
+            <Route path="operations/grn/add" element={<GrnAddForm />} />
+            <Route path="operations/grn/edit/:id" element={<GrnEditForm />} />
+            <Route path="operations/asset_modification_tracker" element={<AssetTrackerOp />} />
+            <Route path="operations/asset_modification_tracker/add" element={<AssetModificationTrackerAdd/>} />
+            <Route path="operations/asset_modification_tracker/edit/:id" element={<AssetModificationTrackerEdit/>} />
+            <Route path="operations/service" element={<ServiceTableOp />} />
+            <Route path="operations/service/add" element={<ServiceAdd />} />
+            <Route path="operations/service/edit/:id" element={<ServiceEdit />} />
+            <Route path="operations/client_journey" element={<ClientJourneyOp/>} />
                                        {/* settings */}
             <Route path="settings/users" element={<UsersTablePage/>} />
             <Route path="settings/users/add" element={<UsersAddPage/>} />

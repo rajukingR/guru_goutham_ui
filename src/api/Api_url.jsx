@@ -1,3 +1,5 @@
-// apiConfig.js (or wherever you export API_URL)
-const API_URL = import.meta.env.VITE_API_URL;
+// apiConfig.js
+export const API_URL = import.meta.env.VITE_API_URL;
+export const IMAGE_API_URL = import.meta.env.VITE_IMAGE_API_URL;
+
 export default API_URL;

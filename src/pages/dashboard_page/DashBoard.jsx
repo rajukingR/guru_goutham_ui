@@ -52,7 +52,6 @@ const DashBoard = () => {
     { title: "Overdue Rentals", value30: 3, value90: 11, color: "#E57373", icon: "⚠️" },
   ];
 
-  // Doughnut chart for laptop categories
   const doughnutData = {
     labels: ["Gaming", "Business", "Ultrabooks", "Budget", "Workstations", "Chromebooks"],
     datasets: [
@@ -67,7 +66,6 @@ const DashBoard = () => {
     ],
   };
 
-  // Line chart for rental/sales trends
   const lineData = {
     labels: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"],
     datasets: [

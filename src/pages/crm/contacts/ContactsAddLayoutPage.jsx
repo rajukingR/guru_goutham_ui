@@ -107,10 +107,8 @@ const ContactsAddLayoutPage = () => {
         }
       }
     };
-
     fetchLocationData();
   }, [formData.address.zip]);
-
   const handleInputChange = (field, value) => {
     // Handle nested address fields
     if (field.includes("address.")) {
@@ -129,10 +127,8 @@ const ContactsAddLayoutPage = () => {
       }));
     }
   };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
-
     try {
       const response = await fetch(
         `${API_URL}/contacts/create`,
@@ -144,9 +140,7 @@ const ContactsAddLayoutPage = () => {
           body: JSON.stringify(formData),
         }
       );
-
       const data = await response.json();
-
       if (response.ok) {
         setSnackbar({
           open: true,
@@ -168,7 +162,6 @@ const ContactsAddLayoutPage = () => {
       });
     }
   };
-
   return (
     <div style={containerStyle}>
       <Snackbar
@@ -216,7 +209,6 @@ const ContactsAddLayoutPage = () => {
                 value={formData.last_name}
                 onChange={handleInputChange}
               />
-
               <Field
                 label="Email ID"
                 type="email"
@@ -225,7 +217,6 @@ const ContactsAddLayoutPage = () => {
                 value={formData.email}
                 onChange={handleInputChange}
               />
-
               <Field
                 label="Phone Number"
                 type="tel"
@@ -234,7 +225,6 @@ const ContactsAddLayoutPage = () => {
                 value={formData.phone_number}
                 onChange={handleInputChange}
               />
-
               <Field
                 label="Company Name"
                 name="company_name"
@@ -242,7 +232,6 @@ const ContactsAddLayoutPage = () => {
                 value={formData.company_name}
                 onChange={handleInputChange}
               />
-
               <Field
                 label="Customer ID"
                 name="customer_id"
@@ -250,7 +239,6 @@ const ContactsAddLayoutPage = () => {
                 value={formData.customer_id}
                 onChange={handleInputChange}
               />
-
               <Field
                 label="Date"
                 type="date"
@@ -258,7 +246,6 @@ const ContactsAddLayoutPage = () => {
                 value={formData.date}
                 onChange={handleInputChange}
               />
-
               <Field
                 label="Industry"
                 name="industry"
@@ -266,7 +253,6 @@ const ContactsAddLayoutPage = () => {
                 value={formData.industry}
                 onChange={handleInputChange}
               />
-
               <Field
                 label="Payment Type"
                 name="payment_type"
