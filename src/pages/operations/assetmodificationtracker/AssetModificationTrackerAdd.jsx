@@ -1,6 +1,19 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import Snackbar from '@mui/material/Snackbar';
+import Alert from '@mui/material/Alert';
+
+const generateAssetId = () => {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  let randomPart = '';
+  for (let i = 0; i < 5; i++) {
+    randomPart += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return `AST-${randomPart}`;
+};
 
 const AssetModificationTrackerAdd = () => {
+  const navigate = useNavigate();
   const [formData, setFormData] = useState({
     assetId: '',
     assetName: '',
@@ -16,6 +29,13 @@ const AssetModificationTrackerAdd = () => {
     activeStatus: false,
   });
 
+  const [snackbarOpen, setSnackbarOpen] = useState(false);
+
+  useEffect(() => {
+    const newId = generateAssetId();
+    setFormData((prev) => ({ ...prev, assetId: newId }));
+  }, []);
+
   const handleInputChange = (field, value) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
@@ -27,12 +47,48 @@ const AssetModificationTrackerAdd = () => {
     }
   };
 
-  const handleSubmit = () => {
-    console.log('Submitted Form', formData);
-  };
+  const handleSubmit = async () => {
+  try {
+    const payload = {
+      asset_image_url: '', 
+      asset_id: formData.assetId,
+      asset_name: formData.assetName,
+      modification_type: formData.modificationType,
+      reason_for_modification: formData.reason,
+      requested_by: formData.requestedBy,
+      approved_by: formData.approvedBy,
+      request_date: formData.requestDate,
+      approval_date: formData.approvalDate,
+      estimated_cost: parseFloat(formData.estimatedCost || 0),
+      status: formData.status,
+      remarks: formData.remarks,
+      active_status: formData.activeStatus
+    };
+
+    const response = await fetch('http://localhost:5000/api/asset-modifications/create', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+
+    if (response.ok) {
+      setSnackbarOpen(true);
+      setTimeout(() => navigate('/dashboard/operations/asset_modification_tracker'), 1500);
+    } else {
+      const errText = await response.text();
+      console.error('Submission failed:', errText);
+    }
+  } catch (err) {
+    console.error('Submission error:', err);
+  }
+};
 
   return (
     <div style={containerStyle}>
+      <Snackbar open={snackbarOpen} autoHideDuration={3000}>
+        <Alert severity="success" variant="filled">Asset Modification Created Successfully!</Alert>
+      </Snackbar>
+
       <div style={formContainerStyle}>
         {/* Asset Information Section */}
         <div style={cardStyle}>
@@ -43,39 +99,17 @@ const AssetModificationTrackerAdd = () => {
           
           <div style={uploadContainerStyle}>
             <label style={uploadButtonStyle}>
-              <input
-                type="file"
-                accept="image/png, image/jpeg"
-                style={{ display: 'none' }}
-                onChange={handleFileUpload}
-              />
+              <input type="file" accept="image/png, image/jpeg" style={{ display: 'none' }} onChange={handleFileUpload} />
               <span style={uploadIconStyle}>☁️</span>
               Upload Asset Image
             </label>
-            <span style={uploadHintStyle}>
-              Supported formats: JPG, PNG (max size: 2MB)
-            </span>
+            <span style={uploadHintStyle}>Supported formats: JPG, PNG (max size: 2MB)</span>
           </div>
 
           <div style={fieldsContainerStyle}>
-            <Field
-              label="Asset ID"
-              placeholder="Enter Asset ID"
-              value={formData.assetId}
-              onChange={(value) => handleInputChange('assetId', value)}
-            />
-            <Field
-              label="Asset Name"
-              placeholder="Enter Asset Name"
-              value={formData.assetName}
-              onChange={(value) => handleInputChange('assetName', value)}
-            />
-            <Field
-              label="Modification Type"
-              placeholder="Enter Modification Type"
-              value={formData.modificationType}
-              onChange={(value) => handleInputChange('modificationType', value)}
-            />
+            <Field label="Asset ID" placeholder="Auto-generated Asset ID" value={formData.assetId} onChange={(v) => handleInputChange('assetId', v)} />
+            <Field label="Asset Name" placeholder="Enter Asset Name" value={formData.assetName} onChange={(v) => handleInputChange('assetName', v)} />
+            <Field label="Modification Type" placeholder="Enter Modification Type" value={formData.modificationType} onChange={(v) => handleInputChange('modificationType', v)} />
           </div>
         </div>
 
@@ -86,57 +120,14 @@ const AssetModificationTrackerAdd = () => {
             <h3 style={cardHeaderStyle}>Request & Approval Details</h3>
           </div>
           <div style={fieldsGridStyle}>
-            <Field
-              label="Reason for Modification"
-              placeholder="Enter Reason for Modification"
-              value={formData.reason}
-              onChange={(value) => handleInputChange('reason', value)}
-            />
-            <Field
-              label="Requested By"
-              placeholder="Enter Requested By"
-              value={formData.requestedBy}
-              onChange={(value) => handleInputChange('requestedBy', value)}
-            />
-            <Field
-              label="Request Date"
-              placeholder="Select Request Date"
-              type="date"
-              value={formData.requestDate}
-              onChange={(value) => handleInputChange('requestDate', value)}
-            />
-            <Field
-              label="Approved By"
-              placeholder="Enter Approved By"
-              value={formData.approvedBy}
-              onChange={(value) => handleInputChange('approvedBy', value)}
-            />
-            <Field
-              label="Approval Date"
-              placeholder="Select Approval Date"
-              type="date"
-              value={formData.approvalDate}
-              onChange={(value) => handleInputChange('approvalDate', value)}
-            />
-            <Field
-              label="Estimated Cost"
-              placeholder="Enter Estimated Cost"
-              type="number"
-              value={formData.estimatedCost}
-              onChange={(value) => handleInputChange('estimatedCost', value)}
-            />
-            <Field
-              label="Status"
-              placeholder="Enter Status"
-              value={formData.status}
-              onChange={(value) => handleInputChange('status', value)}
-            />
-            <Field
-              label="Remarks"
-              placeholder="Enter Remarks"
-              value={formData.remarks}
-              onChange={(value) => handleInputChange('remarks', value)}
-            />
+            <Field label="Reason for Modification" placeholder="Enter Reason for Modification" value={formData.reason} onChange={(v) => handleInputChange('reason', v)} />
+            <Field label="Requested By" placeholder="Enter Requested By" value={formData.requestedBy} onChange={(v) => handleInputChange('requestedBy', v)} />
+            <Field label="Request Date" placeholder="" type="date" value={formData.requestDate} onChange={(v) => handleInputChange('requestDate', v)} />
+            <Field label="Approved By" placeholder="Enter Approved By" value={formData.approvedBy} onChange={(v) => handleInputChange('approvedBy', v)} />
+            <Field label="Approval Date" placeholder="" type="date" value={formData.approvalDate} onChange={(v) => handleInputChange('approvalDate', v)} />
+            <Field label="Estimated Cost" placeholder="Enter Estimated Cost" type="number" value={formData.estimatedCost} onChange={(v) => handleInputChange('estimatedCost', v)} />
+            <Field label="Status" placeholder="Enter Status" value={formData.status} onChange={(v) => handleInputChange('status', v)} />
+            <Field label="Remarks" placeholder="Enter Remarks" value={formData.remarks} onChange={(v) => handleInputChange('remarks', v)} />
           </div>
         </div>
 
@@ -148,12 +139,7 @@ const AssetModificationTrackerAdd = () => {
           </div>
           <div style={checkboxContainerStyle}>
             <label style={checkboxLabelStyle}>
-              <input
-                type="checkbox"
-                style={checkboxStyle}
-                checked={formData.activeStatus}
-                onChange={(e) => handleInputChange('activeStatus', e.target.checked)}
-              />
+              <input type="checkbox" style={checkboxStyle} checked={formData.activeStatus} onChange={(e) => handleInputChange('activeStatus', e.target.checked)} />
               <div style={{
                 ...checkboxCustomStyle,
                 backgroundColor: formData.activeStatus ? '#2563eb' : '#ffffff',
@@ -179,20 +165,15 @@ const AssetModificationTrackerAdd = () => {
   );
 };
 
+// Reusable Field Component
 const Field = ({ label, placeholder, type = 'text', value, onChange }) => (
   <div style={fieldContainerStyle}>
     <label style={labelStyle}>{label}</label>
-    <input
-      type={type}
-      placeholder={placeholder}
-      style={inputStyle}
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
-    />
+    <input type={type} placeholder={placeholder} style={inputStyle} value={value} onChange={(e) => onChange(e.target.value)} />
   </div>
 );
 
-// Styles
+// Styles (same as before – preserved)
 const containerStyle = {
   padding: '2rem',
   fontFamily: '"Inter", "Segoe UI", -apple-system, BlinkMacSystemFont, sans-serif',
@@ -258,133 +239,44 @@ const uploadButtonStyle = {
   transition: 'background-color 0.2s',
 };
 
-const uploadIconStyle = {
-  fontSize: '1rem',
-};
-
-const uploadHintStyle = {
-  display: 'block',
-  fontSize: '0.75rem',
-  color: '#6b7280',
-  marginTop: '0.5rem',
-};
-
-const fieldsContainerStyle = {
-  display: 'flex',
-  flexDirection: 'column',
-  gap: '1rem',
-};
-
-const fieldsGridStyle = {
-  display: 'grid',
-  gap: '1rem',
-  gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
-};
-
-const fieldContainerStyle = {
-  display: 'flex',
-  flexDirection: 'column',
-};
-
-const labelStyle = {
-  display: 'block',
-  marginBottom: '0.5rem',
-  fontWeight: '500',
-  fontSize: '0.875rem',
-  color: '#374151',
-};
-
+const uploadIconStyle = { fontSize: '1rem' };
+const uploadHintStyle = { fontSize: '0.75rem', color: '#6b7280' };
+const fieldsContainerStyle = { display: 'flex', flexDirection: 'column', gap: '1rem' };
+const fieldsGridStyle = { display: 'grid', gap: '1rem', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))' };
+const fieldContainerStyle = { display: 'flex', flexDirection: 'column' };
+const labelStyle = { marginBottom: '0.5rem', fontWeight: '500', fontSize: '0.875rem', color: '#374151' };
 const inputStyle = {
-  width: '100%',
-  padding: '0.75rem',
-  borderRadius: '8px',
-  border: '1px solid #d1d5db',
-  fontSize: '0.875rem',
-  backgroundColor: '#ffffff',
-  transition: 'border-color 0.2s, box-shadow 0.2s',
-  boxSizing: 'border-box',
+  width: '100%', padding: '0.75rem', borderRadius: '8px',
+  border: '1px solid #d1d5db', fontSize: '0.875rem', backgroundColor: '#ffffff'
 };
 
-const checkboxContainerStyle = {
-  marginTop: '0.5rem',
-};
-
-const checkboxLabelStyle = {
-  display: 'flex',
-  alignItems: 'flex-start',
-  cursor: 'pointer',
-  gap: '0.75rem',
-};
-
-const checkboxStyle = {
-  display: 'none',
-};
-
+const checkboxContainerStyle = { marginTop: '0.5rem' };
+const checkboxLabelStyle = { display: 'flex', alignItems: 'flex-start', cursor: 'pointer', gap: '0.75rem' };
+const checkboxStyle = { display: 'none' };
 const checkboxCustomStyle = {
-  width: '20px',
-  height: '20px',
-  borderRadius: '4px',
-  border: '2px solid #d1d5db',
-  backgroundColor: '#ffffff',
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  flexShrink: 0,
-  transition: 'all 0.2s',
+  width: '20px', height: '20px', borderRadius: '4px',
+  border: '2px solid #d1d5db', backgroundColor: '#ffffff',
+  display: 'flex', alignItems: 'center', justifyContent: 'center'
 };
-
-const checkmarkStyle = {
-  color: '#ffffff',
-  fontSize: '12px',
-  fontWeight: 'bold',
-};
-
-const checkboxTextStyle = {
-  fontSize: '0.875rem',
-  fontWeight: '500',
-  color: '#374151',
-  display: 'block',
-};
-
-const checkboxDescStyle = {
-  fontSize: '0.75rem',
-  color: '#6b7280',
-  display: 'block',
-  marginTop: '0.25rem',
-};
+const checkmarkStyle = { color: '#ffffff', fontSize: '12px', fontWeight: 'bold' };
+const checkboxTextStyle = { fontSize: '0.875rem', fontWeight: '500', color: '#374151' };
+const checkboxDescStyle = { fontSize: '0.75rem', color: '#6b7280', marginTop: '0.25rem' };
 
 const buttonContainerStyle = {
-  display: 'flex',
-  justifyContent: 'flex-end',
-  gap: '0.75rem',
-  marginTop: '2rem',
-  maxWidth: '1400px',
-  margin: '2rem auto 0',
-  padding: '0 1.5rem',
+  display: 'flex', justifyContent: 'flex-end', gap: '0.75rem',
+  marginTop: '2rem', maxWidth: '1400px', margin: '2rem auto 0', padding: '0 1.5rem',
 };
 
 const cancelBtnStyle = {
-  padding: '0.75rem 1.5rem',
-  backgroundColor: '#f3f4f6',
-  color: '#374151',
-  border: '1px solid #d1d5db',
-  borderRadius: '8px',
-  cursor: 'pointer',
-  fontSize: '0.875rem',
-  fontWeight: '500',
-  transition: 'all 0.2s',
+  padding: '0.75rem 1.5rem', backgroundColor: '#f3f4f6', color: '#374151',
+  border: '1px solid #d1d5db', borderRadius: '8px', cursor: 'pointer',
+  fontSize: '0.875rem', fontWeight: '500'
 };
 
 const createBtnStyle = {
-  padding: '0.75rem 1.5rem',
-  backgroundColor: '#2563eb',
-  color: 'white',
-  border: 'none',
-  borderRadius: '8px',
-  cursor: 'pointer',
-  fontSize: '0.875rem',
-  fontWeight: '500',
-  transition: 'all 0.2s',
+  padding: '0.75rem 1.5rem', backgroundColor: '#2563eb', color: 'white',
+  border: 'none', borderRadius: '8px', cursor: 'pointer',
+  fontSize: '0.875rem', fontWeight: '500'
 };
 
 export default AssetModificationTrackerAdd;

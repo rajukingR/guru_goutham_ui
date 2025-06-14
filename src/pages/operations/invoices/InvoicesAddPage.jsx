@@ -208,13 +208,11 @@ const InvoicesAddPage = () => {
       taxTypes.find((t) => t.tax_type_name === "CGST")?.percentage || 0;
     const sgstRate =
       taxTypes.find((t) => t.tax_type_name === "SGST")?.percentage || 0;
-    console.log(cgstRate,"kkkkkkkkkkkkkkkkkkkkk");
     
     const cgst = (amount * parseFloat(cgstRate)) / 100;
     const sgst = (amount * parseFloat(sgstRate)) / 100;
     const totalTax = cgst + sgst;
     const totalAmount = amount + totalTax;
-    console.log(cgst,"llllllllllllllllll");
 
     setFormData({
       ...formData,
@@ -274,18 +272,15 @@ const InvoicesAddPage = () => {
         return product.rent_price_per_day;
     }
   };
-  // Add this effect to update the form data when selected products or quantities change
   useEffect(() => {
     if (selectedProductIds.length > 0) {
-      setShowProductTable(true); // Automatically show the product table when products are selected
+      setShowProductTable(true); 
     }
   }, [selectedProductIds]);
-  // Fetch location data when pincode changes
   useEffect(() => {
     const fetchLocationFromPincode = async () => {
       const pincode = formData.shippingDetails.pincode;
 
-      // Only make API call if pincode is 6 digits (India specific)
       if (pincode && pincode.length === 6) {
         try {
           const response = await fetch(

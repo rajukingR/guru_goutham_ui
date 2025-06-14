@@ -55,6 +55,9 @@ const apiEndpoints = {
   Branch: `${API_URL}/branches`,
   users: `${API_URL}/users`,
   grn: `${API_URL}/grn`,
+  service: `${API_URL}/service`,
+  credit_notes: `${API_URL}/credit-notes`,
+  clients: `${API_URL}/clients`,
 };
 
 // Delivery Challan Dialog Component
@@ -585,6 +588,9 @@ const InvoiceDialog = ({ open, onClose, invoiceData }) => {
     </Dialog>
   );
 };
+
+
+
 
 const DynamicTable = ({
   columns,

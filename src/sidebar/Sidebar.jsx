@@ -66,6 +66,7 @@ import MiscellaneousServicesIcon from "@mui/icons-material/MiscellaneousServices
 import ChevronRightIcon from "@mui/icons-material/ChevronRight";
 
 import { MdAttachMoney, MdOutlineComputer } from "react-icons/md";
+import MoneyOffIcon from '@mui/icons-material/MoneyOff';
 
 
 import {
@@ -257,6 +258,11 @@ const Sidebar = ({ section }) => {
           icon: <BuildCircleIcon/>,
         },
         {
+          text: "Credit Notes",
+          path: "/dashboard/operations/credit_notes",
+          icon:  <MoneyOffIcon />,
+        },
+        {
           text: "Service",
           path: "/dashboard/operations/service",
           icon: <MiscellaneousServicesIcon />,
@@ -275,7 +281,7 @@ const Sidebar = ({ section }) => {
       menuItems = [
         {
           text: "Performance List",
-          path: "/dashboard/users_performance",
+          path: "/dashboard/users_performance/user",
           icon: <BusinessIcon />,
         },
       ];
@@ -285,7 +291,7 @@ const Sidebar = ({ section }) => {
       menuItems = [
         {
           text: "Client List",
-          path: "/dashboard/client",
+          path: "/dashboard/client/client",
           icon: <BusinessIcon />,
         },
       ];

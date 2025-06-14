@@ -1,76 +1,74 @@
-import React from "react";
-import { 
-  Avatar, 
-  Card, 
-  CardContent 
+import React, { useEffect, useState } from "react";
+import {
+  Avatar,
+  Card,
+  CardContent,
+  CircularProgress,
+  Typography
 } from "@mui/material";
 import DynamicTable from "../../../components/table-format/DynamicTable";
+import axios from "axios";
 
 const AssetTrackerOp = () => {
-  // Define columns for the table
+  const [data, setData] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  // Fetch data from the API
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const response = await axios.get("http://localhost:5000/api/asset-modifications/");
+        setData(response.data);
+      } catch (error) {
+        console.error("Failed to fetch asset modifications:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, []);
+
+  // Define columns (without "Active" column)
   const columns = [
-    { 
-      id: "itemImage", 
-      label: "Item Image",
+    {
+      id: "asset_image_url",
+      label: "Asset Image",
       render: (value) => (
-        <Avatar 
-          variant="square" 
-          src={value} 
+        <Avatar
+          variant="square"
+          src={value}
           sx={{ width: 56, height: 56 }}
         />
-      )
+      ),
     },
-    { id: "itemName", label: "Item Name" },
-    { id: "itemCode", label: "Item Code" },
-    { id: "category", label: "Category" },
-    { id: "unitPrice", label: "Unit Price" },
-    { id: "stockQuantity", label: "Stock Quantity" },
+    { id: "asset_id", label: "Asset ID" },
+    { id: "asset_name", label: "Asset Name" },
+    { id: "modification_type", label: "Modification Type" },
+    { id: "reason_for_modification", label: "Reason" },
+    { id: "requested_by", label: "Requested By" },
+    { id: "approved_by", label: "Approved By" },
+    { id: "request_date", label: "Request Date" },
+    { id: "approval_date", label: "Approval Date" },
+    { id: "estimated_cost", label: "Estimated Cost" },
     { id: "status", label: "Status" },
-    { id: "actions", label: "Actions" },
-  ];
-
-  // Sample data for items
-  const data = [
-    {
-      itemImage: "https://via.placeholder.com/56", 
-      itemName: "Wireless Mouse",
-      itemCode: "WM-1001",
-      category: "Accessories",
-      unitPrice: "$25",
-      stockQuantity: 120,
-      status: "Available",
-      actions: "..."
-    },
-    {
-      itemImage: "https://via.placeholder.com/56", 
-      itemName: "Mechanical Keyboard",
-      itemCode: "MK-2002",
-      category: "Accessories",
-      unitPrice: "$70",
-      stockQuantity: 85,
-      status: "Available",
-      actions: "..."
-    },
-    {
-      itemImage: "https://via.placeholder.com/56", 
-      itemName: "27-inch Monitor",
-      itemCode: "MN-3003",
-      category: "Monitors",
-      unitPrice: "$230",
-      stockQuantity: 30,
-      status: "Low Stock",
-      actions: "..."
-    },
+    { id: "remarks", label: "Remarks" },
   ];
 
   return (
-    <Card>
+    <Card sx={{ margin: 2 }}>
       <CardContent>
-        <DynamicTable 
-          columns={columns} 
-          data={data} 
-          rowsPerPage={5} 
-        />
+        <Typography variant="h6" gutterBottom>
+          Asset Modification Tracker
+        </Typography>
+
+        {loading ? (
+          <div style={{ textAlign: "center", padding: "2rem" }}>
+            <CircularProgress />
+          </div>
+        ) : (
+          <DynamicTable columns={columns} data={data} rowsPerPage={5} />
+        )}
       </CardContent>
     </Card>
   );
