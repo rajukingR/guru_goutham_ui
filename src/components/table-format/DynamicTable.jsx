@@ -23,6 +23,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import axios from "axios";
 import { jsPDF } from "jspdf";
 import html2canvas from "html2canvas";
+import numWords from "num-words";
 
 // Import Icons
 import DeleteIcon from "../../assets/logos/delete.png";
@@ -39,6 +40,7 @@ const apiEndpoints = {
   roles: `${API_URL}/roles`,
   operations: `${API_URL}/delivery-challans`,
   supplier: `${API_URL}/supplier`,
+  quotations: `${API_URL}/quotations`,
   goodsreceipt: `${API_URL}/goods-receipts`,
   "po-quotations": `${API_URL}/purchase-quotation`,
   "purchase-requests": `${API_URL}/purchase-requests`,
@@ -54,6 +56,7 @@ const apiEndpoints = {
   taxt_list: `${API_URL}/tax-list`,
   Branch: `${API_URL}/branches`,
   users: `${API_URL}/users`,
+  invoices: `${API_URL}/invoices`,
 };
 
 // Delivery Challan Dialog Component
@@ -180,7 +183,7 @@ const DeliveryChallanDialog = ({ open, onClose, dcData }) => {
               <thead>
                 <tr>
                   <th style={tableHeaderNoStyle}>NO.</th>
-                  <th style={tableHeaderParticularsStyle}>PARTICULARS</th>
+                  <th style={tableHeaderParticularsStyle}>Product Name</th>
                   <th style={tableHeaderQtyStyle}>QTY</th>
                 </tr>
               </thead>
@@ -195,6 +198,39 @@ const DeliveryChallanDialog = ({ open, onClose, dcData }) => {
                     <td style={tableCellCenterStyle}>{index + 1}</td>
                     <td style={tableCellStyle}>
                       <div style={itemTitleStyle}>{item.product_name}</div>
+                      <div
+                        style={{
+                          marginTop: 4,
+                          fontSize: "10px",
+                          color: "#555",
+                        }}
+                      >
+                        <div style={specificationsTitleStyle}>
+                          Specifications:
+                        </div>
+                        <div>
+                          <strong>Brand:</strong> {item.product?.brand}
+                        </div>
+                        <div>
+                          <strong>Model:</strong> {item.product?.model}
+                        </div>
+                        <div>
+                          <strong>RAM:</strong> {item.product?.ram}
+                        </div>
+                        <div>
+                          <strong>Storage:</strong> {item.product?.storage}
+                        </div>
+                        <div>
+                          <strong>Processor:</strong> {item.product?.processor}
+                        </div>
+                        <div>
+                          <strong>OS:</strong> {item.product?.os}
+                        </div>
+                        <div>
+                          <strong>Device IDs:</strong>{" "}
+                          {item.device_ids?.join(", ")}
+                        </div>
+                      </div>
                     </td>
                     <td style={tableCellCenterStyle}>{item.quantity}</td>
                   </tr>
@@ -314,272 +350,567 @@ const formatINRCurrency = (value) => {
   }).format(value);
 };
 
-// Invoice Dialog Component
+const numberToWords = (amount) => {
+  const number = Math.floor(amount);
+  const decimal = Math.round((amount - number) * 100);
+
+  let result = `${capitalize(numWords(number))} Rupees `;
+  if (decimal > 0) {
+    result += ` and ${capitalize(numWords(decimal))} Paise`;
+  }
+  return result + " Only.";
+};
+
+const capitalize = (text) =>
+  text.replace(/\b\w/g, (char) => char.toUpperCase());
+
+// Invoices Dialog Component
+
+// Invoices Dialog Component
 const InvoiceDialog = ({ open, onClose, invoiceData }) => {
   if (!invoiceData) return null;
 
-  const handleDownloadPDF = () => {
-    const input = document.getElementById("invoice-container");
+  // Determine which type of invoice to display
+  const invoiceType = invoiceData.type || "current";
 
-    html2canvas(input, {
+  // Calculate dates for all invoice types
+  const currentMonthStart = new Date(invoiceData.invoice_start_date);
+  const currentMonthEnd = new Date(invoiceData.invoice_end_date);
+  const prevMonthStart = new Date(invoiceData.previous_delivered_start_date);
+  const prevMonthEnd = new Date(invoiceData.previous_delivered_end_date);
+  const creditNoteStart = new Date(invoiceData.credit_note_start_date);
+  const creditNoteEnd = new Date(invoiceData.credit_note_end_date);
+
+  // Calculate next month dates
+  const nextMonthStart = new Date(currentMonthEnd);
+  nextMonthStart.setDate(nextMonthStart.getDate() + 1);
+  const nextMonthEnd = new Date(nextMonthStart);
+  nextMonthEnd.setMonth(nextMonthEnd.getMonth() + 1);
+  nextMonthEnd.setDate(0); // Last day of next month
+
+  // Function to calculate days between dates
+  const calculateDays = (startDate, endDate) => {
+    const diffTime = Math.abs(endDate - startDate);
+    return Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+  };
+
+  // Function to calculate item values for the selected invoice type
+  const calculateInvoiceItems = () => {
+    return invoiceData.items
+      ?.map((item) => {
+        const rate = Number(item.unit_price) || 0;
+        const monthlyRate = rate * 30;
+        const perMonthAmount = Number(item.unit_price) || 0;
+
+        let quantity = 0;
+        let days = 0;
+        let amount = 0;
+        let description = "";
+        let deviceIds = [];
+        const indianDateOptions = {
+          day: "2-digit",
+          month: "2-digit",
+          year: "numeric",
+        };
+
+        switch (invoiceType) {
+          case "current":
+            // Current month - all devices minus returns
+            quantity =
+              (Number(item.quantity) || 0) +
+              (Number(item.new_quantity) || 0) -
+              (Number(item.return_quantity) || 0);
+            days = calculateDays(currentMonthStart, currentMonthEnd);
+            amount = quantity * rate;
+            description = `Rental for ${days} days (${currentMonthStart.toLocaleDateString(
+              "en-IN",
+              indianDateOptions
+            )} to ${currentMonthEnd.toLocaleDateString(
+              "en-IN",
+              indianDateOptions
+            )})`;
+            deviceIds = [
+              ...(item.device_ids || []),
+              ...(item.new_device_ids || []),
+            ].filter((id) => !(item.returned_device_ids || []).includes(id));
+            break;
+
+          case "previous":
+            // Previous month - only new devices delivered in previous month
+            quantity = Number(item.new_quantity) || 0;
+            if (quantity > 0) {
+              days = calculateDays(prevMonthStart, prevMonthEnd);
+              amount = quantity * rate;
+              description = `Additional devices delivered in previous month (${prevMonthStart.toLocaleDateString(
+                "en-IN",
+                indianDateOptions
+              )} to ${prevMonthEnd.toLocaleDateString(
+                "en-IN",
+                indianDateOptions
+              )})`;
+              deviceIds = item.new_device_ids || [];
+            }
+            break;
+
+          case "next":
+            // Next month - current devices plus new minus returns
+            quantity =
+              (Number(item.quantity) || 0) +
+              (Number(item.new_quantity) || 0) -
+              (Number(item.return_quantity) || 0);
+            days = calculateDays(nextMonthStart, nextMonthEnd);
+            amount = quantity * rate;
+            description = `Projected rental for ${days} days (${nextMonthStart.toLocaleDateString(
+              "en-IN",
+              indianDateOptions
+            )} to ${nextMonthEnd.toLocaleDateString(
+              "en-IN",
+              indianDateOptions
+            )})`;
+            deviceIds = [
+              ...(item.device_ids || []),
+              ...(item.new_device_ids || []),
+            ].filter((id) => !(item.returned_device_ids || []).includes(id));
+            break;
+
+          case "credit":
+            // Credit note - only returned devices
+            quantity = Number(item.return_quantity) || 0;
+            if (quantity > 0) {
+              days = calculateDays(creditNoteStart, creditNoteEnd);
+              amount = quantity * rate;
+              description = `Credit for returned devices (${creditNoteStart.toLocaleDateString(
+                "en-IN",
+                indianDateOptions
+              )} to ${creditNoteEnd.toLocaleDateString(
+                "en-IN",
+                indianDateOptions
+              )})`;
+              deviceIds = item.returned_device_ids || [];
+            }
+            break;
+
+          default:
+            break;
+        }
+
+        return {
+          ...item,
+          quantity,
+          days,
+          amount,
+          description,
+          deviceIds,
+          rate,
+          total: amount,
+        };
+      })
+      .filter((item) => item.quantity > 0);
+  };
+
+  const items = calculateInvoiceItems();
+  const totalAmount = items.reduce((sum, item) => sum + item.amount, 0);
+
+  // Function to render the invoice
+  const renderInvoice = () => {
+    const isCreditNote = invoiceType === "credit";
+    const title =
+      invoiceType === "current"
+        ? "Current Month Invoice"
+        : invoiceType === "previous"
+        ? "Previous Month Reference"
+        : invoiceType === "next"
+        ? "Next Month Projection"
+        : "Return Credit Note";
+
+    const cgst = totalAmount * 0.09;
+    const sgst = totalAmount * 0.09;
+    const totalTax = cgst + sgst;
+    const grandTotal = isCreditNote ? totalAmount : totalAmount + totalTax;
+    const indianDateOptions = {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+    };
+
+    return (
+      <div
+        style={{
+          ...receiptContainerStyle,
+          marginBottom: "40px",
+          pageBreakAfter: "always",
+        }}
+        id={`invoice-${title.replace(/\s+/g, "-").toLowerCase()}`}
+      >
+        {/* Header Color Bar */}
+        <div style={headerBarStyle}></div>
+
+        {/* Company Header */}
+        <div style={companyHeaderStyle}>
+          <div style={companyInfoContainerStyle}>
+            <div style={logoStyle}>
+              <img
+                src="/SORT-ICON.png"
+                alt="Company Logo"
+                style={{
+                  width: "100%",
+                  height: "100%",
+                  objectFit: "contain",
+                }}
+              />
+            </div>
+            <div>
+              <div style={companyNameStyle}>Guru Goutam Infotech Pvt. Ltd.</div>
+              <div style={companyDetailsStyle}>
+                CIN: U72200KA2008PTC047679
+                <br />
+                GST: {invoiceData.customer_gst_number || "29AADCG2608Q1Z6"}
+              </div>
+            </div>
+          </div>
+          <div style={challanHeaderStyle}>
+            <div style={challanTitleStyle}>
+              {isCreditNote ? "CREDIT NOTE" : "TAX INVOICE"}
+            </div>
+            <div style={challanDetailsStyle}>
+              {isCreditNote ? "Credit Note No." : "Invoice No."} &nbsp;:{" "}
+              {invoiceData.invoice_number}
+              <br />
+              Date
+              &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;:{" "}
+              {invoiceData.invoice_date}
+              {!isCreditNote && (
+                <>
+                  <br />
+                  Due Date &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;:{" "}
+                  {invoiceData.invoice_due_date}
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Recipient Section */}
+        <div style={recipientSectionStyle}>
+          <div style={recipientContainerStyle}>
+            <div style={recipientAddressStyle}>
+              <div style={recipientLabelStyle}>Bill To</div>
+              {invoiceData.customer_name}
+              <br />
+              {invoiceData.shippingDetail?.street &&
+                `${invoiceData.shippingDetail.street}, `}
+              {invoiceData.shippingDetail?.landmark &&
+                `${invoiceData.shippingDetail.landmark}, `}
+              {invoiceData.shippingDetail?.city},{" "}
+              {invoiceData.shippingDetail?.state}
+              <br />
+              {invoiceData.shippingDetail?.country} -{" "}
+              {invoiceData.shippingDetail?.pincode}
+            </div>
+            <div style={recipientDetailsGridStyle}>
+              <div>
+                <div style={detailLabelStyle}>Customer GST :</div>
+                {invoiceData.customer_gst_number}
+              </div>
+              <div>
+                <div style={detailLabelStyle}>PAN Number :</div>
+                {invoiceData.pan_number}
+              </div>
+              <div>
+                <div style={detailLabelStyle}>PO Number :</div>
+                {invoiceData.purchase_order_number}
+              </div>
+              <div>
+                <div style={detailLabelStyle}>PO Date :</div>
+                {invoiceData.purchase_order_date}
+              </div>
+              <div>
+                <div style={detailLabelStyle}>Email :</div>
+                {invoiceData.email}
+              </div>
+              <div>
+                <div style={detailLabelStyle}>Phone :</div>
+                {invoiceData.phone_number}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Invoice Period */}
+
+        {/* Invoice Period */}
+        <div style={invoicePeriodStyle}>
+          {invoiceType === "next"
+            ? `Projection Period: ${nextMonthStart.toLocaleDateString(
+                "en-IN",
+                indianDateOptions
+              )} to ${nextMonthEnd.toLocaleDateString(
+                "en-IN",
+                indianDateOptions
+              )}`
+            : isCreditNote
+            ? `Credit Note Period: ${creditNoteStart.toLocaleDateString(
+                "en-IN",
+                indianDateOptions
+              )} to ${creditNoteEnd.toLocaleDateString(
+                "en-IN",
+                indianDateOptions
+              )}`
+            : invoiceType === "previous"
+            ? `Previous Month Period: ${prevMonthStart.toLocaleDateString(
+                "en-IN",
+                indianDateOptions
+              )} to ${prevMonthEnd.toLocaleDateString(
+                "en-IN",
+                indianDateOptions
+              )}`
+            : `Invoice Period: ${currentMonthStart.toLocaleDateString(
+                "en-IN",
+                indianDateOptions
+              )} to ${currentMonthEnd.toLocaleDateString(
+                "en-IN",
+                indianDateOptions
+              )}`}
+        </div>
+        {/* Items Table */}
+        <table style={tableStyle}>
+          <thead>
+            <tr>
+              <th style={tableHeaderNoStyle}>NO.</th>
+              <th style={tableHeaderParticularsStyle}>Product Details</th>
+              <th style={tableHeaderQtyStyle}>QTY</th>
+              <th style={tableHeaderDaysStyle}></th>
+              <th style={tableHeaderRateStyle}>Rate/Day</th>
+              <th style={tableHeaderRateStyle}>TOTAL</th>
+            </tr>
+          </thead>
+          <tbody>
+            {items.map((item, index) => (
+              <tr
+                key={item.id}
+                style={index % 2 === 0 ? tableRowOddStyle : tableRowEvenStyle}
+              >
+                <td style={tableCellCenterStyle}>{index + 1}</td>
+                <td style={tableCellStyle}>
+                  <div style={itemTitleStyle}>{item.product_name}</div>
+                  <div
+                    style={{ marginTop: 4, fontSize: "10px", color: "#555" }}
+                  >
+                    <div>
+                      <strong>Brand:</strong> {item.productDetails?.brand}
+                    </div>
+                    <div>
+                      <strong>Model:</strong> {item.productDetails?.model}
+                    </div>
+                    {item.deviceIds.length > 0 && (
+                      <div>
+                        <strong>Device IDs:</strong> {item.deviceIds.join(", ")}
+                      </div>
+                    )}
+                    <div style={{ marginTop: 4, fontStyle: "italic" }}>
+                      {item.description}
+                    </div>
+                  </div>
+                </td>
+                <td style={tableCellCenterStyle}>{item.quantity}</td>
+                <td style={tableCellCenterStyle}></td>
+                <td style={tableCellRightStyle}>
+                  {formatINRCurrency(item.rate)}
+                </td>
+                <td style={tableCellRightStyle}>
+                  {formatINRCurrency(item.amount)}
+                </td>
+              </tr>
+            ))}
+
+            {/* Totals Row */}
+            <tr style={totalsRowStyle}>
+              <td style={tableCellCenterStyle} colSpan={3}>
+                <strong>TOTAL</strong>
+              </td>
+              <td style={tableCellCenterStyle}>
+                {/* <strong>
+                  {items.reduce((sum, item) => sum + item.days, 0)}
+                </strong> */}
+              </td>
+              <td style={tableCellRightStyle}></td>
+              <td style={tableCellRightStyle}>
+                {formatINRCurrency(totalAmount)}
+              </td>
+            </tr>
+          </tbody>
+        </table>
+
+        {/* Tax and Total Section */}
+        <div style={taxTotalContainerStyle}>
+          <div style={taxDetailsStyle}>
+            <div style={taxRowStyle}>
+              <span>Subtotal:</span>
+              <span>{formatINRCurrency(totalAmount)}</span>
+            </div>
+
+            {!isCreditNote && (
+              <>
+                <div style={taxRowStyle}>
+                  <span>CGST @9%:</span>
+                  <span>{formatINRCurrency(cgst)}</span>
+                </div>
+                <div style={taxRowStyle}>
+                  <span>SGST @9%:</span>
+                  <span>{formatINRCurrency(sgst)}</span>
+                </div>
+                <div style={taxRowTotalStyle}>
+                  <span>Total Tax:</span>
+                  <span>{formatINRCurrency(totalTax)}</span>
+                </div>
+              </>
+            )}
+
+            <div style={grandTotalStyle}>
+              <span>{isCreditNote ? "Credit Amount" : "Grand Total"}:</span>
+              <span>{formatINRCurrency(grandTotal)}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Bank Details Section */}
+        <div style={bankDetailsContainerStyle}>
+          <div style={bankDetailsTitleStyle}>Bank Details:</div>
+          <div style={bankLineStyle}>
+            Guru Goutham Infotech Pvt. Ltd., HDFC Bank Ltd, Jayanagar Branch
+          </div>
+          <div style={bankLineStyle}>
+            Current A/c No: 50200066787843. &nbsp;&nbsp; IFSC Code: HDFC0000261
+          </div>
+
+          <div style={amountWordsStyle}>
+            Amt. in Words:{" "}
+            <span style={highlightTextStyle}>
+              {numberToWords(Math.abs(grandTotal))}{" "}
+              {isCreditNote ? "(Credit)" : ""}
+            </span>
+          </div>
+
+          <div style={jurisdictionNoteStyle}>
+            Note:{" "}
+            <span style={highlightTextStyle}>
+              Subject to Bengaluru Jurisdiction
+            </span>
+          </div>
+        </div>
+
+        {/* Signature Section */}
+        <div style={signatureSectionStyle}>
+          {/* Left: Receiver Signature */}
+          <div style={leftSignatureAreaStyle}>
+            <div style={companySignatureLabelStyle}></div>
+            <div style={signatureBoxStyle}></div>
+            <div style={signatureDesignationStyle}>
+              {" "}
+              Receiver Signature with Seal
+            </div>
+          </div>
+
+          {/* Right: Authorised Signatory */}
+          <div style={rightSignatureAreaStyle}>
+            <div style={companySignatureLabelStyle}>
+              For Guru Goutham Infotech Private Limited
+            </div>
+            <div style={signatureBoxStyle}>SD/-</div>
+            <div style={signatureDesignationStyle}>Authorised Signatory</div>
+          </div>
+        </div>
+
+        {/* Company Footer */}
+        <div style={companyFooterStyle}>
+          <div style={footerAddressStyle}>
+            <span>📍</span>
+            <span>
+              No. 8, 2nd Cross, Diagonal Road, 3rd Block,
+              <br />
+              Jayanagar Bengaluru-560011.
+            </span>
+          </div>
+          <div style={footerContactStyle}>
+            <div style={footerContactItemStyle}>
+              <span>🌐</span>
+              <span>gurugoutam.com</span>
+            </div>
+            <div style={footerContactItemStyle}>
+              <span>📞</span>
+              <span>080-2242 9955, +91 9449 0789 55</span>
+            </div>
+            <div style={footerContactItemStyle}>
+              <span>✉️</span>
+              <span>info@gurugoutam.com</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // Handle PDF download
+  const handleDownloadPDF = () => {
+    const element = document.getElementById(
+      `invoice-${
+        invoiceType === "current"
+          ? "current-month-invoice"
+          : invoiceType === "previous"
+          ? "previous-month-reference"
+          : "return-credit-note"
+      }`
+    );
+
+    if (!element) return;
+
+    html2canvas(element, {
       scale: 2,
       logging: false,
       useCORS: true,
       allowTaint: true,
     }).then((canvas) => {
       const imgData = canvas.toDataURL("image/png");
-      const pdf = new jsPDF("p", "mm", "a4");
       const imgWidth = 210;
       const imgHeight = (canvas.height * imgWidth) / canvas.width;
 
+      const pdf = new jsPDF("p", "mm", "a4");
       pdf.addImage(imgData, "PNG", 0, 0, imgWidth, imgHeight);
-      pdf.save(`invoice-${invoiceData.invoice_number}.pdf`);
+      pdf.save(
+        `${
+          invoiceType === "current"
+            ? "invoice"
+            : invoiceType === "previous"
+            ? "previous-month"
+            : "credit-note"
+        }-${invoiceData.invoice_number}.pdf`
+      );
     });
   };
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="lg" fullWidth>
-      <DialogTitle>Invoice Details</DialogTitle>
+    <Dialog
+      open={open}
+      onClose={onClose}
+      maxWidth="lg"
+      fullWidth
+      scroll="paper"
+    >
+      <DialogTitle>
+        {invoiceType === "current"
+          ? "Current Month Invoice"
+          : invoiceType === "previous"
+          ? "Previous Month Reference"
+          : "Return Credit Note"}
+      </DialogTitle>
       <DialogContent>
-        <div style={containerStyle}>
-          <div id="invoice-container" style={receiptContainerStyle}>
-            {/* Header Color Bar */}
-            <div style={headerBarStyle}></div>
-
-            {/* Company Header */}
-            <div style={companyHeaderStyle}>
-              <div style={companyInfoContainerStyle}>
-                <div style={logoStyle}>
-                  <img
-                    src="/SORT-ICON.png"
-                    alt="Company Logo"
-                    style={{
-                      width: "100%",
-                      height: "100%",
-                      objectFit: "contain",
-                    }}
-                  />
-                </div>
-                <div>
-                  <div style={companyNameStyle}>
-                    Guru Goutam Infotech Pvt. Ltd.
-                  </div>
-                  <div style={companyDetailsStyle}>
-                    CIN: U72200KA2008PTC047679
-                    <br />
-                    GST: {invoiceData.customer_gst_number || "29AADCG2608Q1Z6"}
-                  </div>
-                </div>
-              </div>
-              <div style={challanHeaderStyle}>
-                <div style={challanTitleStyle}>TAX INVOICE</div>
-                <div style={challanDetailsStyle}>
-                  Invoice No. &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;:{" "}
-                  {invoiceData.invoice_number}
-                  <br />
-                  Invoice Date &nbsp;&nbsp;: {invoiceData.invoice_date}
-                  <br />
-                  Due Date &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;:{" "}
-                  {invoiceData.invoice_due_date}
-                </div>
-              </div>
-            </div>
-
-            {/* Recipient Section */}
-            <div style={recipientSectionStyle}>
-              <div style={recipientContainerStyle}>
-                <div style={recipientAddressStyle}>
-                  <div style={recipientLabelStyle}>Bill To</div>
-                  {invoiceData.customer_name}
-                  <br />
-                  {invoiceData.shippingDetail?.street &&
-                    `${invoiceData.shippingDetail.street}, `}
-                  {invoiceData.shippingDetail?.landmark &&
-                    `${invoiceData.shippingDetail.landmark}, `}
-                  {invoiceData.shippingDetail?.city},{" "}
-                  {invoiceData.shippingDetail?.state}
-                  <br />
-                  {invoiceData.shippingDetail?.country} -{" "}
-                  {invoiceData.shippingDetail?.pincode}
-                </div>
-                <div style={recipientDetailsGridStyle}>
-                  <div>
-                    <div style={detailLabelStyle}>Customer GST :</div>
-                    {invoiceData.customer_gst_number}
-                  </div>
-                  <div>
-                    <div style={detailLabelStyle}>PAN Number :</div>
-                    {invoiceData.pan_number}
-                  </div>
-                  <div>
-                    <div style={detailLabelStyle}>PO Number :</div>
-                    {invoiceData.purchase_order_number}
-                  </div>
-                  <div>
-                    <div style={detailLabelStyle}>PO Date :</div>
-                    {invoiceData.purchase_order_date}
-                  </div>
-                  <div>
-                    <div style={detailLabelStyle}>Email :</div>
-                    {invoiceData.email}
-                  </div>
-                  <div>
-                    <div style={detailLabelStyle}>Phone :</div>
-                    {invoiceData.phone_number}
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Items Table */}
-            <table style={tableStyle}>
-              <thead>
-                <tr>
-                  <th style={tableHeaderNoStyle}>NO.</th>
-                  <th style={tableHeaderParticularsStyle}>Product Name</th>
-                  <th style={tableHeaderQtyStyle}>QTY</th>
-                  <th style={tableHeaderRateStyle}>RATE</th>
-                  <th style={tableHeaderAmountStyle}>AMOUNT</th>
-                </tr>
-              </thead>
-              <tbody>
-                {invoiceData.items?.map((item, index) => (
-                  <tr
-                    key={item.id}
-                    style={
-                      index % 2 === 0 ? tableRowOddStyle : tableRowEvenStyle
-                    }
-                  >
-                    <td style={tableCellCenterStyle}>{index + 1}</td>
-                    <td style={tableCellStyle}>
-                      <div style={itemTitleStyle}>{item.product_name}</div>
-                    </td>
-                    <td style={tableCellCenterStyle}>{item.quantity}</td>
-                    <td style={tableCellRightStyle}>
-                      {formatINRCurrency(item.unit_price)}
-                    </td>
-                    <td style={tableCellRightStyle}>
-                      {formatINRCurrency(item.total_price)}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-
-            {/* Tax and Total Section */}
-            <div style={taxTotalContainerStyle}>
-              <div style={taxDetailsStyle}>
-                <div style={taxRowStyle}>
-                  <span>Subtotal:</span>
-                  <span>{formatINRCurrency(invoiceData.amount)}</span>
-                </div>
-                <div style={taxRowStyle}>
-                  <span>CGST @9%:</span>
-                  <span>{formatINRCurrency(invoiceData.cgst)}</span>
-                </div>
-                <div style={taxRowStyle}>
-                  <span>SGST @9%:</span>
-                  <span>{formatINRCurrency(invoiceData.sgst)}</span>
-                </div>
-                {/* <div style={taxRowStyle}>
-                  <span>IGST @0%:</span>
-                  <span>₹{invoiceData.igst}</span>
-                </div> */}
-                <div style={taxRowTotalStyle}>
-                  <span>Total Tax:</span>
-                  <span>{formatINRCurrency(invoiceData.total_tax)}</span>
-                </div>
-                <div style={grandTotalStyle}>
-                  <span>Grand Total:</span>
-                  <span>{formatINRCurrency(invoiceData.total_amount)}</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Bank Details Section */}
-            <div style={bankDetailsContainerStyle}>
-              <div style={bankDetailsTitleStyle}>Bank Details:</div>
-              <div style={bankLineStyle}>
-                Guru Goutham Infotech Pvt. Ltd., HDFC Bank Ltd, Jayanagar Branch
-              </div>
-              <div style={bankLineStyle}>
-                Current A/c No: 50200066787843. &nbsp;&nbsp; IFSC Code:
-                HDFC0000261
-              </div>
-
-              <div style={amountWordsStyle}>
-                Amt. in Words:{" "}
-                <span style={highlightTextStyle}>
-                  Rupees Twenty Six Thousand Seven Hundred and Twelve Only
-                </span>
-              </div>
-
-              <div style={jurisdictionNoteStyle}>
-                Note:{" "}
-                <span style={highlightTextStyle}>
-                  Subject to Bengaluru Jurisdiction
-                </span>
-              </div>
-            </div>
-
-            {/* Signature Section */}
-            <div style={signatureSectionStyle}>
-              {/* Left: Receiver Signature */}
-              <div style={leftSignatureAreaStyle}>
-                <div style={companySignatureLabelStyle}></div>
-                <div style={signatureBoxStyle}></div>
-                <div style={signatureDesignationStyle}>
-                  {" "}
-                  Receiver Signature with Seal
-                </div>
-              </div>
-
-              {/* Right: Authorised Signatory */}
-              <div style={rightSignatureAreaStyle}>
-                <div style={companySignatureLabelStyle}>
-                  For Guru Goutham Infotech Private Limited
-                </div>
-                <div style={signatureBoxStyle}>SD/-</div>
-                <div style={signatureDesignationStyle}>
-                  Authorised Signatory
-                </div>
-              </div>
-            </div>
-
-            {/* Company Footer */}
-            <div style={companyFooterStyle}>
-              <div style={footerAddressStyle}>
-                <span>📍</span>
-                <span>
-                  No. 8, 2nd Cross, Diagonal Road, 3rd Block,
-                  <br />
-                  Jayanagar Bengaluru-560011.
-                </span>
-              </div>
-              <div style={footerContactStyle}>
-                <div style={footerContactItemStyle}>
-                  <span>🌐</span>
-                  <span>gurugoutam.com</span>
-                </div>
-                <div style={footerContactItemStyle}>
-                  <span>📞</span>
-                  <span>080-2242 9955, +91 9449 0789 55</span>
-                </div>
-                <div style={footerContactItemStyle}>
-                  <span>✉️</span>
-                  <span>info@gurugoutam.com</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+        <div style={containerStyle}>{renderInvoice()}</div>
       </DialogContent>
       <DialogActions>
         <Button onClick={onClose}>Close</Button>
         <Button onClick={handleDownloadPDF} variant="contained" color="primary">
           Download PDF
         </Button>
-        <Button onClick={() => window.print()}>Print</Button>
       </DialogActions>
     </Dialog>
   );
@@ -666,11 +997,17 @@ const DynamicTable = ({
     }
   };
 
-  const handleViewInvoice = async (row) => {
+  const handleViewInvoice = async (row, type = "current") => {
     try {
       const response = await axios.get(`${API_URL}/invoices/${row.id}`);
       console.log("Invoice Data Response:", response.data);
-      setSelectedInvoiceRow(response.data);
+
+      const invoiceWithType = {
+        ...response.data,
+        type, // inject type for filtering inside dialog
+      };
+
+      setSelectedInvoiceRow(invoiceWithType);
       setOpenInvoiceDialog(true);
     } catch (error) {
       console.error("Error fetching invoice details:", error);
@@ -765,6 +1102,23 @@ const DynamicTable = ({
                     Active Status
                   </TableCell>
                 )}
+              {tableType === "invoices" && (
+                <>
+                  <TableCell align="center" sx={{ fontWeight: "bold" }}>
+                    Previous Invoice
+                  </TableCell>
+                  <TableCell align="center" sx={{ fontWeight: "bold" }}>
+                    Current Invoice
+                  </TableCell>
+                  <TableCell align="center" sx={{ fontWeight: "bold" }}>
+                    Next Month Invoice
+                  </TableCell>
+                  <TableCell align="center" sx={{ fontWeight: "bold" }}>
+                    Credit Note Invoice
+                  </TableCell>
+                </>
+              )}
+
               {tableType !== "inventory" && (
                 <TableCell align="center" sx={{ fontWeight: "bold" }}>
                   Action
@@ -858,6 +1212,72 @@ const DynamicTable = ({
                       </TableCell>
                     )}
 
+                  {tableType === "invoices" && (
+                    <>
+                      {/* Previous Invoice Button */}
+                      <TableCell align="center">
+                        <Button
+                          onClick={() => handleViewInvoice(row, "previous")}
+                          sx={{ minWidth: "30px", p: 0 }}
+                          title="View Previous Invoice"
+                        >
+                          <img
+                            src={ViewDC}
+                            alt="View Previous"
+                            width="45"
+                            height="35"
+                          />
+                        </Button>
+                      </TableCell>
+
+                      {/* Current Invoice Button */}
+                      <TableCell align="center">
+                        <Button
+                          onClick={() => handleViewInvoice(row, "current")}
+                          sx={{ minWidth: "30px", p: 0 }}
+                          title="View Current Invoice"
+                        >
+                          <img
+                            src={ViewDC}
+                            alt="View Current"
+                            width="45"
+                            height="35"
+                          />
+                        </Button>
+                      </TableCell>
+                      {/* Next Month Button */}
+                      <TableCell align="center">
+                        <Button
+                          onClick={() =>
+                            handleViewInvoice(row, "next")
+                          } /* ... */
+                        >
+                          <img
+                            src={ViewDC}
+                            alt="View Next"
+                            width="45"
+                            height="35"
+                          />
+                        </Button>
+                      </TableCell>
+                      {/* Credit Note Button */}
+                      <TableCell align="center">
+                        <Button
+                          onClick={() => handleViewInvoice(row, "credit")}
+                          sx={{ minWidth: "30px", p: 0 }}
+                          title="View Credit Note"
+                        >
+                          <img
+                            src={ViewDC}
+                            alt="View Credit"
+                            width="45"
+                            height="35"
+                          />
+                        </Button>
+                      </TableCell>
+                    </>
+                  )}
+
                   {tableType !== "inventory" && (
                     <TableCell align="center">
                       <Box display="flex" justifyContent="center" gap={1}>
@@ -875,19 +1295,6 @@ const DynamicTable = ({
                           </Button>
                         )}
 
-                        {tableType === "invoices" && (
-                          <Button
-                            onClick={() => handleViewInvoice(row)}
-                            sx={{ minWidth: "30px", p: 0 }}
-                          >
-                            <img
-                              src={ViewDC}
-                              alt="ViewDC"
-                              width="45"
-                              height="35"
-                            />
-                          </Button>
-                        )}
                         <Button
                           onClick={() => handleEdit(row)}
                           sx={{ minWidth: "30px", p: 0 }}
@@ -1116,6 +1523,41 @@ const tableCellRightStyle = {
   fontSize: "0.75rem",
 };
 
+const specificationsRowStyle = {
+  backgroundColor: "#f9f9f9",
+  borderBottom: "1px solid #ddd",
+};
+
+const specificationsCellStyle = {
+  padding: "10px",
+};
+
+const specificationsTitleStyle = {
+  fontWeight: "bold",
+  marginBottom: "5px",
+};
+
+const specificationsGrid = {
+  display: "grid",
+  gridTemplateColumns: "repeat(3, 1fr)",
+  gap: "5px 20px",
+  marginBottom: "10px",
+};
+
+const deviceIdsContainer = {
+  display: "flex",
+  alignItems: "flex-start",
+  marginTop: "5px",
+};
+
+const deviceIdsTitle = {
+  fontWeight: "bold",
+  marginRight: "5px",
+};
+
+const deviceIdsList = {
+  flex: 1,
+};
 const taxTotalContainerStyle = {
   padding: "1.25rem",
   display: "flex",
@@ -1128,6 +1570,15 @@ const taxRowStyle = {
   width: "20rem",
   marginBottom: "0.5rem",
   fontSize: "0.875rem",
+};
+
+const totalsRowStyle = {
+  fontWeight: "bold",
+  backgroundColor: "#f0f0f0",
+};
+
+const minusStyle = {
+  color: "red",
 };
 
 const taxRowTotalStyle = {
@@ -1341,6 +1792,22 @@ const rightSignatureAreaStyle = {
 const companySignatureLabelStyle = {
   marginBottom: "0.75rem",
   color: "#1f2937",
+};
+
+// Add these new styles to your existing styles
+const invoicePeriodStyle = {
+  padding: "8px 16px",
+  backgroundColor: "#f5f5f5",
+  borderBottom: "1px solid #ddd",
+  fontSize: "14px",
+  fontWeight: "bold",
+  textAlign: "center",
+  marginBottom: "16px",
+};
+
+const tableHeaderDaysStyle = {
+  ...tableHeaderQtyStyle,
+  width: "60px",
 };
 
 const signatureBoxStyle = {

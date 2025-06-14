@@ -27,7 +27,6 @@ const SalesOrdersEditLayoutPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
 
-
   // State for form data
   const [formData, setFormData] = useState({
     order_id: "",
@@ -41,6 +40,7 @@ const SalesOrdersEditLayoutPage = () => {
     remarks: "",
     order_generated_by: "User A",
     rental_duration: null,
+    rental_duration_days: null,
     rental_start_date: null,
     rental_end_date: null,
     order_date: new Date().toISOString().split("T")[0],
@@ -65,6 +65,9 @@ const SalesOrdersEditLayoutPage = () => {
   // State for data fetching
   const [quotations, setQuotations] = useState([]);
   const [products, setProducts] = useState([]);
+  const [deviceIds, setDeviceIds] = useState({});
+  const [deviceIdErrors, setDeviceIdErrors] = useState({});
+
   const [loading, setLoading] = useState({
     order: true,
     quotations: true,
@@ -97,7 +100,14 @@ const SalesOrdersEditLayoutPage = () => {
         }
         const data = await response.json();
 
-        // Set form data with fetched order
+        // Initialize device IDs from order items
+        const initialDeviceIds = {};
+        data.items?.forEach((item) => {
+          initialDeviceIds[item.product_id] = item.device_ids || [];
+        });
+        setDeviceIds(initialDeviceIds);
+
+        // Rest of your existing code...
         setFormData({
           ...data,
           personalDetails: {
@@ -106,7 +116,7 @@ const SalesOrdersEditLayoutPage = () => {
             email: "",
             phone_number: "",
             gst_number: "",
-            ...data.personalDetails, // ✅ This must match API key exactly
+            ...data.personalDetails,
           },
           address: {
             billing_address: "",
@@ -120,7 +130,6 @@ const SalesOrdersEditLayoutPage = () => {
           items: data.items || [],
         });
 
-        // Set selected products and quantities
         const productIds = data.items.map((item) => item.product_id);
         setSelectedProductIds(productIds);
 
@@ -132,13 +141,7 @@ const SalesOrdersEditLayoutPage = () => {
 
         setLoading((prev) => ({ ...prev, order: false }));
       } catch (err) {
-        setError((prev) => ({ ...prev, order: err.message }));
-        setLoading((prev) => ({ ...prev, order: false }));
-        setSnackbar({
-          open: true,
-          message: "Failed to load order data",
-          severity: "error",
-        });
+        // Error handling...
       }
     };
 
@@ -216,6 +219,7 @@ const SalesOrdersEditLayoutPage = () => {
         transaction_type: quotationData.transaction_type || "",
         payment_type: quotationData.payment_type || "",
         rental_duration: quotationData.rental_duration || "",
+        rental_duration_days: quotationData.rental_duration_days || "",
         rental_start_date: quotationData.rental_start_date || "",
         rental_end_date: quotationData.rental_end_date || "",
         order_title: `Order for Quotation ${quotationData.quotation_id}`,
@@ -355,30 +359,47 @@ const SalesOrdersEditLayoutPage = () => {
         : [...prev, productId]
     );
 
-    // If adding a new product, initialize its quantity to 1 if not already set
-    if (!selectedProductIds.includes(productId) && !quantities[productId]) {
-      setQuantities((prev) => ({ ...prev, [productId]: 1 }));
+    // Initialize quantity and device IDs
+    if (!selectedProductIds.includes(productId)) {
+      const qty = quantities[productId] || 1;
+      setQuantities((prev) => ({ ...prev, [productId]: qty }));
+      setDeviceIds((prev) => ({
+        ...prev,
+        [productId]: Array(qty).fill(""),
+      }));
     }
   };
 
-  // Handle quantity changes
   const handleQtyChange = (productId, value) => {
     const qty = Math.max(0, parseInt(value) || 0);
-    setQuantities((prev) => ({ ...prev, [productId]: qty }));
+    setQuantities((prev) => {
+      // Adjust device IDs array when quantity changes
+      const currentDeviceIds = deviceIds[productId] || [];
+      let newDeviceIds = currentDeviceIds.slice(0, qty);
+
+      // If increasing quantity, add empty strings for new device IDs
+      if (qty > currentDeviceIds.length) {
+        newDeviceIds = [
+          ...currentDeviceIds,
+          ...Array(qty - currentDeviceIds.length).fill(""),
+        ];
+      }
+
+      setDeviceIds((prev) => ({
+        ...prev,
+        [productId]: newDeviceIds,
+      }));
+
+      return { ...prev, [productId]: qty };
+    });
   };
 
   const incrementQty = (productId) => {
-    setQuantities((prev) => ({
-      ...prev,
-      [productId]: (prev[productId] || 0) + 1,
-    }));
+    handleQtyChange(productId, (quantities[productId] || 0) + 1);
   };
 
-  const decrementQty = (id) => {
-    setQuantities((prev) => ({
-      ...prev,
-      [id]: Math.max(0, (prev[id] || 0) - 1),
-    }));
+  const decrementQty = (productId) => {
+    handleQtyChange(productId, Math.max(0, (quantities[productId] || 0) - 1));
   };
 
   // Filter products based on search term
@@ -389,17 +410,48 @@ const SalesOrdersEditLayoutPage = () => {
       product.description?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  // Handle form submission
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // Prepare items array from selected products and quantities
+    // Validate device IDs
+    let hasErrors = false;
+    const newDeviceIdErrors = {};
+
+    selectedProductIds.forEach((productId) => {
+      const qty = quantities[productId] || 0;
+      const ids = deviceIds[productId] || [];
+
+      if (ids.length !== qty) {
+        newDeviceIdErrors[productId] = `Please add ${qty} device IDs`;
+        hasErrors = true;
+      } else {
+        const emptyIds = ids.filter((id) => !id.trim());
+        if (emptyIds.length > 0) {
+          newDeviceIdErrors[productId] = `All device IDs are required`;
+          hasErrors = true;
+        }
+      }
+    });
+
+    setDeviceIdErrors(newDeviceIdErrors);
+
+    if (hasErrors) {
+      setSnackbar({
+        open: true,
+        message: "Please provide all required device IDs",
+        severity: "error",
+      });
+      return;
+    }
+
+    // Prepare items array with device IDs
     const orderItems = selectedProductIds.map((productId) => {
       const product = products.find((p) => p.id === productId);
       return {
         product_id: productId,
-        product_name: product.name,
+        product_name: product?.product_name || "Unknown Product",
         requested_quantity: quantities[productId] || 1,
+        device_ids: deviceIds[productId] || [],
       };
     });
 
@@ -439,7 +491,6 @@ const SalesOrdersEditLayoutPage = () => {
       });
     }
   };
-
   if (loading.order) {
     return (
       <div style={containerStyle}>
@@ -640,6 +691,17 @@ const SalesOrdersEditLayoutPage = () => {
                   })
                 }
               />
+              {/* <Field
+                label="Rental Duration (days)"
+                placeholder="Enter Duration Days"
+                type="number"
+                value={formData.rental_duration_days || ""}
+                onChange={(e) =>
+                  handleChange({
+                    target: { name: "rental_duration_days", value: e.target.value },
+                  })
+                }
+              /> */}
               <Field
                 label="Rental Start Date"
                 type="date"
@@ -898,12 +960,14 @@ const SalesOrdersEditLayoutPage = () => {
                           Product Name
                         </TableCell>
                         <TableCell sx={{ color: "#fff" }}>Brand</TableCell>
-                        <TableCell sx={{ color: "#fff" }}>Model</TableCell>
-                        <TableCell sx={{ color: "#fff" }}>Processor</TableCell>
-                        <TableCell sx={{ color: "#fff" }}>RAM</TableCell>
-                        <TableCell sx={{ color: "#fff" }}>Storage</TableCell>
-                        <TableCell sx={{ color: "#fff" }}>Graphics</TableCell>
+                        <TableCell sx={{ color: "#fff" }}>
+                          Specifications
+                        </TableCell>
+                        <TableCell sx={{ color: "#fff" }}>
+                          Price per Piece
+                        </TableCell>
                         <TableCell sx={{ color: "#fff" }}>Quantity</TableCell>
+                        <TableCell sx={{ color: "#fff" }}>Device IDs</TableCell>
                       </TableRow>
                     </TableHead>
                     <TableBody>
@@ -923,11 +987,43 @@ const SalesOrdersEditLayoutPage = () => {
                           </TableCell>
                           <TableCell>{product.product_name}</TableCell>
                           <TableCell>{product.brand}</TableCell>
-                          <TableCell>{product.model}</TableCell>
-                          <TableCell>{product.processor}</TableCell>
-                          <TableCell>{product.ram}</TableCell>
-                          <TableCell>{product.storage}</TableCell>
-                          <TableCell>{product.graphics}</TableCell>
+                          <TableCell>
+                            <div>
+                              <strong>Model:</strong> {product.model}
+                            </div>
+                            <div>
+                              <strong>Processor:</strong> {product.processor}
+                            </div>
+                            <div>
+                              <strong>RAM:</strong> {product.ram}
+                            </div>
+                            <div>
+                              <strong>Storage:</strong> {product.storage}
+                            </div>
+                            <div>
+                              <strong>Graphics:</strong> {product.graphics}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <>
+                              {/* <div>
+                                <strong>Day:</strong> ₹
+                                {product.rent_price_per_day}
+                              </div> */}
+                              <div>
+                                <strong>Month:</strong> ₹
+                                {product.rent_price_per_month}
+                              </div>
+                              {/* <div>
+                                <strong>6 Months:</strong> ₹
+                                {product.rent_price_6_months}
+                              </div>
+                              <div>
+                                <strong>1 Year:</strong> ₹
+                                {product.rent_price_1_year}
+                              </div> */}
+                            </>
+                          </TableCell>
                           <TableCell>
                             <Box display="flex" alignItems="center">
                               <IconButton
@@ -968,6 +1064,70 @@ const SalesOrdersEditLayoutPage = () => {
                                 <Add fontSize="small" />
                               </IconButton>
                             </Box>
+                          </TableCell>
+                          <TableCell>
+                            {quantities[product.id] > 0 && (
+                              <Box
+                                display="flex"
+                                flexDirection="column"
+                                gap={1}
+                              >
+                                {(deviceIds[product.id] || []).map(
+                                  (id, idx) => (
+                                    <TextField
+                                      key={idx}
+                                      size="small"
+                                      placeholder={`Device ID ${idx + 1}`}
+                                      value={id}
+                                      onChange={(e) => {
+                                        const updated = [
+                                          ...(deviceIds[product.id] || []),
+                                        ];
+                                        updated[idx] = e.target.value;
+                                        setDeviceIds((prev) => ({
+                                          ...prev,
+                                          [product.id]: updated,
+                                        }));
+                                        // Clear error when user types
+                                        if (deviceIdErrors[product.id]) {
+                                          setDeviceIdErrors((prev) => {
+                                            const newErrors = { ...prev };
+                                            delete newErrors[product.id];
+                                            return newErrors;
+                                          });
+                                        }
+                                      }}
+                                      error={Boolean(
+                                        deviceIdErrors[product.id]
+                                      )}
+                                      helperText={
+                                        idx === 0
+                                          ? deviceIdErrors[product.id]
+                                          : ""
+                                      }
+                                    />
+                                  )
+                                )}
+                                {(deviceIds[product.id]?.length || 0) <
+                                  (quantities[product.id] || 0) && (
+                                  <Button
+                                    size="small"
+                                    variant="outlined"
+                                    onClick={() =>
+                                      setDeviceIds((prev) => ({
+                                        ...prev,
+                                        [product.id]: [
+                                          ...(prev[product.id] || []),
+                                          "",
+                                        ],
+                                      }))
+                                    }
+                                  >
+                                    + Add Device ID
+                                  </Button>
+                                )}
+                              </Box>
+                            )}
                           </TableCell>
                         </TableRow>
                       ))}

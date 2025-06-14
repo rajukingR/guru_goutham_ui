@@ -19,11 +19,11 @@ const InvoicesTablePage = () => {
     { id: "pan_number", label: "PAN" },
     { id: "payment_mode", label: "Payment Mode" },
     { id: "approval_status", label: "Status" },
-    { id: "amount", label: "Amount" },
-    { id: "cgst", label: "CGST" },
-    { id: "sgst", label: "SGST" },
-    { id: "total_tax", label: "Total Tax" },
-    { id: "total_amount", label: "Total Amount" },
+    // { id: "amount", label: "Amount" },
+    // { id: "cgst", label: "CGST" },
+    // { id: "sgst", label: "SGST" },
+    // { id: "total_tax", label: "Total Tax" },
+    // { id: "total_amount", label: "Total Amount" },
   ];
 
   useEffect(() => {
@@ -41,11 +41,11 @@ const InvoicesTablePage = () => {
           const formatted = response.data.map((item, index) => ({
             id: index + 1,
             ...item,
-            amount: formatINR(item.amount),
-            cgst: formatINR(item.cgst),
-            sgst: formatINR(item.sgst),
-            total_tax: formatINR(item.total_tax),
-            total_amount: formatINR(item.total_amount),
+            // amount: formatINR(item.amount),
+            // cgst: formatINR(item.cgst),
+            // sgst: formatINR(item.sgst),
+            // total_tax: formatINR(item.total_tax),
+            // total_amount: formatINR(item.total_amount),
             status: item.approval_status === "Approved" ? "Active" : "Inactive",
           }));
           setData(formatted);

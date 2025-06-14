@@ -270,7 +270,7 @@ const DeliveryChallanAddPage = () => {
         items,
       };
 
-      const response = await fetch(`${API_URL}/invoices/create`, {
+      const response = await fetch(`${API_URL}/delivery-challans/create`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -283,12 +283,12 @@ const DeliveryChallanAddPage = () => {
       const result = await response.json();
       setSnackbar({
         open: true,
-        message: "Invoices created successfully!",
+        message: "Delivery-Challans created successfully!",
         severity: "success",
       });
 
       setTimeout(() => {
-        navigate("/dashboard/operations/invoices");
+        navigate("/dashboard/operations");
       }, 1500);
 
     } catch (error) {
@@ -855,12 +855,12 @@ const DeliveryChallanAddPage = () => {
                           <TableCell>
                             {formData.type === "Rent" ? (
                               <>
-                                <div>Day: {product.rent_price_per_day}</div>
+                                {/* <div>Day: {product.rent_price_per_day}</div> */}
                                 <div>Month: {product.rent_price_per_month}</div>
-                                <div>
+                                {/* <div>
                                   6 Months: {product.rent_price_6_months}
                                 </div>
-                                <div>1 Year: {product.rent_price_1_year}</div>
+                                <div>1 Year: {product.rent_price_1_year}</div> */}
                               </>
                             ) : (
                               product.purchase_price

@@ -135,7 +135,7 @@ const ContactsAddLayoutPage = () => {
           severity: "success",
         });
         setTimeout(() => {
-          navigate("/dashboard/crm/contacts");
+          navigate("/dashboard/crm/client-list");
         }, 1500);
       } else {
         throw new Error(data.message || "Failed to create contact");

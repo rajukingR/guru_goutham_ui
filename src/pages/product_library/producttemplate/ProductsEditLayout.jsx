@@ -231,46 +231,47 @@ const ProductsEditLayout = () => {
   };
 
   // Handle form submission
-const handleSubmit = async (e) => {
-  e.preventDefault();
-  setLoading(true);
-  setError(null);
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setError(null);
 
-  try {
-    const formDataToSend = new FormData();
+    try {
+      const formDataToSend = new FormData();
 
-    for (const key in formData) {
-      if (key === "product_image") {
-        // only append image if it's a File object
-        if (formData.product_image instanceof File) {
-          formDataToSend.append("product_image", formData.product_image);
+      for (const key in formData) {
+        if (key === "product_image") {
+          // only append image if it's a File object
+          if (formData.product_image instanceof File) {
+            formDataToSend.append("product_image", formData.product_image);
+          }
+        } else {
+          formDataToSend.append(key, formData[key]);
         }
-      } else {
-        formDataToSend.append(key, formData[key]);
       }
+
+      await axios.put(`${API_URL}/product-templete/${id}`, formDataToSend, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      });
+
+      setSuccess(true);
+      showSnackbar("Product updated successfully!", "success");
+      setTimeout(() => {
+        navigate("/dashboard/product_library");
+      }, 1500);
+    } catch (err) {
+      showSnackbar(
+        err.response?.data?.message ||
+          err.message ||
+          "Failed to update product",
+        "error"
+      );
+    } finally {
+      setLoading(false);
     }
-
-    await axios.put(`${API_URL}/product-templete/${id}`, formDataToSend, {
-      headers: {
-        "Content-Type": "multipart/form-data",
-      },
-    });
-
-    setSuccess(true);
-    showSnackbar("Product updated successfully!", "success");
-    setTimeout(() => {
-      navigate("/dashboard/product_library/product_template");
-    }, 1500);
-  } catch (err) {
-    showSnackbar(
-      err.response?.data?.message || err.message || "Failed to update product",
-      "error"
-    );
-  } finally {
-    setLoading(false);
-  }
-};
-
+  };
 
   // Render different specification fields based on product category
   const renderSpecificationFields = () => {
@@ -629,9 +630,7 @@ const handleSubmit = async (e) => {
             </Field>
 
             <div style={{ gridColumn: "1 / -1" }}>
-              <label style={{ fontWeight: "bold" }}>
-                Product Image <span style={{ color: "red" }}>*</span>
-              </label>
+              <label style={{ fontWeight: "bold" }}>Product Image</label>
 
               <div
                 onClick={() =>
@@ -821,7 +820,11 @@ const handleSubmit = async (e) => {
               name="purchase_price"
               type="number"
               placeholder="Enter Purchase Price"
-              value={formData.purchase_price}
+              value={
+                formData.purchase_price % 1 === 0
+                  ? formData.purchase_price.toString().split(".")[0] // whole number: remove .00
+                  : formData.purchase_price // show decimal if needed
+              }
               onChange={handlePriceChange}
             />
 
@@ -860,7 +863,11 @@ const handleSubmit = async (e) => {
                     onChange={handlePriceChange}
                     required
                   >
-                    <option value="0">0%</option>
+                    <option value="1">1%</option>
+                    <option value="2">2%</option>
+                    <option value="3">3%</option>
+                    <option value="4">4%</option>
+
                     <option value="5">5%</option>
                     <option value="8">8%</option>
                     <option value="10">10%</option>
@@ -991,17 +998,35 @@ const CheckboxField = ({
 }) => (
   <div style={checkboxContainerStyle}>
     <label style={checkboxLabelStyle}>
+      {/* Hidden checkbox */}
       <input
         type="checkbox"
-        style={checkboxStyle}
+        style={{
+          position: "absolute",
+          opacity: 0,
+          width: "20px",
+          height: "20px",
+          cursor: "pointer",
+          zIndex: 1,
+        }}
         name={name}
         checked={checked}
         onChange={onChange}
         defaultChecked={defaultChecked}
       />
-      <div style={checkboxCustomStyle}>
+
+      {/* Custom visual checkbox */}
+      <div
+        style={{
+          ...checkboxCustomStyle,
+          backgroundColor: checked ? "#4CAF50" : "#ffffff",
+          borderColor: checked ? "#4CAF50" : "#d1d5db",
+        }}
+      >
         {checked && <span style={checkmarkStyle}>✓</span>}
       </div>
+
+      {/* Label text */}
       <div>
         <span style={checkboxTextStyle}>
           {label}
@@ -1180,13 +1205,6 @@ const checkboxContainerStyle = {
   marginTop: "0.5rem",
 };
 
-const checkboxLabelStyle = {
-  display: "flex",
-  alignItems: "flex-start",
-  cursor: "pointer",
-  gap: "0.75rem",
-};
-
 const checkboxStyle = {
   display: "none",
 };
@@ -1194,28 +1212,29 @@ const checkboxStyle = {
 const checkboxCustomStyle = {
   width: "20px",
   height: "20px",
+  border: "2px solid #ccc",
   borderRadius: "4px",
-  border: "2px solid #d1d5db",
-  backgroundColor: "#ffffff",
   display: "flex",
   alignItems: "center",
   justifyContent: "center",
-  transition: "all 0.2s ease",
-  flexShrink: 0,
-  marginTop: "2px",
+  marginRight: "8px",
+  transition: "0.2s ease-in-out",
 };
 
 const checkmarkStyle = {
-  color: "#ffffff",
-  fontSize: "12px",
-  fontWeight: "bold",
+  color: "#fff",
+  fontSize: "14px",
 };
 
 const checkboxTextStyle = {
-  fontSize: "0.875rem",
-  fontWeight: "500",
-  color: "#374151",
-  display: "block",
+  fontSize: "14px",
+};
+
+const checkboxLabelStyle = {
+  display: "flex",
+  alignItems: "center",
+  cursor: "pointer",
+  gap: "8px",
 };
 
 const buttonContainerStyle = {

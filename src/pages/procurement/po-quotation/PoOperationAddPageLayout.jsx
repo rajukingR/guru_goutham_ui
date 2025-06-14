@@ -108,6 +108,7 @@ const PoOperationAddPageLayout = () => {
       setFormData((prev) => ({
         ...prev,
         purchaseRequestId: "",
+        purchaseType: "",
         purchaseRequestStatus: "",
         owner: "",
         supplierId: "",
@@ -133,6 +134,7 @@ const PoOperationAddPageLayout = () => {
     setFormData((prev) => ({
       ...prev,
       purchaseRequestId: selectedRequest.purchase_request_id,
+      purchaseType: selectedRequest.purchase_type, // 👈 This line
       purchaseRequestStatus: selectedRequest.purchase_request_status,
       owner: selectedRequest.owner,
       supplier_id: selectedRequest.supplier_id,
@@ -436,20 +438,18 @@ const PoOperationAddPageLayout = () => {
               <TableContainer component={Paper}>
                 <Table size="small">
                   <TableHead>
-                    <TableRow sx={{ backgroundColor: "#0d47a1" }}>
-                      <TableCell padding="checkbox" sx={{ color: "#fff" }}>
-                        <Checkbox sx={{ color: "#fff" }} />
-                      </TableCell>
-                      <TableCell sx={{ color: "#fff" }}>Product Name</TableCell>
-                      <TableCell sx={{ color: "#fff" }}>Brand</TableCell>
-                      <TableCell sx={{ color: "#fff" }}>Model</TableCell>
-                      <TableCell sx={{ color: "#fff" }}>Processor</TableCell>
-                      <TableCell sx={{ color: "#fff" }}>RAM</TableCell>
-                      <TableCell sx={{ color: "#fff" }}>Storage</TableCell>
-                      <TableCell sx={{ color: "#fff" }}>Graphics</TableCell>
-                      <TableCell sx={{ color: "#fff" }}>Quantity</TableCell>
-                    </TableRow>
-                  </TableHead>
+  <TableRow sx={{ backgroundColor: "#0d47a1" }}>
+    <TableCell padding="checkbox" sx={{ color: "#fff" }}>
+      <Checkbox sx={{ color: "#fff" }} />
+    </TableCell>
+    <TableCell sx={{ color: "#fff" }}>Product Name</TableCell>
+    <TableCell sx={{ color: "#fff" }}>Brand</TableCell>
+    <TableCell sx={{ color: "#fff" }}>Specifications</TableCell>
+    <TableCell sx={{ color: "#fff" }}>Price per Piece</TableCell> {/* ✅ New column */}
+    <TableCell sx={{ color: "#fff" }}>Quantity</TableCell>
+  </TableRow>
+</TableHead>
+
                   <TableBody>
                     {filteredProducts.map((product) => (
                       <TableRow key={product.id}>
@@ -467,11 +467,33 @@ const PoOperationAddPageLayout = () => {
                         </TableCell>
                         <TableCell>{product.product_name}</TableCell>
                         <TableCell>{product.brand}</TableCell>
-                        <TableCell>{product.model}</TableCell>
-                        <TableCell>{product.processor}</TableCell>
-                        <TableCell>{product.ram}</TableCell>
-                        <TableCell>{product.storage}</TableCell>
-                        <TableCell>{product.graphics}</TableCell>
+                        <TableCell>
+                          <div>
+                            <strong>Model:</strong> {product.model}
+                          </div>
+                          <div>
+                            <strong>Processor:</strong> {product.processor}
+                          </div>
+                          <div>
+                            <strong>RAM:</strong> {product.ram}
+                          </div>
+                          <div>
+                            <strong>Storage:</strong> {product.storage}
+                          </div>
+                          <div>
+                            <strong>Graphics:</strong> {product.graphics}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+  <>
+    {/* <div><strong>Day:</strong> ₹{product.rent_price_per_day}</div> */}
+    <div><strong>Month:</strong> ₹{product.rent_price_per_month}</div>
+    {/* <div><strong>6 Months:</strong> ₹{product.rent_price_6_months}</div>
+    <div><strong>1 Year:</strong> ₹{product.rent_price_1_year}</div> */}
+  </>
+</TableCell>
+
+
                         <TableCell>
                           <Box display="flex" alignItems="center">
                             <IconButton

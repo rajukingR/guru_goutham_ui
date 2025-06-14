@@ -883,12 +883,12 @@ const DeliveryChallanEditPage = () => {
                           <TableCell>
                             {formData.type === "Rent" ? (
                               <>
-                                <div>Day: {product.rent_price_per_day}</div>
+                                {/* <div>Day: {product.rent_price_per_day}</div> */}
                                 <div>Month: {product.rent_price_per_month}</div>
-                                <div>
+                                {/* <div>
                                   6 Months: {product.rent_price_6_months}
                                 </div>
-                                <div>1 Year: {product.rent_price_1_year}</div>
+                                <div>1 Year: {product.rent_price_1_year}</div> */}
                               </>
                             ) : (
                               product.purchase_price

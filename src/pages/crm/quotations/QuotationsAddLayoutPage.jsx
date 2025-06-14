@@ -56,6 +56,7 @@ const QuotationsAddLayoutPage = () => {
     email: "",
     phoneNumber: "",
     rentalDurationMonths: "",
+    rentalDurationDays: "",
     rentalStartDate: "",
     rentalEndDate: "",
     quotationDate: new Date().toISOString().split("T")[0],
@@ -119,51 +120,52 @@ const QuotationsAddLayoutPage = () => {
   }, []);
 
   // Handle lead selection change
-const handleLeadChange = (leadId) => {
-  setSelectedLeadId(leadId);
-  const selectedLead = leads.find((lead) => lead.id === parseInt(leadId));
+  const handleLeadChange = (leadId) => {
+    setSelectedLeadId(leadId);
+    const selectedLead = leads.find((lead) => lead.id === parseInt(leadId));
 
-  if (selectedLead) {
-    setFormData((prev) => ({
-      ...prev,
-      leadId: selectedLead.lead_id,
-      leadTitle: selectedLead.lead_title,
-      transactionType: selectedLead.transaction_type,
-      sourceOfEnquiry: selectedLead.source_of_enquiry,
-      owner: selectedLead.owner,
-      remarks: selectedLead.remarks,
-      quotationGeneratedBy: selectedLead.lead_generated_by,
-      activeStatus: selectedLead.is_active,
-      firstName: selectedLead.contact?.first_name || "",
-      lastName: selectedLead.contact?.last_name || "",
-      email: selectedLead.contact?.email || "",
-      phoneNumber: selectedLead.contact?.phone_number || "",
-      rentalDurationMonths: selectedLead.rental_duration_months || "",
-      rentalStartDate: selectedLead.rental_start_date || "",
-      rentalEndDate: selectedLead.rental_end_date || "",
-      industry: selectedLead.contact?.industry || "",
-      street: selectedLead.contact?.address?.street || "",
-      pincode: selectedLead.contact?.address?.zip || "",
-      city: selectedLead.contact?.address?.city || "",
-      state: selectedLead.contact?.address?.state || "",
-      country: selectedLead.contact?.address?.country || "India",
-    }));
+    if (selectedLead) {
+      setFormData((prev) => ({
+        ...prev,
+        leadId: selectedLead.lead_id,
+        leadTitle: selectedLead.lead_title,
+        transactionType: selectedLead.transaction_type,
+        sourceOfEnquiry: selectedLead.source_of_enquiry,
+        owner: selectedLead.owner,
+        remarks: selectedLead.remarks,
+        quotationGeneratedBy: selectedLead.lead_generated_by,
+        activeStatus: selectedLead.is_active,
+        firstName: selectedLead.contact?.first_name || "",
+        lastName: selectedLead.contact?.last_name || "",
+        email: selectedLead.contact?.email || "",
+        phoneNumber: selectedLead.contact?.phone_number || "",
+        rentalDurationMonths: selectedLead.rental_duration_months || "",
+        rentalDurationDays:selectedLead.rental_duration_days || "",
+        rentalStartDate: selectedLead.rental_start_date || "",
+        rentalEndDate: selectedLead.rental_end_date || "",
+        industry: selectedLead.contact?.industry || "",
+        street: selectedLead.contact?.address?.street || "",
+        pincode: selectedLead.contact?.address?.zip || "",
+        city: selectedLead.contact?.address?.city || "",
+        state: selectedLead.contact?.address?.state || "",
+        country: selectedLead.contact?.address?.country || "India",
+      }));
 
-    // Auto-select products from the lead - UPDATED CODE
-    if (selectedLead.lead_products && selectedLead.lead_products.length > 0) {
-      const productIds = selectedLead.lead_products.map(
-        (product) => product.product_id
-      );
-      setSelectedProductIds(productIds);
+      // Auto-select products from the lead - UPDATED CODE
+      if (selectedLead.lead_products && selectedLead.lead_products.length > 0) {
+        const productIds = selectedLead.lead_products.map(
+          (product) => product.product_id
+        );
+        setSelectedProductIds(productIds);
 
-      const productQuantities = {};
-      selectedLead.lead_products.forEach((product) => {
-        productQuantities[product.product_id] = product.quantity;
-      });
-      setQuantities(productQuantities);
+        const productQuantities = {};
+        selectedLead.lead_products.forEach((product) => {
+          productQuantities[product.product_id] = product.quantity;
+        });
+        setQuantities(productQuantities);
+      }
     }
-  }
-};
+  };
   // Handle input changes
   const handleInputChange = (field, value) => {
     setFormData((prev) => ({
@@ -240,33 +242,34 @@ const handleLeadChange = (leadId) => {
 
     try {
       const quotationPayload = {
-      quotation_id: formData.quotationId,
-      quotation_title: formData.quotationTitle,
-      lead_id: selectedLeadId,
-      rental_start_date: formData.rentalStartDate,
-      rental_end_date: formData.rentalEndDate,
-      quotation_date: formData.quotationDate,
-      rental_duration: parseInt(formData.rentalDurationMonths) || 0,
-      remarks: formData.remarks,
-      quotation_generated_by: formData.quotationGeneratedBy,
-      status: formData.quotationStatus,
-      items: selectedProductIds.map((productId) => {
-        const product = products.find((p) => p.id === productId);
-        // Get quantity from lead products if available
-        const leadProduct = selectedLeadId
-          ? leads
-              .find((lead) => lead.id === parseInt(selectedLeadId))
-              ?.lead_products?.find((lp) => lp.product_id === productId)
-          : null;
-        
-        return {
-          product_id: productId,
-          requested_quantity: leadProduct?.quantity || 1,
-          quotation_quantity: quantities[productId] || 0,
-          product_name: product?.product_name || "",
-        };
-      }),
-    };
+        quotation_id: formData.quotationId,
+        quotation_title: formData.quotationTitle,
+        lead_id: selectedLeadId,
+        rental_start_date: formData.rentalStartDate,
+        rental_end_date: formData.rentalEndDate,
+        quotation_date: formData.quotationDate,
+        rental_duration: parseInt(formData.rentalDurationMonths) || 0,
+        rental_duration_days: parseInt(formData.rentalDurationDays) || 0,
+        remarks: formData.remarks,
+        quotation_generated_by: formData.quotationGeneratedBy,
+        status: formData.quotationStatus,
+        items: selectedProductIds.map((productId) => {
+          const product = products.find((p) => p.id === productId);
+          // Get quantity from lead products if available
+          const leadProduct = selectedLeadId
+            ? leads
+                .find((lead) => lead.id === parseInt(selectedLeadId))
+                ?.lead_products?.find((lp) => lp.product_id === productId)
+            : null;
+
+          return {
+            product_id: productId,
+            requested_quantity: leadProduct?.quantity || 1,
+            quotation_quantity: quantities[productId] || 0,
+            product_name: product?.product_name || "",
+          };
+        }),
+      };
 
       const response = await fetch(`${API_URL}/quotations/create`, {
         method: "POST",
@@ -483,15 +486,27 @@ const handleLeadChange = (leadId) => {
                   handleInputChange("phoneNumber", e.target.value)
                 }
               />
-              <Field
-                label="Rental Duration (Months)"
-                placeholder="Enter Duration"
-                type="number"
-                value={formData.rentalDurationMonths}
-                onChange={(e) =>
-                  handleInputChange("rentalDurationMonths", e.target.value)
-                }
-              />
+              <Box display="flex" gap={2}>
+                <Field
+                  label="Rental Duration (Months)"
+                  placeholder="Enter Months"
+                  type="number"
+                  value={formData.rentalDurationMonths}
+                  onChange={(e) =>
+                    handleInputChange("rentalDurationMonths", e.target.value)
+                  }
+                />
+                {/* <Field
+                  label="Rental Duration (Days)"
+                  placeholder="Enter Days"
+                  type="number"
+                  value={formData.rentalDurationDays}
+                  onChange={(e) =>
+                    handleInputChange("rentalDurationDays", e.target.value)
+                  }
+                /> */}
+              </Box>
+
               <Field
                 label="Rental Start Date"
                 type="date"
@@ -625,11 +640,12 @@ const handleLeadChange = (leadId) => {
                           Product Name
                         </TableCell>
                         <TableCell sx={{ color: "#fff" }}>Brand</TableCell>
-                        <TableCell sx={{ color: "#fff" }}>Model</TableCell>
-                        <TableCell sx={{ color: "#fff" }}>Processor</TableCell>
-                        <TableCell sx={{ color: "#fff" }}>RAM</TableCell>
-                        <TableCell sx={{ color: "#fff" }}>Storage</TableCell>
-                        <TableCell sx={{ color: "#fff" }}>Graphics</TableCell>
+                        <TableCell sx={{ color: "#fff" }}>
+                          Specifications
+                        </TableCell>
+                        <TableCell sx={{ color: "#fff" }}>
+                          Price per Piece
+                        </TableCell>
                         <TableCell sx={{ color: "#fff" }}>Quantity</TableCell>
                       </TableRow>
                     </TableHead>
@@ -650,11 +666,43 @@ const handleLeadChange = (leadId) => {
                           </TableCell>
                           <TableCell>{product.product_name}</TableCell>
                           <TableCell>{product.brand}</TableCell>
-                          <TableCell>{product.model}</TableCell>
-                          <TableCell>{product.processor}</TableCell>
-                          <TableCell>{product.ram}</TableCell>
-                          <TableCell>{product.storage}</TableCell>
-                          <TableCell>{product.graphics}</TableCell>
+                          <TableCell>
+                            <div>
+                              <strong>Model:</strong> {product.model}
+                            </div>
+                            <div>
+                              <strong>Processor:</strong> {product.processor}
+                            </div>
+                            <div>
+                              <strong>RAM:</strong> {product.ram}
+                            </div>
+                            <div>
+                              <strong>Storage:</strong> {product.storage}
+                            </div>
+                            <div>
+                              <strong>Graphics:</strong> {product.graphics}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <>
+                              {/* <div>
+                                <strong>Day:</strong> ₹
+                                {product.rent_price_per_day}
+                              </div> */}
+                              <div>
+                                <strong>Month:</strong> ₹
+                                {product.rent_price_per_month}
+                              </div>
+                              {/* <div>
+                                <strong>6 Months:</strong> ₹
+                                {product.rent_price_6_months}
+                              </div>
+                              <div>
+                                <strong>1 Year:</strong> ₹
+                                {product.rent_price_1_year}
+                              </div> */}
+                            </>
+                          </TableCell>
                           <TableCell>
                             <Box display="flex" alignItems="center">
                               <IconButton

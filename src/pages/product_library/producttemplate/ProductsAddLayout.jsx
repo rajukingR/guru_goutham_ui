@@ -34,11 +34,11 @@ const ProductsAddLayout = () => {
     graphics: "",
     os: "",
     // Laptop specific
-    mouse: true,
-    keyboard: true,
+    mouse: false,
+    keyboard: false,
     dvd: false,
-    speaker: true,
-    webcam: true,
+    speaker: false,
+    webcam: false,
     // Monitor specific
     display_device: "",
     power_consumption: "",
@@ -98,14 +98,13 @@ const ProductsAddLayout = () => {
     fetchData();
   }, []);
 
-  // Handle input changes
   const handleChange = (e) => {
-    const { name, value, type, checked } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: type === "checkbox" ? checked : value,
-    }));
-  };
+  const { name, value, type, checked } = e.target;
+  setFormData((prev) => ({
+    ...prev,
+    [name]: type === "checkbox" ? checked : value,
+  }));
+};
 
   // Handle price changes and calculate rent prices
   const handlePriceChange = (e) => {
@@ -319,21 +318,23 @@ const ProductsAddLayout = () => {
 
             <div style={{ gridColumn: "1 / -1" }}>
               <div style={checkboxGroupStyle}>
-                {["mouse", "keyboard", "dvd", "speaker", "webcam"].map(
-                  (field) => (
-                    <CheckboxField
-                      key={field}
-                      label={field.charAt(0).toUpperCase() + field.slice(1)}
-                      name={field}
-                      checked={formData[field]}
-                      onChange={handleChange}
-                    />
-                  )
-                )}
-              </div>
+  {["mouse", "keyboard", "dvd", "speaker", "webcam"].map((field) => (
+    <label key={field} style={{ display: 'flex', alignItems: 'center', marginRight: '15px' }}>
+      <input
+        type="checkbox"
+        name={field}
+        checked={formData[field]}
+        onChange={handleChange}
+        style={{ marginRight: '5px' }}
+      />
+      {field.charAt(0).toUpperCase() + field.slice(1)}
+    </label>
+  ))}
+</div>
             </div>
           </>
         );
+
       case "Branded Systems":
         return (
           <>
@@ -642,7 +643,6 @@ const ProductsAddLayout = () => {
                     product_image: e.target.files[0] || null,
                   }))
                 }
-                required
               />
 
               {formData.product_image && (
@@ -776,26 +776,26 @@ const ProductsAddLayout = () => {
             />
 
             {[
-              {
-                label: "Per Day",
-                percent: "rent_percent_per_day",
-                price: "rent_price_per_day",
-              },
+              // {
+              //   label: "Per Day",
+              //   percent: "rent_percent_per_day",
+              //   price: "rent_price_per_day",
+              // },
               {
                 label: "Per Month",
                 percent: "rent_percent_per_month",
                 price: "rent_price_per_month",
               },
-              {
-                label: "6 Months",
-                percent: "rent_percent_6_months",
-                price: "rent_price_6_months",
-              },
-              {
-                label: "1 Year",
-                percent: "rent_percent_1_year",
-                price: "rent_price_1_year",
-              },
+              // {
+              //   label: "6 Months",
+              //   percent: "rent_percent_6_months",
+              //   price: "rent_price_6_months",
+              // },
+              // {
+              //   label: "1 Year",
+              //   percent: "rent_percent_1_year",
+              //   price: "rent_price_1_year",
+              // },
             ].map(({ label, percent, price }) => (
               <div
                 key={label}
@@ -933,34 +933,33 @@ const Field = ({
   </div>
 );
 
-// CheckboxField component
-const CheckboxField = ({
-  label,
-  name,
-  checked,
-  onChange,
-  defaultChecked = false,
-  required = false,
-}) => (
+const CheckboxField = ({ label, name, checked, onChange }) => (
   <div style={checkboxContainerStyle}>
     <label style={checkboxLabelStyle}>
+      {/* Hidden but functional checkbox */}
       <input
         type="checkbox"
-        style={checkboxStyle}
         name={name}
         checked={checked}
         onChange={onChange}
-        defaultChecked={defaultChecked}
+        style={{
+          position: "absolute",
+          opacity: 0,
+          width: "20px",
+          height: "20px",
+          cursor: "pointer",
+          zIndex: 1,
+        }}
       />
-      <div style={checkboxCustomStyle}>
+      {/* Custom checkbox visualization */}
+      <div style={{
+        ...checkboxCustomStyle,
+        backgroundColor: checked ? "#4CAF50" : "#ffffff",
+        borderColor: checked ? "#4CAF50" : "#d1d5db",
+      }}>
         {checked && <span style={checkmarkStyle}>✓</span>}
       </div>
-      <div>
-        <span style={checkboxTextStyle}>
-          {label}
-          {required && <span style={requiredStyle}>*</span>}
-        </span>
-      </div>
+      <span style={checkboxTextStyle}>{label}</span>
     </label>
   </div>
 );
