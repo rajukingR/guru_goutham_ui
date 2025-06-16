@@ -226,8 +226,6 @@ const RoutesConfig = () => {
             <Route path="client/client" element={<ClinetTableLayout/>} />
             <Route path="client/client/add" element={<ClientDataAddTable/>} />
             <Route path="client/client/edit/:id" element={<ClientDataEditTable/>} />
-
-
           </Route>
         </Routes>
       </Router>
