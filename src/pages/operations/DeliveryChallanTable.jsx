@@ -7,7 +7,7 @@ const DeliveryChallanTable = () => {
   const [data, setData] = useState([]);
 
   const columns = [
-    { id: "id", label: "S.No." },
+    { id: "s_id", label: "S.No." },
     { id: "dc_id", label: "Challan ID" },
     { id: "dc_title", label: "Title" },
     { id: "order_number", label: "Order Number" },
@@ -34,7 +34,7 @@ const DeliveryChallanTable = () => {
 
         if (response.status === 200) {
           const formatted = response.data.map((item, index) => ({
-            id: index + 1,
+            s_id: index + 1,
             ...item,
           }));
           setData(formatted);

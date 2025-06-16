@@ -21,8 +21,11 @@ import {
 } from "@mui/material";
 import { Add, Remove } from "@mui/icons-material";
 import API_URL from "../../../api/Api_url";
+import { useNavigate } from "react-router-dom";
 
 const InvoicesAddPage = () => {
+    const navigate = useNavigate();
+  
   const [formData, setFormData] = useState({
     invoice_number: "",
     invoice_title: "",
@@ -638,6 +641,9 @@ const handleSubmit = async (e) => {
       severity: "success",
     });
 
+    setTimeout(() => {
+        navigate("/dashboard/operations/invoices");
+      }, 1500);
     // Optionally reset the form or redirect
   } catch (error) {
     console.error("Error creating invoice:", error);

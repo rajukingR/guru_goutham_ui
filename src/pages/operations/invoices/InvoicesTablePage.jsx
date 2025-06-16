@@ -7,7 +7,7 @@ const InvoicesTablePage = () => {
   const [data, setData] = useState([]);
 
   const columns = [
-    { id: "id", label: "S.No." },
+    { id: "s_id", label: "S.No." },
     { id: "invoice_number", label: "Invoice Number" },
     { id: "invoice_title", label: "Title" },
     { id: "customer_name", label: "Customer Name" },
@@ -39,7 +39,7 @@ const InvoicesTablePage = () => {
 
         if (response.status === 200) {
           const formatted = response.data.map((item, index) => ({
-            id: index + 1,
+            s_id: index + 1,
             ...item,
             // amount: formatINR(item.amount),
             // cgst: formatINR(item.cgst),
