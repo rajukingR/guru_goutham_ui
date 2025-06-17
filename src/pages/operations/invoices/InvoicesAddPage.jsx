@@ -23,6 +23,16 @@ import { Add, Remove } from "@mui/icons-material";
 import API_URL from "../../../api/Api_url";
 import { useNavigate } from "react-router-dom";
 
+const generateInvoiceId = () => {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  let randomPart = '';
+  for (let i = 0; i < 7; i++) {
+    randomPart += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return `INV-${randomPart}`;
+};
+
+
 const InvoicesAddPage = () => {
     const navigate = useNavigate();
   
@@ -73,6 +83,13 @@ const InvoicesAddPage = () => {
     message: "",
     severity: "info",
   });
+  useEffect(() => {
+  setFormData(prev => ({
+    ...prev,
+    invoice_number: generateInvoiceId()
+  }));
+}, []);
+
 
   const [returnQuantities, setReturnQuantities] = useState({});
   const [newQuantities, setNewQuantities] = useState({});
@@ -363,7 +380,7 @@ const InvoicesAddPage = () => {
   // Add this effect to update the form data when selected products or quantities change
   useEffect(() => {
     if (selectedProductIds.length > 0) {
-      setShowProductTable(true); // Automatically show the product table when products are selected
+      setShowProductTable(true); 
     }
   }, [selectedProductIds]);
 
@@ -372,7 +389,6 @@ const InvoicesAddPage = () => {
     const fetchLocationFromPincode = async () => {
       const pincode = formData.shippingDetails.pincode;
 
-      // Only make API call if pincode is 6 digits (India specific)
       if (pincode && pincode.length === 6) {
         try {
           const response = await fetch(
@@ -808,11 +824,11 @@ const handleSubmit = async (e) => {
             </div>
             <div style={fieldsGridStyle}>
               <Field
-                label="Invoice Number"
+                label="Invoice ID"
                 name="invoice_number"
                 value={formData.invoice_number}
                 onChange={handleInputChange}
-                placeholder="Enter Invoice Number"
+                placeholder="Enter Invoice Id"
               />
               <Field
                 label="Invoice Title"
@@ -1130,9 +1146,7 @@ const handleSubmit = async (e) => {
                           Returned Device IDs
                         </TableCell>
 
-                        <TableCell sx={{ color: "#fff" }}>
-                          Purchase Price
-                        </TableCell>
+                        
                         <TableCell sx={{ color: "#fff" }}>
                           Price for Durations
                         </TableCell>
@@ -1388,18 +1402,12 @@ const handleSubmit = async (e) => {
                               </Box>
                             )}
                           </TableCell>
-                          <TableCell>{product.purchase_price}</TableCell>
                           <TableCell>
-                            {formData.transaction_type === "Rent" ? (
                               <>
-                                {/* <div>Day: {product.rent_price_per_day}</div> */}
                                 <div>Month: {product.rent_price_per_month}</div>
-                                {/* <div>6 Months: {product.rent_price_6_months}</div>
-                                <div>1 Year: {product.rent_price_1_year}</div> */}
+                               
                               </>
-                            ) : (
-                              product.purchase_price
-                            )}
+                            
                           </TableCell>
                         </TableRow>
                       ))}
@@ -1411,20 +1419,7 @@ const handleSubmit = async (e) => {
           </div>
         </div>
 
-        {/* Totals Section */}
-        {/* <div style={cardStyle}>
-          <div style={cardHeaderContainerStyle}>
-            <div style={iconStyle}>💰</div>
-            <h3 style={cardHeaderStyle}>Invoice Totals</h3>
-          </div>
-          <div style={fieldsGridStyle}>
-            <Field label="Subtotal" name="amount" value={formatINR(formData.amount)} readOnly />
-            <Field label="CGST (9%)" name="cgst" value={formatINR(formData.cgst)} readOnly />
-            <Field label="SGST (9%)" name="sgst" value={formatINR(formData.sgst)} readOnly />
-            <Field label="Total Tax" name="total_tax" value={formatINR(formData.total_tax)} readOnly />
-            <Field label="Total Amount" name="total_amount" value={formatINR(formData.total_amount)} readOnly />
-          </div>
-        </div> */}
+       
 
         {/* Action Buttons */}
         <div style={buttonContainerStyle}>

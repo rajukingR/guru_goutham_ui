@@ -91,6 +91,23 @@ import BranchTablePageLayout from "../pages/settings/branch/BranchTablePageLayou
 import BranchAddPageLayout from "../pages/settings/branch/BranchAddPageLayout.jsx";
 import BranchEditPageLayout from "../pages/settings/branch/BranchEditPageLayout.jsx";
 import UsersEditPage from "../pages/settings/users/UsersEditPage.jsx";
+import GrnLayoutTableContent from "../pages/operations/grn/GrnLayoutTableContent.jsx";
+import AssetTrackerOp from "../pages/operations/assetmodificationtracker/AssetTrackerOp.jsx";
+import ServiceTableOp from "../pages/operations/service/ServiceTableOp.jsx";
+import ClientJourneyOp from "../pages/operations/clientjourney/ClientJourneyOp.jsx";
+import GrnAddForm from "../pages/operations/grn/GrnAddForm.jsx";
+import ServiceAdd from "../pages/operations/service/ServiceAdd.jsx";
+import AssetModificationTrackerAdd from "../pages/operations/assetmodificationtracker/AssetModificationTrackerAdd.jsx";
+import GrnEditForm from "../pages/operations/grn/GrnEditForm.jsx";
+import ServiceEdit from "../pages/operations/service/ServiceEdit.jsx";
+import AssetModificationTrackerEdit from "../pages/operations/assetmodificationtracker/AssetModificationTrackerEdit.jsx";
+import CreaditNotesTableLayout from "../pages/operations/creaditnotes/CreaditNotesTableLayout.jsx";
+import CreaditNotesAddFormLayout from "../pages/operations/creaditnotes/CreaditNotesAddFormLayout.jsx";
+import CreaditNotesEditFormLayout from "../pages/operations/creaditnotes/CreaditNotesEditFormLayout.jsx";
+import UserPerformance from "../pages/userperformance/user/UserPerformance.jsx";
+import ClinetTableLayout from "../pages/client/ClinetTableLayout.jsx";
+import ClientDataAddTable from "../pages/client/ClientDataAddTable.jsx";
+import ClientDataEditTable from "../pages/client/ClientDataEditTable.jsx";
 const ProtectedRoute = ({ element }) => {
   const user = useSelector((state) => state.auth.user);
   return user ? element : <Navigate to="/signin" replace />;
@@ -173,7 +190,21 @@ const RoutesConfig = () => {
             <Route path="operations/invoices" element={<InvoicesTablePage />} />
             <Route path="operations/invoices/add" element={<InvoicesAddPage />} />
             <Route path="operations/invoices/edit/:id" element={<InvoicesEditPage />} />
-                                       {/* settings */}
+            <Route path="operations/grn" element={<GrnLayoutTableContent />} />
+            <Route path="operations/grn/add" element={<GrnAddForm />} />
+            <Route path="operations/grn/edit/:id" element={<GrnEditForm />} />
+            <Route path="operations/asset_modification_tracker" element={<AssetTrackerOp />} />
+            <Route path="operations/asset_modification_tracker/add" element={<AssetModificationTrackerAdd/>} />
+            <Route path="operations/asset_modification_tracker/edit/:id" element={<AssetModificationTrackerEdit/>} />
+            <Route path="operations/service" element={<ServiceTableOp />} />
+            <Route path="operations/service/add" element={<ServiceAdd />} />
+            <Route path="operations/service/edit/:id" element={<ServiceEdit />} />
+            <Route path="operations/client_journey" element={<ClientJourneyOp/>} />
+            <Route path="operations/credit_notes" element={<CreaditNotesTableLayout/>} />
+            <Route path="operations/credit_notes/add" element={<CreaditNotesAddFormLayout/>} />
+            <Route path="operations/credit_notes/edit/:id" element={<CreaditNotesEditFormLayout/>} />
+
+                                       {/* settings */}                                                                               
             <Route path="settings/users" element={<UsersTablePage/>} />
             <Route path="settings/users/add" element={<UsersAddPage/>} />
             <Route path="settings/users/edit/:id" element={<UsersEditPage/>} />
@@ -191,8 +222,10 @@ const RoutesConfig = () => {
             <Route path="settings/branch" element={<BranchTablePageLayout/>} />
             <Route path="settings/branch/add" element={<BranchAddPageLayout/>} />
             <Route path="settings/branch/edit/:id" element={<BranchEditPageLayout/>} />
-
-
+            <Route path="users_performance/user" element={<UserPerformance/>} />
+            <Route path="client/client" element={<ClinetTableLayout/>} />
+            <Route path="client/client/add" element={<ClientDataAddTable/>} />
+            <Route path="client/client/edit/:id" element={<ClientDataEditTable/>} />
           </Route>
         </Routes>
       </Router>

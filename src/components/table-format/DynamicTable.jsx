@@ -57,6 +57,10 @@ const apiEndpoints = {
   Branch: `${API_URL}/branches`,
   users: `${API_URL}/users`,
   invoices: `${API_URL}/invoices`,
+  grn: `${API_URL}/grn`,
+  service: `${API_URL}/service`,
+  credit_notes: `${API_URL}/credit-notes`,
+  clients: `${API_URL}/clients`,
 };
 
 // Delivery Challan Dialog Component
@@ -342,6 +346,293 @@ const DeliveryChallanDialog = ({ open, onClose, dcData }) => {
   );
 };
 
+// Goods Return Note Dialog Component
+const GoodsReturnNoteDialog = ({ open, onClose, grnData }) => {
+  if (!grnData) return null;
+
+  const handleDownloadPDF = () => {
+    const input = document.getElementById("grn-container");
+
+    html2canvas(input, {
+      scale: 2,
+      logging: false,
+      useCORS: true,
+      allowTaint: true,
+    }).then((canvas) => {
+      const imgData = canvas.toDataURL("image/png");
+      const pdf = new jsPDF("p", "mm", "a4");
+      const imgWidth = 210;
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+
+      pdf.addImage(imgData, "PNG", 0, 0, imgWidth, imgHeight);
+      pdf.save(`goods-return-note-${grnData.grn_number}.pdf`);
+    });
+  };
+
+  return (
+    <Dialog open={open} onClose={onClose} maxWidth="lg" fullWidth>
+      <DialogTitle>Goods Return Note Details</DialogTitle>
+      <DialogContent>
+        <div style={containerStyle}>
+          <div id="grn-container" style={receiptContainerStyle}>
+            {/* Header Color Bar */}
+            <div style={headerBarStyle}></div>
+
+            {/* Company Header */}
+            <div style={companyHeaderStyle}>
+              <div style={companyInfoContainerStyle}>
+                <div style={logoStyle}>
+                  <img
+                    src="/SORT-ICON.png"
+                    alt="Company Logo"
+                    style={{
+                      width: "100%",
+                      height: "100%",
+                      objectFit: "contain",
+                    }}
+                  />
+                </div>
+                <div>
+                  <div style={companyNameStyle}>
+                    Guru Goutam Infotech Pvt. Ltd.
+                  </div>
+                  <div style={companyDetailsStyle}>
+                    CIN: U72200KA2008PTC047679
+                    <br />
+                    GST: {grnData.gst_number || "29AADCG2608Q1Z6"}
+                  </div>
+                </div>
+              </div>
+              <div style={challanHeaderStyle}>
+                <div style={challanTitleStyle}>GOODS RETURN NOTE</div>
+                <div style={challanDetailsStyle}>
+                  GRN No. &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;:{" "}
+                  {grnData.grn_number}
+                  <br />
+                  GRN Date. &nbsp;&nbsp;&nbsp;:{" "}
+                  {new Date(grnData.grn_date).toLocaleDateString("en-GB")}
+                  <br />
+                  Order No. &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;: {grnData.order_id}
+                </div>
+              </div>
+            </div>
+
+            {/* Recipient Section */}
+            <div style={recipientSectionStyle}>
+              <div style={recipientContainerStyle}>
+                <div style={recipientAddressStyle}>
+                  <div style={recipientLabelStyle}>To</div>
+                  {grnData.company_name}
+                  <br />
+                  {grnData.street && `${grnData.street}, `}
+                  {grnData.landmark && `${grnData.landmark}, `}
+                  {grnData.city}, {grnData.state}
+                  <br />
+                  {grnData.country} - {grnData.pincode}
+                </div>
+                <div style={recipientDetailsGridStyle}>
+                  <div>
+                    <div style={detailLabelStyle}>Customer Code :</div>
+                    {grnData.customer_id}
+                  </div>
+                  <div>
+                    <div style={detailLabelStyle}>Contact Person :</div>
+                    {grnData.informed_person_name}
+                  </div>
+                  <div>
+                    <div style={detailLabelStyle}>Received Person :</div>
+                    {grnData.receiver_name}
+                  </div>
+                  <div>
+                    <div style={detailLabelStyle}>Returned By :</div>
+                    {grnData.returner_name}
+                  </div>
+                  <div>
+                    <div style={detailLabelStyle}>Invoice Number:</div>
+                    {grnData.invoice_number || "N/A"}
+                  </div>
+                  <div>
+                    <div style={detailLabelStyle}>Contact Number :</div>
+                    {grnData.phone_number}
+                  </div>
+                  <div>
+                    <div style={detailLabelStyle}>Receiver Number :</div>
+                    {grnData.receiver_phone}
+                  </div>
+                  <div>
+                    <div style={detailLabelStyle}>Vehicle Number :</div>
+                    {grnData.vehicle_number}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Items Table */}
+            <table style={tableStyle}>
+              <thead>
+                <tr>
+                  <th style={tableHeaderNoStyle}>NO.</th>
+                  <th style={tableHeaderParticularsStyle}>Product Name</th>
+                  <th style={tableHeaderQtyStyle}>QTY</th>
+                </tr>
+              </thead>
+              <tbody>
+                {grnData.items?.map((item, index) => {
+                  const deviceIds =
+                    typeof item.device_ids === "string"
+                      ? JSON.parse(item.device_ids)
+                      : item.device_ids || [];
+
+                  return (
+                    <tr
+                      key={item.grn_item_id}
+                      style={
+                        index % 2 === 0 ? tableRowOddStyle : tableRowEvenStyle
+                      }
+                    >
+                      <td style={tableCellCenterStyle}>{index + 1}</td>
+                      <td style={tableCellStyle}>
+                        <div style={itemTitleStyle}>{item.product_name}</div>
+                        <div
+                          style={{
+                            marginTop: 4,
+                            fontSize: "10px",
+                            color: "#555",
+                          }}
+                        >
+                          <div style={specificationsTitleStyle}>
+                            Specifications:
+                          </div>
+                          <div>
+                            <strong>Brand:</strong> {item.product?.brand}
+                          </div>
+                          <div>
+                            <strong>Model:</strong> {item.product?.model}
+                          </div>
+                          <div>
+                            <strong>RAM:</strong> {item.product?.ram}
+                          </div>
+                          <div>
+                            <strong>Storage:</strong> {item.product?.storage}
+                          </div>
+                          <div>
+                            <strong>Processor:</strong>{" "}
+                            {item.product?.processor}
+                          </div>
+                          <div>
+                            <strong>Device IDs:</strong> {deviceIds.join(", ")}
+                          </div>
+                        </div>
+                      </td>
+                      <td style={tableCellCenterStyle}>{item.quantity}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+
+            {/* Footer Info */}
+            <div style={footerInfoStyle}>
+              <div style={taxDetailsStyle}>
+                PAN No. &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;:{" "}
+                {grnData.pan_number}
+                <br />
+                GST No. &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;:{" "}
+                {grnData.gst_number}
+              </div>
+
+              <div style={totalContainerStyle}>
+                <div style={totalLabelStyle}>TOTAL QTY :</div>
+                <div style={totalValueStyle}>
+                  {grnData.items?.reduce((sum, item) => sum + item.quantity, 0)}
+                </div>
+              </div>
+            </div>
+
+            {/* Description */}
+            <div style={totalLabelStyle}>
+              <strong>Description:</strong> {grnData.description}
+            </div>
+
+            {/* Signature Section */}
+            <div style={signatureSectionStyle}>
+              <div style={leftSignatureAreaStyle}>
+                <div style={jurisdictionNoteStyle}>
+                  Note: Subjected to Bengaluru Jurisdiction
+                </div>
+                <table style={signatureTableStyle}>
+                  <tbody>
+                    <tr>
+                      <td style={signatureTableHeaderStyle}>Return Address</td>
+                      <td style={signatureTableHeaderStyle}>
+                        Receiver Date and Signature
+                      </td>
+                    </tr>
+                    <tr>
+                      <td style={signatureTableCellStyle}>
+                        {grnData.company_name}
+                        <br />
+                        {grnData.street && `${grnData.street}, `}
+                        {grnData.landmark && `${grnData.landmark}, `}
+                        {grnData.city}, {grnData.state}
+                        <br />
+                        {grnData.country} - {grnData.pincode}
+                      </td>
+                      <td style={signatureTableCellStyle}></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <div style={rightSignatureAreaStyle}>
+                <div style={companySignatureLabelStyle}>
+                  For Guru Goutham Infotech Private Limited
+                </div>
+                <div style={signatureBoxStyle}>SD/-</div>
+                <div style={signatureDesignationStyle}>
+                  Authorised Signatory
+                </div>
+              </div>
+            </div>
+
+            {/* Company Footer */}
+            <div style={companyFooterStyle}>
+              <div style={footerAddressStyle}>
+                <span>📍</span>
+                <span>
+                  No. 8, 2nd Cross, Diagonal Road, 3rd Block,
+                  <br />
+                  Jayanagar Bengaluru-560011.
+                </span>
+              </div>
+              <div style={footerContactStyle}>
+                <div style={footerContactItemStyle}>
+                  <span>🌐</span>
+                  <span>gurugoutam.com</span>
+                </div>
+                <div style={footerContactItemStyle}>
+                  <span>📞</span>
+                  <span>080-2242 9955, +91 9449 0789 55</span>
+                </div>
+                <div style={footerContactItemStyle}>
+                  <span>✉️</span>
+                  <span>info@gurugoutam.com</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={onClose}>Close</Button>
+        <Button onClick={handleDownloadPDF} variant="contained" color="primary">
+          Download PDF
+        </Button>
+        <Button onClick={() => window.print()}>Print</Button>
+      </DialogActions>
+    </Dialog>
+  );
+};
+
 const formatINRCurrency = (value) => {
   return new Intl.NumberFormat("en-IN", {
     style: "currency",
@@ -380,133 +671,125 @@ const InvoiceDialog = ({ open, onClose, invoiceData }) => {
   const prevMonthEnd = new Date(invoiceData.previous_delivered_end_date);
   const creditNoteStart = new Date(invoiceData.credit_note_start_date);
   const creditNoteEnd = new Date(invoiceData.credit_note_end_date);
-
-  // Calculate next month dates
-  const nextMonthStart = new Date(currentMonthEnd);
-  nextMonthStart.setDate(nextMonthStart.getDate() + 1);
-  const nextMonthEnd = new Date(nextMonthStart);
-  nextMonthEnd.setMonth(nextMonthEnd.getMonth() + 1);
-  nextMonthEnd.setDate(0); // Last day of next month
+// Remove these lines - they're not needed for your scenario
+const nextMonthStart = new Date(currentMonthEnd);
+nextMonthStart.setDate(nextMonthStart.getDate() + 1);
+const nextMonthEnd = new Date(nextMonthStart);
+nextMonthEnd.setMonth(nextMonthEnd.getMonth() + 1);
+nextMonthEnd.setDate(0); // Last day of next month
 
   // Function to calculate days between dates
   const calculateDays = (startDate, endDate) => {
     const diffTime = Math.abs(endDate - startDate);
     return Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
   };
+const calculateInvoiceItems = () => {
+  return invoiceData.items
+    ?.map((item) => {
+      const rate = Number(item.unit_price) || 0;
 
-  // Function to calculate item values for the selected invoice type
-  const calculateInvoiceItems = () => {
-    return invoiceData.items
-      ?.map((item) => {
-        const rate = Number(item.unit_price) || 0;
-        const monthlyRate = rate * 30;
-        const perMonthAmount = Number(item.unit_price) || 0;
+      const addedDate = item.added_date ? new Date(item.added_date) : null;
+      const returnedDate = item.returned_date ? new Date(item.returned_date) : null;
 
-        let quantity = 0;
-        let days = 0;
-        let amount = 0;
-        let description = "";
-        let deviceIds = [];
-        const indianDateOptions = {
+      const formatDate = (date) =>
+        date.toLocaleDateString("en-IN", {
           day: "2-digit",
           month: "2-digit",
           year: "numeric",
-        };
+        });
 
-        switch (invoiceType) {
-          case "current":
-            // Current month - all devices minus returns
-            quantity =
-              (Number(item.quantity) || 0) +
-              (Number(item.new_quantity) || 0) -
-              (Number(item.return_quantity) || 0);
-            days = calculateDays(currentMonthStart, currentMonthEnd);
-            amount = quantity * rate;
-            description = `Rental for ${days} days (${currentMonthStart.toLocaleDateString(
-              "en-IN",
-              indianDateOptions
-            )} to ${currentMonthEnd.toLocaleDateString(
-              "en-IN",
-              indianDateOptions
-            )})`;
-            deviceIds = [
-              ...(item.device_ids || []),
-              ...(item.new_device_ids || []),
-            ].filter((id) => !(item.returned_device_ids || []).includes(id));
-            break;
+      let quantity = 0,
+        days = 0,
+        amount = 0,
+        description = "",
+        deviceIds = [];
 
-          case "previous":
-            // Previous month - only new devices delivered in previous month
-            quantity = Number(item.new_quantity) || 0;
-            if (quantity > 0) {
-              days = calculateDays(prevMonthStart, prevMonthEnd);
-              amount = quantity * rate;
-              description = `Additional devices delivered in previous month (${prevMonthStart.toLocaleDateString(
-                "en-IN",
-                indianDateOptions
-              )} to ${prevMonthEnd.toLocaleDateString(
-                "en-IN",
-                indianDateOptions
-              )})`;
-              deviceIds = item.new_device_ids || [];
-            }
-            break;
+      const prevQty = Number(item.previous_quantity) || 0;
+      const newQty = Number(item.new_quantity) || 0;
+      const returnQty = Number(item.return_quantity) || 0;
 
-          case "next":
-            // Next month - current devices plus new minus returns
-            quantity =
-              (Number(item.quantity) || 0) +
-              (Number(item.new_quantity) || 0) -
-              (Number(item.return_quantity) || 0);
-            days = calculateDays(nextMonthStart, nextMonthEnd);
-            amount = quantity * rate;
-            description = `Projected rental for ${days} days (${nextMonthStart.toLocaleDateString(
-              "en-IN",
-              indianDateOptions
-            )} to ${nextMonthEnd.toLocaleDateString(
-              "en-IN",
-              indianDateOptions
-            )})`;
-            deviceIds = [
-              ...(item.device_ids || []),
-              ...(item.new_device_ids || []),
-            ].filter((id) => !(item.returned_device_ids || []).includes(id));
-            break;
+      switch (invoiceType) {
+        case "current": {
+          quantity = prevQty + newQty - returnQty;
+          days = calculateDays(currentMonthStart, currentMonthEnd);
+          amount = quantity * rate;
 
-          case "credit":
-            // Credit note - only returned devices
-            quantity = Number(item.return_quantity) || 0;
-            if (quantity > 0) {
-              days = calculateDays(creditNoteStart, creditNoteEnd);
-              amount = quantity * rate;
-              description = `Credit for returned devices (${creditNoteStart.toLocaleDateString(
-                "en-IN",
-                indianDateOptions
-              )} to ${creditNoteEnd.toLocaleDateString(
-                "en-IN",
-                indianDateOptions
-              )})`;
-              deviceIds = item.returned_device_ids || [];
-            }
-            break;
+          description = `Rental for ${days} days (${formatDate(currentMonthStart)} to ${formatDate(currentMonthEnd)})`;
 
-          default:
-            break;
+          deviceIds = [
+            ...(item.original_device_ids || []),
+            ...(item.new_device_ids || []),
+          ].filter((id) => !(item.returned_device_ids || []).includes(id));
+          break;
         }
 
-        return {
-          ...item,
-          quantity,
-          days,
-          amount,
-          description,
-          deviceIds,
-          rate,
-          total: amount,
-        };
-      })
-      .filter((item) => item.quantity > 0);
-  };
+        case "previous": {
+          if (newQty > 0 && addedDate) {
+            const start = addedDate > prevMonthStart ? addedDate : prevMonthStart;
+            const end = prevMonthEnd;
+            days = calculateDays(start, end);
+            quantity = newQty;
+            amount = quantity * rate;
+
+            description = `Additional devices delivered in previous month (${formatDate(start)} to ${formatDate(end)})`;
+            deviceIds = item.new_device_ids || [];
+          }
+          break;
+        }
+
+        case "credit": {
+          if (returnQty > 0 && returnedDate) {
+            const start = returnedDate;
+            const end = creditNoteEnd;
+            days = calculateDays(start, end);
+            quantity = returnQty;
+            amount = returnQty * rate * -1;
+
+            description = `Credit for returned devices (${formatDate(start)} to ${formatDate(end)})`;
+            deviceIds = item.returned_device_ids || [];
+          }
+          break;
+        }
+
+        case "next": {
+          quantity = prevQty + newQty - returnQty;
+          days = calculateDays(nextMonthStart, nextMonthEnd);
+          amount = quantity * rate * days;
+
+          description = `Projected rental for ${days} days (${formatDate(nextMonthStart)} to ${formatDate(nextMonthEnd)})`;
+
+          deviceIds = [
+            ...(item.original_device_ids || []),
+            ...(item.new_device_ids || []),
+          ].filter((id) => !(item.returned_device_ids || []).includes(id));
+          break;
+        }
+
+        default:
+          break;
+      }
+
+      return {
+        ...item,
+        quantity,
+        days,
+        amount,
+        description,
+        deviceIds,
+        rate,
+        total: amount,
+        prevQty,
+        prevDays: days,
+        newQty,
+        newdays: days,
+        returnQty,
+        returnedDays: days,
+      };
+    })
+    .filter((item) => item.quantity > 0 || item.amount < 0);
+};
+
+
 
   const items = calculateInvoiceItems();
   const totalAmount = items.reduce((sum, item) => sum + item.amount, 0);
@@ -514,14 +797,15 @@ const InvoiceDialog = ({ open, onClose, invoiceData }) => {
   // Function to render the invoice
   const renderInvoice = () => {
     const isCreditNote = invoiceType === "credit";
-    const title =
-      invoiceType === "current"
-        ? "Current Month Invoice"
-        : invoiceType === "previous"
-        ? "Previous Month Reference"
-        : invoiceType === "next"
-        ? "Next Month Projection"
-        : "Return Credit Note";
+   const title =
+  invoiceType === "current"
+    ? "Current Month Invoice"
+    : invoiceType === "previous"
+    ? "Previous Month Reference"
+    : invoiceType === "next"
+    ? "Next Month Projection"
+    : "Return Credit Note";
+
 
     const cgst = totalAmount * 0.09;
     const sgst = totalAmount * 0.09;
@@ -576,14 +860,14 @@ const InvoiceDialog = ({ open, onClose, invoiceData }) => {
               {isCreditNote ? "Credit Note No." : "Invoice No."} &nbsp;:{" "}
               {invoiceData.invoice_number}
               <br />
-              Date
+              Invoice Date
               &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;:{" "}
               {invoiceData.invoice_date}
               {!isCreditNote && (
                 <>
                   <br />
-                  Due Date &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;:{" "}
-                  {invoiceData.invoice_due_date}
+                  {/* Due Date &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;:{" "}
+                  {invoiceData.invoice_due_date} */}
                 </>
               )}
             </div>
@@ -640,106 +924,142 @@ const InvoiceDialog = ({ open, onClose, invoiceData }) => {
 
         {/* Invoice Period */}
         <div style={invoicePeriodStyle}>
-          {invoiceType === "next"
-            ? `Projection Period: ${nextMonthStart.toLocaleDateString(
-                "en-IN",
-                indianDateOptions
-              )} to ${nextMonthEnd.toLocaleDateString(
-                "en-IN",
-                indianDateOptions
-              )}`
-            : isCreditNote
-            ? `Credit Note Period: ${creditNoteStart.toLocaleDateString(
-                "en-IN",
-                indianDateOptions
-              )} to ${creditNoteEnd.toLocaleDateString(
-                "en-IN",
-                indianDateOptions
-              )}`
-            : invoiceType === "previous"
-            ? `Previous Month Period: ${prevMonthStart.toLocaleDateString(
-                "en-IN",
-                indianDateOptions
-              )} to ${prevMonthEnd.toLocaleDateString(
-                "en-IN",
-                indianDateOptions
-              )}`
-            : `Invoice Period: ${currentMonthStart.toLocaleDateString(
-                "en-IN",
-                indianDateOptions
-              )} to ${currentMonthEnd.toLocaleDateString(
-                "en-IN",
-                indianDateOptions
-              )}`}
-        </div>
-        {/* Items Table */}
-        <table style={tableStyle}>
-          <thead>
-            <tr>
-              <th style={tableHeaderNoStyle}>NO.</th>
-              <th style={tableHeaderParticularsStyle}>Product Details</th>
-              <th style={tableHeaderQtyStyle}>QTY</th>
-              <th style={tableHeaderDaysStyle}></th>
-              <th style={tableHeaderRateStyle}>Rate/Day</th>
-              <th style={tableHeaderRateStyle}>TOTAL</th>
-            </tr>
-          </thead>
-          <tbody>
-            {items.map((item, index) => (
-              <tr
-                key={item.id}
-                style={index % 2 === 0 ? tableRowOddStyle : tableRowEvenStyle}
-              >
-                <td style={tableCellCenterStyle}>{index + 1}</td>
-                <td style={tableCellStyle}>
-                  <div style={itemTitleStyle}>{item.product_name}</div>
-                  <div
-                    style={{ marginTop: 4, fontSize: "10px", color: "#555" }}
-                  >
-                    <div>
-                      <strong>Brand:</strong> {item.productDetails?.brand}
-                    </div>
-                    <div>
-                      <strong>Model:</strong> {item.productDetails?.model}
-                    </div>
-                    {item.deviceIds.length > 0 && (
-                      <div>
-                        <strong>Device IDs:</strong> {item.deviceIds.join(", ")}
-                      </div>
-                    )}
-                    <div style={{ marginTop: 4, fontStyle: "italic" }}>
-                      {item.description}
-                    </div>
-                  </div>
-                </td>
-                <td style={tableCellCenterStyle}>{item.quantity}</td>
-                <td style={tableCellCenterStyle}></td>
-                <td style={tableCellRightStyle}>
-                  {formatINRCurrency(item.rate)}
-                </td>
-                <td style={tableCellRightStyle}>
-                  {formatINRCurrency(item.amount)}
-                </td>
-              </tr>
-            ))}
+  {invoiceType === "next"
+    ? `Projection Period: ${nextMonthStart.toLocaleDateString(
+        "en-IN",
+        indianDateOptions
+      )} to ${nextMonthEnd.toLocaleDateString(
+        "en-IN",
+        indianDateOptions
+      )}`
+    : isCreditNote
+    ? `Credit Note Period: ${creditNoteStart.toLocaleDateString(
+        "en-IN",
+        indianDateOptions
+      )} to ${creditNoteEnd.toLocaleDateString(
+        "en-IN",
+        indianDateOptions
+      )}`
+    : invoiceType === "previous"
+    ? `Previous Month Period: ${prevMonthStart.toLocaleDateString(
+        "en-IN",
+        indianDateOptions
+      )} to ${prevMonthEnd.toLocaleDateString(
+        "en-IN",
+        indianDateOptions
+      )}`
+    : `Invoice Period: ${currentMonthStart.toLocaleDateString(
+        "en-IN",
+        indianDateOptions
+      )} to ${currentMonthEnd.toLocaleDateString(
+        "en-IN",
+        indianDateOptions
+      )}`}
+</div>
+       <table style={tableStyle}>
+  <thead>
+    <tr>
+      <th style={tableHeaderNoStyle}>NO.</th>
+      <th style={tableHeaderParticularsStyle}>Product Details</th>
+      <th style={tableHeaderQtyStyle}>QTY</th>
+      <th style={tableHeaderRateStyle}>Rate/Day</th>
+      <th style={tableHeaderRateStyle}>TOTAL</th>
+    </tr>
+  </thead>
+  <tbody>
+    {items.map((item, index) => (
+      <tr
+        key={item.id}
+        style={index % 2 === 0 ? tableRowOddStyle : tableRowEvenStyle}
+      >
+        <td style={tableCellCenterStyle}>{index + 1}</td>
 
-            {/* Totals Row */}
-            <tr style={totalsRowStyle}>
-              <td style={tableCellCenterStyle} colSpan={3}>
-                <strong>TOTAL</strong>
-              </td>
-              <td style={tableCellCenterStyle}>
-                {/* <strong>
-                  {items.reduce((sum, item) => sum + item.days, 0)}
-                </strong> */}
-              </td>
-              <td style={tableCellRightStyle}></td>
-              <td style={tableCellRightStyle}>
-                {formatINRCurrency(totalAmount)}
-              </td>
-            </tr>
-          </tbody>
-        </table>
+        <td style={tableCellStyle}>
+          <div style={itemTitleStyle}>{item.product_name}</div>
+
+          {/* --- Device Metadata --- */}
+          <div style={{ fontSize: "10px", color: "#555", marginTop: 4 }}>
+            <div><strong>Brand:</strong> {item.productDetails?.brand}</div>
+            <div><strong>Model:</strong> {item.productDetails?.model}</div>
+
+            {/* Active Device IDs */}
+            {item.deviceIds?.length > 0 && (
+              <div><strong>Active Devices:</strong> {item.deviceIds.join(", ")}</div>
+            )}
+
+            {/* Description */}
+            {item.description && (
+              <div style={{ fontStyle: "italic", marginTop: 4 }}>
+                {item.description}
+              </div>
+            )}
+          </div>
+
+          {/* --- New Devices --- */}
+          {item.newQty > 0 && (
+            <div style={{ fontSize: "10px", color: "#007600", marginTop: 6 }}>
+              <strong>🟢 New Devices:</strong>
+              <div>Qty: {item.newQty} ({item.newdays} days)</div>
+              <div>Added On: {new Date(item.added_date).toLocaleDateString("en-IN")}</div>
+              {item.new_device_ids?.length > 0 && (
+                <div>Device IDs: {item.new_device_ids.join(", ")}</div>
+              )}
+            </div>
+          )}
+
+          {/* --- Returned Devices --- */}
+          {item.returnQty > 0 && (
+            <div style={{ fontSize: "10px", color: "#B00020", marginTop: 6 }}>
+              <strong>🔴 Returned Devices:</strong>
+              <div>Qty: {item.returnQty} ({item.returnedDays} days)</div>
+              <div>Returned On: {new Date(item.returned_date).toLocaleDateString("en-IN")}</div>
+              {item.returned_device_ids?.length > 0 && (
+                <div>Device IDs: {item.returned_device_ids.join(", ")}</div>
+              )}
+            </div>
+          )}
+        </td>
+
+        {/* --- Quantity Breakdown --- */}
+        <td style={tableCellCenterStyle}>
+          <div>{item.quantity}</div>
+          <div style={{ fontSize: "10px", color: "#666" }}>
+            {item.prevQty > 0 && (
+              <div>🔵 Prev: {item.prevQty} ({item.prevDays}d)</div>
+            )}
+            {item.newQty > 0 && (
+              <div>🟢 New: {item.newQty} ({item.newdays}d)</div>
+            )}
+            {item.returnQty > 0 && (
+              <div>🔴 Ret: {item.returnQty} ({item.returnedDays}d)</div>
+            )}
+          </div>
+        </td>
+
+        {/* --- Rate/Day --- */}
+        <td style={tableCellRightStyle}>
+          {formatINRCurrency(item.rate)}
+        </td>
+
+        {/* --- Total Amount --- */}
+        <td style={tableCellRightStyle}>
+          {formatINRCurrency(item.amount)}
+        </td>
+      </tr>
+    ))}
+
+    {/* --- Grand Total --- */}
+    <tr style={totalsRowStyle}>
+      <td colSpan={3} style={tableCellCenterStyle}><strong>TOTAL</strong></td>
+      <td></td>
+      <td style={tableCellRightStyle}>
+        {formatINRCurrency(totalAmount)}
+      </td>
+    </tr>
+  </tbody>
+</table>
+
+
 
         {/* Tax and Total Section */}
         <div style={taxTotalContainerStyle}>
@@ -851,42 +1171,46 @@ const InvoiceDialog = ({ open, onClose, invoiceData }) => {
   };
 
   // Handle PDF download
-  const handleDownloadPDF = () => {
-    const element = document.getElementById(
-      `invoice-${
+const handleDownloadPDF = () => {
+  const element = document.getElementById(
+    `invoice-${
+      invoiceType === "current"
+        ? "current-month-invoice"
+        : invoiceType === "previous"
+        ? "previous-month-reference"
+        : invoiceType === "next"
+        ? "next-month-projection"
+        : "return-credit-note"
+    }`
+  );
+
+  if (!element) return;
+
+  html2canvas(element, {
+    scale: 2,
+    logging: false,
+    useCORS: true,
+    allowTaint: true,
+  }).then((canvas) => {
+    const imgData = canvas.toDataURL("image/png");
+    const imgWidth = 210;
+    const imgHeight = (canvas.height * imgWidth) / canvas.width;
+
+    const pdf = new jsPDF("p", "mm", "a4");
+    pdf.addImage(imgData, "PNG", 0, 0, imgWidth, imgHeight);
+    pdf.save(
+      `${
         invoiceType === "current"
-          ? "current-month-invoice"
+          ? "invoice"
           : invoiceType === "previous"
-          ? "previous-month-reference"
-          : "return-credit-note"
-      }`
+          ? "previous-month"
+          : invoiceType === "next"
+          ? "next-month-projection"
+          : "credit-note"
+      }-${invoiceData.invoice_number}.pdf`
     );
-
-    if (!element) return;
-
-    html2canvas(element, {
-      scale: 2,
-      logging: false,
-      useCORS: true,
-      allowTaint: true,
-    }).then((canvas) => {
-      const imgData = canvas.toDataURL("image/png");
-      const imgWidth = 210;
-      const imgHeight = (canvas.height * imgWidth) / canvas.width;
-
-      const pdf = new jsPDF("p", "mm", "a4");
-      pdf.addImage(imgData, "PNG", 0, 0, imgWidth, imgHeight);
-      pdf.save(
-        `${
-          invoiceType === "current"
-            ? "invoice"
-            : invoiceType === "previous"
-            ? "previous-month"
-            : "credit-note"
-        }-${invoiceData.invoice_number}.pdf`
-      );
-    });
-  };
+  });
+};
 
   return (
     <Dialog
@@ -997,6 +1321,21 @@ const DynamicTable = ({
     }
   };
 
+  // Add this to your component where you manage the dialog state
+  const [openGrnDialog, setOpenGrnDialog] = useState(false);
+  const [selectedGrnRow, setSelectedGrnRow] = useState(null);
+
+  const handleViewGRN = async (row) => {
+    try {
+      const response = await axios.get(`${API_URL}/grns/${row.id}`);
+      console.log("GRN Data Response:", response.data);
+      setSelectedGrnRow(response.data);
+      setOpenGrnDialog(true);
+    } catch (error) {
+      console.error("Error fetching GRN details:", error);
+    }
+  };
+
   const handleViewInvoice = async (row, type = "current") => {
     try {
       const response = await axios.get(`${API_URL}/invoices/${row.id}`);
@@ -1097,7 +1436,8 @@ const DynamicTable = ({
                 tableType !== "inventory" &&
                 tableType !== "quotations" &&
                 tableType !== "orders" &&
-                tableType !== "operations" && (
+                tableType !== "operations" &&
+                tableType !== "grn" && (
                   <TableCell align="center" sx={{ fontWeight: "bold" }}>
                     Active Status
                   </TableCell>
@@ -1199,7 +1539,8 @@ const DynamicTable = ({
                     tableType !== "inventory" &&
                     tableType !== "quotations" &&
                     tableType !== "orders" &&
-                    tableType !== "operations" && (
+                    tableType !== "operations" &&
+                    tableType !== "grn" && (
                       <TableCell align="center">
                         <Button onClick={() => toggleStatus(rowIndex)}>
                           <img
@@ -1284,6 +1625,20 @@ const DynamicTable = ({
                         {tableType === "operations" && (
                           <Button
                             onClick={() => handleViewDC(row)}
+                            sx={{ minWidth: "30px", p: 0 }}
+                          >
+                            <img
+                              src={ViewDC}
+                              alt="ViewDC"
+                              width="45"
+                              height="35"
+                            />
+                          </Button>
+                        )}
+
+                        {tableType === "grn" && (
+                          <Button
+                            onClick={() => handleViewGRN(row)}
                             sx={{ minWidth: "30px", p: 0 }}
                           >
                             <img
@@ -1381,6 +1736,11 @@ const DynamicTable = ({
         open={openInvoiceDialog}
         onClose={() => setOpenInvoiceDialog(false)}
         invoiceData={selectedInvoiceRow}
+      />
+      <GoodsReturnNoteDialog
+        open={openGrnDialog}
+        onClose={() => setOpenGrnDialog(false)}
+        grnData={selectedGrnRow}
       />
     </Box>
   );

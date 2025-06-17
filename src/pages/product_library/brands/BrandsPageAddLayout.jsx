@@ -1,21 +1,26 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Box,
   Button,
   Checkbox,
+  Snackbar,
+  Alert
 } from "@mui/material";
 import axios from "axios";
-import { Snackbar, Alert } from "@mui/material";
-
-import API_URL from "../../../api/Api_url"; // assuming IMAGE_API_URL is defined
+import API_URL from "../../../api/Api_url"; 
 import { useNavigate } from "react-router-dom";
 
+const generateBrandNumber = () => {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  let randomPart = '';
+  for (let i = 0; i < 5; i++) {
+    randomPart += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return `BND-${randomPart}`;
+};
 
 const BrandsPageAddLayout = () => {
-
-
-
-    const navigate = useNavigate();
+  const navigate = useNavigate();
 
   const [form, setForm] = useState({
     brandNumber: "",
@@ -25,10 +30,17 @@ const BrandsPageAddLayout = () => {
   });
 
   const [snackbar, setSnackbar] = useState({
-  open: false,
-  message: "",
-  severity: "success",
-});
+    open: false,
+    message: "",
+    severity: "success",
+  });
+
+  useEffect(() => {
+    setForm(prev => ({
+      ...prev,
+      brandNumber: generateBrandNumber()
+    }));
+  }, []);
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -36,36 +48,36 @@ const BrandsPageAddLayout = () => {
   };
 
   const handleSubmit = async () => {
-  const payload = {
-    brand_number: form.brandNumber,
-    brand_name: form.brandName,
-    brand_description: form.description,
-    active_status: form.active,
-  };
+    const payload = {
+      brand_number: form.brandNumber,
+      brand_name: form.brandName,
+      brand_description: form.description,
+      active_status: form.active,
+    };
 
-  try {
-    const response = await axios.post(`${API_URL}/product-brands/create`, payload);
-    if (response.status === 200 || response.status === 201) {
+    try {
+      const response = await axios.post(`${API_URL}/product-brands/create`, payload);
+      if (response.status === 200 || response.status === 201) {
+        setSnackbar({
+          open: true,
+          message: "Brand created successfully!",
+          severity: "success",
+        });
+        setTimeout(() => {
+          navigate("/dashboard/product_library/brands");
+        }, 1500);
+      }
+    } catch (error) {
+      console.error("Error creating brand:", error);
       setSnackbar({
         open: true,
-        message: "Brand created successfully!",
-        severity: "success",
+        message: "Failed to create brand. Please try again.",
+        severity: "error",
       });
-setTimeout(() => {
-        navigate("/dashboard/product_library/brands");
-      }, 1500);
     }
-  } catch (error) {
-    console.error("Error creating brand:", error);
-    setSnackbar({
-      open: true,
-      message: "Failed to create brand. Please try again.",
-      severity: "error",
-    });
-  }
-};
+  };
 
-
+  // --- Styles ---
   const containerStyle = {
     padding: '2rem',
     fontFamily: '"Inter", "Segoe UI", -apple-system, BlinkMacSystemFont, sans-serif',
@@ -203,26 +215,27 @@ setTimeout(() => {
 
   return (
     <div style={containerStyle}>
+      <Snackbar
+        anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+        open={snackbar.open}
+        autoHideDuration={6000}
+        onClose={() => setSnackbar({ ...snackbar, open: false })}
+      >
+        <Alert
+          onClose={() => setSnackbar({ ...snackbar, open: false })}
+          severity={snackbar.severity}
+          sx={{ width: "100%" }}
+        >
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
 
-       <Snackbar
-              anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
-              open={snackbar.open}
-              autoHideDuration={6000}
-              onClose={() => setSnackbar({ ...snackbar, open: false })}
-            >
-              <Alert
-                onClose={() => setSnackbar({ ...snackbar, open: false })}
-                severity={snackbar.severity}
-                sx={{ width: "100%" }}
-              >
-                {snackbar.message}
-              </Alert>
-            </Snackbar>
       <div style={cardStyle}>
-       <div style={cardHeaderContainerStyle}>
-  <div style={iconStyle}>📝</div>
-  <h3 style={cardHeaderStyle}>Add New Brand</h3>
-</div>
+        <div style={cardHeaderContainerStyle}>
+          <div style={iconStyle}>📝</div>
+          <h3 style={cardHeaderStyle}>Add New Brand</h3>
+        </div>
+
         <div style={fieldsGridStyle}>
           <Field
             label="Brand Number"
@@ -271,6 +284,7 @@ setTimeout(() => {
             </label>
           </div>
         </div>
+
         <div style={buttonContainerStyle}>
           <button style={cancelBtnStyle}>Cancel</button>
           <button style={createBtnStyle} onClick={handleSubmit}>

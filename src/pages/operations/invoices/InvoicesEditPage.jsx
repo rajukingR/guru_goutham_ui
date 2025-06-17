@@ -17,15 +17,17 @@ import {
   MenuItem,
   InputLabel,
   FormControl,
+  Button,
 } from "@mui/material";
 import { Add, Remove } from "@mui/icons-material";
-import { useParams } from "react-router-dom";
 import API_URL from "../../../api/Api_url";
+import { useNavigate, useParams } from "react-router-dom";
 
 const InvoicesEditPage = () => {
   const { id } = useParams();
+  const navigate = useNavigate();
+  
   const [formData, setFormData] = useState({
-    id: "",
     invoice_number: "",
     invoice_title: "",
     customer_id: "",
@@ -35,19 +37,14 @@ const InvoicesEditPage = () => {
     purchase_order_date: "",
     purchase_order_number: "",
     customer_gst_number: "",
+    duration: "",
     email: "",
     phone_number: "",
     pan_number: "",
     payment_terms: "",
-    payment_mode: "NEFT",
+    payment_mode: "",
     approval_status: "Approved",
     approval_date: new Date().toISOString().slice(0, 19).replace("T", " "),
-    amount: 0,
-    cgst: 0,
-    sgst: 0,
-    igst: 0,
-    total_tax: 0,
-    total_amount: 0,
     invoice_consulting_by: "",
     industry: "",
     remarks: "",
@@ -78,48 +75,87 @@ const InvoicesEditPage = () => {
     severity: "info",
   });
 
-  // Fetch initial data
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        // Fetch invoice data
-        const invoiceResponse = await fetch(`${API_URL}/invoices/${id}`);
-        if (!invoiceResponse.ok) throw new Error("Failed to fetch invoice");
-        const invoiceData = await invoiceResponse.json();
+  const [returnQuantities, setReturnQuantities] = useState({});
+  const [newQuantities, setNewQuantities] = useState({});
+  const [newDeviceIds, setNewDeviceIds] = useState({});
+  const [returnedDeviceIds, setReturnedDeviceIds] = useState({});
+  const [selectedMonth, setSelectedMonth] = useState("current");
+  const [dateRanges, setDateRanges] = useState({
+    invoiceStartDate: "",
+    invoiceEndDate: "",
+    previousDeliveredStartDate: "",
+    previousDeliveredEndDate: "",
+    creditNoteStartDate: "",
+    creditNoteEndDate: "",
+  });
 
-        // Set form data from the fetched invoice
+  // Fetch invoice data when component mounts
+  useEffect(() => {
+    const fetchInvoiceData = async () => {
+      try {
+        const response = await fetch(`${API_URL}/invoices/${id}`);
+        if (!response.ok) throw new Error("Failed to fetch invoice");
+        const invoiceData = await response.json();
+        
+        // Set form data from fetched invoice
         setFormData({
           ...invoiceData,
-          shippingDetails: invoiceData.shippingDetail || {
-            consignee_name: "",
-            country: "India",
-            state: "",
-            city: "",
-            street: "",
-            landmark: "",
-            pincode: "",
-            phone_number: "",
-            email: "",
-          },
-        });
+          invoice_date: invoiceData.invoice_date.split('T')[0],
+          invoice_due_date: invoiceData.invoice_due_date?.split('T')[0] || '',
+          purchase_order_date: invoiceData.purchase_order_date?.split('T')[0] || '',
+         // Fix the shipping details mapping here:
+      shippingDetails: invoiceData.shippingDetail || { // Note: shippingDetail (singular)
+        consignee_name: "",
+        country: "India",
+        state: "",
+        city: "",
+        street: "",
+        landmark: "",
+        pincode: "",
+        phone_number: "",
+        email: "",
+      }
+    });
 
-        // Set selected products and quantities
-        const productIds = invoiceData.items.map((item) => item.product_id);
-        const productQuantities = {};
-        invoiceData.items.forEach((item) => {
-          productQuantities[item.product_id] = item.quantity;
-        });
-
+        // Set product-related states
+        const productIds = invoiceData.items.map(item => item.product_id);
         setSelectedProductIds(productIds);
-        setQuantities(productQuantities);
-        setShowProductTable(productIds.length > 0);
+        
+        const qtyMap = {};
+        const newQtyMap = {};
+        const returnQtyMap = {};
+        const newDeviceIdsMap = {};
+        const returnedDeviceIdsMap = {};
+        
+        invoiceData.items.forEach(item => {
+          qtyMap[item.product_id] = item.quantity;
+          newQtyMap[item.product_id] = item.new_quantity || 0;
+          returnQtyMap[item.product_id] = item.return_quantity || 0;
+          newDeviceIdsMap[item.product_id] = item.new_device_ids || [];
+          returnedDeviceIdsMap[item.product_id] = item.returned_device_ids || [];
+        });
+        
+        setQuantities(qtyMap);
+        setNewQuantities(newQtyMap);
+        setReturnQuantities(returnQtyMap);
+        setNewDeviceIds(newDeviceIdsMap);
+        setReturnedDeviceIds(returnedDeviceIdsMap);
 
+      } catch (error) {
+        console.error("Error fetching invoice:", error);
+        setSnackbar({
+          open: true,
+          message: "Error fetching invoice: " + error.message,
+          severity: "error",
+        });
+      }
+    };
+
+    const fetchInitialData = async () => {
+      try {
         // Fetch orders
-        const orderApprovedResponse = await fetch(
-          `${API_URL}/orders/order-approved`
-        );
-        if (!orderApprovedResponse.ok)
-          throw new Error("Failed to fetch orders");
+        const orderApprovedResponse = await fetch(`${API_URL}/orders/order-approved`);
+        if (!orderApprovedResponse.ok) throw new Error("Failed to fetch orders");
         const orderApprovedData = await orderApprovedResponse.json();
         setOrders(orderApprovedData);
 
@@ -134,6 +170,9 @@ const InvoicesEditPage = () => {
         if (!taxResponse.ok) throw new Error("Failed to fetch tax types");
         const taxData = await taxResponse.json();
         setTaxTypes(taxData);
+
+        // Fetch invoice data after other data is loaded
+        await fetchInvoiceData();
       } catch (error) {
         console.error("Error fetching data:", error);
         setSnackbar({
@@ -144,9 +183,121 @@ const InvoicesEditPage = () => {
       }
     };
 
-    fetchData();
+    fetchInitialData();
   }, [id]);
 
+  // Calculate dates when month selection changes
+  useEffect(() => {
+    const today = new Date();
+    let startDate, endDate;
+    let prevStartDate, prevEndDate;
+
+    if (selectedMonth === "previous") {
+      startDate = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+      endDate = new Date(today.getFullYear(), today.getMonth(), 0);
+      prevStartDate = new Date(today.getFullYear(), today.getMonth() - 2, 1);
+      prevEndDate = new Date(today.getFullYear(), today.getMonth() - 1, 0);
+    } else if (selectedMonth === "current") {
+      startDate = new Date(today.getFullYear(), today.getMonth(), 1);
+      endDate = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+      prevStartDate = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+      prevEndDate = new Date(today.getFullYear(), today.getMonth(), 0);
+    } else if (selectedMonth === "next") {
+      startDate = new Date(today.getFullYear(), today.getMonth() + 1, 1);
+      endDate = new Date(today.getFullYear(), today.getMonth() + 2, 0);
+      prevStartDate = new Date(today.getFullYear(), today.getMonth(), 1);
+      prevEndDate = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+    }
+
+    const formatDate = (date) => {
+      const day = String(date.getDate()).padStart(2, "0");
+      const month = String(date.getMonth() + 1).padStart(2, "0");
+      const year = date.getFullYear();
+      return `${day}-${month}-${year}`;
+    };
+
+    setDateRanges({
+      invoiceStartDate: formatDate(startDate),
+      invoiceEndDate: formatDate(endDate),
+      previousDeliveredStartDate: formatDate(prevStartDate),
+      previousDeliveredEndDate: formatDate(prevEndDate),
+      creditNoteStartDate: formatDate(prevStartDate),
+      creditNoteEndDate: formatDate(prevEndDate),
+    });
+  }, [selectedMonth]);
+
+  // Handle return quantity changes
+  const handleReturnQtyChange = (productId, value) => {
+    setReturnQuantities((prev) => ({
+      ...prev,
+      [productId]: parseInt(value) || 0,
+    }));
+  };
+
+  const incrementReturnQty = (productId) => {
+    setReturnQuantities((prev) => ({
+      ...prev,
+      [productId]: (prev[productId] || 0) + 1,
+    }));
+  };
+
+  const decrementReturnQty = (productId) => {
+    setReturnQuantities((prev) => ({
+      ...prev,
+      [productId]: Math.max((prev[productId] || 0) - 1, 0),
+    }));
+  };
+
+  // Handle new quantity changes
+  const handleNewQtyChange = (productId, value) => {
+    const updated = { ...newQuantities, [productId]: parseInt(value) || 0 };
+    setNewQuantities(updated);
+  };
+
+  const incrementNewQty = (productId) => {
+    setNewQuantities((prev) => ({
+      ...prev,
+      [productId]: (prev[productId] || 0) + 1,
+    }));
+  };
+
+  const decrementNewQty = (productId) => {
+    setNewQuantities((prev) => ({
+      ...prev,
+      [productId]: Math.max((prev[productId] || 0) - 1, 0),
+    }));
+  };
+
+  // Calculate rental price
+  const calculateRentalPrice = (product, months = 0, days = 0) => {
+    const perDay = product.rent_price_per_day || 0;
+    const perMonth = product.rent_price_per_month || 0;
+    const rent6Months = product.rent_price_6_months || perMonth * 6;
+    const rent1Year = product.rent_price_1_year || perMonth * 12;
+
+    let price = 0;
+
+    if (months === 0 && days > 0) {
+      const dayCost = perDay * days;
+      price = days >= 30 && dayCost > perMonth ? perMonth : dayCost;
+    } else if (days === 0 && months > 0) {
+      if (months === 6) price = rent6Months;
+      else if (months === 12) price = rent1Year;
+      else price = perMonth * months;
+    } else if (months > 0 && days > 0) {
+      let monthPrice = 0;
+
+      if (months === 6) monthPrice = rent6Months;
+      else if (months === 12) monthPrice = rent1Year;
+      else monthPrice = perMonth * months;
+
+      price = monthPrice + perDay * days;
+    }
+
+    return price;
+  };
+
+  // Handle customer selection
   const handleCustomerSelect = (customerId) => {
     const selectedOrder = orders.find(
       (order) => order.id === parseInt(customerId)
@@ -156,7 +307,6 @@ const InvoicesEditPage = () => {
     const personal = selectedOrder.personalDetails;
     const address = selectedOrder.address;
 
-    // Extract product IDs and quantities from the order items
     const orderItems = selectedOrder.items || [];
     const productIds = orderItems.map((item) => item.product_id);
     const productQuantities = {};
@@ -165,61 +315,35 @@ const InvoicesEditPage = () => {
       productQuantities[item.product_id] = item.requested_quantity;
     });
 
-    // Set the selected products and quantities
     setSelectedProductIds(productIds);
     setQuantities(productQuantities);
 
-    // Calculate initial totals based on the order items
     const selectedProducts = products.filter((product) =>
       productIds.includes(product.id)
     );
 
     let amount = 0;
     const items = selectedProducts.map((product) => {
-      const quantity = productQuantities[product.id] || 0;
+      const quantity = quantities[product.id] || 0;
       let price = product.purchase_price;
-      if (selectedOrder.transaction_type === "Rent") {
-        const duration = selectedOrder.rental_duration;
-        const monthlyRate = product.rent_price_per_month || 0;
 
-        switch (duration) {
-          case "1":
-          case "2":
-          case "3":
-          case "4":
-          case "5":
-            price = monthlyRate * parseInt(duration);
-            break;
-          case "6":
-            price = product.rent_price_6_months || monthlyRate * 6;
-            break;
-          case "7":
-          case "8":
-          case "9":
-          case "10":
-          case "11":
-            price = monthlyRate * parseInt(duration);
-            break;
-          case "12":
-            price = product.rent_price_1_year || monthlyRate * 12;
-            break;
-          default:
-            price = product.rent_price_per_day || 0; // fallback
-        }
+      if (formData.transaction_type === "Rent") {
+        const months = parseInt(formData.rental_duration) || 0;
+        const days = parseInt(formData.rental_duration_days) || 0;
+        price = calculateRentalPrice(product, months, days);
       }
 
       const totalPrice = quantity * price;
       amount += totalPrice;
+
       return {
         product_id: product.id,
         product_name: product.product_name,
         quantity: quantity,
-        unit_price: price,
-        total_price: totalPrice,
       };
     });
 
-    // Calculate taxes
+    // Tax Calculation
     const cgstRate =
       taxTypes.find((t) => t.tax_type_name === "CGST")?.percentage || 0;
     const sgstRate =
@@ -229,6 +353,7 @@ const InvoicesEditPage = () => {
     const totalTax = cgst + sgst;
     const totalAmount = amount + totalTax;
 
+    // Set Form Data
     setFormData({
       ...formData,
       customer_id: selectedOrder.id,
@@ -243,10 +368,12 @@ const InvoicesEditPage = () => {
       transaction_type: selectedOrder.transaction_type || "Sale",
       payment_type: selectedOrder.payment_type || "Postpaid",
       rental_duration: selectedOrder.rental_duration || "",
+      rental_duration_days: selectedOrder.rental_duration_days || 0,
       purchase_order_date: selectedOrder.updated_at
         ? new Date(selectedOrder.updated_at).toISOString().split("T")[0]
         : "",
       purchase_order_number: selectedOrder.order_id || "",
+      duration: selectedOrder.rental_duration || 0,
       rental_start_date: selectedOrder.rental_start_date || "",
       rental_end_date: selectedOrder.rental_end_date || "",
       amount: amount,
@@ -271,28 +398,11 @@ const InvoicesEditPage = () => {
     });
   };
 
-  // Helper function to get rental price based on duration
-  const getRentalPrice = (product, duration) => {
-    switch (duration) {
-      case "1":
-        return product.rent_price_per_day;
-      case "30":
-        return product.rent_price_per_month;
-      case "180":
-        return product.rent_price_6_months;
-      case "365":
-        return product.rent_price_1_year;
-      default:
-        return product.rent_price_per_day;
-    }
-  };
-
   // Fetch location data when pincode changes
   useEffect(() => {
     const fetchLocationFromPincode = async () => {
       const pincode = formData.shippingDetails.pincode;
 
-      // Only make API call if pincode is 6 digits (India specific)
       if (pincode && pincode.length === 6) {
         try {
           const response = await fetch(
@@ -331,7 +441,6 @@ const InvoicesEditPage = () => {
       }
     };
 
-    // Add debounce to prevent too many API calls
     const debounceTimer = setTimeout(() => {
       fetchLocationFromPincode();
     }, 500);
@@ -403,7 +512,7 @@ const InvoicesEditPage = () => {
       product.description?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  // Calculate totals when products or quantities change
+  // Calculate totals when dependencies change
   useEffect(() => {
     const calculateTotals = () => {
       const selectedProducts = products.filter((product) =>
@@ -411,29 +520,70 @@ const InvoicesEditPage = () => {
       );
 
       let amount = 0;
-      const items = selectedProducts.map((product) => {
-        const quantity = quantities[product.id] || 0;
-        const price =
-          formData.transaction_type === "Rent"
-            ? getRentalPrice(product, formData.rental_duration)
-            : product.purchase_price;
 
-        const totalPrice = quantity * price;
+      const items = selectedProducts.map((product) => {
+        const previous_quantity = quantities[product.id] || 0;
+        const quantity = quantities[product.id] || 0;
+        const return_quantity = returnQuantities?.[product.id] || 0;
+        const new_quantity = newQuantities?.[product.id] || 0;
+        const new_device_ids = newDeviceIds?.[product.id] || [];
+        const returned_device_ids = returnedDeviceIds?.[product.id] || [];
+
+        let price = product.purchase_price;
+
+        if (formData.transaction_type === "Rent") {
+          const months = parseInt(formData.rental_duration) || 0;
+          const days = parseInt(formData.rental_duration_days) || 0;
+
+          if (months === 0 && days > 0) {
+            price = (product.rent_price_per_day || 0) * days;
+          } else if (days === 0 && months > 0) {
+            if (months === 6) {
+              price =
+                product.rent_price_6_months ||
+                (product.rent_price_per_month || 0) * 6;
+            } else if (months === 12) {
+              price =
+                product.rent_price_1_year ||
+                (product.rent_price_per_month || 0) * 12;
+            } else {
+              price = (product.rent_price_per_month || 0) * months;
+            }
+          } else if (months > 0 && days > 0) {
+            const monthPrice =
+              months === 6
+                ? product.rent_price_6_months ||
+                  (product.rent_price_per_month || 0) * 6
+                : months === 12
+                ? product.rent_price_1_year ||
+                  (product.rent_price_per_month || 0) * 12
+                : (product.rent_price_per_month || 0) * months;
+
+            const dayPrice = (product.rent_price_per_day || 0) * days;
+            price = monthPrice + dayPrice;
+          }
+        }
+
+        const totalPrice = new_quantity * price;
         amount += totalPrice;
+
         return {
           product_id: product.id,
           product_name: product.product_name,
-          quantity: quantity,
-          unit_price: price,
-          total_price: totalPrice,
+          previous_quantity,
+          quantity,
+          return_quantity,
+          new_quantity,
+          new_device_ids,
+          returned_device_ids,
         };
       });
 
-      // Calculate taxes
       const cgstRate =
         taxTypes.find((t) => t.tax_type_name === "CGST")?.percentage || 0;
       const sgstRate =
         taxTypes.find((t) => t.tax_type_name === "SGST")?.percentage || 0;
+
       const cgst = (amount * parseFloat(cgstRate)) / 100;
       const sgst = (amount * parseFloat(sgstRate)) / 100;
       const totalTax = cgst + sgst;
@@ -441,12 +591,12 @@ const InvoicesEditPage = () => {
 
       setFormData((prev) => ({
         ...prev,
-        amount: amount,
-        cgst: cgst,
-        sgst: sgst,
+        amount,
+        cgst,
+        sgst,
         total_tax: totalTax,
         total_amount: totalAmount,
-        items: items,
+        items,
       }));
     };
 
@@ -454,25 +604,58 @@ const InvoicesEditPage = () => {
   }, [
     selectedProductIds,
     quantities,
+    returnQuantities,
+    newQuantities,
     products,
     taxTypes,
     formData.transaction_type,
     formData.rental_duration,
+    formData.rental_duration_days,
   ]);
 
-  // Handle form submission
+  // Handle form submission for editing
   const handleSubmit = async (e) => {
     e.preventDefault();
+
     try {
+      const submissionData = {
+        ...formData,
+        invoice_start_date: dateRanges.invoiceStartDate,
+        invoice_end_date: dateRanges.invoiceEndDate,
+        previous_delivered_start_date: dateRanges.previousDeliveredStartDate,
+        previous_delivered_end_date: dateRanges.previousDeliveredEndDate,
+        credit_note_start_date: dateRanges.creditNoteStartDate,
+        credit_note_end_date: dateRanges.creditNoteEndDate,
+        rental_duration: formData.rental_duration || "0",
+        rental_duration_days: formData.rental_duration_days || 0,
+        rental_duration_months: formData.rental_duration
+          ? parseInt(formData.rental_duration)
+          : 0,
+        payment_mode: formData.payment_type || "Postpaid",
+        items: formData.items.map((item) => ({
+          ...item,
+          new_device_ids: newDeviceIds[item.product_id] || [],
+          returned_device_ids: returnedDeviceIds[item.product_id] || [],
+          rental_duration: formData.rental_duration || "0",
+          rental_duration_days: formData.rental_duration_days || 0,
+          rental_duration_months: formData.rental_duration
+            ? parseInt(formData.rental_duration)
+            : 0,
+        })),
+      };
+
       const response = await fetch(`${API_URL}/invoices/${id}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(submissionData),
       });
 
-      if (!response.ok) throw new Error("Failed to update invoice");
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Failed to update invoice");
+      }
 
       const result = await response.json();
       setSnackbar({
@@ -480,6 +663,10 @@ const InvoicesEditPage = () => {
         message: "Invoice updated successfully!",
         severity: "success",
       });
+
+      setTimeout(() => {
+        navigate("/dashboard/operations/invoices");
+      }, 1500);
     } catch (error) {
       console.error("Error updating invoice:", error);
       setSnackbar({
@@ -494,8 +681,120 @@ const InvoicesEditPage = () => {
     new Intl.NumberFormat("en-IN", {
       style: "currency",
       currency: "INR",
-      maximumFractionDigits: 2
+      maximumFractionDigits: 2,
     }).format(number || 0);
+
+  // Date Range Selector Component
+  const DateRangeSelector = ({
+    selectedMonth,
+    setSelectedMonth,
+    dateRanges,
+    setDateRanges,
+  }) => {
+    return (
+      <Box sx={{ width: "100%", mb: 10 }}>
+        <Box sx={monthButtonContainerStyle}>
+          <button
+            type="button"
+            onClick={() => setSelectedMonth("previous")}
+            style={monthButtonStyle(selectedMonth === "previous")}
+          >
+            Previous Month
+          </button>
+          <button
+            type="button"
+            onClick={() => setSelectedMonth("current")}
+            style={monthButtonStyle(selectedMonth === "current")}
+          >
+            Current Month
+          </button>
+          <button
+            type="button"
+            onClick={() => setSelectedMonth("next")}
+            style={monthButtonStyle(selectedMonth === "next")}
+          >
+            Next Month
+          </button>
+        </Box>
+
+        <Box
+          sx={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))",
+            gap: "1rem",
+            width: "100%",
+          }}
+        >
+          <Field
+            label="Invoice Start Date"
+            name="invoiceStartDate"
+            value={dateRanges.invoiceStartDate}
+            onChange={(e) =>
+              setDateRanges({ ...dateRanges, invoiceStartDate: e.target.value })
+            }
+            type="text"
+          />
+          <Field
+            label="Invoice End Date"
+            name="invoiceEndDate"
+            value={dateRanges.invoiceEndDate}
+            onChange={(e) =>
+              setDateRanges({ ...dateRanges, invoiceEndDate: e.target.value })
+            }
+            type="text"
+          />
+          <Field
+            label="Previous Delivered Start Date"
+            name="previousDeliveredStartDate"
+            value={dateRanges.previousDeliveredStartDate}
+            onChange={(e) =>
+              setDateRanges({
+                ...dateRanges,
+                previousDeliveredStartDate: e.target.value,
+              })
+            }
+            type="text"
+          />
+          <Field
+            label="Previous Delivered End Date"
+            name="previousDeliveredEndDate"
+            value={dateRanges.previousDeliveredEndDate}
+            onChange={(e) =>
+              setDateRanges({
+                ...dateRanges,
+                previousDeliveredEndDate: e.target.value,
+              })
+            }
+            type="text"
+          />
+          <Field
+            label="Credit Note Start Date"
+            name="creditNoteStartDate"
+            value={dateRanges.creditNoteStartDate}
+            onChange={(e) =>
+              setDateRanges({
+                ...dateRanges,
+                creditNoteStartDate: e.target.value,
+              })
+            }
+            type="text"
+          />
+          <Field
+            label="Credit Note End Date"
+            name="creditNoteEndDate"
+            value={dateRanges.creditNoteEndDate}
+            onChange={(e) =>
+              setDateRanges({
+                ...dateRanges,
+                creditNoteEndDate: e.target.value,
+              })
+            }
+            type="text"
+          />
+        </Box>
+      </Box>
+    );
+  };
 
   return (
     <div style={containerStyle}>
@@ -517,7 +816,7 @@ const InvoicesEditPage = () => {
       <div style={headerStyle}>
         <h1 style={titleStyle}>Edit Invoice</h1>
         <p style={subtitleStyle}>
-          Edit the details below for invoice {formData.invoice_number}
+          Edit the details below to update the invoice
         </p>
       </div>
 
@@ -531,11 +830,12 @@ const InvoicesEditPage = () => {
             </div>
             <div style={fieldsGridStyle}>
               <Field
-                label="Invoice Number"
+                label="Invoice ID"
                 name="invoice_number"
                 value={formData.invoice_number}
                 onChange={handleInputChange}
-                placeholder="Enter Invoice Number"
+                placeholder="Enter Invoice Id"
+                readOnly
               />
               <Field
                 label="Invoice Title"
@@ -543,6 +843,21 @@ const InvoicesEditPage = () => {
                 value={formData.invoice_title}
                 onChange={handleInputChange}
                 placeholder="Enter Invoice Title"
+              />
+
+              <Field
+                label="Invoice Date"
+                type="date"
+                name="invoice_date"
+                value={formData.invoice_date}
+                onChange={handleInputChange}
+              />
+              <Field
+                label="Due Date"
+                type="date"
+                name="invoice_due_date"
+                value={formData.invoice_due_date}
+                onChange={handleInputChange}
               />
 
               <FormControl fullWidth>
@@ -561,20 +876,25 @@ const InvoicesEditPage = () => {
                 </Select>
               </FormControl>
 
-              <Field
-                label="Invoice Date"
-                type="date"
-                name="invoice_date"
-                value={formData.invoice_date}
-                onChange={handleInputChange}
-              />
-              <Field
-                label="Due Date"
-                type="date"
-                name="invoice_due_date"
-                value={formData.invoice_due_date}
-                onChange={handleInputChange}
-              />
+              {/* Date Range Selector */}
+              <div
+                style={{
+                  gridColumn: "1 / -1",
+                  margin: "1rem 0",
+                  padding: "1rem",
+                  backgroundColor: "#f8f9fa",
+                  borderRadius: "8px",
+                  border: "1px solid #e0e0e0",
+                }}
+              >
+                <DateRangeSelector
+                  selectedMonth={selectedMonth}
+                  setSelectedMonth={setSelectedMonth}
+                  dateRanges={dateRanges}
+                  setDateRanges={setDateRanges}
+                />
+              </div>
+
               <Field
                 label="PO Number"
                 name="purchase_order_number"
@@ -629,7 +949,7 @@ const InvoicesEditPage = () => {
               <Field
                 label="Payment Mode"
                 name="payment_mode"
-                value={formData.payment_mode}
+                value={formData.payment_type}
                 onChange={handleInputChange}
                 placeholder="Enter Payment Mode"
               />
@@ -658,80 +978,80 @@ const InvoicesEditPage = () => {
           </div>
 
           {/* Shipping Details Section */}
-          <div style={cardStyle}>
-            <div style={cardHeaderContainerStyle}>
-              <div style={iconStyle}>🏢</div>
-              <h3 style={cardHeaderStyle}>Shipping Details</h3>
-            </div>
-            <div style={fieldsGridStyle}>
-              <Field
-                label="Consignee Name"
-                name="consignee_name"
-                value={formData.shippingDetails.consignee_name}
-                onChange={handleShippingChange}
-                placeholder="Enter Consignee Name"
-              />
-              <Field
-                label="Pincode"
-                name="pincode"
-                value={formData.shippingDetails.pincode}
-                onChange={handleShippingChange}
-                placeholder="Enter Pincode"
-                type="number"
-              />
-              <Field
-                label="Country"
-                name="country"
-                value={formData.shippingDetails.country}
-                onChange={handleShippingChange}
-                placeholder="Enter Country"
-              />
-              <Field
-                label="State"
-                name="state"
-                value={formData.shippingDetails.state}
-                onChange={handleShippingChange}
-                placeholder="Enter State"
-              />
-              <Field
-                label="City"
-                name="city"
-                value={formData.shippingDetails.city}
-                onChange={handleShippingChange}
-                placeholder="Enter City"
-              />
-              <Field
-                label="Street"
-                name="street"
-                value={formData.shippingDetails.street}
-                onChange={handleShippingChange}
-                placeholder="Enter Street"
-              />
-              <Field
-                label="Landmark"
-                name="landmark"
-                value={formData.shippingDetails.landmark}
-                onChange={handleShippingChange}
-                placeholder="Enter Landmark"
-              />
-              <Field
-                label="Shipping Phone"
-                name="phone_number"
-                value={formData.shippingDetails.phone_number}
-                onChange={handleShippingChange}
-                placeholder="Enter Phone"
-                type="tel"
-              />
-              <Field
-                label="Shipping Email"
-                name="email"
-                value={formData.shippingDetails.email}
-                onChange={handleShippingChange}
-                placeholder="Enter Email"
-                type="email"
-              />
-            </div>
-          </div>
+<div style={cardStyle}>
+  <div style={cardHeaderContainerStyle}>
+    <div style={iconStyle}>🏢</div>
+    <h3 style={cardHeaderStyle}>Shipping Details</h3>
+  </div>
+  <div style={fieldsGridStyle}>
+    <Field
+      label="Consignee Name"
+      name="consignee_name"
+      value={formData.shippingDetails.consignee_name}
+      onChange={handleShippingChange}
+      placeholder="Enter Consignee Name"
+    />
+    <Field
+      label="Pincode"
+      name="pincode"
+      value={formData.shippingDetails.pincode}
+      onChange={handleShippingChange}
+      placeholder="Enter Pincode"
+      type="number"
+    />
+    <Field
+      label="Country"
+      name="country"
+      value={formData.shippingDetails.country}
+      onChange={handleShippingChange}
+      placeholder="Enter Country"
+    />
+    <Field
+      label="State"
+      name="state"
+      value={formData.shippingDetails.state}
+      onChange={handleShippingChange}
+      placeholder="Enter State"
+    />
+    <Field
+      label="City"
+      name="city"
+      value={formData.shippingDetails.city}
+      onChange={handleShippingChange}
+      placeholder="Enter City"
+    />
+    <Field
+      label="Street"
+      name="street"
+      value={formData.shippingDetails.street}
+      onChange={handleShippingChange}
+      placeholder="Enter Street"
+    />
+    <Field
+      label="Landmark"
+      name="landmark"
+      value={formData.shippingDetails.landmark}
+      onChange={handleShippingChange}
+      placeholder="Enter Landmark"
+    />
+    <Field
+      label="Shipping Phone"
+      name="phone_number"
+      value={formData.shippingDetails.phone_number}
+      onChange={handleShippingChange}
+      placeholder="Enter Phone"
+      type="tel"
+    />
+    <Field
+      label="Shipping Email"
+      name="email"
+      value={formData.shippingDetails.email}
+      onChange={handleShippingChange}
+      placeholder="Enter Email"
+      type="email"
+    />
+  </div>
+</div>
         </div>
 
         {/* Select Products Section */}
@@ -758,7 +1078,7 @@ const InvoicesEditPage = () => {
                 marginBottom: "1rem",
               }}
             >
-              {showProductTable ? "Hide Product List" : "Add Products"}
+              {showProductTable ? "Hide Product List" : "Edit Products"}
             </button>
 
             {showProductTable && (
@@ -817,11 +1137,23 @@ const InvoicesEditPage = () => {
                         <TableCell sx={{ color: "#fff" }}>
                           Specifications
                         </TableCell>
-
                         <TableCell sx={{ color: "#fff" }}>Quantity</TableCell>
                         <TableCell sx={{ color: "#fff" }}>
-                          Purchase Price
+                          New Quantity
                         </TableCell>
+                        <TableCell sx={{ color: "#fff" }}>
+                          New Device IDs
+                        </TableCell>
+
+                        <TableCell sx={{ color: "#fff" }}>
+                          Return Quantity
+                        </TableCell>
+
+                        <TableCell sx={{ color: "#fff" }}>
+                          Returned Device IDs
+                        </TableCell>
+
+                        
                         <TableCell sx={{ color: "#fff" }}>
                           Price for Durations
                         </TableCell>
@@ -840,7 +1172,6 @@ const InvoicesEditPage = () => {
                           </TableCell>
                           <TableCell>{product.product_name}</TableCell>
                           <TableCell>{product.brand}</TableCell>
-
                           <TableCell>
                             {[
                               product.model,
@@ -849,10 +1180,9 @@ const InvoicesEditPage = () => {
                               product.storage,
                               product.graphics,
                             ]
-                              .filter(Boolean) // Remove undefined/null values
+                              .filter(Boolean)
                               .join(" | ")}
                           </TableCell>
-
                           <TableCell>
                             <Box display="flex" alignItems="center">
                               <IconButton
@@ -894,21 +1224,196 @@ const InvoicesEditPage = () => {
                               </IconButton>
                             </Box>
                           </TableCell>
-                          <TableCell>{product.purchase_price}</TableCell>
-
                           <TableCell>
-                            {formData.transaction_type === "Rent" ? (
-                              <>
-                                {/* <div>Day: {product.rent_price_per_day}</div> */}
-                                <div>Month: {product.rent_price_per_month}</div>
-                                {/* <div>
-                                  6 Months: {product.rent_price_6_months}
-                                </div>
-                                <div>1 Year: {product.rent_price_1_year}</div> */}
-                              </>
-                            ) : (
-                              product.purchase_price
+                            <Box display="flex" alignItems="center">
+                              <IconButton
+                                size="small"
+                                onClick={() => decrementNewQty(product.id)}
+                                disabled={
+                                  !selectedProductIds.includes(product.id)
+                                }
+                              >
+                                <Remove fontSize="small" />
+                              </IconButton>
+                              <TextField
+                                type="number"
+                                size="small"
+                                value={
+                                  selectedProductIds.includes(product.id)
+                                    ? newQuantities[product.id] || ""
+                                    : ""
+                                }
+                                onChange={(e) =>
+                                  handleNewQtyChange(product.id, e.target.value)
+                                }
+                                disabled={
+                                  !selectedProductIds.includes(product.id)
+                                }
+                                inputProps={{
+                                  min: 0,
+                                  style: { width: 50, textAlign: "center" },
+                                }}
+                              />
+                              <IconButton
+                                size="small"
+                                onClick={() => incrementNewQty(product.id)}
+                                disabled={
+                                  !selectedProductIds.includes(product.id)
+                                }
+                              >
+                                <Add fontSize="small" />
+                              </IconButton>
+                            </Box>
+                          </TableCell>
+                          {/* New Device IDs */}
+                          <TableCell>
+                            {newQuantities[product.id] > 0 && (
+                              <Box
+                                display="flex"
+                                flexDirection="column"
+                                gap={1}
+                              >
+                                {(newDeviceIds[product.id] || []).map(
+                                  (id, idx) => (
+                                    <TextField
+                                      key={idx}
+                                      size="small"
+                                      placeholder={`New Device ID ${idx + 1}`}
+                                      value={id}
+                                      onChange={(e) => {
+                                        const updated = [
+                                          ...(newDeviceIds[product.id] || []),
+                                        ];
+                                        updated[idx] = e.target.value;
+                                        setNewDeviceIds((prev) => ({
+                                          ...prev,
+                                          [product.id]: updated,
+                                        }));
+                                      }}
+                                    />
+                                  )
+                                )}
+                                {(newDeviceIds[product.id]?.length || 0) <
+                                  (newQuantities[product.id] || 0) && (
+                                  <Button
+                                    size="small"
+                                    variant="outlined"
+                                    onClick={() =>
+                                      setNewDeviceIds((prev) => ({
+                                        ...prev,
+                                        [product.id]: [
+                                          ...(prev[product.id] || []),
+                                          "",
+                                        ],
+                                      }))
+                                    }
+                                  >
+                                    + Add New ID
+                                  </Button>
+                                )}
+                              </Box>
                             )}
+                          </TableCell>
+                          <TableCell>
+                            <Box display="flex" alignItems="center">
+                              <IconButton
+                                size="small"
+                                onClick={() => decrementReturnQty(product.id)}
+                                disabled={
+                                  !selectedProductIds.includes(product.id)
+                                }
+                              >
+                                <Remove fontSize="small" />
+                              </IconButton>
+                              <TextField
+                                type="number"
+                                size="small"
+                                value={
+                                  selectedProductIds.includes(product.id)
+                                    ? returnQuantities[product.id] || ""
+                                    : ""
+                                }
+                                onChange={(e) =>
+                                  handleReturnQtyChange(
+                                    product.id,
+                                    e.target.value
+                                  )
+                                }
+                                disabled={
+                                  !selectedProductIds.includes(product.id)
+                                }
+                                inputProps={{
+                                  min: 0,
+                                  style: { width: 50, textAlign: "center" },
+                                }}
+                              />
+                              <IconButton
+                                size="small"
+                                onClick={() => incrementReturnQty(product.id)}
+                                disabled={
+                                  !selectedProductIds.includes(product.id)
+                                }
+                              >
+                                <Add fontSize="small" />
+                              </IconButton>
+                            </Box>
+                          </TableCell>
+                          <TableCell>
+                            {returnQuantities[product.id] > 0 && (
+                              <Box
+                                display="flex"
+                                flexDirection="column"
+                                gap={1}
+                              >
+                                {(returnedDeviceIds[product.id] || []).map(
+                                  (id, idx) => (
+                                    <TextField
+                                      key={idx}
+                                      size="small"
+                                      placeholder={`Returned Device ID ${
+                                        idx + 1
+                                      }`}
+                                      value={id}
+                                      onChange={(e) => {
+                                        const updated = [
+                                          ...(returnedDeviceIds[product.id] ||
+                                            []),
+                                        ];
+                                        updated[idx] = e.target.value;
+                                        setReturnedDeviceIds((prev) => ({
+                                          ...prev,
+                                          [product.id]: updated,
+                                        }));
+                                      }}
+                                    />
+                                  )
+                                )}
+                                {(returnedDeviceIds[product.id]?.length || 0) <
+                                  (returnQuantities[product.id] || 0) && (
+                                  <Button
+                                    size="small"
+                                    variant="outlined"
+                                    onClick={() =>
+                                      setReturnedDeviceIds((prev) => ({
+                                        ...prev,
+                                        [product.id]: [
+                                          ...(prev[product.id] || []),
+                                          "",
+                                        ],
+                                      }))
+                                    }
+                                  >
+                                    + Add Returned ID
+                                  </Button>
+                                )}
+                              </Box>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                              <>
+                                <div>Month: {product.rent_price_per_month}</div>
+                              </>
+                           
                           </TableCell>
                         </TableRow>
                       ))}
@@ -920,21 +1425,6 @@ const InvoicesEditPage = () => {
           </div>
         </div>
 
-        {/* Totals Section */}
-        <div style={cardStyle}>
-          <div style={cardHeaderContainerStyle}>
-            <div style={iconStyle}>💰</div>
-            <h3 style={cardHeaderStyle}>Invoice Totals</h3>
-          </div>
-          <div style={fieldsGridStyle}>
-            <Field label="Subtotal" name="amount" value={formatINR(formData.amount)} readOnly />
-            <Field label="CGST (9%)" name="cgst" value={formatINR(formData.cgst)} readOnly />
-            <Field label="SGST (9%)" name="sgst" value={formatINR(formData.sgst)} readOnly />
-            <Field label="Total Tax" name="total_tax" value={formatINR(formData.total_tax)} readOnly />
-            <Field label="Total Amount" name="total_amount" value={formatINR(formData.total_amount)} readOnly />
-          </div>
-        </div>
-        
         {/* Action Buttons */}
         <div style={buttonContainerStyle}>
           <button
@@ -942,6 +1432,7 @@ const InvoicesEditPage = () => {
             style={cancelBtnStyle}
             onMouseEnter={(e) => (e.target.style.backgroundColor = "#e5e7eb")}
             onMouseLeave={(e) => (e.target.style.backgroundColor = "#f3f4f6")}
+            onClick={() => navigate("/dashboard/operations/invoices")}
           >
             Cancel
           </button>
@@ -959,6 +1450,7 @@ const InvoicesEditPage = () => {
   );
 };
 
+// Field component
 const Field = ({
   label,
   name,
@@ -1011,7 +1503,28 @@ const Field = ({
   </div>
 );
 
-// Styles (same as in InvoicesAddPage.jsx)
+// Styles (same as InvoicesAddPage.jsx)
+const monthButtonContainerStyle = {
+  display: "flex",
+  justifyContent: "center",
+  gap: "1rem",
+  marginBottom: "1rem",
+  width: "100%",
+};
+
+const monthButtonStyle = (isSelected) => ({
+  padding: "0.5rem 1rem",
+  backgroundColor: isSelected ? "#2563eb" : "#f3f4f6",
+  color: isSelected ? "white" : "#374151",
+  border: "1px solid #d1d5db",
+  borderRadius: "4px",
+  cursor: "pointer",
+  transition: "all 0.2s ease",
+  "&:hover": {
+    backgroundColor: isSelected ? "#1d4ed8" : "#e5e7eb",
+  },
+});
+
 const containerStyle = {
   padding: "2rem",
   fontFamily:

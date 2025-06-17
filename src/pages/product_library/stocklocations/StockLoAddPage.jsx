@@ -3,9 +3,18 @@ import { Snackbar, Alert } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 
+const generateStockLocationId = () => {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  let randomPart = '';
+  for (let i = 0; i < 5; i++) {
+    randomPart += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return `SL-${randomPart}`;
+};
+
 const StockLoAddPage = () => {
   const [formData, setFormData] = useState({
-    stockLocationId: '',
+    stockLocationId: generateStockLocationId(),
     stockName: '',
     mailId: '',
     phoneNo: '',
@@ -63,7 +72,17 @@ const StockLoAddPage = () => {
             <h3 style={cardHeaderStyle}>Stock Location Information</h3>
           </div>
           <div style={fieldsGridStyle}>
-            <Field label="Stock Location ID" placeholder="Enter Stock Location ID" value={formData.stockLocationId} onChange={(value) => handleInputChange('stockLocationId', value)} required />
+            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+              <Field
+                label="Stock Location ID"
+                placeholder="Enter Stock Location ID"
+                value={formData.stockLocationId}
+                onChange={(value) => handleInputChange('stockLocationId', value)}
+                required
+              />
+          
+          
+            </div>
             <Field label="Stock Name" placeholder="Enter Stock Name" value={formData.stockName} onChange={(value) => handleInputChange('stockName', value)} required />
             <Field label="Mail ID" type="email" placeholder="Email id" value={formData.mailId} onChange={(value) => handleInputChange('mailId', value)} />
             <Field label="Phone No" type="tel" placeholder="Contact number" value={formData.phoneNo} onChange={(value) => handleInputChange('phoneNo', value)} />
@@ -128,7 +147,7 @@ const Field = ({ label, placeholder, type = 'text', required = false, value, onC
   </div>
 );
 
-// Same styles as before
+// Styles (same as before)
 const containerStyle = {
   padding: '2rem',
   fontFamily: '"Inter", "Segoe UI", -apple-system, BlinkMacSystemFont, sans-serif',

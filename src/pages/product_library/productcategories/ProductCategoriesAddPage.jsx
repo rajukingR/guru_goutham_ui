@@ -1,8 +1,17 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useNavigate } from "react-router-dom";
 import API_URL from "../../../api/Api_url";
 import { Snackbar, Alert, Checkbox, FormControlLabel } from '@mui/material';
+
+const generateCategoryCode = () => {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  let code = '';
+  for (let i = 0; i < 5; i++) {
+    code += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return `PC-${code}`;
+};
 
 const ProductCategoriesAddPage = () => {
   const navigate = useNavigate();
@@ -18,6 +27,13 @@ const ProductCategoriesAddPage = () => {
     message: '',
     severity: 'success'
   });
+
+  useEffect(() => {
+    setFormData(prev => ({
+      ...prev,
+      categoryCode: generateCategoryCode()
+    }));
+  }, []);
 
   const handleInputChange = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -42,7 +58,7 @@ const ProductCategoriesAddPage = () => {
       });
 
       setFormData({
-        categoryCode: '',
+        categoryCode: generateCategoryCode(),
         categoryName: '',
         description: '',
         activeStatus: false,
@@ -86,7 +102,7 @@ const ProductCategoriesAddPage = () => {
           <div style={fieldsGridStyle}>
             <Field
               label="Category Code"
-              placeholder="Enter Category Code"
+              placeholder="Auto-generated"
               value={formData.categoryCode}
               onChange={(value) => handleInputChange('categoryCode', value)}
               required
@@ -157,7 +173,10 @@ const ProductCategoriesAddPage = () => {
 
 const Field = ({ label, placeholder, value, onChange, required }) => (
   <div style={fieldContainerStyle}>
-    <label style={labelStyle}>{label}{required && <span style={{ color: 'red' }}> *</span>}</label>
+    <label style={labelStyle}>
+      {label}
+      {required && <span style={{ color: 'red' }}> *</span>}
+    </label>
     <input
       type="text"
       placeholder={placeholder}
@@ -167,7 +186,6 @@ const Field = ({ label, placeholder, value, onChange, required }) => (
     />
   </div>
 );
-
 
 // Styles
 const containerStyle = {
@@ -231,11 +249,6 @@ const labelStyle = {
   color: '#374151',
 };
 
-const requiredStyle = {
-  color: '#ef4444',
-  marginLeft: '0.25rem',
-};
-
 const inputStyle = {
   padding: '0.6rem',
   borderRadius: '8px',
@@ -254,15 +267,6 @@ const checkboxLabelStyle = {
   alignItems: 'center',
   gap: '1rem',
   cursor: 'pointer',
-};
-
-const checkboxStyle = {
-  display: 'none',
-};
-
-const checkboxTextStyle = {
-  fontWeight: '600',
-  color: '#1f2937',
 };
 
 const buttonContainerStyle = {

@@ -8,6 +8,18 @@ import API_URL from "../../../api/Api_url";
 import { useNavigate } from 'react-router-dom';
 import { Snackbar, Alert } from '@mui/material';
 
+
+// ✅ Put this at the top of PoOperationAddPageLayout.jsx
+const generateRandomId = () => {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  let code = '';
+  for (let i = 0; i < 5; i++) {
+    code += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return `PR-${code}`;
+};
+
+
 const PurchaseRequestAdd = () => {
   const [showProductTable, setShowProductTable] = useState(false);
   const [selectedProductIds, setSelectedProductIds] = useState([]);
@@ -24,7 +36,7 @@ const PurchaseRequestAdd = () => {
 
   const [formData, setFormData] = useState({
     purchaseRequestId: '',
-    purchaseRequestDate: new Date().toISOString().split('T')[0], // Today's date in YYYY-MM-DD
+    purchaseRequestDate: new Date().toISOString().split('T')[0],
     purchaseType: 'Buy',
     purchaseRequestStatus: 'Pending',
     owner: '',
@@ -35,21 +47,23 @@ const PurchaseRequestAdd = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [quantities, setQuantities] = useState({});
   const navigate = useNavigate();
-const [snackbar, setSnackbar] = useState({
-  open: false,
-  message: '',
-  severity: 'success'
-});
 
+  const [snackbar, setSnackbar] = useState({
+    open: false,
+    message: '',
+    severity: 'success'
+  });
 
   useEffect(() => {
-    // Fetch suppliers
+    setFormData(prev => ({
+      ...prev,
+      purchaseRequestId: generateRandomId()
+    }));
+
     const fetchSuppliers = async () => {
       try {
         const response = await fetch(`${API_URL}/supplier`);
-        if (!response.ok) {
-          throw new Error('Failed to fetch suppliers');
-        }
+        if (!response.ok) throw new Error('Failed to fetch suppliers');
         const data = await response.json();
         setSuppliers(data);
         setLoading(prev => ({ ...prev, suppliers: false }));
@@ -59,13 +73,10 @@ const [snackbar, setSnackbar] = useState({
       }
     };
 
-    // Fetch products
     const fetchProducts = async () => {
       try {
         const response = await fetch(`${API_URL}/product-templete`);
-        if (!response.ok) {
-          throw new Error('Failed to fetch products');
-        }
+        if (!response.ok) throw new Error('Failed to fetch products');
         const data = await response.json();
         setProducts(data);
         setLoading(prev => ({ ...prev, products: false }));
@@ -102,67 +113,60 @@ const [snackbar, setSnackbar] = useState({
     setQuantities(prev => ({ ...prev, [id]: Math.max(0, (prev[id] || 0) - 1) }));
   };
 
-const handleSubmit = async () => {
-  const selectedProducts = products
-    .filter(p => selectedProductIds.includes(p.id))
-    .map(p => ({
-      product_id: p.id,
-      product_name: p.name,
-      quantity: quantities[p.id] || 0,
-      unit_price: 0
-    }));
+  const handleSubmit = async () => {
+    const selectedProducts = products
+      .filter(p => selectedProductIds.includes(p.id))
+      .map(p => ({
+        product_id: p.id,
+        product_name: p.name,
+        quantity: quantities[p.id] || 0,
+        unit_price: 0
+      }));
 
-  const payload = {
-    purchase_request_id: formData.purchaseRequestId,
-    purchase_request_date: formData.purchaseRequestDate,
-    purchase_type: formData.purchaseType,
-    purchase_request_status: formData.purchaseRequestStatus,
-    owner: formData.owner,
-    supplier_id: formData.supplier,
-    description: formData.description,
-    selected_products: selectedProducts
+    const payload = {
+      purchase_request_id: formData.purchaseRequestId,
+      purchase_request_date: formData.purchaseRequestDate,
+      purchase_type: formData.purchaseType,
+      purchase_request_status: formData.purchaseRequestStatus,
+      owner: formData.owner,
+      supplier_id: formData.supplier,
+      description: formData.description,
+      selected_products: selectedProducts
+    };
+
+    try {
+      const response = await fetch(`${API_URL}/purchase-requests/create`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      if (response.ok) {
+        setSnackbar({ open: true, message: 'Purchase request created successfully!', severity: 'success' });
+        setTimeout(() => navigate('/dashboard/procurement/purchase-requests'), 1500);
+      } else {
+        const error = await response.json();
+        console.error(error);
+        setSnackbar({ open: true, message: 'Failed to create purchase request.', severity: 'error' });
+      }
+    } catch (err) {
+      console.error(err);
+      setSnackbar({ open: true, message: 'Error occurred during submission.', severity: 'error' });
+    }
   };
 
-  try {
-    const response = await fetch(`${API_URL}/purchase-requests/create`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(payload)
-    });
-
-    if (response.ok) {
-      setSnackbar({ open: true, message: 'Purchase request created successfully!', severity: 'success' });
-      setTimeout(() => {
-        navigate('/dashboard/procurement/purchase-requests');
-      }, 1500);
-    } else {
-      const error = await response.json();
-      console.error(error);
-      setSnackbar({ open: true, message: 'Failed to create purchase request.', severity: 'error' });
-    }
-  } catch (err) {
-    console.error(err);
-    setSnackbar({ open: true, message: 'Error occurred during submission.', severity: 'error' });
-  }
-};
-
-
   if (loading.suppliers || loading.products) {
-    return <div style={containerStyle}>Loading...</div>;
+    return <div style={{ padding: 20 }}>Loading...</div>;
   }
 
   if (error.suppliers || error.products) {
     return (
-      <div style={containerStyle}>
+      <div style={{ padding: 20 }}>
         {error.suppliers && <p>Error loading suppliers: {error.suppliers}</p>}
         {error.products && <p>Error loading products: {error.products}</p>}
       </div>
     );
   }
-
-
   return (
     <div style={containerStyle}>
         

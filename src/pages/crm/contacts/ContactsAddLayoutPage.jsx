@@ -4,6 +4,18 @@ import Alert from "@mui/material/Alert";
 import { useNavigate } from "react-router-dom";
 import { useSelector } from "react-redux";
 import API_URL from "../../../api/Api_url"
+
+
+ const generateCustomerId = () => {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    let randomPart = '';
+    for (let i = 0; i < 5; i++) {
+      randomPart += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return `CT-${randomPart}`; // CT- prefix for Customer
+  };
+
+
 const ContactsAddLayoutPage = () => {
   const { user } = useSelector((state) => state.auth);
   const LoginUserName = user.full_name;
@@ -33,6 +45,13 @@ const ContactsAddLayoutPage = () => {
     contact_generated_by: "",
     status: "Inactive",
   });
+
+  useEffect(() => {
+    setFormData(prev => ({
+      ...prev,
+      customer_id: generateCustomerId()
+    }));
+  }, []);
 
   useEffect(() => {
     if (LoginUserName) {
@@ -88,10 +107,8 @@ const ContactsAddLayoutPage = () => {
         }
       }
     };
-
     fetchLocationData();
   }, [formData.address.zip]);
-
   const handleInputChange = (field, value) => {
     // Handle nested address fields
     if (field.includes("address.")) {
@@ -110,10 +127,8 @@ const ContactsAddLayoutPage = () => {
       }));
     }
   };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
-
     try {
       const response = await fetch(
         `${API_URL}/contacts/create`,
@@ -125,9 +140,7 @@ const ContactsAddLayoutPage = () => {
           body: JSON.stringify(formData),
         }
       );
-
       const data = await response.json();
-
       if (response.ok) {
         setSnackbar({
           open: true,
@@ -149,7 +162,6 @@ const ContactsAddLayoutPage = () => {
       });
     }
   };
-
   return (
     <div style={containerStyle}>
       <Snackbar
@@ -197,7 +209,6 @@ const ContactsAddLayoutPage = () => {
                 value={formData.last_name}
                 onChange={handleInputChange}
               />
-
               <Field
                 label="Email ID"
                 type="email"
@@ -206,7 +217,6 @@ const ContactsAddLayoutPage = () => {
                 value={formData.email}
                 onChange={handleInputChange}
               />
-
               <Field
                 label="Phone Number"
                 type="tel"
@@ -215,7 +225,6 @@ const ContactsAddLayoutPage = () => {
                 value={formData.phone_number}
                 onChange={handleInputChange}
               />
-
               <Field
                 label="Company Name"
                 name="company_name"
@@ -223,7 +232,6 @@ const ContactsAddLayoutPage = () => {
                 value={formData.company_name}
                 onChange={handleInputChange}
               />
-
               <Field
                 label="Customer ID"
                 name="customer_id"
@@ -231,7 +239,6 @@ const ContactsAddLayoutPage = () => {
                 value={formData.customer_id}
                 onChange={handleInputChange}
               />
-
               <Field
                 label="Date"
                 type="date"
@@ -239,7 +246,6 @@ const ContactsAddLayoutPage = () => {
                 value={formData.date}
                 onChange={handleInputChange}
               />
-
               <Field
                 label="Industry"
                 name="industry"
@@ -247,7 +253,6 @@ const ContactsAddLayoutPage = () => {
                 value={formData.industry}
                 onChange={handleInputChange}
               />
-
               <Field
                 label="Payment Type"
                 name="payment_type"

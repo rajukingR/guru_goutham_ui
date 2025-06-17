@@ -16,8 +16,17 @@ import {
 } from "@mui/material";
 import { Add, Remove } from "@mui/icons-material";
 import { useNavigate } from "react-router-dom";
-
 import API_URL from "../../api/Api_url";
+
+const generateDcId = () => {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  let randomPart = '';
+  for (let i = 0; i < 6; i++) {
+    randomPart += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return `DC-${randomPart}`;
+};
+
 
 const DeliveryChallanAddPage = () => {
   const navigate = useNavigate();
@@ -67,6 +76,15 @@ const DeliveryChallanAddPage = () => {
     message: "",
     severity: "success",
   });
+
+
+  useEffect(() => {
+  setFormData(prev => ({
+    ...prev,
+    dc_id: generateDcId()
+  }));
+}, []);
+
 
   // Fetch orders and products on component mount
   useEffect(() => {
