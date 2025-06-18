@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import DynamicTable from "../../../components/table-format/DynamicTable";
+import API_URL from "../../../api/Api_url";
 
 const CreaditNotesTableLayout = () => {
   const [data, setData] = useState([]);
@@ -11,7 +12,7 @@ const CreaditNotesTableLayout = () => {
 
   const fetchCreditNotes = async () => {
     try {
-      const response = await axios.get("http://localhost:5000/api/credit-notes");
+      const response = await axios.get(`${API_URL}/credit-notes`);
       setData(response.data);
     } catch (error) {
       console.error("Failed to fetch credit notes:", error);

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import DynamicTable from "../../components/table-format/DynamicTable";
 import axios from "axios";
+import API_URL from "../../api/Api_url";
 
 const ClinetTableLayout = () => {
   const [data, setData] = useState([]);
@@ -22,7 +23,7 @@ const ClinetTableLayout = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const res = await axios.get("http://localhost:5000/api/user"); 
+        const res = await axios.get(`${API_URL}/user`); 
         const formattedData = res.data.map((item, index) => ({
           s_no: index + 1,
           client_id: item.client_id,

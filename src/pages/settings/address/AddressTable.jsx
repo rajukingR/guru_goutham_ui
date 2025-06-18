@@ -1,5 +1,6 @@
 import React from "react";
 import DynamicTable from "../../../components/table-format/DynamicTable";
+import API_URL from "../../../api/Api_url";
 
 const AddressTable = () => {
   const columns = [

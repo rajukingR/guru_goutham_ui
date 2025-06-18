@@ -69,6 +69,7 @@ const ProductsEditLayout = () => {
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(false);
   const [existingImage, setExistingImage] = useState(null);
+  const [stockLocations, setStockLocations] = useState([]);
 
   const [snackbar, setSnackbar] = useState({
     open: false,
@@ -85,11 +86,13 @@ const ProductsEditLayout = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [productRes, brandsRes, categoriesRes] = await Promise.all([
-          axios.get(`${API_URL}/product-templete/${id}`),
-          axios.get(`${API_URL}/product-brands/active`),
-          axios.get(`${API_URL}/product-categories/active`),
-        ]);
+        const [productRes, brandsRes, categoriesRes, stockLocationRes] =
+          await Promise.all([
+            axios.get(`${API_URL}/product-templete/${id}`),
+            axios.get(`${API_URL}/product-brands/active`),
+            axios.get(`${API_URL}/product-categories/active`),
+            axios.get(`${API_URL}/stock-location/active-stock-location`),
+          ]);
 
         const productData = productRes.data;
 
@@ -150,6 +153,13 @@ const ProductsEditLayout = () => {
         });
 
         setBrands(brandsRes.data);
+        setStockLocations(
+          stockLocationRes.data.map((item) => ({
+            stockLocationId: item.stock_location_id,
+            stockName: item.stock_name,
+          }))
+        );
+
         setCategories(categoriesRes.data);
         setLoading(false);
       } catch (err) {
@@ -490,14 +500,14 @@ const ProductsEditLayout = () => {
               required
             />
 
-            <Field
+            {/* <Field
               label="Pro Model"
               name="pro_model"
               placeholder="Enter Pro Model"
               value={formData.pro_model}
               onChange={handleChange}
               required
-            />
+            /> */}
           </>
         );
       case "Monitors":
@@ -764,19 +774,21 @@ const ProductsEditLayout = () => {
             />
 
             <Field
-              label="Stock Location"
-              type="select"
-              name="stock_location"
-              value={formData.stock_location}
-              onChange={handleChange}
-              required
-            >
-              <option value="">Select Stock Location</option>
-              <option value="Warehouse-A">Warehouse-A</option>
-              <option value="Warehouse-B">Warehouse-B</option>
-              <option value="FutureVault-04">FutureVault-04</option>
-              <option value="Main Storage">Main Storage</option>
-            </Field>
+  label="Stock Location"
+  type="select"
+  name="stock_location"
+  value={formData.stock_location}
+  onChange={handleChange}
+  required
+>
+  <option value="">Select Stock Location</option>
+  {stockLocations.map((loc) => (
+    <option key={loc.stockLocationId} value={loc.stockName}>
+      {loc.stockName}
+    </option>
+  ))}
+</Field>
+
 
             <div style={{ gridColumn: "1 / -1" }}>
               <Field
@@ -829,26 +841,26 @@ const ProductsEditLayout = () => {
             />
 
             {[
-              {
-                label: "Per Day",
-                percent: "rent_percent_per_day",
-                price: "rent_price_per_day",
-              },
+              // {
+              //   label: "Per Day",
+              //   percent: "rent_percent_per_day",
+              //   price: "rent_price_per_day",
+              // },
               {
                 label: "Per Month",
                 percent: "rent_percent_per_month",
                 price: "rent_price_per_month",
               },
-              {
-                label: "6 Months",
-                percent: "rent_percent_6_months",
-                price: "rent_price_6_months",
-              },
-              {
-                label: "1 Year",
-                percent: "rent_percent_1_year",
-                price: "rent_price_1_year",
-              },
+              // {
+              //   label: "6 Months",
+              //   percent: "rent_percent_6_months",
+              //   price: "rent_price_6_months",
+              // },
+              // {
+              //   label: "1 Year",
+              //   percent: "rent_percent_1_year",
+              //   price: "rent_price_1_year",
+              // },
             ].map(({ label, percent, price }) => (
               <div
                 key={label}
@@ -863,7 +875,9 @@ const ProductsEditLayout = () => {
                     onChange={handlePriceChange}
                     required
                   >
+                    <option value="0">0%</option>
                     <option value="1">1%</option>
+
                     <option value="2">2%</option>
                     <option value="3">3%</option>
                     <option value="4">4%</option>

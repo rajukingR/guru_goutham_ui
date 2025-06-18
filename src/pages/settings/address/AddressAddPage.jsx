@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { ChevronDown, CheckCircle, X } from 'lucide-react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
+import API_URL from "../../../api/Api_url";
 
 const AddressAddPage = () => {
   const navigate = useNavigate();
@@ -43,7 +44,7 @@ const AddressAddPage = () => {
     
     setIsSubmitting(true);
     try {
-      await axios.post('http://localhost:5000/api/countries/create', {
+      await axios.post(`${API_URL}/countries/create`, {
         country_name: formData.countryName
       });
       setShowSuccessSnackbar(true);
@@ -64,7 +65,7 @@ const AddressAddPage = () => {
     
     setIsSubmitting(true);
     try {
-      await axios.post('http://localhost:5000/api/states/create', {
+      await axios.post(`${API_URL}/states/create`, {
         country_id: formData.selectedCountryForState,
         state_name: formData.stateName
       });
@@ -86,7 +87,7 @@ const AddressAddPage = () => {
     
     setIsSubmitting(true);
     try {
-      await axios.post('http://localhost:5000/api/cities/create', {
+      await axios.post(`${API_URL}/cities/create`, {
         country_id: formData.selectedCountryForCity,
         state_id: formData.selectedStateForCity,
         city_name: formData.cityName

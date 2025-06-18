@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { ChevronDown, CheckCircle, X } from 'lucide-react';
 import axios from 'axios';
 import { useNavigate, useParams } from 'react-router-dom';
+import API_URL from "../../../api/Api_url";
 
 const BranchEditPage = () => {
   const navigate = useNavigate();
@@ -25,7 +26,7 @@ const BranchEditPage = () => {
   useEffect(() => {
     const fetchBranchData = async () => {
       try {
-        const response = await axios.get(`http://localhost:5000/api/branches/${id}`);
+        const response = await axios.get(`${API_URL}/branches/${id}`);
         const branch = response.data;
 
         setFormData({
@@ -53,7 +54,7 @@ const BranchEditPage = () => {
     const fetchLocation = async () => {
       if (formData.pincode.length === 6) {
         try {
-          const response = await axios.get(`http://localhost:5000/api/branches${formData.pincode}`);
+          const response = await axios.get(`${API_URL}/branches${formData.pincode}`);
           const data = response.data;
 
           if (data[0].Status === "Success") {
@@ -117,7 +118,7 @@ const BranchEditPage = () => {
     setIsSubmitting(true);
 
     try {
-      await axios.put(`http://localhost:5000/api/branches/${id}`, {
+      await axios.put(`${API_URL}/branches/${id}`, {
         branch_code: formData.branchCode,
         branch_name: formData.branchName,
         pincode: formData.pincode,

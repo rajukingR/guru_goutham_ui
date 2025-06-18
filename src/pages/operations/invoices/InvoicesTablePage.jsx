@@ -18,7 +18,7 @@ const InvoicesTablePage = () => {
     { id: "phone_number", label: "Phone" },
     { id: "pan_number", label: "PAN" },
     { id: "payment_mode", label: "Payment Mode" },
-    { id: "approval_status", label: "Status" },
+    // { id: "approval_status", label: "Status" },
     // { id: "amount", label: "Amount" },
     // { id: "cgst", label: "CGST" },
     // { id: "sgst", label: "SGST" },

@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import Snackbar from '@mui/material/Snackbar';
 import Alert from '@mui/material/Alert';
+import API_URL from "../../../api/Api_url";
 
 const AssetModificationTrackerEdit = () => {
   const { id } = useParams();
@@ -26,7 +27,7 @@ const AssetModificationTrackerEdit = () => {
   });
 
   useEffect(() => {
-    axios.get(`http://localhost:5000/api/asset-modifications/${id}`)
+    axios.get(`${API_URL}/asset-modifications/${id}`)
       .then(res => setFormData(res.data))
       .catch(err => console.error('Fetch failed:', err));
   }, [id]);
@@ -35,7 +36,7 @@ const AssetModificationTrackerEdit = () => {
     setFormData(prev => ({ ...prev, [field]: value }));
 
   const handleSubmit = () => {
-    axios.put(`http://localhost:5000/api/asset-modifications/${id}`, formData)
+    axios.put(`${API_URL}/asset-modifications/${id}`, formData)
       .then(() => {
         setSnackbarOpen(true); // Show success Snackbar
         setTimeout(() => {

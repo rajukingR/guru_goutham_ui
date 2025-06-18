@@ -8,6 +8,7 @@ import {
 } from "@mui/material";
 import DynamicTable from "../../../components/table-format/DynamicTable";
 import axios from "axios";
+import API_URL from "../../../api/Api_url";
 
 const AssetTrackerOp = () => {
   const [data, setData] = useState([]);
@@ -17,7 +18,7 @@ const AssetTrackerOp = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const response = await axios.get("http://localhost:5000/api/asset-modifications/");
+        const response = await axios.get(`${API_URL}/asset-modifications`);
         setData(response.data);
       } catch (error) {
         console.error("Failed to fetch asset modifications:", error);

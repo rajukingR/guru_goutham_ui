@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Snackbar, Alert } from '@mui/material';
+import API_URL from "../../../api/Api_url";
 
 const ServiceEdit = () => {
   const { id } = useParams();
@@ -30,7 +31,7 @@ const ServiceEdit = () => {
   useEffect(() => {
     const fetchService = async () => {
       try {
-        const response = await axios.get(`http://localhost:5000/api/product-services/${id}`);
+        const response = await axios.get(`${API_URL}/product-services/${id}`);
         setFormData({
           product_id: response.data.product_id,
           product_name: response.data.product_name,
@@ -74,7 +75,7 @@ const ServiceEdit = () => {
     try {
       setLoading(true);
       const response = await axios.put(
-        `http://localhost:5000/api/product-services/${id}`,
+        `${API_URL}/product-services/${id}`,
         formData
       );
       

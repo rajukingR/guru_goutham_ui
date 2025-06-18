@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { ChevronDown } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import API_URL from "../../../api/Api_url";
 
 const UsersAddPage = () => {
   const [formData, setFormData] = useState({
@@ -31,7 +32,7 @@ const UsersAddPage = () => {
   useEffect(() => {
     const fetchRoles = async () => {
       try {
-        const res = await fetch('http://localhost:5000/api/roles');
+        const res = await fetch(`${API_URL}/roles`);
         if (res.ok) {
           const data = await res.json();
           setRoles(data);
@@ -45,7 +46,7 @@ const UsersAddPage = () => {
 
     const fetchBranches = async () => {
       try {
-        const res = await fetch('http://localhost:5000/api/branches');
+        const res = await fetch(`${API_URL}/branches`);
         if (res.ok) {
           const data = await res.json();
           setBranches(data);
@@ -128,7 +129,7 @@ const UsersAddPage = () => {
       const roleObj = roles.find(r => r.id === payload.role_id);
       payload.role_name = roleObj ? roleObj.role_name : '';
 
-      const response = await fetch('http://localhost:5000/api/users/create', {
+      const response = await fetch(`${API_URL}/users/create`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)

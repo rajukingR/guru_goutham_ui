@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import DynamicTable from "../../../components/table-format/DynamicTable";
+import API_URL from "../../../api/Api_url";
 
 const UsersTablePage = () => {
   const [users, setUsers] = useState([]);
@@ -19,7 +20,7 @@ const UsersTablePage = () => {
   useEffect(() => {
     const fetchUsers = async () => {
       try {
-        const response = await fetch("http://localhost:5000/api/users");
+        const response = await fetch(`${API_URL}/users`);
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }

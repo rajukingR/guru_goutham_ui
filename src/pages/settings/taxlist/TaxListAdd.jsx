@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Snackbar from '@mui/material/Snackbar';
 import MuiAlert from '@mui/material/Alert';
+import API_URL from "../../../api/Api_url";
 
 const Alert = React.forwardRef(function Alert(props, ref) {
   return <MuiAlert elevation={6} ref={ref} variant="filled" {...props} />;
@@ -45,7 +46,7 @@ const TaxListAdd = () => {
         return;
       }
 
-      const response = await fetch('http://localhost:5000/api/tax-list/create', {
+      const response = await fetch(`${API_URL}/tax-list/create`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

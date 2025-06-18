@@ -3,6 +3,7 @@ import axios from 'axios';
 import { useNavigate, useParams } from 'react-router-dom';
 import Snackbar from '@mui/material/Snackbar';
 import MuiAlert from '@mui/material/Alert';
+import API_URL from "../../../api/Api_url";
 
 const Alert = React.forwardRef(function Alert(props, ref) {
   return <MuiAlert elevation={6} ref={ref} variant="filled" {...props} />;
@@ -36,7 +37,7 @@ const CreaditNotesEditFormLayout = () => {
   const [snackbarSeverity, setSnackbarSeverity] = useState('success');
 
   useEffect(() => {
-    axios.get(`http://localhost:5000/api/credit-notes/${id}`)
+    axios.get(`${API_URL}/credit-notes/${id}`)
       .then((res) => {
         const data = res.data;
         setFormData({
@@ -82,7 +83,7 @@ const CreaditNotesEditFormLayout = () => {
         if (payload[key]) payload[key] = new Date(payload[key]).toISOString();
       });
 
-      const response = await axios.put(`http://localhost:5000/api/credit-notes/update/${id}`, payload);
+      const response = await axios.put(`${API_URL}/credit-notes/update/${id}`, payload);
 
       if (response.status === 200 || response.status === 204) {
         setSnackbarMessage('Credit Note updated successfully!');

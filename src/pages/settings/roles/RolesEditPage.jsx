@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { ChevronDown, CheckCircle, X } from 'lucide-react';
 import axios from 'axios';
 import { useNavigate, useParams } from 'react-router-dom';
+import API_URL from "../../../api/Api_url";
 
 const RolesEditPage = () => {
   const navigate = useNavigate();
@@ -21,7 +22,7 @@ const RolesEditPage = () => {
   useEffect(() => {
     const fetchRoleData = async () => {
       try {
-        const response = await axios.get(`http://localhost:5000/api/roles/${id}`);
+        const response = await axios.get(`${API_URL}/roles/${id}`);
         const role = response.data;
         
         setFormData({
@@ -67,7 +68,7 @@ const RolesEditPage = () => {
     setIsSubmitting(true);
     
     try {
-      await axios.put(`http://localhost:5000/api/roles/update/${id}`, {
+      await axios.put(`${API_URL}/roles/update/${id}`, {
         role_name: formData.roleName,
         description: formData.description,
         is_active: formData.activeStatus,

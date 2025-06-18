@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Snackbar, Alert } from '@mui/material';
 import { useNavigate, useParams } from 'react-router-dom';
 import axios from 'axios';
+import API_URL from "../../../api/Api_url";
 
 const TaxListEdit = () => {
   const navigate = useNavigate();
@@ -21,7 +22,7 @@ const TaxListEdit = () => {
   useEffect(() => {
     const fetchTaxData = async () => {
       try {
-        const response = await axios.get(`http://localhost:5000/api/tax-list/${id}`);
+        const response = await axios.get(`${API_URL}/tax-list/${id}`);
         const data = response.data;
 
         setFormData({
@@ -56,7 +57,7 @@ const TaxListEdit = () => {
         return;
       }
 
-      await axios.put(`http://localhost:5000/api/tax-list/update/${id}`, {
+      await axios.put(`${API_URL}/tax-list/update/${id}`, {
         tax_code: formData.taxCode,
         tax_name: formData.taxName,
         percentage: parseFloat(formData.percentage),

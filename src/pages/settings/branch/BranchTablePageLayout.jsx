@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import DynamicTable from "../../../components/table-format/DynamicTable";
+import API_URL from "../../../api/Api_url";
 
 const BranchTablePageLayout = () => {
   const [data, setData] = useState([]);
@@ -20,7 +21,7 @@ const BranchTablePageLayout = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const response = await axios.get("http://localhost:5000/api/branches");
+        const response = await axios.get(`${API_URL}/branches`);
         const formattedData = response.data.map(item => ({
           id: item.id, // ✅ Fix added here
           branch_code: item.branch_code,

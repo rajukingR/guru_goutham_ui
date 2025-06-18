@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { ChevronDown, CheckCircle, X } from 'lucide-react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
+import API_URL from "../../../api/Api_url";
 
 const RolesAddPage = () => {
   const navigate = useNavigate();
@@ -41,7 +42,7 @@ const RolesAddPage = () => {
     setIsSubmitting(true);
     
     try {
-      const response = await axios.post('http://localhost:5000/api/roles/create', {
+      const response = await axios.post(`${API_URL}/roles/create`, {
         role_name: formData.roleName,
         description: formData.description,
         is_active: formData.activeStatus,

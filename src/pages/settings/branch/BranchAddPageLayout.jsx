@@ -3,6 +3,7 @@ import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import Snackbar from '@mui/material/Snackbar';
 import MuiAlert from '@mui/material/Alert';
+import API_URL from "../../../api/Api_url";
 
 const Alert = React.forwardRef(function Alert(props, ref) {
   return <MuiAlert elevation={6} ref={ref} variant="filled" {...props} />;
@@ -83,7 +84,7 @@ const BranchAddPageLayout = () => {
     };
 
     try {
-      const response = await axios.post('http://localhost:5000/api/branches/create', payload);
+      const response = await axios.post(`${API_URL}/branches/create`, payload);
       setSnackbarMessage('Branch created successfully!');
       setSnackbarSeverity('success');
       setOpenSnackbar(true);

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import { Snackbar, Alert } from '@mui/material';
+import API_URL from "../../../api/Api_url";
 
 const generateServiceNumber = () => {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
@@ -78,7 +79,7 @@ const ServiceAdd = () => {
     };
 
     try {
-      const response = await axios.post('http://localhost:5000/api/product-services/create', payload);
+      const response = await axios.post(`${API_URL}/product-services/create`, payload);
       if (response.status === 200 || response.status === 201) {
         setSnackbar({
           open: true,

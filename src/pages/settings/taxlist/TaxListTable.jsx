@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import axios from "axios";
 import DynamicTable from "../../../components/table-format/DynamicTable";
 import { id } from "date-fns/locale";
+import API_URL from "../../../api/Api_url";
 
 const TaxListTable = () => {
   const [data, setData] = useState([]);
@@ -18,7 +19,7 @@ const TaxListTable = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const response = await axios.get("http://localhost:5000/api/tax-list");
+        const response = await axios.get(`${API_URL}/tax-list`);
 
         const formatted = response.data.map((item, index) => ({
           s_no: index + 1,

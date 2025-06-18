@@ -1,78 +1,48 @@
 import React, { useEffect, useState } from "react";
-import { 
-  Card, 
-  CardContent, 
-  CircularProgress, 
-  Typography 
-} from "@mui/material";
 import axios from "axios";
+import API_URL from "../../../api/Api_url";
 import DynamicTable from "../../../components/table-format/DynamicTable";
 
 const StockLocationPageLayout = () => {
   const [data, setData] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
 
-  // Define columns (Removed "Active Status" and "Actions")
   const columns = [
-    { id: "stockLocationId", label: "Stock Location ID" },
-    { id: "stockName", label: "Stock Name" },
-    { id: "mailId", label: "Mail ID" },
-    { id: "phoneNo", label: "Phone No" },
+    { id: "s_id", label: "S.No" },
+    { id: "stock_location_id", label: "Location ID" },
+    { id: "stock_name", label: "Stock Name" },
+    { id: "mail_id", label: "Mail ID" },
+    { id: "phone_no", label: "Phone No" },
     { id: "pincode", label: "Pincode" },
     { id: "country", label: "Country" },
     { id: "state", label: "State" },
     { id: "city", label: "City" },
     { id: "landmark", label: "Landmark" },
-    { id: "street", label: "Street" }
+    { id: "street", label: "Street" },
   ];
 
   useEffect(() => {
     const fetchStockLocations = async () => {
       try {
-        const response = await axios.get("http://localhost:5000/api/stock-location/");
-        const formattedData = response.data.map((item) => ({
-          stockLocationId: item.stock_location_id,
-          stockName: item.stock_name,
-          mailId: item.mail_id,
-          phoneNo: item.phone_no,
-          pincode: item.pincode,
-          country: item.country,
-          state: item.state,
-          city: item.city,
-          landmark: item.landmark,
-          street: item.street
+        const response = await axios.get(`${API_URL}/stock-location`);
+        const formatted = response.data.map((item, index) => ({
+          s_id: index + 1,
+          ...item,
+            status: item.is_active ? "Active" : "Inactive", // ✅ Status from is_active
+
         }));
-        setData(formattedData);
-        setLoading(false);
-      } catch (err) {
-        console.error("Error fetching stock locations:", err);
-        setError("Failed to load stock locations.");
-        setLoading(false);
+        setData(formatted);
+      } catch (error) {
+        console.error("Error fetching stock locations:", error);
       }
     };
 
     fetchStockLocations();
   }, []);
 
-  if (loading) {
-    return <CircularProgress sx={{ display: "block", margin: "2rem auto" }} />;
-  }
-
-  if (error) {
-    return <Typography color="error" align="center" sx={{ mt: 4 }}>{error}</Typography>;
-  }
-
   return (
-    <Card>
-      <CardContent>
-        <DynamicTable 
-          columns={columns} 
-          data={data} 
-          rowsPerPage={5} 
-        />
-      </CardContent>
-    </Card>
+    <div>
+      <DynamicTable columns={columns} data={data} />
+    </div>
   );
 };
 

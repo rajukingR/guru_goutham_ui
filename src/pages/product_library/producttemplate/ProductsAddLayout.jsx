@@ -6,14 +6,13 @@ import MuiAlert from "@mui/material/Alert";
 import { useNavigate } from "react-router-dom";
 
 const generateProductId = () => {
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-  let randomPart = '';
+  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+  let randomPart = "";
   for (let i = 0; i < 5; i++) {
     randomPart += chars.charAt(Math.floor(Math.random() * chars.length));
   }
   return `PRD-${randomPart}`;
 };
-
 
 // Add this Alert component (optional but recommended for better styling)
 const Alert = React.forwardRef(function Alert(props, ref) {
@@ -77,11 +76,12 @@ const ProductsAddLayout = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(false);
+const [stockLocations, setStockLocations] = useState([]);
 
   const [snackbar, setSnackbar] = useState({
     open: false,
     message: "",
-    severity: "info", 
+    severity: "info",
   });
 
   const showSnackbar = (message, severity = "info") => {
@@ -89,39 +89,47 @@ const ProductsAddLayout = () => {
   };
 
   useEffect(() => {
-  setFormData(prev => ({
-    ...prev,
-    product_id: generateProductId()
-  }));
-}, []);
-
+    setFormData((prev) => ({
+      ...prev,
+      product_id: generateProductId(),
+    }));
+  }, []);
 
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const [brandsRes, categoriesRes] = await Promise.all([
-          axios.get(`${API_URL}/product-brands/active`),
-          axios.get(`${API_URL}/product-categories/active`),
-        ]);
-        setBrands(brandsRes.data);
-        setCategories(categoriesRes.data);
-        setLoading(false);
-      } catch (err) {
-        setError(err.message);
-        setLoading(false);
-      }
-    };
+   const fetchData = async () => {
+  try {
+    const [brandsRes, categoriesRes, stockLocationRes] = await Promise.all([
+      axios.get(`${API_URL}/product-brands/active`),
+      axios.get(`${API_URL}/product-categories/active`),
+      axios.get(`${API_URL}/stock-location/active-stock-location`)
+    ]);
+
+    setBrands(brandsRes.data);
+    setCategories(categoriesRes.data);
+    setStockLocations(
+      stockLocationRes.data.map((item) => ({
+        stockLocationId: item.stock_location_id,
+        stockName: item.stock_name,
+      }))
+    );
+
+    setLoading(false);
+  } catch (err) {
+    setError(err.message);
+    setLoading(false);
+  }
+};
 
     fetchData();
   }, []);
 
   const handleChange = (e) => {
-  const { name, value, type, checked } = e.target;
-  setFormData((prev) => ({
-    ...prev,
-    [name]: type === "checkbox" ? checked : value,
-  }));
-};
+    const { name, value, type, checked } = e.target;
+    setFormData((prev) => ({
+      ...prev,
+      [name]: type === "checkbox" ? checked : value,
+    }));
+  };
 
   // Handle price changes and calculate rent prices
   const handlePriceChange = (e) => {
@@ -335,19 +343,28 @@ const ProductsAddLayout = () => {
 
             <div style={{ gridColumn: "1 / -1" }}>
               <div style={checkboxGroupStyle}>
-  {["mouse", "keyboard", "dvd", "speaker", "webcam"].map((field) => (
-    <label key={field} style={{ display: 'flex', alignItems: 'center', marginRight: '15px' }}>
-      <input
-        type="checkbox"
-        name={field}
-        checked={formData[field]}
-        onChange={handleChange}
-        style={{ marginRight: '5px' }}
-      />
-      {field.charAt(0).toUpperCase() + field.slice(1)}
-    </label>
-  ))}
-</div>
+                {["mouse", "keyboard", "dvd", "speaker", "webcam"].map(
+                  (field) => (
+                    <label
+                      key={field}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        marginRight: "15px",
+                      }}
+                    >
+                      <input
+                        type="checkbox"
+                        name={field}
+                        checked={formData[field]}
+                        onChange={handleChange}
+                        style={{ marginRight: "5px" }}
+                      />
+                      {field.charAt(0).toUpperCase() + field.slice(1)}
+                    </label>
+                  )
+                )}
+              </div>
             </div>
           </>
         );
@@ -486,14 +503,14 @@ const ProductsAddLayout = () => {
               required
             />
 
-            <Field
+            {/* <Field
               label="Pro Model"
               name="pro_model"
               placeholder="Enter Pro Model"
               value={formData.pro_model}
               onChange={handleChange}
               required
-            />
+            /> */}
           </>
         );
       case "Monitors":
@@ -732,19 +749,21 @@ const ProductsAddLayout = () => {
             />
 
             <Field
-              label="Stock Location"
-              type="select"
-              name="stock_location"
-              value={formData.stock_location}
-              onChange={handleChange}
-              required
-            >
-              <option value="">Select Stock Location</option>
-              <option value="Warehouse-A">Warehouse-A</option>
-              <option value="Warehouse-B">Warehouse-B</option>
-              <option value="FutureVault-04">FutureVault-04</option>
-              <option value="Main Storage">Main Storage</option>
-            </Field>
+  label="Stock Location"
+  type="select"
+  name="stock_location"
+  value={formData.stock_location}
+  onChange={handleChange}
+  required
+>
+  <option value="">Select Stock Location</option>
+  {stockLocations.map((loc) => (
+    <option key={loc.stockLocationId} value={loc.stockName}>
+      {loc.stockName}
+    </option>
+  ))}
+</Field>
+
 
             <div style={{ gridColumn: "1 / -1" }}>
               <Field
@@ -827,6 +846,7 @@ const ProductsAddLayout = () => {
                     onChange={handlePriceChange}
                     required
                   >
+                    <option value="0">0%</option>
                     <option value="1">1%</option>
                     <option value="2">2%</option>
                     <option value="3">3%</option>
@@ -969,11 +989,13 @@ const CheckboxField = ({ label, name, checked, onChange }) => (
         }}
       />
       {/* Custom checkbox visualization */}
-      <div style={{
-        ...checkboxCustomStyle,
-        backgroundColor: checked ? "#4CAF50" : "#ffffff",
-        borderColor: checked ? "#4CAF50" : "#d1d5db",
-      }}>
+      <div
+        style={{
+          ...checkboxCustomStyle,
+          backgroundColor: checked ? "#4CAF50" : "#ffffff",
+          borderColor: checked ? "#4CAF50" : "#d1d5db",
+        }}
+      >
         {checked && <span style={checkmarkStyle}>✓</span>}
       </div>
       <span style={checkboxTextStyle}>{label}</span>

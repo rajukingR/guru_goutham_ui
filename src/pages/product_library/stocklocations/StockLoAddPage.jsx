@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Snackbar, Alert } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import API_URL from "../../../api/Api_url";
 
 const generateStockLocationId = () => {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
@@ -52,7 +53,7 @@ const StockLoAddPage = () => {
         updated_at: new Date().toISOString()
       };
 
-      await axios.post('http://localhost:5000/api/stock-location/create', payload);
+      await axios.post(`${API_URL}/stock-location/create`, payload);
       setSnackbarOpen(true);
       setTimeout(() => {
         navigate('/dashboard/product_library/stock_locations');

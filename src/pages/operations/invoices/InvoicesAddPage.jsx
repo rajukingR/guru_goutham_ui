@@ -24,25 +24,24 @@ import API_URL from "../../../api/Api_url";
 import { useNavigate } from "react-router-dom";
 
 const generateInvoiceId = () => {
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-  let randomPart = '';
+  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+  let randomPart = "";
   for (let i = 0; i < 7; i++) {
     randomPart += chars.charAt(Math.floor(Math.random() * chars.length));
   }
   return `INV-${randomPart}`;
 };
 
-
 const InvoicesAddPage = () => {
-    const navigate = useNavigate();
-  
+  const navigate = useNavigate();
+
   const [formData, setFormData] = useState({
     invoice_number: "",
     invoice_title: "",
     customer_id: "",
     customer_name: "",
     invoice_date: new Date().toISOString().split("T")[0],
-    invoice_due_date: "",
+    invoice_due_date: new Date().toISOString().split("T")[0],
     purchase_order_date: "",
     purchase_order_number: "",
     customer_gst_number: "",
@@ -84,12 +83,11 @@ const InvoicesAddPage = () => {
     severity: "info",
   });
   useEffect(() => {
-  setFormData(prev => ({
-    ...prev,
-    invoice_number: generateInvoiceId()
-  }));
-}, []);
-
+    setFormData((prev) => ({
+      ...prev,
+      invoice_number: generateInvoiceId(),
+    }));
+  }, []);
 
   const [returnQuantities, setReturnQuantities] = useState({});
   const [newQuantities, setNewQuantities] = useState({});
@@ -380,7 +378,7 @@ const InvoicesAddPage = () => {
   // Add this effect to update the form data when selected products or quantities change
   useEffect(() => {
     if (selectedProductIds.length > 0) {
-      setShowProductTable(true); 
+      setShowProductTable(true);
     }
   }, [selectedProductIds]);
 
@@ -601,75 +599,75 @@ const InvoicesAddPage = () => {
   ]);
 
   // Handle form submission
-const handleSubmit = async (e) => {
-  e.preventDefault();
+  const handleSubmit = async (e) => {
+    e.preventDefault();
 
-  try {
-    // Prepare the data to be sent
-    const submissionData = {
-      ...formData,
-      // Include date ranges in the submission
-      invoice_start_date: dateRanges.invoiceStartDate,
-      invoice_end_date: dateRanges.invoiceEndDate,
-      previous_delivered_start_date: dateRanges.previousDeliveredStartDate,
-      previous_delivered_end_date: dateRanges.previousDeliveredEndDate,
-      credit_note_start_date: dateRanges.creditNoteStartDate,
-      credit_note_end_date: dateRanges.creditNoteEndDate,
+    try {
+      // Prepare the data to be sent
+      const submissionData = {
+        ...formData,
+        // Include date ranges in the submission
+        invoice_start_date: dateRanges.invoiceStartDate,
+        invoice_end_date: dateRanges.invoiceEndDate,
+        previous_delivered_start_date: dateRanges.previousDeliveredStartDate,
+        previous_delivered_end_date: dateRanges.previousDeliveredEndDate,
+        credit_note_start_date: dateRanges.creditNoteStartDate,
+        credit_note_end_date: dateRanges.creditNoteEndDate,
 
-      // Ensure rental duration fields are included
-      rental_duration: formData.rental_duration || "0",
-      rental_duration_days: formData.rental_duration_days || 0,
-      rental_duration_months: formData.rental_duration
-        ? parseInt(formData.rental_duration)
-        : 0,
-      payment_mode: formData.payment_type || "Postpaid",
-
-      // Make sure items have the correct rental duration information
-      items: formData.items.map((item) => ({
-        ...item,
-        new_device_ids: newDeviceIds[item.product_id] || [], // Changed from productId to item.product_id
-        returned_device_ids: returnedDeviceIds[item.product_id] || [], // Changed from productId to item.product_id
+        // Ensure rental duration fields are included
         rental_duration: formData.rental_duration || "0",
         rental_duration_days: formData.rental_duration_days || 0,
         rental_duration_months: formData.rental_duration
           ? parseInt(formData.rental_duration)
           : 0,
-      })),
-    };
+        payment_mode: formData.payment_type || "Postpaid",
 
-    const response = await fetch(`${API_URL}/invoices/create`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(submissionData),
-    });
+        // Make sure items have the correct rental duration information
+        items: formData.items.map((item) => ({
+          ...item,
+          new_device_ids: newDeviceIds[item.product_id] || [], // Changed from productId to item.product_id
+          returned_device_ids: returnedDeviceIds[item.product_id] || [], // Changed from productId to item.product_id
+          rental_duration: formData.rental_duration || "0",
+          rental_duration_days: formData.rental_duration_days || 0,
+          rental_duration_months: formData.rental_duration
+            ? parseInt(formData.rental_duration)
+            : 0,
+        })),
+      };
 
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.message || "Failed to create invoice");
-    }
+      const response = await fetch(`${API_URL}/invoices/create`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(submissionData),
+      });
 
-    const result = await response.json();
-    setSnackbar({
-      open: true,
-      message: "Invoice created successfully!",
-      severity: "success",
-    });
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Failed to create invoice");
+      }
 
-    setTimeout(() => {
+      const result = await response.json();
+      setSnackbar({
+        open: true,
+        message: "Invoice created successfully!",
+        severity: "success",
+      });
+
+      setTimeout(() => {
         navigate("/dashboard/operations/invoices");
       }, 1500);
-    // Optionally reset the form or redirect
-  } catch (error) {
-    console.error("Error creating invoice:", error);
-    setSnackbar({
-      open: true,
-      message: "Error creating invoice: " + error.message,
-      severity: "error",
-    });
-  }
-};
+      // Optionally reset the form or redirect
+    } catch (error) {
+      console.error("Error creating invoice:", error);
+      setSnackbar({
+        open: true,
+        message: "Error creating invoice: " + error.message,
+        severity: "error",
+      });
+    }
+  };
 
   const formatINR = (number) =>
     new Intl.NumberFormat("en-IN", {
@@ -845,13 +843,13 @@ const handleSubmit = async (e) => {
                 value={formData.invoice_date}
                 onChange={handleInputChange}
               />
-              <Field
+              {/* <Field
                 label="Due Date"
                 type="date"
                 name="invoice_due_date"
                 value={formData.invoice_due_date}
                 onChange={handleInputChange}
-              />
+              /> */}
 
               <FormControl fullWidth>
                 <InputLabel>Select Customer</InputLabel>
@@ -888,7 +886,7 @@ const handleSubmit = async (e) => {
                 />
               </div>
 
-              <Field
+              {/* <Field
                 label="PO Number"
                 name="purchase_order_number"
                 value={formData.purchase_order_number}
@@ -901,7 +899,7 @@ const handleSubmit = async (e) => {
                 name="purchase_order_date"
                 value={formData.purchase_order_date}
                 onChange={handleInputChange}
-              />
+              /> */}
               <Field
                 label="Customer GST"
                 name="customer_gst_number"
@@ -1135,7 +1133,7 @@ const handleSubmit = async (e) => {
                           New Quantity
                         </TableCell>
                         <TableCell sx={{ color: "#fff" }}>
-                          New Device IDs
+                          New Asset IDs
                         </TableCell>
 
                         <TableCell sx={{ color: "#fff" }}>
@@ -1143,274 +1141,281 @@ const handleSubmit = async (e) => {
                         </TableCell>
 
                         <TableCell sx={{ color: "#fff" }}>
-                          Returned Device IDs
+                          Returned Asset IDs
                         </TableCell>
 
-                        
                         <TableCell sx={{ color: "#fff" }}>
                           Price for Durations
                         </TableCell>
                       </TableRow>
                     </TableHead>
                     <TableBody>
-                      {filteredProducts.map((product) => (
-                        <TableRow key={product.id}>
-                          <TableCell padding="checkbox">
-                            <Checkbox
-                              checked={selectedProductIds.includes(product.id)}
-                              onChange={() =>
-                                handleProductSelection(product.id)
-                              }
-                            />
-                          </TableCell>
-                          <TableCell>{product.product_name}</TableCell>
-                          <TableCell>{product.brand}</TableCell>
-                          <TableCell>
-                            {[
-                              product.model,
-                              product.processor,
-                              product.ram,
-                              product.storage,
-                              product.graphics,
-                            ]
-                              .filter(Boolean)
-                              .join(" | ")}
-                          </TableCell>
-                          <TableCell>
-                            <Box display="flex" alignItems="center">
-                              <IconButton
-                                size="small"
-                                onClick={() => decrementQty(product.id)}
-                                disabled={
-                                  !selectedProductIds.includes(product.id)
+                      {filteredProducts
+                        .filter((product) =>
+                          selectedProductIds.includes(product.id)
+                        )
+                        .map((product) => (
+                          <TableRow key={product.id}>
+                            <TableCell padding="checkbox">
+                              <Checkbox
+                                checked={selectedProductIds.includes(
+                                  product.id
+                                )}
+                                onChange={() =>
+                                  handleProductSelection(product.id)
                                 }
-                              >
-                                <Remove fontSize="small" />
-                              </IconButton>
-                              <TextField
-                                type="number"
-                                size="small"
-                                value={
-                                  selectedProductIds.includes(product.id)
-                                    ? quantities[product.id] || ""
-                                    : ""
-                                }
-                                onChange={(e) =>
-                                  handleQtyChange(product.id, e.target.value)
-                                }
-                                disabled={
-                                  !selectedProductIds.includes(product.id)
-                                }
-                                inputProps={{
-                                  min: 0,
-                                  style: { width: 50, textAlign: "center" },
-                                }}
                               />
-                              <IconButton
-                                size="small"
-                                onClick={() => incrementQty(product.id)}
-                                disabled={
-                                  !selectedProductIds.includes(product.id)
-                                }
-                              >
-                                <Add fontSize="small" />
-                              </IconButton>
-                            </Box>
-                          </TableCell>
-                          <TableCell>
-                            <Box display="flex" alignItems="center">
-                              <IconButton
-                                size="small"
-                                onClick={() => decrementNewQty(product.id)}
-                                disabled={
-                                  !selectedProductIds.includes(product.id)
-                                }
-                              >
-                                <Remove fontSize="small" />
-                              </IconButton>
-                              <TextField
-                                type="number"
-                                size="small"
-                                value={
-                                  selectedProductIds.includes(product.id)
-                                    ? newQuantities[product.id] || ""
-                                    : ""
-                                }
-                                onChange={(e) =>
-                                  handleNewQtyChange(product.id, e.target.value)
-                                }
-                                disabled={
-                                  !selectedProductIds.includes(product.id)
-                                }
-                                inputProps={{
-                                  min: 0,
-                                  style: { width: 50, textAlign: "center" },
-                                }}
-                              />
-                              <IconButton
-                                size="small"
-                                onClick={() => incrementNewQty(product.id)}
-                                disabled={
-                                  !selectedProductIds.includes(product.id)
-                                }
-                              >
-                                <Add fontSize="small" />
-                              </IconButton>
-                            </Box>
-                          </TableCell>
-                          {/* New Device IDs */}
-                          <TableCell>
-                            {newQuantities[product.id] > 0 && (
-                              <Box
-                                display="flex"
-                                flexDirection="column"
-                                gap={1}
-                              >
-                                {(newDeviceIds[product.id] || []).map(
-                                  (id, idx) => (
-                                    <TextField
-                                      key={idx}
+                            </TableCell>
+                            <TableCell>{product.product_name}</TableCell>
+                            <TableCell>{product.brand}</TableCell>
+                            <TableCell>
+                              {[
+                                product.model,
+                                product.processor,
+                                product.ram,
+                                product.storage,
+                                product.graphics,
+                              ]
+                                .filter(Boolean)
+                                .join(" | ")}
+                            </TableCell>
+                            <TableCell>
+                              <Box display="flex" alignItems="center">
+                                <IconButton
+                                  size="small"
+                                  onClick={() => decrementQty(product.id)}
+                                  disabled={
+                                    !selectedProductIds.includes(product.id)
+                                  }
+                                >
+                                  <Remove fontSize="small" />
+                                </IconButton>
+                                <TextField
+                                  type="number"
+                                  size="small"
+                                  value={
+                                    selectedProductIds.includes(product.id)
+                                      ? quantities[product.id] || ""
+                                      : ""
+                                  }
+                                  onChange={(e) =>
+                                    handleQtyChange(product.id, e.target.value)
+                                  }
+                                  disabled={
+                                    !selectedProductIds.includes(product.id)
+                                  }
+                                  inputProps={{
+                                    min: 0,
+                                    style: { width: 50, textAlign: "center" },
+                                  }}
+                                />
+                                <IconButton
+                                  size="small"
+                                  onClick={() => incrementQty(product.id)}
+                                  disabled={
+                                    !selectedProductIds.includes(product.id)
+                                  }
+                                >
+                                  <Add fontSize="small" />
+                                </IconButton>
+                              </Box>
+                            </TableCell>
+                            <TableCell>
+                              <Box display="flex" alignItems="center">
+                                <IconButton
+                                  size="small"
+                                  onClick={() => decrementNewQty(product.id)}
+                                  disabled={
+                                    !selectedProductIds.includes(product.id)
+                                  }
+                                >
+                                  <Remove fontSize="small" />
+                                </IconButton>
+                                <TextField
+                                  type="number"
+                                  size="small"
+                                  value={
+                                    selectedProductIds.includes(product.id)
+                                      ? newQuantities[product.id] || ""
+                                      : ""
+                                  }
+                                  onChange={(e) =>
+                                    handleNewQtyChange(
+                                      product.id,
+                                      e.target.value
+                                    )
+                                  }
+                                  disabled={
+                                    !selectedProductIds.includes(product.id)
+                                  }
+                                  inputProps={{
+                                    min: 0,
+                                    style: { width: 50, textAlign: "center" },
+                                  }}
+                                />
+                                <IconButton
+                                  size="small"
+                                  onClick={() => incrementNewQty(product.id)}
+                                  disabled={
+                                    !selectedProductIds.includes(product.id)
+                                  }
+                                >
+                                  <Add fontSize="small" />
+                                </IconButton>
+                              </Box>
+                            </TableCell>
+                            {/* New Asset IDs */}
+                            <TableCell>
+                              {newQuantities[product.id] > 0 && (
+                                <Box
+                                  display="flex"
+                                  flexDirection="column"
+                                  gap={1}
+                                >
+                                  {(newDeviceIds[product.id] || []).map(
+                                    (id, idx) => (
+                                      <TextField
+                                        key={idx}
+                                        size="small"
+                                        placeholder={`New Device ID ${idx + 1}`}
+                                        value={id}
+                                        onChange={(e) => {
+                                          const updated = [
+                                            ...(newDeviceIds[product.id] || []),
+                                          ];
+                                          updated[idx] = e.target.value;
+                                          setNewDeviceIds((prev) => ({
+                                            ...prev,
+                                            [product.id]: updated,
+                                          }));
+                                        }}
+                                      />
+                                    )
+                                  )}
+                                  {(newDeviceIds[product.id]?.length || 0) <
+                                    (newQuantities[product.id] || 0) && (
+                                    <Button
                                       size="small"
-                                      placeholder={`New Device ID ${idx + 1}`}
-                                      value={id}
-                                      onChange={(e) => {
-                                        const updated = [
-                                          ...(newDeviceIds[product.id] || []),
-                                        ];
-                                        updated[idx] = e.target.value;
+                                      variant="outlined"
+                                      onClick={() =>
                                         setNewDeviceIds((prev) => ({
                                           ...prev,
-                                          [product.id]: updated,
-                                        }));
-                                      }}
-                                    />
-                                  )
-                                )}
-                                {(newDeviceIds[product.id]?.length || 0) <
-                                  (newQuantities[product.id] || 0) && (
-                                  <Button
-                                    size="small"
-                                    variant="outlined"
-                                    onClick={() =>
-                                      setNewDeviceIds((prev) => ({
-                                        ...prev,
-                                        [product.id]: [
-                                          ...(prev[product.id] || []),
-                                          "",
-                                        ],
-                                      }))
-                                    }
-                                  >
-                                    + Add New ID
-                                  </Button>
-                                )}
+                                          [product.id]: [
+                                            ...(prev[product.id] || []),
+                                            "",
+                                          ],
+                                        }))
+                                      }
+                                    >
+                                      + Add New ID
+                                    </Button>
+                                  )}
+                                </Box>
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              <Box display="flex" alignItems="center">
+                                <IconButton
+                                  size="small"
+                                  onClick={() => decrementReturnQty(product.id)}
+                                  disabled={
+                                    !selectedProductIds.includes(product.id)
+                                  }
+                                >
+                                  <Remove fontSize="small" />
+                                </IconButton>
+                                <TextField
+                                  type="number"
+                                  size="small"
+                                  value={
+                                    selectedProductIds.includes(product.id)
+                                      ? returnQuantities[product.id] || ""
+                                      : ""
+                                  }
+                                  onChange={(e) =>
+                                    handleReturnQtyChange(
+                                      product.id,
+                                      e.target.value
+                                    )
+                                  }
+                                  disabled={
+                                    !selectedProductIds.includes(product.id)
+                                  }
+                                  inputProps={{
+                                    min: 0,
+                                    style: { width: 50, textAlign: "center" },
+                                  }}
+                                />
+                                <IconButton
+                                  size="small"
+                                  onClick={() => incrementReturnQty(product.id)}
+                                  disabled={
+                                    !selectedProductIds.includes(product.id)
+                                  }
+                                >
+                                  <Add fontSize="small" />
+                                </IconButton>
                               </Box>
-                            )}
-                          </TableCell>
-                          <TableCell>
-                            <Box display="flex" alignItems="center">
-                              <IconButton
-                                size="small"
-                                onClick={() => decrementReturnQty(product.id)}
-                                disabled={
-                                  !selectedProductIds.includes(product.id)
-                                }
-                              >
-                                <Remove fontSize="small" />
-                              </IconButton>
-                              <TextField
-                                type="number"
-                                size="small"
-                                value={
-                                  selectedProductIds.includes(product.id)
-                                    ? returnQuantities[product.id] || ""
-                                    : ""
-                                }
-                                onChange={(e) =>
-                                  handleReturnQtyChange(
-                                    product.id,
-                                    e.target.value
-                                  )
-                                }
-                                disabled={
-                                  !selectedProductIds.includes(product.id)
-                                }
-                                inputProps={{
-                                  min: 0,
-                                  style: { width: 50, textAlign: "center" },
-                                }}
-                              />
-                              <IconButton
-                                size="small"
-                                onClick={() => incrementReturnQty(product.id)}
-                                disabled={
-                                  !selectedProductIds.includes(product.id)
-                                }
-                              >
-                                <Add fontSize="small" />
-                              </IconButton>
-                            </Box>
-                          </TableCell>
-                          <TableCell>
-                            {returnQuantities[product.id] > 0 && (
-                              <Box
-                                display="flex"
-                                flexDirection="column"
-                                gap={1}
-                              >
-                                {(returnedDeviceIds[product.id] || []).map(
-                                  (id, idx) => (
-                                    <TextField
-                                      key={idx}
+                            </TableCell>
+                            <TableCell>
+                              {returnQuantities[product.id] > 0 && (
+                                <Box
+                                  display="flex"
+                                  flexDirection="column"
+                                  gap={1}
+                                >
+                                  {(returnedDeviceIds[product.id] || []).map(
+                                    (id, idx) => (
+                                      <TextField
+                                        key={idx}
+                                        size="small"
+                                        placeholder={`Returned Device ID ${
+                                          idx + 1
+                                        }`}
+                                        value={id}
+                                        onChange={(e) => {
+                                          const updated = [
+                                            ...(returnedDeviceIds[product.id] ||
+                                              []),
+                                          ];
+                                          updated[idx] = e.target.value;
+                                          setReturnedDeviceIds((prev) => ({
+                                            ...prev,
+                                            [product.id]: updated,
+                                          }));
+                                        }}
+                                      />
+                                    )
+                                  )}
+                                  {(returnedDeviceIds[product.id]?.length ||
+                                    0) <
+                                    (returnQuantities[product.id] || 0) && (
+                                    <Button
                                       size="small"
-                                      placeholder={`Returned Device ID ${
-                                        idx + 1
-                                      }`}
-                                      value={id}
-                                      onChange={(e) => {
-                                        const updated = [
-                                          ...(returnedDeviceIds[product.id] ||
-                                            []),
-                                        ];
-                                        updated[idx] = e.target.value;
+                                      variant="outlined"
+                                      onClick={() =>
                                         setReturnedDeviceIds((prev) => ({
                                           ...prev,
-                                          [product.id]: updated,
-                                        }));
-                                      }}
-                                    />
-                                  )
-                                )}
-                                {(returnedDeviceIds[product.id]?.length || 0) <
-                                  (returnQuantities[product.id] || 0) && (
-                                  <Button
-                                    size="small"
-                                    variant="outlined"
-                                    onClick={() =>
-                                      setReturnedDeviceIds((prev) => ({
-                                        ...prev,
-                                        [product.id]: [
-                                          ...(prev[product.id] || []),
-                                          "",
-                                        ],
-                                      }))
-                                    }
-                                  >
-                                    + Add Returned ID
-                                  </Button>
-                                )}
-                              </Box>
-                            )}
-                          </TableCell>
-                          <TableCell>
+                                          [product.id]: [
+                                            ...(prev[product.id] || []),
+                                            "",
+                                          ],
+                                        }))
+                                      }
+                                    >
+                                      + Add Returned ID
+                                    </Button>
+                                  )}
+                                </Box>
+                              )}
+                            </TableCell>
+                            <TableCell>
                               <>
                                 <div>Month: {product.rent_price_per_month}</div>
-                               
                               </>
-                            
-                          </TableCell>
-                        </TableRow>
-                      ))}
+                            </TableCell>
+                          </TableRow>
+                        ))}
                     </TableBody>
                   </Table>
                 </TableContainer>
@@ -1418,8 +1423,6 @@ const handleSubmit = async (e) => {
             )}
           </div>
         </div>
-
-       
 
         {/* Action Buttons */}
         <div style={buttonContainerStyle}>

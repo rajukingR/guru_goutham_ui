@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { ChevronDown } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
+import API_URL from "../../../api/Api_url";
 
 const UsersEditPage = () => {
   const { id } = useParams();
@@ -35,8 +36,8 @@ const UsersEditPage = () => {
       try {
         // Fetch roles and branches
         const [rolesRes, branchesRes] = await Promise.all([
-          fetch('http://localhost:5000/api/roles'),
-          fetch('http://localhost:5000/api/branches')
+          fetch(`${API_URL}/roles`),
+          fetch(`${API_URL}/branches`)
         ]);
 
         if (rolesRes.ok && branchesRes.ok) {
@@ -51,7 +52,7 @@ const UsersEditPage = () => {
         }
 
         // Fetch user data
-        const userRes = await fetch(`http://localhost:5000/api/users/${id}`);
+        const userRes = await fetch(`${API_URL}/users/${id}`);
         if (userRes.ok) {
           const userData = await userRes.json();
           
@@ -161,7 +162,7 @@ const UsersEditPage = () => {
         delete payload.password;
       }
 
-      const response = await fetch(`http://localhost:5000/api/users/${id}`, {
+      const response = await fetch(`${API_URL}/users/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)

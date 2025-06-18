@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import API_URL from "../../../api/Api_url";
 
 const GrnEditForm = () => {
   const { id } = useParams(); // ID from route
@@ -37,7 +38,7 @@ const GrnEditForm = () => {
 
   useEffect(() => {
     axios
-      .get(`http://localhost:5000/api/goods-return-notes/${id}`)
+      .get(`${API_URL}/goods-return-notes/${id}`)
       .then((res) => {
         const data = res.data;
         setFormData({
@@ -81,7 +82,7 @@ const GrnEditForm = () => {
 
   const handleUpdate = async () => {
     try {
-      await axios.put(`http://localhost:5000/api/goods-return-notes/${id}`, formData);
+      await axios.put(`${API_URL}/goods-return-notes/${id}`, formData);
       alert("GRN Updated Successfully");
       navigate("/grn-list");
     } catch (error) {

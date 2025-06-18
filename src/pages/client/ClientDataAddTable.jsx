@@ -10,6 +10,7 @@ import { DatePicker } from "@mui/x-date-pickers/DatePicker";
 import { LocalizationProvider } from "@mui/x-date-pickers";
 import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 import { useNavigate } from "react-router-dom"; // Add this at the top
+import API_URL from "../../api/Api_url";
 
 const ClientDataAddTable = () => {
 const navigate = useNavigate(); 
@@ -65,7 +66,7 @@ const navigate = useNavigate();
         active_status: formData.active
       };
 
-      const response = await fetch("http://localhost:5000/api/user/create", {
+      const response = await fetch(`${API_URL}/user/create`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload)

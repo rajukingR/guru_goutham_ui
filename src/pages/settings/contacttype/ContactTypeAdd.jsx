@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Snackbar, Alert } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import API_URL from "../../../api/Api_url";
 
 const ContactTypeAdd = () => {
   const navigate = useNavigate();
@@ -25,7 +26,7 @@ const ContactTypeAdd = () => {
 
   const handleSubmit = async () => {
     try {
-      await axios.post('http://localhost:5000/api/contact-types/create', {
+      await axios.post(`${API_URL}/contact-types/create`, {
         contact_type_name: formData.contactsTypeCode,
         type: formData.type,
         description: formData.description,

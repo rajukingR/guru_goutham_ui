@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Snackbar, Alert } from '@mui/material';
 import { useNavigate, useParams } from 'react-router-dom';
 import axios from 'axios';
+import API_URL from "../../../api/Api_url";
 
 const ContactTypeEdit = () => {
   const navigate = useNavigate();
@@ -21,7 +22,7 @@ const ContactTypeEdit = () => {
   useEffect(() => {
     const fetchContactType = async () => {
       try {
-        const response = await axios.get(`http://localhost:5000/api/contact-types/${id}`);
+        const response = await axios.get(`${API_URL}/contact-types/${id}`);
         const data = response.data;
 
         // Assuming your backend returns object with keys:
@@ -52,7 +53,7 @@ const ContactTypeEdit = () => {
 
   const handleSubmit = async () => {
     try {
-      await axios.put(`http://localhost:5000/api/contact-types/${id}`, {
+      await axios.put(`${API_URL}/contact-types/${id}`, {
         contact_type_name: formData.contactsTypeCode,
         type: formData.type,
         description: formData.description,

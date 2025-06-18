@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Snackbar from '@mui/material/Snackbar';
 import Alert from '@mui/material/Alert';
+import API_URL from "../../../api/Api_url";
 
 const generateAssetId = () => {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
@@ -65,7 +66,7 @@ const AssetModificationTrackerAdd = () => {
       active_status: formData.activeStatus
     };
 
-    const response = await fetch('http://localhost:5000/api/asset-modifications/create', {
+    const response = await fetch(`${API_URL}/asset-modifications/create`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
