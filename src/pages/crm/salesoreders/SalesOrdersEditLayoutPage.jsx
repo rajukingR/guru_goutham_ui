@@ -25,14 +25,13 @@ import API_URL from "../../../api/Api_url";
 import { useInventory } from "../../../contexts/InventoryContext";
 
 const SalesOrdersEditLayoutPage = ({ product }) => {
-
   // State for form data
-    const { inventoryData } = useInventory();
-  
-    const getAvailableQty = (productId) => {
-      const entry = inventoryData.find((item) => item.id === productId);
-      return entry ? entry.available_quantity : "N/A";
-    };
+  const { inventoryData } = useInventory();
+
+  const getAvailableQty = (productId) => {
+    const entry = inventoryData.find((item) => item.id === productId);
+    return entry ? entry.available_quantity : "N/A";
+  };
 
   const { id } = useParams();
   const navigate = useNavigate();
@@ -60,6 +59,8 @@ const SalesOrdersEditLayoutPage = ({ product }) => {
       last_name: "",
       email: "",
       phone_number: "",
+      gst_number: "",
+      pan_number: "",
     },
     address: {
       street: "",
@@ -126,6 +127,7 @@ const SalesOrdersEditLayoutPage = ({ product }) => {
             email: "",
             phone_number: "",
             gst_number: "",
+            pan_number: "",
             ...data.personalDetails,
           },
           address: {
@@ -241,6 +243,9 @@ const SalesOrdersEditLayoutPage = ({ product }) => {
           last_name: quotationData.personalDetails?.last_name || "",
           email: quotationData.personalDetails?.email || "",
           phone_number: quotationData.personalDetails?.phone_number || "",
+          gst_number: quotationData.personalDetails?.gst_number || "",
+                    pan_number: quotationData.personalDetails?.pan_number || "",
+
         },
         address: {
           ...prev.address,
@@ -830,13 +835,26 @@ const SalesOrdersEditLayoutPage = ({ product }) => {
                 placeholder="Enter GST Number"
                 value={formData.personalDetails.gst_number}
                 onChange={(e) =>
-                  handleChange({
-                    target: {
-                      name: "personalDetails.gst_number",
-                      value: e.target.value,
-                    },
-                  })
-                }
+  handleChange({
+    target: {
+      name: "personalDetails.gst_number",
+      value: e.target.value,
+    },
+  })
+}
+              />
+               <Field
+                label="PAN Number"
+                placeholder="Enter PAN Number"
+                value={formData.personalDetails.pan_number}
+                onChange={(e) =>
+  handleChange({
+    target: {
+      name: "personalDetails.pan_number",
+      value: e.target.value,
+    },
+  })
+}
               />
             </div>
           </div>
@@ -960,121 +978,162 @@ const SalesOrdersEditLayoutPage = ({ product }) => {
                 </Box>
 
                 <TableContainer component={Paper}>
-  <Table size="small">
-    <TableHead>
-      <TableRow sx={{ backgroundColor: "#0d47a1" }}>
-        <TableCell padding="checkbox" sx={{ color: "#fff" }}>
-          <Checkbox sx={{ color: "#fff" }} disabled />
-        </TableCell>
-        <TableCell sx={{ color: "#fff" }}>Product Name</TableCell>
-        <TableCell sx={{ color: "#fff" }}>Brand</TableCell>
-        <TableCell sx={{ color: "#fff" }}>Specifications</TableCell>
-        <TableCell sx={{ color: "#fff" }}>Available Qty</TableCell>
-        <TableCell sx={{ color: "#fff" }}>Price per Piece</TableCell>
-        <TableCell sx={{ color: "#fff" }}>Quantity</TableCell>
-        <TableCell sx={{ color: "#fff" }}>Asset IDs</TableCell>
-      </TableRow>
-    </TableHead>
+                  <Table size="small">
+                    <TableHead>
+                      <TableRow sx={{ backgroundColor: "#0d47a1" }}>
+                        <TableCell padding="checkbox" sx={{ color: "#fff" }}>
+                          <Checkbox sx={{ color: "#fff" }} disabled />
+                        </TableCell>
+                        <TableCell sx={{ color: "#fff" }}>
+                          Product Name
+                        </TableCell>
+                        <TableCell sx={{ color: "#fff" }}>Brand</TableCell>
+                        <TableCell sx={{ color: "#fff" }}>
+                          Specifications
+                        </TableCell>
+                        <TableCell sx={{ color: "#fff" }}>
+                          Available Qty
+                        </TableCell>
+                        <TableCell sx={{ color: "#fff" }}>
+                          Price per Piece
+                        </TableCell>
+                        <TableCell sx={{ color: "#fff" }}>Quantity</TableCell>
+                        <TableCell sx={{ color: "#fff" }}>Asset IDs</TableCell>
+                      </TableRow>
+                    </TableHead>
 
-    <TableBody>
-      {filteredProducts
-        .filter((product) => selectedProductIds.includes(product.id))
-        .map((product) => (
-          <TableRow key={product.id}>
-            <TableCell padding="checkbox">
-              <Checkbox checked readOnly />
-            </TableCell>
-            <TableCell>{product.product_name}</TableCell>
-            <TableCell>{product.brand}</TableCell>
-            <TableCell>
-              <div><strong>Model:</strong> {product.model}</div>
-              <div><strong>Processor:</strong> {product.processor}</div>
-              <div><strong>RAM:</strong> {product.ram}</div>
-              <div><strong>Storage:</strong> {product.storage}</div>
-              <div><strong>Graphics:</strong> {product.graphics}</div>
-            </TableCell>
-            <TableCell>{getAvailableQty(product.id)}</TableCell>
-            <TableCell>
-              <div><strong>Month:</strong> ₹{product.rent_price_per_month}</div>
-            </TableCell>
-            <TableCell>
-              <Box display="flex" alignItems="center">
-                <IconButton
-                  size="small"
-                  onClick={() => decrementQty(product.id)}
-                >
-                  <Remove fontSize="small" />
-                </IconButton>
-                <TextField
-                  type="number"
-                  size="small"
-                  value={quantities[product.id] || ""}
-                  onChange={(e) => handleQtyChange(product.id, e.target.value)}
-                  inputProps={{
-                    min: 0,
-                    style: { width: 50, textAlign: "center" },
-                  }}
-                />
-                <IconButton
-                  size="small"
-                  onClick={() => incrementQty(product.id)}
-                >
-                  <Add fontSize="small" />
-                </IconButton>
-              </Box>
-            </TableCell>
-            <TableCell>
-              {quantities[product.id] > 0 && (
-                <Box display="flex" flexDirection="column" gap={1}>
-                  {(deviceIds[product.id] || []).map((id, idx) => (
-                    <TextField
-                      key={idx}
-                      size="small"
-                      placeholder={`Device ID ${idx + 1}`}
-                      value={id}
-                      onChange={(e) => {
-                        const updated = [...(deviceIds[product.id] || [])];
-                        updated[idx] = e.target.value;
-                        setDeviceIds((prev) => ({
-                          ...prev,
-                          [product.id]: updated,
-                        }));
-                        if (deviceIdErrors[product.id]) {
-                          setDeviceIdErrors((prev) => {
-                            const newErrors = { ...prev };
-                            delete newErrors[product.id];
-                            return newErrors;
-                          });
-                        }
-                      }}
-                      error={Boolean(deviceIdErrors[product.id])}
-                      helperText={idx === 0 ? deviceIdErrors[product.id] : ""}
-                    />
-                  ))}
-                  {(deviceIds[product.id]?.length || 0) <
-                    (quantities[product.id] || 0) && (
-                    <Button
-                      size="small"
-                      variant="outlined"
-                      onClick={() =>
-                        setDeviceIds((prev) => ({
-                          ...prev,
-                          [product.id]: [...(prev[product.id] || []), ""],
-                        }))
-                      }
-                    >
-                      + Add Device ID
-                    </Button>
-                  )}
-                </Box>
-              )}
-            </TableCell>
-          </TableRow>
-        ))}
-    </TableBody>
-  </Table>
-</TableContainer>
-
+                    <TableBody>
+                      {filteredProducts
+                        .filter((product) =>
+                          selectedProductIds.includes(product.id)
+                        )
+                        .map((product) => (
+                          <TableRow key={product.id}>
+                            <TableCell padding="checkbox">
+                              <Checkbox checked readOnly />
+                            </TableCell>
+                            <TableCell>{product.product_name}</TableCell>
+                            <TableCell>{product.brand}</TableCell>
+                            <TableCell>
+                              <div>
+                                <strong>Model:</strong> {product.model}
+                              </div>
+                              <div>
+                                <strong>Processor:</strong> {product.processor}
+                              </div>
+                              <div>
+                                <strong>RAM:</strong> {product.ram}
+                              </div>
+                              <div>
+                                <strong>Storage:</strong> {product.storage}
+                              </div>
+                              <div>
+                                <strong>Graphics:</strong> {product.graphics}
+                              </div>
+                            </TableCell>
+                            <TableCell>{getAvailableQty(product.id)}</TableCell>
+                            <TableCell>
+                              <div>
+                                <strong>Month:</strong> ₹
+                                {product.rent_price_per_month}
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <Box display="flex" alignItems="center">
+                                <IconButton
+                                  size="small"
+                                  onClick={() => decrementQty(product.id)}
+                                >
+                                  <Remove fontSize="small" />
+                                </IconButton>
+                                <TextField
+                                  type="number"
+                                  size="small"
+                                  value={quantities[product.id] || ""}
+                                  onChange={(e) =>
+                                    handleQtyChange(product.id, e.target.value)
+                                  }
+                                  inputProps={{
+                                    min: 0,
+                                    style: { width: 50, textAlign: "center" },
+                                  }}
+                                />
+                                <IconButton
+                                  size="small"
+                                  onClick={() => incrementQty(product.id)}
+                                >
+                                  <Add fontSize="small" />
+                                </IconButton>
+                              </Box>
+                            </TableCell>
+                            <TableCell>
+                              {quantities[product.id] > 0 && (
+                                <Box
+                                  display="flex"
+                                  flexDirection="column"
+                                  gap={1}
+                                >
+                                  {(deviceIds[product.id] || []).map(
+                                    (id, idx) => (
+                                      <TextField
+                                        key={idx}
+                                        size="small"
+                                        placeholder={`Device ID ${idx + 1}`}
+                                        value={id}
+                                        onChange={(e) => {
+                                          const updated = [
+                                            ...(deviceIds[product.id] || []),
+                                          ];
+                                          updated[idx] = e.target.value;
+                                          setDeviceIds((prev) => ({
+                                            ...prev,
+                                            [product.id]: updated,
+                                          }));
+                                          if (deviceIdErrors[product.id]) {
+                                            setDeviceIdErrors((prev) => {
+                                              const newErrors = { ...prev };
+                                              delete newErrors[product.id];
+                                              return newErrors;
+                                            });
+                                          }
+                                        }}
+                                        error={Boolean(
+                                          deviceIdErrors[product.id]
+                                        )}
+                                        helperText={
+                                          idx === 0
+                                            ? deviceIdErrors[product.id]
+                                            : ""
+                                        }
+                                      />
+                                    )
+                                  )}
+                                  {(deviceIds[product.id]?.length || 0) <
+                                    (quantities[product.id] || 0) && (
+                                    <Button
+                                      size="small"
+                                      variant="outlined"
+                                      onClick={() =>
+                                        setDeviceIds((prev) => ({
+                                          ...prev,
+                                          [product.id]: [
+                                            ...(prev[product.id] || []),
+                                            "",
+                                          ],
+                                        }))
+                                      }
+                                    >
+                                      + Add Device ID
+                                    </Button>
+                                  )}
+                                </Box>
+                              )}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
               </Box>
             )}
 

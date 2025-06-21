@@ -10,14 +10,17 @@ const OrdersTable = () => {
     { id: "id", label: "S.No." },
     { id: "order_id", label: "Order ID" },
     { id: "transaction_type", label: "Purchase Type" },
+    { id: "payment_type", label: "Payment Type" },
+
     { id: "quotation_id", label: "Quotation ID" },
     { id: "order_date", label: "Order Date" },
     { id: "rental_start_date", label: "Rental Start" },
+
     { id: "rental_end_date", label: "Rental End" },
     { id: "rental_duration", label: "Duration (months)" },
     { id: "owner", label: "Owner" },
-    { id: "total_quantity", label: "Total Quantity" },
-    { id: "total_order_value", label: "Total Amount (₹)" }, // ✅ new column
+    // { id: "total_quantity", label: "Total Quantity" },
+    // { id: "total_order_value", label: "Total Amount (₹)" }, // ✅ new column
     { id: "order_status", label: "Order Status" },
   ];
 

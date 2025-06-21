@@ -209,6 +209,12 @@ const Sidebar = ({ section }) => {
           icon: <AccountBalanceIcon />,
           description: "Delivery documents",
         },
+         {
+          text: "GRN",
+          path: "/dashboard/operations/grn",
+          icon: <ReceiptLongIcon />,
+          description: "Goods received notes",
+        },
         {
           text: "Invoices",
           path: "/dashboard/operations/invoices",
@@ -216,10 +222,10 @@ const Sidebar = ({ section }) => {
           description: "Invoice management",
         },
         {
-          text: "GRN",
-          path: "/dashboard/operations/grn",
-          icon: <ReceiptLongIcon />,
-          description: "Goods received notes",
+          text: "Credit Notes",
+          path: "/dashboard/operations/credit_notes",
+          icon: <MoneyOffIcon />,
+          description: "Credit note management",
         },
         {
           text: "Asset Modification Tracker",
@@ -227,12 +233,7 @@ const Sidebar = ({ section }) => {
           icon: <BuildCircleIcon />,
           description: "Track asset changes",
         },
-        {
-          text: "Credit Notes",
-          path: "/dashboard/operations/credit_notes",
-          icon: <MoneyOffIcon />,
-          description: "Credit note management",
-        },
+       
         {
           text: "Service",
           path: "/dashboard/operations/service",

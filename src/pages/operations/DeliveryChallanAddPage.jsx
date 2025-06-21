@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback, memo } from "react";
 import {
   Box,
   TextField,
@@ -18,309 +18,278 @@ import { Add, Remove } from "@mui/icons-material";
 import { useNavigate } from "react-router-dom";
 import API_URL from "../../api/Api_url";
 
-const generateDcId = () => {
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-  let randomPart = '';
-  for (let i = 0; i < 6; i++) {
-    randomPart += chars.charAt(Math.floor(Math.random() * chars.length));
-  }
-  return `DC-${randomPart}`;
+// Styles (same as in your original code)
+const containerStyle = {
+  padding: "2rem",
+  fontFamily:
+    '"Inter", "Segoe UI", -apple-system, BlinkMacSystemFont, sans-serif',
+  minHeight: "100vh",
+  lineHeight: 1.6,
 };
 
+const headerStyle = {
+  marginBottom: "2rem",
+  maxWidth: "1400px",
+};
 
-const DeliveryChallanAddPage = () => {
-  const navigate = useNavigate();
-  const [formData, setFormData] = useState({
-    dc_id: "",
-    dc_title: "",
-    is_dc: false,
-    order_id: "",
-    customer_code: "",
-    order_number: "",
-    dc_date: new Date().toISOString().split("T")[0],
-    dc_status: "Dispatched",
-    dealer_reference: "",
-    email: "",
-    gst_number: "",
-    pan_number: "",
-    remarks: "",
-    type: "Sale",
-    regular_dc: true,
-    industry: "",
-    shipping_ordered_by: "",
-    shipping_phone_number: "",
-    shipping_name: "",
-    street: "",
-    landmark: "",
-    pincode: "",
-    city: "",
-    state: "",
-    country: "India",
-    vehicle_number: "",
-    delivery_person_name: "",
-    delivery_person_phone_number: "",
-    receiver_name: "",
-    receiver_phone_number: "",
-    items: [],
-  });
+const titleStyle = {
+  fontSize: "2rem",
+  fontWeight: "700",
+  color: "#1e293b",
+  margin: "0 0 0.5rem 0",
+  letterSpacing: "-0.025em",
+};
 
-  // State for UI and data
-  const [orders, setOrders] = useState([]);
-  const [products, setProducts] = useState([]);
-  const [selectedProductIds, setSelectedProductIds] = useState([]);
-  const [quantities, setQuantities] = useState({});
-  const [searchTerm, setSearchTerm] = useState("");
-  const [showProductTable, setShowProductTable] = useState(false);
-  const [snackbar, setSnackbar] = useState({
-    open: false,
-    message: "",
-    severity: "success",
-  });
+const subtitleStyle = {
+  fontSize: "1rem",
+  color: "#64748b",
+  margin: 0,
+};
 
+const formContainerStyle = {
+  display: "grid",
+  gap: "1.5rem",
+  maxWidth: "1400px",
+  gridTemplateColumns: "repeat(auto-fit, minmax(400px, 1fr))",
+};
 
-  useEffect(() => {
-  setFormData(prev => ({
-    ...prev,
-    dc_id: generateDcId()
-  }));
-}, []);
+const cardStyle = {
+  backgroundColor: "#ffffff",
+  padding: "1.5rem",
+  borderRadius: "12px",
+  boxShadow: "0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06)",
+  border: "1px solid #e2e8f0",
+  transition: "box-shadow 0.2s ease",
+};
 
+const cardHeaderContainerStyle = {
+  display: "flex",
+  alignItems: "center",
+  marginBottom: "1.5rem",
+  paddingBottom: "1rem",
+  borderBottom: "1px solid #e2e8f0",
+};
 
-  // Fetch orders and products on component mount
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        // Fetch approved orders
-        const orderResponse = await fetch(`${API_URL}/orders/order-approved`);
-        if (!orderResponse.ok) throw new Error("Failed to fetch orders");
-        const orderData = await orderResponse.json();
-        setOrders(orderData);
+const iconStyle = {
+  fontSize: "1.25rem",
+  marginRight: "0.75rem",
+  backgroundColor: "#f1f5f9",
+  padding: "0.5rem",
+  borderRadius: "8px",
+};
 
-        // Fetch products
-        const prodResponse = await fetch(`${API_URL}/product-templete`);
-        if (!prodResponse.ok) throw new Error("Failed to fetch products");
-        const prodData = await prodResponse.json();
-        setProducts(prodData);
-      } catch (error) {
-        console.error("Error fetching data:", error);
-        setSnackbar({
-          open: true,
-          message: "Error fetching data: " + error.message,
-          severity: "error",
-        });
-      }
-    };
+const cardHeaderStyle = {
+  fontSize: "1.125rem",
+  fontWeight: "600",
+  color: "#1e293b",
+  margin: 0,
+};
 
-    fetchData();
-  }, []);
+const fieldsGridStyle = {
+  display: "grid",
+  gap: "1rem",
+  gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))",
+};
 
-  // Handle order selection
-  const handleOrderSelect = (orderId) => {
-    const selectedOrder = orders.find(
-      (order) => order.id === parseInt(orderId)
-    );
-    if (!selectedOrder) return;
+const fieldContainerStyle = {
+  display: "flex",
+  flexDirection: "column",
+};
 
-    const { personalDetails, address, items } = selectedOrder;
+const labelStyle = {
+  display: "block",
+  marginBottom: "0.5rem",
+  fontWeight: "500",
+  fontSize: "0.875rem",
+  color: "#374151",
+  letterSpacing: "0.025em",
+};
 
-    setFormData({
-      ...formData,
-      order_id: selectedOrder.id,
-      customer_code: selectedOrder.order_id, // Using order_id as customer code
-      order_number: selectedOrder.order_id,
-      email: personalDetails.email,
-      gst_number: personalDetails.gst_number,
-      shipping_ordered_by: `${personalDetails.first_name} ${personalDetails.last_name}`,
-      shipping_phone_number: personalDetails.phone_number,
-      shipping_name: `${personalDetails.first_name} ${personalDetails.last_name}`,
-      street: address.street || "",
-      landmark: address.landmark || "",
-      pincode: address.pincode,
-      city: address.city,
-      state: address.state,
-      country: address.country,
-      type: selectedOrder.transaction_type,
-      items: items.map((item) => ({
-        product_id: item.product_id,
-        product_name: item.product_name,
-        quantity: item.requested_quantity,
-        item_total_value: item.item_total_value,
-      })),
-    });
+const requiredStyle = {
+  color: "#ef4444",
+  marginLeft: "0.25rem",
+};
 
-    // Auto-select products from the order
-    const productIds = items.map((item) => item.product_id);
-    setSelectedProductIds(productIds);
+const inputStyle = {
+  width: "100%",
+  padding: "0.75rem",
+  borderRadius: "8px",
+  border: "1px solid #d1d5db",
+  fontSize: "0.875rem",
+  backgroundColor: "#ffffff",
+  transition: "all 0.2s ease",
+  outline: "none",
+  boxSizing: "border-box",
+};
 
-    // Set quantities
-    const newQuantities = {};
-    items.forEach((item) => {
-      newQuantities[item.product_id] = item.requested_quantity;
-    });
-    setQuantities(newQuantities);
-  };
+const selectWrapperStyle = {
+  position: "relative",
+  width: "100%",
+};
 
-  // Fetch location data when pincode changes
-  useEffect(() => {
-    const fetchLocationFromPincode = async () => {
-      const pincode = formData.pincode;
+const selectStyle = {
+  width: "100%",
+  padding: "0.75rem",
+  paddingRight: "2.5rem",
+  borderRadius: "8px",
+  border: "1px solid #d1d5db",
+  fontSize: "0.875rem",
+  backgroundColor: "#ffffff",
+  appearance: "none",
+  transition: "all 0.2s ease",
+  outline: "none",
+  boxSizing: "border-box",
+  cursor: "pointer",
+};
 
-      // Only make API call if pincode is 6 digits (India specific)
-      if (pincode && pincode.length === 6) {
-        try {
-          const response = await fetch(
-            `https://api.postalpincode.in/pincode/${pincode}`
-          );
-          const data = await response.json();
+const selectArrowStyle = {
+  position: "absolute",
+  right: "0.75rem",
+  top: "50%",
+  transform: "translateY(-50%)",
+  pointerEvents: "none",
+  fontSize: "0.75rem",
+  color: "#6b7280",
+};
 
-          if (data && data[0]?.Status === "Success") {
-            const postOffice = data[0].PostOffice[0];
+const textareaStyle = {
+  width: "100%",
+  padding: "0.75rem",
+  borderRadius: "8px",
+  border: "1px solid #d1d5db",
+  fontSize: "0.875rem",
+  backgroundColor: "#ffffff",
+  transition: "all 0.2s ease",
+  outline: "none",
+  resize: "vertical",
+  fontFamily: "inherit",
+  boxSizing: "border-box",
+};
 
-            setFormData((prev) => ({
-              ...prev,
-              city: postOffice.District,
-              state: postOffice.State,
-              country: "India",
-            }));
-          } else {
-            setSnackbar({
-              open: true,
-              message: "Could not find location for this pincode",
-              severity: "warning",
-            });
-          }
-        } catch (error) {
-          console.error("Error fetching location data:", error);
-          setSnackbar({
-            open: true,
-            message:
-              "Error fetching location data. Please check the pincode and try again.",
-            severity: "error",
-          });
-        }
-      }
-    };
+const checkboxContainerStyle = {
+  marginTop: "0.5rem",
+  gridColumn: "1 / -1",
+};
 
-    // Add debounce to prevent too many API calls
-    const debounceTimer = setTimeout(() => {
-      fetchLocationFromPincode();
-    }, 500);
+const checkboxLabelStyle = {
+  display: "flex",
+  alignItems: "flex-start",
+  cursor: "pointer",
+  gap: "0.75rem",
+};
 
-    return () => clearTimeout(debounceTimer);
-  }, [formData.pincode]);
+const checkboxStyle = {
+  display: "none",
+};
 
-  // Handle form field changes
-  const handleInputChange = (e) => {
-    const { name, value, type, checked } = e.target;
-    setFormData({
-      ...formData,
-      [name]: type === "checkbox" ? checked : value,
-    });
-  };
+const checkboxCustomStyle = {
+  width: "20px",
+  height: "20px",
+  borderRadius: "4px",
+  border: "2px solid #d1d5db",
+  backgroundColor: "#ffffff",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  transition: "all 0.2s ease",
+  flexShrink: 0,
+  marginTop: "2px",
+};
 
-  // Handle quantity changes
-  const handleQtyChange = (productId, value) => {
-    const qty = Math.max(0, parseInt(value) || 0);
-    setQuantities((prev) => ({ ...prev, [productId]: qty }));
-  };
+const checkmarkStyle = {
+  color: "#ffffff",
+  fontSize: "12px",
+  fontWeight: "bold",
+};
 
-  const incrementQty = (productId) => {
-    setQuantities((prev) => ({
-      ...prev,
-      [productId]: (prev[productId] || 0) + 1,
-    }));
-  };
+const checkboxTextStyle = {
+  fontSize: "0.875rem",
+  fontWeight: "500",
+  color: "#374151",
+  display: "block",
+};
 
-  const decrementQty = (productId) => {
-    setQuantities((prev) => ({
-      ...prev,
-      [productId]: Math.max(0, (prev[productId] || 0) - 1),
-    }));
-  };
+const checkboxDescStyle = {
+  fontSize: "0.75rem",
+  color: "#6b7280",
+  display: "block",
+  marginTop: "0.25rem",
+};
 
-  // Filter products based on search term
-  const filteredProducts = products.filter(
-    (product) =>
-      product.product_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      product.model?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      product.description?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+const buttonContainerStyle = {
+  display: "flex",
+  justifyContent: "flex-end",
+  gap: "0.75rem",
+  marginTop: "2rem",
+  maxWidth: "1200px",
+  margin: "2rem auto 0",
+  padding: "0 1.5rem",
+};
 
-  // Handle form submission
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+const cancelBtnStyle = {
+  padding: "0.75rem 1.5rem",
+  backgroundColor: "#f3f4f6",
+  color: "#374151",
+  border: "1px solid #d1d5db",
+  borderRadius: "8px",
+  cursor: "pointer",
+  fontSize: "0.875rem",
+  fontWeight: "500",
+  transition: "all 0.2s ease",
+  outline: "none",
+};
 
-    try {
-      // Prepare items data
-      const items = selectedProductIds.map((productId) => {
-        const product = products.find((p) => p.id === productId);
-        const quantity = quantities[productId] || 1;
+const createBtnStyle = {
+  padding: "0.75rem 1.5rem",
+  backgroundColor: "#2563eb",
+  color: "white",
+  border: "none",
+  borderRadius: "8px",
+  cursor: "pointer",
+  fontSize: "0.875rem",
+  fontWeight: "500",
+  transition: "all 0.2s ease",
+  outline: "none",
+};
 
-        let total_price = 0;
-        if (formData.type === "Rent") {
-         
-          const rentalDuration =
-            formData.items.find((item) => item.product_id === productId)
-              ?.rental_duration || 1;
+const selectProductBtnStyle = {
+  padding: "0.75rem 1.5rem",
+  backgroundColor: "#ffffff",
+  color: "#2563eb",
+  border: "1px solid #2563eb",
+  borderRadius: "8px",
+  cursor: "pointer",
+  fontSize: "0.875rem",
+  fontWeight: "500",
+  transition: "all 0.2s ease",
+  outline: "none",
+  width: "100%",
+};
 
-          if (rentalDuration === 12) {
-            total_price = product.rent_price_1_year * quantity;
-          } else if (rentalDuration === 6) {
-            total_price = product.rent_price_6_months * quantity;
-          } else {
-            total_price = product.rent_price_per_month * quantity;
-          }
-        } else {
-          // For Sale transactions
-          total_price = product.purchase_price * quantity;
-        }
+const fileUploadContainer = {
+  gridColumn: "1 / -1",
+};
 
-        return {
-          product_id: productId,
-          product_name: product.product_name,
-          quantity: quantity,
-          total_price: total_price,
-        };
-      });
+const fileUploadLabel = {
+  display: "block",
+  cursor: "pointer",
+};
 
-      const payload = {
-        ...formData,
-        items,
-      };
+const fileUploadButton = {
+  display: "inline-block",
+  padding: "0.75rem 1.5rem",
+  backgroundColor: "#ffffff",
+  color: "#374151",
+  border: "1px solid #d1d5db",
+  borderRadius: "8px",
+  fontSize: "0.875rem",
+  fontWeight: "500",
+  transition: "all 0.2s ease",
+};
 
-      const response = await fetch(`${API_URL}/delivery-challans/create`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(payload),
-      });
-
-      if (!response.ok) throw new Error("Failed to create delivery challan");
-
-      const result = await response.json();
-      setSnackbar({
-        open: true,
-        message: "Delivery-Challans created successfully!",
-        severity: "success",
-      });
-
-      setTimeout(() => {
-        navigate("/dashboard/operations");
-      }, 1500);
-
-    } catch (error) {
-      console.error("Error creating delivery challan:", error);
-      setSnackbar({
-        open: true,
-        message: "Error creating delivery challan: " + error.message,
-        severity: "error",
-      });
-    }
-  };
-
-  // Field component
-  const Field = ({
+// Field component moved outside and memoized
+const Field = memo(
+  ({
     label,
     name,
     placeholder,
@@ -403,7 +372,325 @@ const DeliveryChallanAddPage = () => {
         />
       )}
     </div>
+  )
+);
+
+const generateDcId = () => {
+  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+  let randomPart = "";
+  for (let i = 0; i < 6; i++) {
+    randomPart += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return `DC-${randomPart}`;
+};
+
+const DeliveryChallanAddPage = () => {
+  const navigate = useNavigate();
+  const [formData, setFormData] = useState({
+    dc_id: "",
+    dc_title: "",
+    is_dc: false,
+    order_id: "",
+    customer_code: "",
+    order_number: "",
+    payment_type: "",
+    dc_date: new Date().toISOString().split("T")[0],
+    dc_status: "Dispatched",
+    dealer_reference: "",
+    email: "",
+    gst_number: "",
+    pan_number: "",
+    remarks: "",
+    type: "Sale",
+    regular_dc: true,
+    industry: "",
+    shipping_ordered_by: "",
+    shipping_phone_number: "",
+    shipping_name: "",
+    street: "",
+    landmark: "",
+    pincode: "",
+    city: "",
+    state: "",
+    country: "India",
+    vehicle_number: "",
+    delivery_person_name: "",
+    delivery_person_phone_number: "",
+    receiver_name: "",
+    receiver_phone_number: "",
+    items: [],
+  });
+
+  // State for UI and data
+  const [orders, setOrders] = useState([]);
+  const [products, setProducts] = useState([]);
+  const [selectedProductIds, setSelectedProductIds] = useState([]);
+  const [quantities, setQuantities] = useState({});
+  const [searchTerm, setSearchTerm] = useState("");
+  const [showProductTable, setShowProductTable] = useState(false);
+  const [snackbar, setSnackbar] = useState({
+    open: false,
+    message: "",
+    severity: "success",
+  });
+
+  useEffect(() => {
+    setFormData((prev) => ({
+      ...prev,
+      dc_id: generateDcId(),
+    }));
+  }, []);
+
+  // Fetch orders and products on component mount
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        // Fetch approved orders
+        const orderResponse = await fetch(`${API_URL}/orders/order-approved`);
+        if (!orderResponse.ok) throw new Error("Failed to fetch orders");
+        const orderData = await orderResponse.json();
+        setOrders(orderData);
+
+        // Fetch products
+        const prodResponse = await fetch(`${API_URL}/product-templete`);
+        if (!prodResponse.ok) throw new Error("Failed to fetch products");
+        const prodData = await prodResponse.json();
+        setProducts(prodData);
+      } catch (error) {
+        console.error("Error fetching data:", error);
+        setSnackbar({
+          open: true,
+          message: "Error fetching data: " + error.message,
+          severity: "error",
+        });
+      }
+    };
+
+    fetchData();
+  }, []);
+
+  // Handle order selection
+  const handleOrderSelect = (orderId) => {
+    const selectedOrder = orders.find(
+      (order) => order.id === parseInt(orderId)
+    );
+    if (!selectedOrder) return;
+
+    const { personalDetails, address, items } = selectedOrder;
+
+    setFormData({
+      ...formData,
+      order_id: selectedOrder.id,
+      customer_code: personalDetails.id, // ✅ FIXED HERE
+      order_number: selectedOrder.order_id,
+      payment_type:selectedOrder.payment_type,
+      email: personalDetails.email,
+      gst_number: personalDetails.gst_number,
+      shipping_ordered_by: `${personalDetails.first_name} ${personalDetails.last_name}`,
+      shipping_phone_number: personalDetails.phone_number,
+      shipping_name: `${personalDetails.first_name} ${personalDetails.last_name}`,
+      street: address.street || "",
+      landmark: address.landmark || "",
+      pincode: address.pincode,
+      city: address.city,
+      state: address.state,
+      country: address.country,
+      type: selectedOrder.transaction_type,
+      items: items.map((item) => ({
+        product_id: item.product_id,
+        product_name: item.product_name,
+        quantity: item.requested_quantity,
+        item_total_value: item.item_total_value,
+      })),
+    });
+
+    // Auto-select products from the order
+    const productIds = items.map((item) => item.product_id);
+    setSelectedProductIds(productIds);
+
+    // Set quantities
+    const newQuantities = {};
+    items.forEach((item) => {
+      newQuantities[item.product_id] = item.requested_quantity;
+    });
+    setQuantities(newQuantities);
+  };
+
+  // Fetch location data when pincode changes
+  useEffect(() => {
+    const fetchLocationFromPincode = async () => {
+      const pincode = formData.pincode;
+
+      // Only make API call if pincode is 6 digits (India specific)
+      if (pincode && pincode.length === 6) {
+        try {
+          const response = await fetch(
+            `https://api.postalpincode.in/pincode/${pincode}`
+          );
+          const data = await response.json();
+
+          if (data && data[0]?.Status === "Success") {
+            const postOffice = data[0].PostOffice[0];
+
+            setFormData((prev) => ({
+              ...prev,
+              city: postOffice.District,
+              state: postOffice.State,
+              country: "India",
+            }));
+          } else {
+            setSnackbar({
+              open: true,
+              message: "Could not find location for this pincode",
+              severity: "warning",
+            });
+          }
+        } catch (error) {
+          console.error("Error fetching location data:", error);
+          setSnackbar({
+            open: true,
+            message:
+              "Error fetching location data. Please check the pincode and try again.",
+            severity: "error",
+          });
+        }
+      }
+    };
+
+    // Add debounce to prevent too many API calls
+    const debounceTimer = setTimeout(() => {
+      fetchLocationFromPincode();
+    }, 500);
+
+    return () => clearTimeout(debounceTimer);
+  }, [formData.pincode]);
+
+  // Handle form field changes
+  const handleInputChange = useCallback((e) => {
+    const { name, value, type, checked } = e.target;
+    setFormData((prev) => ({
+      ...prev,
+      [name]: type === "checkbox" ? checked : value,
+    }));
+  }, []);
+
+  // Handle product selection
+  const handleProductSelection = useCallback((productId) => {
+    setSelectedProductIds((prev) => {
+      if (prev.includes(productId)) {
+        return prev.filter((id) => id !== productId);
+      } else {
+        return [...prev, productId];
+      }
+    });
+
+    // Initialize quantity to 1 if not already set
+    setQuantities((prev) => {
+      if (!prev[productId]) {
+        return { ...prev, [productId]: 1 };
+      }
+      return prev;
+    });
+  }, []);
+
+  // Handle quantity changes
+  const handleQtyChange = useCallback((productId, value) => {
+    const qty = Math.max(0, parseInt(value) || 0);
+    setQuantities((prev) => ({ ...prev, [productId]: qty }));
+  }, []);
+
+  const incrementQty = useCallback((productId) => {
+    setQuantities((prev) => ({
+      ...prev,
+      [productId]: (prev[productId] || 0) + 1,
+    }));
+  }, []);
+
+  const decrementQty = useCallback((productId) => {
+    setQuantities((prev) => ({
+      ...prev,
+      [productId]: Math.max(0, (prev[productId] || 0) - 1),
+    }));
+  }, []);
+
+  // Filter products based on search term
+  const filteredProducts = products.filter(
+    (product) =>
+      product.product_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      product.model?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      product.description?.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  // Handle form submission
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+
+    try {
+      // Prepare items data
+      const items = selectedProductIds.map((productId) => {
+        const product = products.find((p) => p.id === productId);
+        const quantity = quantities[productId] || 1;
+
+        let total_price = 0;
+        if (formData.type === "Rent") {
+          const rentalDuration =
+            formData.items.find((item) => item.product_id === productId)
+              ?.rental_duration || 1;
+
+          if (rentalDuration === 12) {
+            total_price = product.rent_price_1_year * quantity;
+          } else if (rentalDuration === 6) {
+            total_price = product.rent_price_6_months * quantity;
+          } else {
+            total_price = product.rent_price_per_month * quantity;
+          }
+        } else {
+          // For Sale transactions
+          total_price = product.purchase_price * quantity;
+        }
+
+        return {
+          product_id: productId,
+          product_name: product.product_name,
+          quantity: quantity,
+          total_price: total_price,
+        };
+      });
+
+      const payload = {
+        ...formData,
+        items,
+      };
+
+      const response = await fetch(`${API_URL}/delivery-challans/create`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) throw new Error("Failed to create delivery challan");
+
+      const result = await response.json();
+      setSnackbar({
+        open: true,
+        message: "Delivery-Challans created successfully!",
+        severity: "success",
+      });
+
+      setTimeout(() => {
+        navigate("/dashboard/operations");
+      }, 1500);
+    } catch (error) {
+      console.error("Error creating delivery challan:", error);
+      setSnackbar({
+        open: true,
+        message: "Error creating delivery challan: " + error.message,
+        severity: "error",
+      });
+    }
+  };
 
   return (
     <div style={containerStyle}>
@@ -452,25 +739,6 @@ const DeliveryChallanAddPage = () => {
                 value={formData.dc_title}
                 onChange={handleInputChange}
               />
-              {/* <div style={checkboxContainerStyle}>
-                <label style={checkboxLabelStyle}>
-                  <Field
-                    type="checkbox"
-                    name="is_dc"
-                    checked={formData.is_dc}
-                    onChange={handleInputChange}
-                  />
-                  <div style={checkboxCustomStyle}>
-                    {formData.is_dc && <span style={checkmarkStyle}>✓</span>}
-                  </div>
-                  <div>
-                    <span style={checkboxTextStyle}>Is DC</span>
-                    <span style={checkboxDescStyle}>
-                      Check if this is a delivery challan
-                    </span>
-                  </div>
-                </label>
-              </div> */}
               <Field
                 label="Order Details"
                 name="order_id"
@@ -499,6 +767,14 @@ const DeliveryChallanAddPage = () => {
                 required
               />
               <Field
+                label="Payment type"
+                name="payment_type"
+                placeholder="Payment Type"
+                value={formData.payment_type}
+                onChange={handleInputChange}
+                disabled
+              />
+              <Field
                 label="DC Status"
                 name="dc_status"
                 type="select"
@@ -507,7 +783,6 @@ const DeliveryChallanAddPage = () => {
                 onChange={handleInputChange}
                 options={[
                   { value: "Pending", label: "Pending" },
-                  { value: "Dispatched", label: "Dispatched" },
                   { value: "Delivered", label: "Delivered" },
                 ]}
                 required
@@ -873,17 +1148,12 @@ const DeliveryChallanAddPage = () => {
                           <TableCell>
                             {formData.type === "Rent" ? (
                               <>
-                                {/* <div>Day: {product.rent_price_per_day}</div> */}
                                 <div>Month: {product.rent_price_per_month}</div>
-                                {/* <div>
-                                  6 Months: {product.rent_price_6_months}
-                                </div>
-                                <div>1 Year: {product.rent_price_1_year}</div> */}
                               </>
                             ) : (
                               product.purchase_price
                             )}
-                          </TableCell>{" "}
+                          </TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
@@ -924,275 +1194,6 @@ const DeliveryChallanAddPage = () => {
       </form>
     </div>
   );
-};
-
-// Styles (same as in your original code)
-const containerStyle = {
-  padding: "2rem",
-  fontFamily:
-    '"Inter", "Segoe UI", -apple-system, BlinkMacSystemFont, sans-serif',
-  minHeight: "100vh",
-  lineHeight: 1.6,
-};
-
-const headerStyle = {
-  marginBottom: "2rem",
-  maxWidth: "1400px",
-};
-
-const titleStyle = {
-  fontSize: "2rem",
-  fontWeight: "700",
-  color: "#1e293b",
-  margin: "0 0 0.5rem 0",
-  letterSpacing: "-0.025em",
-};
-
-const subtitleStyle = {
-  fontSize: "1rem",
-  color: "#64748b",
-  margin: 0,
-};
-
-const formContainerStyle = {
-  display: "grid",
-  gap: "1.5rem",
-  maxWidth: "1400px",
-  gridTemplateColumns: "repeat(auto-fit, minmax(400px, 1fr))",
-};
-
-const cardStyle = {
-  backgroundColor: "#ffffff",
-  padding: "1.5rem",
-  borderRadius: "12px",
-  boxShadow: "0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06)",
-  border: "1px solid #e2e8f0",
-  transition: "box-shadow 0.2s ease",
-};
-
-const cardHeaderContainerStyle = {
-  display: "flex",
-  alignItems: "center",
-  marginBottom: "1.5rem",
-  paddingBottom: "1rem",
-  borderBottom: "1px solid #e2e8f0",
-};
-
-const iconStyle = {
-  fontSize: "1.25rem",
-  marginRight: "0.75rem",
-  backgroundColor: "#f1f5f9",
-  padding: "0.5rem",
-  borderRadius: "8px",
-};
-
-const cardHeaderStyle = {
-  fontSize: "1.125rem",
-  fontWeight: "600",
-  color: "#1e293b",
-  margin: 0,
-};
-
-const fieldsGridStyle = {
-  display: "grid",
-  gap: "1rem",
-  gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))",
-};
-
-const fieldContainerStyle = {
-  display: "flex",
-  flexDirection: "column",
-};
-
-const labelStyle = {
-  display: "block",
-  marginBottom: "0.5rem",
-  fontWeight: "500",
-  fontSize: "0.875rem",
-  color: "#374151",
-  letterSpacing: "0.025em",
-};
-
-const requiredStyle = {
-  color: "#ef4444",
-  marginLeft: "0.25rem",
-};
-
-const inputStyle = {
-  width: "100%",
-  padding: "0.75rem",
-  borderRadius: "8px",
-  border: "1px solid #d1d5db",
-  fontSize: "0.875rem",
-  backgroundColor: "#ffffff",
-  transition: "all 0.2s ease",
-  outline: "none",
-  boxSizing: "border-box",
-};
-
-const selectWrapperStyle = {
-  position: "relative",
-  width: "100%",
-};
-
-const selectStyle = {
-  width: "100%",
-  padding: "0.75rem",
-  paddingRight: "2.5rem",
-  borderRadius: "8px",
-  border: "1px solid #d1d5db",
-  fontSize: "0.875rem",
-  backgroundColor: "#ffffff",
-  appearance: "none",
-  transition: "all 0.2s ease",
-  outline: "none",
-  boxSizing: "border-box",
-  cursor: "pointer",
-};
-
-const selectArrowStyle = {
-  position: "absolute",
-  right: "0.75rem",
-  top: "50%",
-  transform: "translateY(-50%)",
-  pointerEvents: "none",
-  fontSize: "0.75rem",
-  color: "#6b7280",
-};
-
-const textareaStyle = {
-  width: "100%",
-  padding: "0.75rem",
-  borderRadius: "8px",
-  border: "1px solid #d1d5db",
-  fontSize: "0.875rem",
-  backgroundColor: "#ffffff",
-  transition: "all 0.2s ease",
-  outline: "none",
-  resize: "vertical",
-  fontFamily: "inherit",
-  boxSizing: "border-box",
-};
-
-const checkboxContainerStyle = {
-  marginTop: "0.5rem",
-  gridColumn: "1 / -1",
-};
-
-const checkboxLabelStyle = {
-  display: "flex",
-  alignItems: "flex-start",
-  cursor: "pointer",
-  gap: "0.75rem",
-};
-
-const checkboxStyle = {
-  display: "none",
-};
-
-const checkboxCustomStyle = {
-  width: "20px",
-  height: "20px",
-  borderRadius: "4px",
-  border: "2px solid #d1d5db",
-  backgroundColor: "#ffffff",
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  transition: "all 0.2s ease",
-  flexShrink: 0,
-  marginTop: "2px",
-};
-
-const checkmarkStyle = {
-  color: "#ffffff",
-  fontSize: "12px",
-  fontWeight: "bold",
-};
-
-const checkboxTextStyle = {
-  fontSize: "0.875rem",
-  fontWeight: "500",
-  color: "#374151",
-  display: "block",
-};
-
-const checkboxDescStyle = {
-  fontSize: "0.75rem",
-  color: "#6b7280",
-  display: "block",
-  marginTop: "0.25rem",
-};
-
-const buttonContainerStyle = {
-  display: "flex",
-  justifyContent: "flex-end",
-  gap: "0.75rem",
-  marginTop: "2rem",
-  maxWidth: "1200px",
-  margin: "2rem auto 0",
-  padding: "0 1.5rem",
-};
-
-const cancelBtnStyle = {
-  padding: "0.75rem 1.5rem",
-  backgroundColor: "#f3f4f6",
-  color: "#374151",
-  border: "1px solid #d1d5db",
-  borderRadius: "8px",
-  cursor: "pointer",
-  fontSize: "0.875rem",
-  fontWeight: "500",
-  transition: "all 0.2s ease",
-  outline: "none",
-};
-
-const createBtnStyle = {
-  padding: "0.75rem 1.5rem",
-  backgroundColor: "#2563eb",
-  color: "white",
-  border: "none",
-  borderRadius: "8px",
-  cursor: "pointer",
-  fontSize: "0.875rem",
-  fontWeight: "500",
-  transition: "all 0.2s ease",
-  outline: "none",
-};
-
-const selectProductBtnStyle = {
-  padding: "0.75rem 1.5rem",
-  backgroundColor: "#ffffff",
-  color: "#2563eb",
-  border: "1px solid #2563eb",
-  borderRadius: "8px",
-  cursor: "pointer",
-  fontSize: "0.875rem",
-  fontWeight: "500",
-  transition: "all 0.2s ease",
-  outline: "none",
-  width: "100%",
-};
-
-const fileUploadContainer = {
-  gridColumn: "1 / -1",
-};
-
-const fileUploadLabel = {
-  display: "block",
-  cursor: "pointer",
-};
-
-const fileUploadButton = {
-  display: "inline-block",
-  padding: "0.75rem 1.5rem",
-  backgroundColor: "#ffffff",
-  color: "#374151",
-  border: "1px solid #d1d5db",
-  borderRadius: "8px",
-  fontSize: "0.875rem",
-  fontWeight: "500",
-  transition: "all 0.2s ease",
 };
 
 export default DeliveryChallanAddPage;

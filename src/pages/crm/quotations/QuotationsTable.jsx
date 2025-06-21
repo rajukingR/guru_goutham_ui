@@ -12,9 +12,9 @@ const QuotationsTable = () => {
     { id: "quotation_title", label: "Title" },
     { id: "lead_id", label: "Lead ID" },
     { id: "quotation_date", label: "Quotation Date" },
-    { id: "rental_start_date", label: "Rental Start" },
-    { id: "rental_end_date", label: "Rental End" },
-    { id: "rental_duration", label: "Duration (months)" },
+    // { id: "rental_start_date", label: "Rental Start" },
+    // { id: "rental_end_date", label: "Rental End" },
+    // { id: "rental_duration", label: "Duration (months)" },
     { id: "remarks", label: "Remarks" },
     { id: "status", label: "Status" },
   ];

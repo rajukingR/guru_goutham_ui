@@ -501,7 +501,7 @@ const QuotationsAddLayoutPage = () => {
                 }
               />
               <Box display="flex" gap={2}>
-                <Field
+                {/* <Field
                   label="Rental Duration (Months)"
                   placeholder="Enter Months"
                   type="number"
@@ -509,7 +509,7 @@ const QuotationsAddLayoutPage = () => {
                   onChange={(e) =>
                     handleInputChange("rentalDurationMonths", e.target.value)
                   }
-                />
+                /> */}
                 {/* <Field
                   label="Rental Duration (Days)"
                   placeholder="Enter Days"
@@ -521,7 +521,7 @@ const QuotationsAddLayoutPage = () => {
                 /> */}
               </Box>
 
-              <Field
+              {/* <Field
                 label="Rental Start Date"
                 type="date"
                 placeholder="Select Date"
@@ -538,7 +538,7 @@ const QuotationsAddLayoutPage = () => {
                 onChange={(e) =>
                   handleInputChange("rentalEndDate", e.target.value)
                 }
-              />
+              /> */}
               <Field
                 label="Quotation Date"
                 type="date"

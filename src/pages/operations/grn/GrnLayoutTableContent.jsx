@@ -3,15 +3,29 @@ import axios from "axios";
 import DynamicTable from "../../../components/table-format/DynamicTable";
 import API_URL from "../../../api/Api_url";
 
+const getGrnStatusBadge = (status) => {
+  switch (status) {
+    case "Approved":
+      return (
+        <span style={{ color: "green", fontWeight: "bold" }}>Approved</span>
+      );
+    case "Rejected":
+      return <span style={{ color: "red", fontWeight: "bold" }}>Rejected</span>;
+    default:
+      return (
+        <span style={{ color: "orange", fontWeight: "bold" }}>
+          {status || "Pending"}
+        </span>
+      );
+  }
+};
+
 const GrnLayoutTableContent = () => {
   const [data, setData] = useState([]);
 
   const columns = [
     { id: "s_id", label: "S.No." },
     { id: "grn_number", label: "GRN Number" },
-    { id: "grn_title", label: "Title" },
-    { id: "order_id", label: "Order ID" },
-    { id: "invoice_number", label: "Invoice Number" },
     { id: "customer_id", label: "Customer ID" },
     { id: "customer_name", label: "Customer Name" },
     { id: "grn_date", label: "GRN Date" },
@@ -24,6 +38,7 @@ const GrnLayoutTableContent = () => {
     { id: "country", label: "Country" },
     { id: "gst_number", label: "GST No." },
     { id: "pan_number", label: "PAN No." },
+    { id: "grn_status", label: "Status" }, // 👈 Add this
   ];
 
   useEffect(() => {
@@ -34,6 +49,7 @@ const GrnLayoutTableContent = () => {
           const formattedData = response.data.map((item, index) => ({
             s_id: index + 1,
             ...item,
+            grn_status: getGrnStatusBadge(item.grn_status), // 👈 Add this
           }));
           setData(formattedData);
         }

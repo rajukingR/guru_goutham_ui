@@ -24,14 +24,13 @@ import API_URL from "../../../api/Api_url";
 import { useInventory } from "../../../contexts/InventoryContext";
 
 const generateSalesOrderId = () => {
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-  let randomPart = '';
+  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+  let randomPart = "";
   for (let i = 0; i < 6; i++) {
     randomPart += chars.charAt(Math.floor(Math.random() * chars.length));
   }
   return `SO-${randomPart}`;
 };
-
 
 const SalesOrdersAddLayoutPage = ({ product }) => {
   // State for form data
@@ -68,6 +67,7 @@ const SalesOrdersAddLayoutPage = ({ product }) => {
       phone_number: "",
       email: "",
       gst_number: "",
+      pan_number: "",
     },
     address: {
       billing_address: "",
@@ -83,8 +83,8 @@ const SalesOrdersAddLayoutPage = ({ product }) => {
   // State for data fetching
   const [quotations, setQuotations] = useState([]);
   const [products, setProducts] = useState([]);
-const [deviceIds, setDeviceIds] = useState({});
-const [deviceIdErrors, setDeviceIdErrors] = useState({});
+  const [deviceIds, setDeviceIds] = useState({});
+  const [deviceIdErrors, setDeviceIdErrors] = useState({});
 
   const [loading, setLoading] = useState({
     quotations: true,
@@ -106,13 +106,12 @@ const [deviceIdErrors, setDeviceIdErrors] = useState({});
   const [selectedProductIds, setSelectedProductIds] = useState([]);
   const [quantities, setQuantities] = useState({});
 
-
-useEffect(() => {
-  setFormData(prev => ({
-    ...prev,
-    order_id: generateSalesOrderId()  // Match key used in form
-  }));
-}, []);
+  useEffect(() => {
+    setFormData((prev) => ({
+      ...prev,
+      order_id: generateSalesOrderId(), // Match key used in form
+    }));
+  }, []);
 
   // Fetch approved quotations
   useEffect(() => {
@@ -142,14 +141,49 @@ useEffect(() => {
   const handleRentalDurationChange = (field, value) => {
     if (field === "rental_duration") {
       const months = Math.max(0, parseInt(value) || 0);
+      const currentDate = new Date();
+
+      // Format date as YYYY-MM-DD for date inputs
+      const formatDateForInput = (date) => {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, "0");
+        const day = String(date.getDate()).padStart(2, "0");
+        return `${year}-${month}-${day}`;
+      };
+
+      // Format date as DD-MM-YYYY for display
+      const formatDateForDisplay = (date) => {
+        const day = String(date.getDate()).padStart(2, "0");
+        const month = String(date.getMonth() + 1).padStart(2, "0");
+        const year = date.getFullYear();
+        return `${day}-${month}-${year}`;
+      };
+
+      const startDate = formatDateForInput(currentDate);
+      let endDate = null;
+
+      // Calculate end date by adding exact months (same day)
+      if (months > 0) {
+        const endDateObj = new Date(currentDate);
+        endDateObj.setMonth(endDateObj.getMonth() + months);
+        endDate = formatDateForInput(endDateObj);
+      }
+
       setFormData((prev) => ({
         ...prev,
         rental_duration: months,
-        rental_duration_days: months > 0 ? null : prev.rental_duration_days,
+        rental_duration_days: null,
+        rental_start_date: startDate,
+        rental_end_date: endDate || prev.rental_end_date,
+        order_date: startDate,
       }));
     } else if (field === "rental_duration_days") {
       const days = Math.max(0, parseInt(value) || 0);
-      setFormData((prev) => ({ ...prev, rental_duration_days: days }));
+      setFormData((prev) => ({
+        ...prev,
+        rental_duration_days: days,
+        rental_duration: null,
+      }));
     }
   };
 
@@ -216,6 +250,7 @@ useEffect(() => {
           phone_number: leadData.contact.phone_number,
           email: leadData.contact.email,
           gst_number: leadData.contact.gst,
+          pan_number: leadData.contact.pan,
         },
         address: {
           ...prev.address,
@@ -337,54 +372,54 @@ useEffect(() => {
 
   // Handle product selection changes
   const handleProductSelection = (productId) => {
-  setSelectedProductIds((prev) =>
-    prev.includes(productId)
-      ? prev.filter((id) => id !== productId)
-      : [...prev, productId]
-  );
+    setSelectedProductIds((prev) =>
+      prev.includes(productId)
+        ? prev.filter((id) => id !== productId)
+        : [...prev, productId]
+    );
 
-  // Initialize quantity and Asset IDs
-  if (!selectedProductIds.includes(productId)) {
-    const qty = quantities[productId] || 1;
-    setQuantities((prev) => ({ ...prev, [productId]: qty }));
-    setDeviceIds((prev) => ({
-      ...prev,
-      [productId]: Array(qty).fill("")
-    }));
-  }
-};
+    // Initialize quantity and Asset IDs
+    if (!selectedProductIds.includes(productId)) {
+      const qty = quantities[productId] || 1;
+      setQuantities((prev) => ({ ...prev, [productId]: qty }));
+      setDeviceIds((prev) => ({
+        ...prev,
+        [productId]: Array(qty).fill(""),
+      }));
+    }
+  };
 
   const handleQtyChange = (productId, value) => {
-  const qty = Math.max(0, parseInt(value) || 0);
-  setQuantities((prev) => {
-    // Adjust Asset IDs array when quantity changes
-    const currentDeviceIds = deviceIds[productId] || [];
-    let newDeviceIds = currentDeviceIds.slice(0, qty);
-    
-    // If increasing quantity, add empty strings for new Asset IDs
-    if (qty > currentDeviceIds.length) {
-      newDeviceIds = [
-        ...currentDeviceIds,
-        ...Array(qty - currentDeviceIds.length).fill("")
-      ];
-    }
-    
-    setDeviceIds(prev => ({
-      ...prev,
-      [productId]: newDeviceIds
-    }));
-    
-    return { ...prev, [productId]: qty };
-  });
-};
+    const qty = Math.max(0, parseInt(value) || 0);
+    setQuantities((prev) => {
+      // Adjust Asset IDs array when quantity changes
+      const currentDeviceIds = deviceIds[productId] || [];
+      let newDeviceIds = currentDeviceIds.slice(0, qty);
 
-const incrementQty = (productId) => {
-  handleQtyChange(productId, (quantities[productId] || 0) + 1);
-};
+      // If increasing quantity, add empty strings for new Asset IDs
+      if (qty > currentDeviceIds.length) {
+        newDeviceIds = [
+          ...currentDeviceIds,
+          ...Array(qty - currentDeviceIds.length).fill(""),
+        ];
+      }
 
-const decrementQty = (productId) => {
-  handleQtyChange(productId, Math.max(0, (quantities[productId] || 0) - 1));
-};
+      setDeviceIds((prev) => ({
+        ...prev,
+        [productId]: newDeviceIds,
+      }));
+
+      return { ...prev, [productId]: qty };
+    });
+  };
+
+  const incrementQty = (productId) => {
+    handleQtyChange(productId, (quantities[productId] || 0) + 1);
+  };
+
+  const decrementQty = (productId) => {
+    handleQtyChange(productId, Math.max(0, (quantities[productId] || 0) - 1));
+  };
   // Filter products based on search term
   const filteredProducts = products.filter(
     (product) =>
@@ -397,35 +432,35 @@ const decrementQty = (productId) => {
     e.preventDefault();
 
     // Validate Asset IDs
-  let hasErrors = false;
-  const newDeviceIdErrors = {};
-  
-  selectedProductIds.forEach(productId => {
-    const qty = quantities[productId] || 0;
-    const ids = deviceIds[productId] || [];
-    
-    if (ids.length !== qty) {
-      newDeviceIdErrors[productId] = `Please add ${qty} Asset IDs`;
-      hasErrors = true;
-    } else {
-      const emptyIds = ids.filter(id => !id.trim());
-      if (emptyIds.length > 0) {
-        newDeviceIdErrors[productId] = `All Asset IDs are required`;
-        hasErrors = true;
-      }
-    }
-  });
+    let hasErrors = false;
+    const newDeviceIdErrors = {};
 
-  setDeviceIdErrors(newDeviceIdErrors);
-  
-  if (hasErrors) {
-    setSnackbar({
-      open: true,
-      message: "Please provide all required Asset IDs",
-      severity: "error",
+    selectedProductIds.forEach((productId) => {
+      const qty = quantities[productId] || 0;
+      const ids = deviceIds[productId] || [];
+
+      if (ids.length !== qty) {
+        newDeviceIdErrors[productId] = `Please add ${qty} Asset IDs`;
+        hasErrors = true;
+      } else {
+        const emptyIds = ids.filter((id) => !id.trim());
+        if (emptyIds.length > 0) {
+          newDeviceIdErrors[productId] = `All Asset IDs are required`;
+          hasErrors = true;
+        }
+      }
     });
-    return;
-  }
+
+    setDeviceIdErrors(newDeviceIdErrors);
+
+    if (hasErrors) {
+      setSnackbar({
+        open: true,
+        message: "Please provide all required Asset IDs",
+        severity: "error",
+      });
+      return;
+    }
     // Prepare items array with Asset IDs
     const orderItems = selectedProductIds.map((productId) => {
       const product = products.find((p) => p.id === productId);
@@ -645,6 +680,7 @@ const decrementQty = (productId) => {
                 value={formData.order_generated_by}
                 readOnly
               />
+
               <Field
                 label="Rental Duration (months)"
                 placeholder="Enter Duration in Months"
@@ -655,19 +691,6 @@ const decrementQty = (productId) => {
                 }
               />
 
-              {/* <Field
-                label="Rental Duration (Days)"
-                placeholder="Enter Rental Duration in Days"
-                value={formData.rental_duration_days || ""}
-                onChange={(e) =>
-                  handleRentalDurationChange(
-                    "rental_duration_days",
-                    e.target.value
-                  )
-                }
-                type="number"
-                disabled={parseInt(formData.rental_duration || 0) > 0}
-              /> */}
               <Field
                 label="Rental Start Date"
                 type="date"
@@ -682,6 +705,7 @@ const decrementQty = (productId) => {
                   })
                 }
               />
+
               <Field
                 label="Rental End Date"
                 type="date"
@@ -693,6 +717,7 @@ const decrementQty = (productId) => {
                   })
                 }
               />
+
               <Field
                 label="Order Date"
                 type="date"
@@ -788,6 +813,19 @@ const decrementQty = (productId) => {
                   handleChange({
                     target: {
                       name: "personal_details.gst_number",
+                      value: e.target.value,
+                    },
+                  })
+                }
+              />
+              <Field
+                label="PAN Number"
+                placeholder="Enter PAN Number"
+                value={formData.personal_details.pan_number}
+                onChange={(e) =>
+                  handleChange({
+                    target: {
+                      name: "personal_details.pan_number",
                       value: e.target.value,
                     },
                   })
@@ -915,136 +953,185 @@ const decrementQty = (productId) => {
                 </Box>
 
                 <TableContainer component={Paper}>
-  <Table size="small">
-    <TableHead>
-      <TableRow sx={{ backgroundColor: "#0d47a1" }}>
-        <TableCell padding="checkbox" sx={{ color: "#fff" }}>
-          <Checkbox sx={{ color: "#fff" }} />
-        </TableCell>
-        <TableCell sx={{ color: "#fff" }}>Product Name</TableCell>
-        <TableCell sx={{ color: "#fff" }}>Product Category</TableCell>
-        <TableCell sx={{ color: "#fff" }}>Brand</TableCell>
-        <TableCell sx={{ color: "#fff" }}>Specifications</TableCell>
-        <TableCell sx={{ color: "#fff" }}>Available Qty</TableCell>
-        <TableCell sx={{ color: "#fff" }}>Price per Piece</TableCell>
-        <TableCell sx={{ color: "#fff" }}>Quantity</TableCell>
-        <TableCell sx={{ color: "#fff" }}>Asset IDs</TableCell>
-      </TableRow>
-    </TableHead>
-    <TableBody>
-      {filteredProducts.filter((product) => selectedProductIds.includes(product.id))
+                  <Table size="small">
+                    <TableHead>
+                      <TableRow sx={{ backgroundColor: "#0d47a1" }}>
+                        <TableCell padding="checkbox" sx={{ color: "#fff" }}>
+                          <Checkbox sx={{ color: "#fff" }} />
+                        </TableCell>
+                        <TableCell sx={{ color: "#fff" }}>
+                          Product Name
+                        </TableCell>
+                        <TableCell sx={{ color: "#fff" }}>
+                          Product Category
+                        </TableCell>
+                        <TableCell sx={{ color: "#fff" }}>Brand</TableCell>
+                        <TableCell sx={{ color: "#fff" }}>
+                          Specifications
+                        </TableCell>
+                        <TableCell sx={{ color: "#fff" }}>
+                          Available Qty
+                        </TableCell>
+                        <TableCell sx={{ color: "#fff" }}>
+                          Price per Piece
+                        </TableCell>
+                        <TableCell sx={{ color: "#fff" }}>Quantity</TableCell>
+                        <TableCell sx={{ color: "#fff" }}>Asset IDs</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {filteredProducts
+                        .filter((product) =>
+                          selectedProductIds.includes(product.id)
+                        )
 
-        .map((product) => (
-          <TableRow key={product.id}>
-            <TableCell padding="checkbox">
-              <Checkbox
-                checked={selectedProductIds.includes(product.id)}
-                onChange={() => {
-                  setSelectedProductIds((prev) =>
-                    prev.includes(product.id)
-                      ? prev.filter((id) => id !== product.id)
-                      : [...prev, product.id]
-                  );
-                }}
-              />
-            </TableCell>
-            <TableCell>{product.product_name}</TableCell>
-            <TableCell>{product.product_category}</TableCell>
-            <TableCell>{product.brand}</TableCell>
-            <TableCell>
-              <div><strong>Model:</strong> {product.model}</div>
-              <div><strong>Processor:</strong> {product.processor}</div>
-              <div><strong>RAM:</strong> {product.ram}</div>
-              <div><strong>Storage:</strong> {product.storage}</div>
-              <div><strong>Graphics:</strong> {product.graphics}</div>
-            </TableCell>
-            <TableCell>
-              {getAvailableQty(product.id)}
-            </TableCell>
-            <TableCell>
-              <div><strong>Month:</strong> ₹{product.rent_price_per_month}</div>
-            </TableCell>
-            
-            <TableCell>
-              <Box display="flex" alignItems="center">
-                <IconButton
-                  size="small"
-                  onClick={() => decrementQty(product.id)}
-                  disabled={!selectedProductIds.includes(product.id)}
-                >
-                  <Remove fontSize="small" />
-                </IconButton>
-                <TextField
-                  type="number"
-                  size="small"
-                  value={quantities[product.id] || ""}
-                  onChange={(e) => handleQtyChange(product.id, e.target.value)}
-                  inputProps={{
-                    min: 0,
-                    max: getAvailableQty(product.id), // Add max limit based on available quantity
-                    style: { width: 50, textAlign: "center" },
-                  }}
-                />
-                <IconButton
-                  size="small"
-                  onClick={() => incrementQty(product.id)}
-                  disabled={!selectedProductIds.includes(product.id)}
-                >
-                  <Add fontSize="small" />
-                </IconButton>
-              </Box>
-            </TableCell>
-            <TableCell>
-              {quantities[product.id] > 0 && (
-                <Box display="flex" flexDirection="column" gap={1}>
-                  {(deviceIds[product.id] || []).map((id, idx) => (
-                    <TextField
-                      key={idx}
-                      size="small"
-                      placeholder={`Asset ID ${idx + 1}`}
-                      value={id}
-                      onChange={(e) => {
-                        const updated = [...(deviceIds[product.id] || [])];
-                        updated[idx] = e.target.value;
-                        setDeviceIds((prev) => ({
-                          ...prev,
-                          [product.id]: updated,
-                        }));
-                        if (deviceIdErrors[product.id]) {
-                          setDeviceIdErrors((prev) => {
-                            const newErrors = { ...prev };
-                            delete newErrors[product.id];
-                            return newErrors;
-                          });
-                        }
-                      }}
-                      error={Boolean(deviceIdErrors[product.id])}
-                      helperText={idx === 0 ? deviceIdErrors[product.id] : ""}
-                    />
-                  ))}
-                  {(deviceIds[product.id]?.length || 0) < 
-                   (quantities[product.id] || 0) && (
-                    <Button
-                      size="small"
-                      variant="outlined"
-                      onClick={() =>
-                        setDeviceIds((prev) => ({
-                          ...prev,
-                          [product.id]: [...(prev[product.id] || []), ""],
-                        }))
-                      }
-                    >
-                      + Add Asset ID
-                    </Button>
-                  )}
-                </Box>
-              )}
-            </TableCell>
-          </TableRow>
-        ))}
-    </TableBody>
-  </Table>
-</TableContainer>
+                        .map((product) => (
+                          <TableRow key={product.id}>
+                            <TableCell padding="checkbox">
+                              <Checkbox
+                                checked={selectedProductIds.includes(
+                                  product.id
+                                )}
+                                onChange={() => {
+                                  setSelectedProductIds((prev) =>
+                                    prev.includes(product.id)
+                                      ? prev.filter((id) => id !== product.id)
+                                      : [...prev, product.id]
+                                  );
+                                }}
+                              />
+                            </TableCell>
+                            <TableCell>{product.product_name}</TableCell>
+                            <TableCell>{product.product_category}</TableCell>
+                            <TableCell>{product.brand}</TableCell>
+                            <TableCell>
+                              <div>
+                                <strong>Model:</strong> {product.model}
+                              </div>
+                              <div>
+                                <strong>Processor:</strong> {product.processor}
+                              </div>
+                              <div>
+                                <strong>RAM:</strong> {product.ram}
+                              </div>
+                              <div>
+                                <strong>Storage:</strong> {product.storage}
+                              </div>
+                              <div>
+                                <strong>Graphics:</strong> {product.graphics}
+                              </div>
+                            </TableCell>
+                            <TableCell>{getAvailableQty(product.id)}</TableCell>
+                            <TableCell>
+                              <div>
+                                <strong>Month:</strong> ₹
+                                {product.rent_price_per_month}
+                              </div>
+                            </TableCell>
+
+                            <TableCell>
+                              <Box display="flex" alignItems="center">
+                                <IconButton
+                                  size="small"
+                                  onClick={() => decrementQty(product.id)}
+                                  disabled={
+                                    !selectedProductIds.includes(product.id)
+                                  }
+                                >
+                                  <Remove fontSize="small" />
+                                </IconButton>
+                                <TextField
+                                  type="number"
+                                  size="small"
+                                  value={quantities[product.id] || ""}
+                                  onChange={(e) =>
+                                    handleQtyChange(product.id, e.target.value)
+                                  }
+                                  inputProps={{
+                                    min: 0,
+                                    max: getAvailableQty(product.id), // Add max limit based on available quantity
+                                    style: { width: 50, textAlign: "center" },
+                                  }}
+                                />
+                                <IconButton
+                                  size="small"
+                                  onClick={() => incrementQty(product.id)}
+                                  disabled={
+                                    !selectedProductIds.includes(product.id)
+                                  }
+                                >
+                                  <Add fontSize="small" />
+                                </IconButton>
+                              </Box>
+                            </TableCell>
+                            <TableCell>
+                              {quantities[product.id] > 0 && (
+                                <Box
+                                  display="flex"
+                                  flexDirection="column"
+                                  gap={1}
+                                >
+                                  {(deviceIds[product.id] || []).map(
+                                    (id, idx) => (
+                                      <TextField
+                                        key={idx}
+                                        size="small"
+                                        placeholder={`Asset ID ${idx + 1}`}
+                                        value={id}
+                                        onChange={(e) => {
+                                          const updated = [
+                                            ...(deviceIds[product.id] || []),
+                                          ];
+                                          updated[idx] = e.target.value;
+                                          setDeviceIds((prev) => ({
+                                            ...prev,
+                                            [product.id]: updated,
+                                          }));
+                                          if (deviceIdErrors[product.id]) {
+                                            setDeviceIdErrors((prev) => {
+                                              const newErrors = { ...prev };
+                                              delete newErrors[product.id];
+                                              return newErrors;
+                                            });
+                                          }
+                                        }}
+                                        error={Boolean(
+                                          deviceIdErrors[product.id]
+                                        )}
+                                        helperText={
+                                          idx === 0
+                                            ? deviceIdErrors[product.id]
+                                            : ""
+                                        }
+                                      />
+                                    )
+                                  )}
+                                  {(deviceIds[product.id]?.length || 0) <
+                                    (quantities[product.id] || 0) && (
+                                    <Button
+                                      size="small"
+                                      variant="outlined"
+                                      onClick={() =>
+                                        setDeviceIds((prev) => ({
+                                          ...prev,
+                                          [product.id]: [
+                                            ...(prev[product.id] || []),
+                                            "",
+                                          ],
+                                        }))
+                                      }
+                                    >
+                                      + Add Asset ID
+                                    </Button>
+                                  )}
+                                </Box>
+                              )}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
               </Box>
             )}
           </div>

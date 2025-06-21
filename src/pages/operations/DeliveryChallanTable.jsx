@@ -3,6 +3,18 @@ import DynamicTable from "../../components/table-format/DynamicTable";
 import axios from "axios";
 import API_URL from "../../api/Api_url";
 
+// Badge formatter for delivery status
+const getStatusBadge = (status) => {
+  switch (status) {
+    case "Delivered":
+      return <span style={{ color: "green", fontWeight: "bold" }}>Delivered</span>;
+    case "Dispatched":
+      return <span style={{ color: "orange", fontWeight: "bold" }}>Dispatched</span>;
+    default:
+      return <span style={{ color: "orange", fontWeight: "bold" }}>Pending</span>;
+  }
+};
+
 const DeliveryChallanTable = () => {
   const [data, setData] = useState([]);
 
@@ -13,12 +25,13 @@ const DeliveryChallanTable = () => {
     { id: "order_number", label: "Order Number" },
     { id: "customer_code", label: "Customer Code" },
     { id: "dc_date", label: "Date" },
-    { id: "dc_status", label: "Status" },
     { id: "shipping_name", label: "Shipped To" },
     { id: "city", label: "City" },
     { id: "vehicle_number", label: "Vehicle No." },
     { id: "delivery_person_name", label: "Delivery Person" },
     { id: "receiver_name", label: "Receiver" },
+        { id: "dc_status", label: "Status" },
+
   ];
 
   useEffect(() => {
@@ -36,6 +49,7 @@ const DeliveryChallanTable = () => {
           const formatted = response.data.map((item, index) => ({
             s_id: index + 1,
             ...item,
+            dc_status: getStatusBadge(item.dc_status), // format status here
           }));
           setData(formatted);
         }
@@ -49,6 +63,7 @@ const DeliveryChallanTable = () => {
 
   return (
     <div>
+      <h2 style={{ marginBottom: "10px" }}>Delivery Challans</h2>
       <DynamicTable columns={columns} data={data} />
     </div>
   );

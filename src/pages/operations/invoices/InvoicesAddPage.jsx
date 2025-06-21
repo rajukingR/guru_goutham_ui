@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback, memo } from "react";
 import {
   Box,
   TextField,
@@ -22,6 +22,342 @@ import {
 import { Add, Remove } from "@mui/icons-material";
 import API_URL from "../../../api/Api_url";
 import { useNavigate } from "react-router-dom";
+
+// Styles (same as in your original code)
+const containerStyle = {
+  padding: "2rem",
+  fontFamily:
+    '"Inter", "Segoe UI", -apple-system, BlinkMacSystemFont, sans-serif',
+  minHeight: "100vh",
+  lineHeight: 1.6,
+};
+
+const headerStyle = {
+  marginBottom: "2rem",
+  maxWidth: "1400px",
+};
+
+const titleStyle = {
+  fontSize: "20px",
+  fontWeight: "700",
+  color: "#1e293b",
+  margin: "0 0 0.5rem 0",
+  letterSpacing: "-0.025em",
+};
+
+const subtitleStyle = {
+  fontSize: "1rem",
+  color: "#64748b",
+  margin: 0,
+};
+
+const formContainerStyle = {
+  display: "grid",
+  gap: "1.5rem",
+  maxWidth: "1400px",
+  gridTemplateColumns: "repeat(auto-fit, minmax(400px, 1fr))",
+};
+
+const cardStyle = {
+  backgroundColor: "#ffffff",
+  padding: "1.5rem",
+  borderRadius: "12px",
+  boxShadow: "0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06)",
+  border: "1px solid #e2e8f0",
+  transition: "box-shadow 0.2s ease",
+};
+
+const cardHeaderContainerStyle = {
+  display: "flex",
+  alignItems: "center",
+  marginBottom: "1.5rem",
+  paddingBottom: "1rem",
+  borderBottom: "1px solid #e2e8f0",
+};
+
+const iconStyle = {
+  fontSize: "1.25rem",
+  marginRight: "0.75rem",
+  backgroundColor: "#f1f5f9",
+  padding: "0.5rem",
+  borderRadius: "8px",
+};
+
+const cardHeaderStyle = {
+  fontSize: "1.125rem",
+  fontWeight: "600",
+  color: "#1e293b",
+  margin: 0,
+};
+
+const fieldsGridStyle = {
+  display: "grid",
+  gap: "1rem",
+  gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))",
+};
+
+const fieldContainerStyle = {
+  display: "flex",
+  flexDirection: "column",
+};
+
+const labelStyle = {
+  display: "block",
+  marginBottom: "0.5rem",
+  fontWeight: "500",
+  fontSize: "0.875rem",
+  color: "#374151",
+  letterSpacing: "0.025em",
+};
+
+const inputStyle = {
+  width: "100%",
+  padding: "0.75rem",
+  borderRadius: "8px",
+  border: "1px solid #d1d5db",
+  fontSize: "0.875rem",
+  backgroundColor: "#ffffff",
+  transition: "all 0.2s ease",
+  outline: "none",
+  boxSizing: "border-box",
+};
+
+const selectWrapperStyle = {
+  position: "relative",
+  width: "100%",
+};
+
+const selectStyle = {
+  width: "100%",
+  padding: "0.75rem",
+  paddingRight: "2.5rem",
+  borderRadius: "8px",
+  border: "1px solid #d1d5db",
+  fontSize: "0.875rem",
+  backgroundColor: "#ffffff",
+  appearance: "none",
+  transition: "all 0.2s ease",
+  outline: "none",
+  boxSizing: "border-box",
+  cursor: "pointer",
+};
+
+const selectArrowStyle = {
+  position: "absolute",
+  right: "0.75rem",
+  top: "50%",
+  transform: "translateY(-50%)",
+  pointerEvents: "none",
+  fontSize: "0.75rem",
+  color: "#6b7280",
+};
+
+const buttonContainerStyle = {
+  display: "flex",
+  justifyContent: "center",
+  gap: "1rem",
+  marginTop: "2rem",
+  maxWidth: "1200px",
+  margin: "2rem auto 0",
+  padding: "0 1.5rem",
+  flexWrap: "wrap",
+};
+
+const cancelBtnStyle = {
+  padding: "0.75rem 1.5rem",
+  backgroundColor: "#f3f4f6",
+  color: "#374151",
+  border: "1px solid #d1d5db",
+  borderRadius: "8px",
+  cursor: "pointer",
+  fontSize: "0.875rem",
+  fontWeight: "500",
+  transition: "all 0.2s ease",
+  outline: "none",
+};
+
+const submitBtnStyle = {
+  padding: "0.75rem 1.5rem",
+  backgroundColor: "#2563eb",
+  color: "white",
+  border: "none",
+  borderRadius: "8px",
+  cursor: "pointer",
+  fontSize: "0.875rem",
+  fontWeight: "500",
+  transition: "all 0.2s ease",
+  outline: "none",
+};
+
+const monthButtonContainerStyle = {
+  display: "flex",
+  justifyContent: "center",
+  gap: "1rem",
+  marginBottom: "1rem",
+  width: "100%",
+};
+
+const monthButtonStyle = (isSelected) => ({
+  padding: "0.5rem 1rem",
+  backgroundColor: isSelected ? "#2563eb" : "#f3f4f6",
+  color: isSelected ? "white" : "#374151",
+  border: "1px solid #d1d5db",
+  borderRadius: "4px",
+  cursor: "pointer",
+  transition: "all 0.2s ease",
+  "&:hover": {
+    backgroundColor: isSelected ? "#1d4ed8" : "#e5e7eb",
+  },
+});
+
+// Field component moved outside and memoized
+const Field = memo(({
+  label,
+  name,
+  value,
+  onChange,
+  placeholder,
+  type = "text",
+  readOnly = false,
+}) => (
+  <div style={fieldContainerStyle}>
+    <label style={labelStyle}>{label}</label>
+    {type === "select" ? (
+      <div style={selectWrapperStyle}>
+        <select
+          style={selectStyle}
+          name={name}
+          value={value}
+          onChange={onChange}
+          disabled={readOnly}
+        >
+          <option value="" disabled>
+            {placeholder}
+          </option>
+        </select>
+        <div style={selectArrowStyle}>▼</div>
+      </div>
+    ) : type === "date" ? (
+      <input
+        type="date"
+        style={inputStyle}
+        name={name}
+        value={value}
+        onChange={onChange}
+        disabled={readOnly}
+      />
+    ) : (
+      <input
+        type={type}
+        name={name}
+        value={value}
+        onChange={onChange}
+        placeholder={placeholder}
+        style={{
+          ...inputStyle,
+          backgroundColor: readOnly ? "#f3f4f6" : "#ffffff",
+        }}
+        readOnly={readOnly}
+      />
+    )}
+  </div>
+));
+
+// DateRangeSelector component moved outside and memoized
+const DateRangeSelector = memo(({ selectedMonth, setSelectedMonth, dateRanges, setDateRanges }) => {
+  const [monthOffset, setMonthOffset] = useState(0);
+
+  const formatDate = (date) => {
+    const day = String(date.getDate()).padStart(2, "0");
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const year = date.getFullYear();
+    return `${year}-${month}-${day}`;
+  };
+
+  const calculateDates = useCallback((offset) => {
+    const baseDate = new Date();
+    const currentMonth = new Date(baseDate.getFullYear(), baseDate.getMonth() + offset, 1);
+
+    const startDate = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1);
+    const endDate = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0);
+    const prevStartDate = new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1);
+    const prevEndDate = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 0);
+
+    setDateRanges({
+      invoiceStartDate: formatDate(startDate),
+      invoiceEndDate: formatDate(endDate),
+      previousDeliveredStartDate: formatDate(prevStartDate),
+      previousDeliveredEndDate: formatDate(prevEndDate),
+      creditNoteStartDate: formatDate(prevStartDate),
+      creditNoteEndDate: formatDate(prevEndDate),
+    });
+  }, [setDateRanges]);
+
+  useEffect(() => {
+  calculateDates(monthOffset);
+  if (monthOffset === 0) {
+    setSelectedMonth("current");
+  }
+}, [monthOffset, calculateDates, setSelectedMonth]);
+
+
+  const handleMonthChange = (type) => {
+    if (type === "previous") {
+      setMonthOffset((prev) => prev - 1);
+      setSelectedMonth("previous");
+    } else if (type === "current") {
+      setMonthOffset(0); // ✅ Reset to current
+      setSelectedMonth("current");
+    } else if (type === "next") {
+      setMonthOffset((prev) => prev + 1);
+      setSelectedMonth("next");
+    }
+  };
+
+  return (
+    <Box sx={{ width: "100%", mb: 10 }}>
+      <Box sx={monthButtonContainerStyle}>
+        <button
+          type="button"
+          onClick={() => handleMonthChange("previous")}
+          style={monthButtonStyle(selectedMonth === "previous")}
+        >
+          Previous Month
+        </button>
+        <button
+          type="button"
+          onClick={() => handleMonthChange("current")}
+          style={monthButtonStyle(selectedMonth === "current")}
+        >
+          Current Month
+        </button>
+        <button
+          type="button"
+          onClick={() => handleMonthChange("next")}
+          style={monthButtonStyle(selectedMonth === "next")}
+        >
+          Next Month
+        </button>
+      </Box>
+
+      <Box
+        sx={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))",
+          gap: "1rem",
+          width: "100%",
+        }}
+      >
+        <Field label="Invoice Start Date" type="date" name="invoiceStartDate" value={dateRanges.invoiceStartDate} onChange={(e) => setDateRanges({ ...dateRanges, invoiceStartDate: e.target.value })} />
+        <Field label="Invoice End Date" type="date" name="invoiceEndDate" value={dateRanges.invoiceEndDate} onChange={(e) => setDateRanges({ ...dateRanges, invoiceEndDate: e.target.value })} />
+        <Field label="Previous Delivered Start Date" type="date" name="previousDeliveredStartDate" value={dateRanges.previousDeliveredStartDate} onChange={(e) => setDateRanges({ ...dateRanges, previousDeliveredStartDate: e.target.value })} />
+        <Field label="Previous Delivered End Date" type="date" name="previousDeliveredEndDate" value={dateRanges.previousDeliveredEndDate} onChange={(e) => setDateRanges({ ...dateRanges, previousDeliveredEndDate: e.target.value })} />
+        <Field label="Credit Note Start Date" type="date" name="creditNoteStartDate" value={dateRanges.creditNoteStartDate} onChange={(e) => setDateRanges({ ...dateRanges, creditNoteStartDate: e.target.value })} />
+        <Field label="Credit Note End Date" type="date" name="creditNoteEndDate" value={dateRanges.creditNoteEndDate} onChange={(e) => setDateRanges({ ...dateRanges, creditNoteEndDate: e.target.value })} />
+      </Box>
+    </Box>
+  );
+});
 
 const generateInvoiceId = () => {
   const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
@@ -82,6 +418,22 @@ const InvoicesAddPage = () => {
     message: "",
     severity: "info",
   });
+
+  const [returnQuantities, setReturnQuantities] = useState({});
+  const [newQuantities, setNewQuantities] = useState({});
+  const [newDeviceIds, setNewDeviceIds] = useState({});
+  const [returnedDeviceIds, setReturnedDeviceIds] = useState({});
+  const [selectedMonth, setSelectedMonth] = useState("current");
+  const [dateRanges, setDateRanges] = useState({
+  invoiceStartDate: '',
+  invoiceEndDate: '',
+  previousDeliveredStartDate: '',
+  previousDeliveredEndDate: '',
+  creditNoteStartDate: '',
+  creditNoteEndDate: '',
+});
+
+
   useEffect(() => {
     setFormData((prev) => ({
       ...prev,
@@ -89,50 +441,45 @@ const InvoicesAddPage = () => {
     }));
   }, []);
 
-  const [returnQuantities, setReturnQuantities] = useState({});
-  const [newQuantities, setNewQuantities] = useState({});
-  const [newDeviceIds, setNewDeviceIds] = useState({});
-  const [returnedDeviceIds, setReturnedDeviceIds] = useState({});
-
-  const handleReturnQtyChange = (productId, value) => {
+  const handleReturnQtyChange = useCallback((productId, value) => {
     setReturnQuantities((prev) => ({
       ...prev,
       [productId]: parseInt(value) || 0,
     }));
-  };
+  }, []);
 
-  const incrementReturnQty = (productId) => {
+  const incrementReturnQty = useCallback((productId) => {
     setReturnQuantities((prev) => ({
       ...prev,
       [productId]: (prev[productId] || 0) + 1,
     }));
-  };
+  }, []);
 
-  const decrementReturnQty = (productId) => {
+  const decrementReturnQty = useCallback((productId) => {
     setReturnQuantities((prev) => ({
       ...prev,
       [productId]: Math.max((prev[productId] || 0) - 1, 0),
     }));
-  };
+  }, []);
 
-  const handleNewQtyChange = (productId, value) => {
+  const handleNewQtyChange = useCallback((productId, value) => {
     const updated = { ...newQuantities, [productId]: parseInt(value) || 0 };
     setNewQuantities(updated);
-  };
+  }, []);
 
-  const incrementNewQty = (productId) => {
+  const incrementNewQty = useCallback((productId) => {
     setNewQuantities((prev) => ({
       ...prev,
       [productId]: (prev[productId] || 0) + 1,
     }));
-  };
+  }, []);
 
-  const decrementNewQty = (productId) => {
+  const decrementNewQty = useCallback((productId) => {
     setNewQuantities((prev) => ({
       ...prev,
       [productId]: Math.max((prev[productId] || 0) - 1, 0),
     }));
-  };
+  }, []);
 
   // Fetch initial data
   useEffect(() => {
@@ -171,7 +518,7 @@ const InvoicesAddPage = () => {
     fetchData();
   }, []);
 
-  const calculateRentalPrice = (product, months = 0, days = 0) => {
+  const calculateRentalPrice = useCallback((product, months = 0, days = 0) => {
     const perDay = product.rent_price_per_day || 0;
     const perMonth = product.rent_price_per_month || 0;
     const rent6Months = product.rent_price_6_months || perMonth * 6;
@@ -197,18 +544,7 @@ const InvoicesAddPage = () => {
     }
 
     return price;
-  };
-
-  // Add these state variables at the top of your component
-  const [selectedMonth, setSelectedMonth] = useState("current");
-  const [dateRanges, setDateRanges] = useState({
-    invoiceStartDate: "",
-    invoiceEndDate: "",
-    previousDeliveredStartDate: "",
-    previousDeliveredEndDate: "",
-    creditNoteStartDate: "",
-    creditNoteEndDate: "",
-  });
+  }, []);
 
   // Add this useEffect to calculate dates when component mounts or month changes
   useEffect(() => {
@@ -242,13 +578,13 @@ const InvoicesAddPage = () => {
       prevEndDate = new Date(today.getFullYear(), today.getMonth() + 1, 0);
     }
 
-    // Format dates as DD-MM-YYYY
     const formatDate = (date) => {
-      const day = String(date.getDate()).padStart(2, "0");
-      const month = String(date.getMonth() + 1).padStart(2, "0");
-      const year = date.getFullYear();
-      return `${day}-${month}-${year}`;
-    };
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`; // ✅ valid format: yyyy-mm-dd
+};
+
 
     setDateRanges({
       invoiceStartDate: formatDate(startDate),
@@ -260,7 +596,7 @@ const InvoicesAddPage = () => {
     });
   }, [selectedMonth]);
 
-  const handleCustomerSelect = (customerId) => {
+  const handleCustomerSelect = useCallback((customerId) => {
     const selectedOrder = orders.find(
       (order) => order.id === parseInt(customerId)
     );
@@ -358,9 +694,9 @@ const InvoicesAddPage = () => {
         email: personal?.email || "",
       },
     });
-  };
+  }, [orders, products, quantities, taxTypes, formData, calculateRentalPrice]);
 
-  const getRentalPrice = (product, duration) => {
+  const getRentalPrice = useCallback((product, duration) => {
     switch (duration) {
       case "1":
         return product.rent_price_per_day;
@@ -373,7 +709,7 @@ const InvoicesAddPage = () => {
       default:
         return product.rent_price_per_day;
     }
-  };
+  }, []);
 
   // Add this effect to update the form data when selected products or quantities change
   useEffect(() => {
@@ -434,60 +770,60 @@ const InvoicesAddPage = () => {
   }, [formData.shippingDetails.pincode]);
 
   // Handle form field changes
-  const handleInputChange = (e) => {
+  const handleInputChange = useCallback((e) => {
     const { name, value } = e.target;
-    setFormData({
-      ...formData,
+    setFormData((prev) => ({
+      ...prev,
       [name]: value,
-    });
-  };
+    }));
+  }, []);
 
   // Handle shipping details changes
-  const handleShippingChange = (e) => {
+  const handleShippingChange = useCallback((e) => {
     const { name, value } = e.target;
-    setFormData({
-      ...formData,
+    setFormData((prev) => ({
+      ...prev,
       shippingDetails: {
-        ...formData.shippingDetails,
+        ...prev.shippingDetails,
         [name]: value,
       },
-    });
-  };
+    }));
+  }, []);
 
   // Handle product selection
-  const handleProductSelection = (productId) => {
-    if (selectedProductIds.includes(productId)) {
-      setSelectedProductIds(
-        selectedProductIds.filter((id) => id !== productId)
-      );
-    } else {
-      setSelectedProductIds([...selectedProductIds, productId]);
-      setQuantities((prev) => ({
-        ...prev,
-        [productId]: prev[productId] || 1,
-      }));
-    }
-  };
+  const handleProductSelection = useCallback((productId) => {
+    setSelectedProductIds((prev) => {
+      if (prev.includes(productId)) {
+        return prev.filter((id) => id !== productId);
+      } else {
+        return [...prev, productId];
+      }
+    });
+    setQuantities((prev) => ({
+      ...prev,
+      [productId]: prev[productId] || 1,
+    }));
+  }, []);
 
   // Handle quantity changes
-  const handleQtyChange = (productId, value) => {
+  const handleQtyChange = useCallback((productId, value) => {
     const qty = Math.max(0, parseInt(value) || 0);
     setQuantities((prev) => ({ ...prev, [productId]: qty }));
-  };
+  }, []);
 
-  const incrementQty = (productId) => {
+  const incrementQty = useCallback((productId) => {
     setQuantities((prev) => ({
       ...prev,
       [productId]: (prev[productId] || 0) + 1,
     }));
-  };
+  }, []);
 
-  const decrementQty = (productId) => {
+  const decrementQty = useCallback((productId) => {
     setQuantities((prev) => ({
       ...prev,
       [productId]: Math.max(0, (prev[productId] || 0) - 1),
     }));
-  };
+  }, []);
 
   // Filter products based on search term
   const filteredProducts = products.filter(
@@ -559,8 +895,8 @@ const InvoicesAddPage = () => {
           quantity,
           return_quantity,
           new_quantity,
-          new_device_ids, // Add this
-          returned_device_ids, // Add this
+          new_device_ids,
+          returned_device_ids,
         };
       });
 
@@ -588,9 +924,9 @@ const InvoicesAddPage = () => {
     calculateTotals();
   }, [
     selectedProductIds,
-    quantities, // previous_quantity
-    returnQuantities, // return_quantity
-    newQuantities, // ✅ new_quantity
+    quantities,
+    returnQuantities,
+    newQuantities,
     products,
     taxTypes,
     formData.transaction_type,
@@ -625,8 +961,8 @@ const InvoicesAddPage = () => {
         // Make sure items have the correct rental duration information
         items: formData.items.map((item) => ({
           ...item,
-          new_device_ids: newDeviceIds[item.product_id] || [], // Changed from productId to item.product_id
-          returned_device_ids: returnedDeviceIds[item.product_id] || [], // Changed from productId to item.product_id
+          new_device_ids: newDeviceIds[item.product_id] || [],
+          returned_device_ids: returnedDeviceIds[item.product_id] || [],
           rental_duration: formData.rental_duration || "0",
           rental_duration_days: formData.rental_duration_days || 0,
           rental_duration_months: formData.rental_duration
@@ -658,7 +994,6 @@ const InvoicesAddPage = () => {
       setTimeout(() => {
         navigate("/dashboard/operations/invoices");
       }, 1500);
-      // Optionally reset the form or redirect
     } catch (error) {
       console.error("Error creating invoice:", error);
       setSnackbar({
@@ -675,118 +1010,6 @@ const InvoicesAddPage = () => {
       currency: "INR",
       maximumFractionDigits: 2,
     }).format(number || 0);
-
-  // Add this component to your form where you want the date selection
-  const DateRangeSelector = ({
-    selectedMonth,
-    setSelectedMonth,
-    dateRanges,
-    setDateRanges,
-  }) => {
-    return (
-      <Box sx={{ width: "100%", mb: 10 }}>
-        <Box sx={monthButtonContainerStyle}>
-          <button
-            type="button"
-            onClick={() => setSelectedMonth("previous")}
-            style={monthButtonStyle(selectedMonth === "previous")}
-          >
-            Previous Month
-          </button>
-          <button
-            type="button"
-            onClick={() => setSelectedMonth("current")}
-            style={monthButtonStyle(selectedMonth === "current")}
-          >
-            Current Month
-          </button>
-          <button
-            type="button"
-            onClick={() => setSelectedMonth("next")}
-            style={monthButtonStyle(selectedMonth === "next")}
-          >
-            Next Month
-          </button>
-        </Box>
-
-        <Box
-          sx={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))",
-            gap: "1rem",
-            width: "100%",
-          }}
-        >
-          <Field
-            label="Invoice Start Date"
-            name="invoiceStartDate"
-            value={dateRanges.invoiceStartDate}
-            onChange={(e) =>
-              setDateRanges({ ...dateRanges, invoiceStartDate: e.target.value })
-            }
-            type="text"
-          />
-          <Field
-            label="Invoice End Date"
-            name="invoiceEndDate"
-            value={dateRanges.invoiceEndDate}
-            onChange={(e) =>
-              setDateRanges({ ...dateRanges, invoiceEndDate: e.target.value })
-            }
-            type="text"
-          />
-          <Field
-            label="Previous Delivered Start Date"
-            name="previousDeliveredStartDate"
-            value={dateRanges.previousDeliveredStartDate}
-            onChange={(e) =>
-              setDateRanges({
-                ...dateRanges,
-                previousDeliveredStartDate: e.target.value,
-              })
-            }
-            type="text"
-          />
-          <Field
-            label="Previous Delivered End Date"
-            name="previousDeliveredEndDate"
-            value={dateRanges.previousDeliveredEndDate}
-            onChange={(e) =>
-              setDateRanges({
-                ...dateRanges,
-                previousDeliveredEndDate: e.target.value,
-              })
-            }
-            type="text"
-          />
-          <Field
-            label="Credit Note Start Date"
-            name="creditNoteStartDate"
-            value={dateRanges.creditNoteStartDate}
-            onChange={(e) =>
-              setDateRanges({
-                ...dateRanges,
-                creditNoteStartDate: e.target.value,
-              })
-            }
-            type="text"
-          />
-          <Field
-            label="Credit Note End Date"
-            name="creditNoteEndDate"
-            value={dateRanges.creditNoteEndDate}
-            onChange={(e) =>
-              setDateRanges({
-                ...dateRanges,
-                creditNoteEndDate: e.target.value,
-              })
-            }
-            type="text"
-          />
-        </Box>
-      </Box>
-    );
-  };
 
   return (
     <div style={containerStyle}>
@@ -843,13 +1066,6 @@ const InvoicesAddPage = () => {
                 value={formData.invoice_date}
                 onChange={handleInputChange}
               />
-              {/* <Field
-                label="Due Date"
-                type="date"
-                name="invoice_due_date"
-                value={formData.invoice_due_date}
-                onChange={handleInputChange}
-              /> */}
 
               <FormControl fullWidth>
                 <InputLabel>Select Customer</InputLabel>
@@ -870,7 +1086,7 @@ const InvoicesAddPage = () => {
               {/* Date Range Selector - spans full width */}
               <div
                 style={{
-                  gridColumn: "1 / -1", // Makes it span all columns
+                  gridColumn: "1 / -1",
                   margin: "1rem 0",
                   padding: "1rem",
                   backgroundColor: "#f8f9fa",
@@ -886,20 +1102,6 @@ const InvoicesAddPage = () => {
                 />
               </div>
 
-              {/* <Field
-                label="PO Number"
-                name="purchase_order_number"
-                value={formData.purchase_order_number}
-                onChange={handleInputChange}
-                placeholder="Enter PO Number"
-              />
-              <Field
-                label="PO Date"
-                type="date"
-                name="purchase_order_date"
-                value={formData.purchase_order_date}
-                onChange={handleInputChange}
-              /> */}
               <Field
                 label="Customer GST"
                 name="customer_gst_number"
@@ -1446,248 +1648,6 @@ const InvoicesAddPage = () => {
       </form>
     </div>
   );
-};
-
-// Field component
-const Field = ({
-  label,
-  name,
-  value,
-  onChange,
-  placeholder,
-  type = "text",
-  readOnly = false,
-}) => (
-  <div style={fieldContainerStyle}>
-    <label style={labelStyle}>{label}</label>
-    {type === "select" ? (
-      <div style={selectWrapperStyle}>
-        <select
-          style={selectStyle}
-          name={name}
-          value={value}
-          onChange={onChange}
-          disabled={readOnly}
-        >
-          <option value="" disabled>
-            {placeholder}
-          </option>
-        </select>
-        <div style={selectArrowStyle}>▼</div>
-      </div>
-    ) : type === "date" ? (
-      <input
-        type="date"
-        style={inputStyle}
-        name={name}
-        value={value}
-        onChange={onChange}
-        disabled={readOnly}
-      />
-    ) : (
-      <input
-        type={type}
-        name={name}
-        value={value}
-        onChange={onChange}
-        placeholder={placeholder}
-        style={{
-          ...inputStyle,
-          backgroundColor: readOnly ? "#f3f4f6" : "#ffffff",
-        }}
-        readOnly={readOnly}
-      />
-    )}
-  </div>
-);
-
-// Styles
-
-// Add these styles to your existing styles
-const monthButtonContainerStyle = {
-  display: "flex",
-  justifyContent: "center",
-  gap: "1rem",
-  marginBottom: "1rem",
-  width: "100%",
-};
-
-const monthButtonStyle = (isSelected) => ({
-  padding: "0.5rem 1rem",
-  backgroundColor: isSelected ? "#2563eb" : "#f3f4f6",
-  color: isSelected ? "white" : "#374151",
-  border: "1px solid #d1d5db",
-  borderRadius: "4px",
-  cursor: "pointer",
-  transition: "all 0.2s ease",
-  "&:hover": {
-    backgroundColor: isSelected ? "#1d4ed8" : "#e5e7eb",
-  },
-});
-
-const containerStyle = {
-  padding: "2rem",
-  fontFamily:
-    '"Inter", "Segoe UI", -apple-system, BlinkMacSystemFont, sans-serif',
-  minHeight: "100vh",
-  lineHeight: 1.6,
-};
-
-const headerStyle = {
-  marginBottom: "2rem",
-  maxWidth: "1400px",
-};
-
-const titleStyle = {
-  fontSize: "20px",
-  fontWeight: "700",
-  color: "#1e293b",
-  margin: "0 0 0.5rem 0",
-  letterSpacing: "-0.025em",
-};
-
-const subtitleStyle = {
-  fontSize: "1rem",
-  color: "#64748b",
-  margin: 0,
-};
-
-const formContainerStyle = {
-  display: "grid",
-  gap: "1.5rem",
-  maxWidth: "1400px",
-  gridTemplateColumns: "repeat(auto-fit, minmax(400px, 1fr))",
-};
-
-const cardStyle = {
-  backgroundColor: "#ffffff",
-  padding: "1.5rem",
-  borderRadius: "12px",
-  boxShadow: "0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06)",
-  border: "1px solid #e2e8f0",
-  transition: "box-shadow 0.2s ease",
-};
-
-const cardHeaderContainerStyle = {
-  display: "flex",
-  alignItems: "center",
-  marginBottom: "1.5rem",
-  paddingBottom: "1rem",
-  borderBottom: "1px solid #e2e8f0",
-};
-
-const iconStyle = {
-  fontSize: "1.25rem",
-  marginRight: "0.75rem",
-  backgroundColor: "#f1f5f9",
-  padding: "0.5rem",
-  borderRadius: "8px",
-};
-
-const cardHeaderStyle = {
-  fontSize: "1.125rem",
-  fontWeight: "600",
-  color: "#1e293b",
-  margin: 0,
-};
-
-const fieldsGridStyle = {
-  display: "grid",
-  gap: "1rem",
-  gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))",
-};
-
-const fieldContainerStyle = {
-  display: "flex",
-  flexDirection: "column",
-};
-
-const labelStyle = {
-  display: "block",
-  marginBottom: "0.5rem",
-  fontWeight: "500",
-  fontSize: "0.875rem",
-  color: "#374151",
-  letterSpacing: "0.025em",
-};
-
-const inputStyle = {
-  width: "100%",
-  padding: "0.75rem",
-  borderRadius: "8px",
-  border: "1px solid #d1d5db",
-  fontSize: "0.875rem",
-  backgroundColor: "#ffffff",
-  transition: "all 0.2s ease",
-  outline: "none",
-  boxSizing: "border-box",
-};
-
-const selectWrapperStyle = {
-  position: "relative",
-  width: "100%",
-};
-
-const selectStyle = {
-  width: "100%",
-  padding: "0.75rem",
-  paddingRight: "2.5rem",
-  borderRadius: "8px",
-  border: "1px solid #d1d5db",
-  fontSize: "0.875rem",
-  backgroundColor: "#ffffff",
-  appearance: "none",
-  transition: "all 0.2s ease",
-  outline: "none",
-  boxSizing: "border-box",
-  cursor: "pointer",
-};
-
-const selectArrowStyle = {
-  position: "absolute",
-  right: "0.75rem",
-  top: "50%",
-  transform: "translateY(-50%)",
-  pointerEvents: "none",
-  fontSize: "0.75rem",
-  color: "#6b7280",
-};
-
-const buttonContainerStyle = {
-  display: "flex",
-  justifyContent: "center",
-  gap: "1rem",
-  marginTop: "2rem",
-  maxWidth: "1200px",
-  margin: "2rem auto 0",
-  padding: "0 1.5rem",
-  flexWrap: "wrap",
-};
-
-const cancelBtnStyle = {
-  padding: "0.75rem 1.5rem",
-  backgroundColor: "#f3f4f6",
-  color: "#374151",
-  border: "1px solid #d1d5db",
-  borderRadius: "8px",
-  cursor: "pointer",
-  fontSize: "0.875rem",
-  fontWeight: "500",
-  transition: "all 0.2s ease",
-  outline: "none",
-};
-
-const submitBtnStyle = {
-  padding: "0.75rem 1.5rem",
-  backgroundColor: "#2563eb",
-  color: "white",
-  border: "none",
-  borderRadius: "8px",
-  cursor: "pointer",
-  fontSize: "0.875rem",
-  fontWeight: "500",
-  transition: "all 0.2s ease",
-  outline: "none",
 };
 
 export default InvoicesAddPage;

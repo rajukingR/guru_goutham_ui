@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback, memo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
   Box,
@@ -16,8 +16,362 @@ import {
   Alert,
 } from "@mui/material";
 import { Add, Remove } from "@mui/icons-material";
-
 import API_URL from "../../api/Api_url";
+
+// Styles (same as in your original code)
+const containerStyle = {
+  padding: "2rem",
+  fontFamily:
+    '"Inter", "Segoe UI", -apple-system, BlinkMacSystemFont, sans-serif',
+  minHeight: "100vh",
+  lineHeight: 1.6,
+};
+
+const headerStyle = {
+  marginBottom: "2rem",
+  maxWidth: "1400px",
+};
+
+const titleStyle = {
+  fontSize: "2rem",
+  fontWeight: "700",
+  color: "#1e293b",
+  margin: "0 0 0.5rem 0",
+  letterSpacing: "-0.025em",
+};
+
+const subtitleStyle = {
+  fontSize: "1rem",
+  color: "#64748b",
+  margin: 0,
+};
+
+const formContainerStyle = {
+  display: "grid",
+  gap: "1.5rem",
+  maxWidth: "1400px",
+  gridTemplateColumns: "repeat(auto-fit, minmax(400px, 1fr))",
+};
+
+const cardStyle = {
+  backgroundColor: "#ffffff",
+  padding: "1.5rem",
+  borderRadius: "12px",
+  boxShadow: "0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06)",
+  border: "1px solid #e2e8f0",
+  transition: "box-shadow 0.2s ease",
+};
+
+const cardHeaderContainerStyle = {
+  display: "flex",
+  alignItems: "center",
+  marginBottom: "1.5rem",
+  paddingBottom: "1rem",
+  borderBottom: "1px solid #e2e8f0",
+};
+
+const iconStyle = {
+  fontSize: "1.25rem",
+  marginRight: "0.75rem",
+  backgroundColor: "#f1f5f9",
+  padding: "0.5rem",
+  borderRadius: "8px",
+};
+
+const cardHeaderStyle = {
+  fontSize: "1.125rem",
+  fontWeight: "600",
+  color: "#1e293b",
+  margin: 0,
+};
+
+const fieldsGridStyle = {
+  display: "grid",
+  gap: "1rem",
+  gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))",
+};
+
+const fieldContainerStyle = {
+  display: "flex",
+  flexDirection: "column",
+};
+
+const labelStyle = {
+  display: "block",
+  marginBottom: "0.5rem",
+  fontWeight: "500",
+  fontSize: "0.875rem",
+  color: "#374151",
+  letterSpacing: "0.025em",
+};
+
+const requiredStyle = {
+  color: "#ef4444",
+  marginLeft: "0.25rem",
+};
+
+const inputStyle = {
+  width: "100%",
+  padding: "0.75rem",
+  borderRadius: "8px",
+  border: "1px solid #d1d5db",
+  fontSize: "0.875rem",
+  backgroundColor: "#ffffff",
+  transition: "all 0.2s ease",
+  outline: "none",
+  boxSizing: "border-box",
+};
+
+const selectWrapperStyle = {
+  position: "relative",
+  width: "100%",
+};
+
+const selectStyle = {
+  width: "100%",
+  padding: "0.75rem",
+  paddingRight: "2.5rem",
+  borderRadius: "8px",
+  border: "1px solid #d1d5db",
+  fontSize: "0.875rem",
+  backgroundColor: "#ffffff",
+  appearance: "none",
+  transition: "all 0.2s ease",
+  outline: "none",
+  boxSizing: "border-box",
+  cursor: "pointer",
+};
+
+const selectArrowStyle = {
+  position: "absolute",
+  right: "0.75rem",
+  top: "50%",
+  transform: "translateY(-50%)",
+  pointerEvents: "none",
+  fontSize: "0.75rem",
+  color: "#6b7280",
+};
+
+const textareaStyle = {
+  width: "100%",
+  padding: "0.75rem",
+  borderRadius: "8px",
+  border: "1px solid #d1d5db",
+  fontSize: "0.875rem",
+  backgroundColor: "#ffffff",
+  transition: "all 0.2s ease",
+  outline: "none",
+  resize: "vertical",
+  fontFamily: "inherit",
+  boxSizing: "border-box",
+};
+
+const checkboxContainerStyle = {
+  marginTop: "0.5rem",
+  gridColumn: "1 / -1",
+};
+
+const checkboxLabelStyle = {
+  display: "flex",
+  alignItems: "flex-start",
+  cursor: "pointer",
+  gap: "0.75rem",
+};
+
+const checkboxStyle = {
+  display: "none",
+};
+
+const checkboxCustomStyle = {
+  width: "20px",
+  height: "20px",
+  borderRadius: "4px",
+  border: "2px solid #d1d5db",
+  backgroundColor: "#ffffff",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  transition: "all 0.2s ease",
+  flexShrink: 0,
+  marginTop: "2px",
+};
+
+const checkmarkStyle = {
+  color: "#ffffff",
+  fontSize: "12px",
+  fontWeight: "bold",
+};
+
+const checkboxTextStyle = {
+  fontSize: "0.875rem",
+  fontWeight: "500",
+  color: "#374151",
+  display: "block",
+};
+
+const checkboxDescStyle = {
+  fontSize: "0.75rem",
+  color: "#6b7280",
+  display: "block",
+  marginTop: "0.25rem",
+};
+
+const buttonContainerStyle = {
+  display: "flex",
+  justifyContent: "flex-end",
+  gap: "0.75rem",
+  marginTop: "2rem",
+  maxWidth: "1200px",
+  margin: "2rem auto 0",
+  padding: "0 1.5rem",
+};
+
+const cancelBtnStyle = {
+  padding: "0.75rem 1.5rem",
+  backgroundColor: "#f3f4f6",
+  color: "#374151",
+  border: "1px solid #d1d5db",
+  borderRadius: "8px",
+  cursor: "pointer",
+  fontSize: "0.875rem",
+  fontWeight: "500",
+  transition: "all 0.2s ease",
+  outline: "none",
+};
+
+const createBtnStyle = {
+  padding: "0.75rem 1.5rem",
+  backgroundColor: "#2563eb",
+  color: "white",
+  border: "none",
+  borderRadius: "8px",
+  cursor: "pointer",
+  fontSize: "0.875rem",
+  fontWeight: "500",
+  transition: "all 0.2s ease",
+  outline: "none",
+};
+
+const selectProductBtnStyle = {
+  padding: "0.75rem 1.5rem",
+  backgroundColor: "#ffffff",
+  color: "#2563eb",
+  border: "1px solid #2563eb",
+  borderRadius: "8px",
+  cursor: "pointer",
+  fontSize: "0.875rem",
+  fontWeight: "500",
+  transition: "all 0.2s ease",
+  outline: "none",
+  width: "100%",
+};
+
+const fileUploadContainer = {
+  gridColumn: "1 / -1",
+};
+
+const fileUploadLabel = {
+  display: "block",
+  cursor: "pointer",
+};
+
+const fileUploadButton = {
+  display: "inline-block",
+  padding: "0.75rem 1.5rem",
+  backgroundColor: "#ffffff",
+  color: "#374151",
+  border: "1px solid #d1d5db",
+  borderRadius: "8px",
+  fontSize: "0.875rem",
+  fontWeight: "500",
+  transition: "all 0.2s ease",
+};
+
+// Field component moved outside and memoized
+const Field = memo(({
+  label,
+  name,
+  placeholder,
+  type = "text",
+  options = [],
+  required = false,
+  readOnly = false,
+  value,
+  onChange,
+  ...props
+}) => (
+  <div style={fieldContainerStyle}>
+    <label style={labelStyle}>
+      {label}
+      {required && <span style={requiredStyle}>*</span>}
+    </label>
+    {type === "select" ? (
+      <div style={selectWrapperStyle}>
+        <select
+          style={selectStyle}
+          name={name}
+          value={value}
+          onChange={onChange}
+          disabled={readOnly}
+          {...props}
+        >
+          <option value="">{placeholder}</option>
+          {options.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+        <div style={selectArrowStyle}>▼</div>
+      </div>
+    ) : type === "textarea" ? (
+      <textarea
+        name={name}
+        placeholder={placeholder}
+        style={textareaStyle}
+        rows={3}
+        readOnly={readOnly}
+        value={value}
+        onChange={onChange}
+        {...props}
+      />
+    ) : type === "date" ? (
+      <input
+        type="date"
+        name={name}
+        placeholder={placeholder}
+        style={inputStyle}
+        value={value}
+        onChange={onChange}
+        readOnly={readOnly}
+        {...props}
+      />
+    ) : type === "checkbox" ? (
+      <input
+        type="checkbox"
+        name={name}
+        checked={value}
+        onChange={onChange}
+        style={checkboxStyle}
+        {...props}
+      />
+    ) : (
+      <input
+        type={type}
+        name={name}
+        placeholder={placeholder}
+        style={{
+          ...inputStyle,
+          backgroundColor: readOnly ? "#f3f4f6" : "#ffffff",
+        }}
+        readOnly={readOnly}
+        value={value}
+        onChange={onChange}
+        {...props}
+      />
+    )}
+  </div>
+));
 
 const DeliveryChallanEditPage = () => {
   const { id } = useParams();
@@ -30,6 +384,7 @@ const DeliveryChallanEditPage = () => {
     is_dc: false,
     order_id: "",
     customer_code: "",
+    payment_type: "",
     order_number: "",
     dc_date: new Date().toISOString().split("T")[0],
     dc_status: "Dispatched",
@@ -124,7 +479,7 @@ const DeliveryChallanEditPage = () => {
   }, [id]);
 
   // Handle order selection
-  const handleOrderSelect = (orderId) => {
+  const handleOrderSelect = useCallback((orderId) => {
     const selectedOrder = orders.find(
       (order) => order.id === parseInt(orderId)
     );
@@ -132,10 +487,11 @@ const DeliveryChallanEditPage = () => {
 
     const { personalDetails, address, items } = selectedOrder;
 
-    setFormData({
-      ...formData,
+    setFormData(prev => ({
+      ...prev,
       order_id: selectedOrder.id,
-      customer_code: selectedOrder.order_id, // Using order_id as customer code
+      customer_code: selectedOrder.order_id,
+      payment_type: selectedOrder.payment_type,
       order_number: selectedOrder.order_id,
       email: personalDetails.email,
       gst_number: personalDetails.gst_number,
@@ -155,7 +511,7 @@ const DeliveryChallanEditPage = () => {
         quantity: item.requested_quantity,
         item_total_value: item.item_total_value,
       })),
-    });
+    }));
 
     // Auto-select products from the order
     const productIds = items.map((item) => item.product_id);
@@ -167,7 +523,7 @@ const DeliveryChallanEditPage = () => {
       newQuantities[item.product_id] = item.requested_quantity;
     });
     setQuantities(newQuantities);
-  };
+  }, [orders]);
 
   // Fetch location data when pincode changes
   useEffect(() => {
@@ -219,16 +575,16 @@ const DeliveryChallanEditPage = () => {
   }, [formData.pincode]);
 
   // Handle form field changes
-  const handleInputChange = (e) => {
+  const handleInputChange = useCallback((e) => {
     const { name, value, type, checked } = e.target;
-    setFormData({
-      ...formData,
+    setFormData(prev => ({
+      ...prev,
       [name]: type === "checkbox" ? checked : value,
-    });
-  };
+    }));
+  }, []);
 
   // Handle product selection
-  const handleProductSelection = (productId) => {
+  const handleProductSelection = useCallback((productId) => {
     setSelectedProductIds((prev) => {
       if (prev.includes(productId)) {
         return prev.filter((id) => id !== productId);
@@ -236,27 +592,27 @@ const DeliveryChallanEditPage = () => {
         return [...prev, productId];
       }
     });
-  };
+  }, []);
 
   // Handle quantity changes
-  const handleQtyChange = (productId, value) => {
+  const handleQtyChange = useCallback((productId, value) => {
     const qty = Math.max(0, parseInt(value) || 0);
     setQuantities((prev) => ({ ...prev, [productId]: qty }));
-  };
+  }, []);
 
-  const incrementQty = (productId) => {
+  const incrementQty = useCallback((productId) => {
     setQuantities((prev) => ({
       ...prev,
       [productId]: (prev[productId] || 0) + 1,
     }));
-  };
+  }, []);
 
-  const decrementQty = (productId) => {
+  const decrementQty = useCallback((productId) => {
     setQuantities((prev) => ({
       ...prev,
       [productId]: Math.max(0, (prev[productId] || 0) - 1),
     }));
-  };
+  }, []);
 
   // Filter products based on search term
   const filteredProducts = products.filter(
@@ -280,13 +636,10 @@ const DeliveryChallanEditPage = () => {
 
         // Calculate price based on transaction type
         if (formData.type === "Rent") {
-          // Use rental price based on duration (you'll need to implement this logic)
-          // For example, if you have rental duration in the order:
           const rentalDuration =
             formData.items.find((item) => item.product_id === productId)
               ?.rental_duration || 1;
 
-          // This is just an example - adjust based on your actual pricing logic
           if (rentalDuration === 12) {
             total_price = product.rent_price_1_year * quantity;
           } else if (rentalDuration === 6) {
@@ -342,92 +695,6 @@ const DeliveryChallanEditPage = () => {
       });
     }
   };
-
-  // Field component
-  const Field = ({
-    label,
-    name,
-    placeholder,
-    type = "text",
-    options = [],
-    required = false,
-    readOnly = false,
-    value,
-    onChange,
-    ...props
-  }) => (
-    <div style={fieldContainerStyle}>
-      <label style={labelStyle}>
-        {label}
-        {required && <span style={requiredStyle}>*</span>}
-      </label>
-      {type === "select" ? (
-        <div style={selectWrapperStyle}>
-          <select
-            style={selectStyle}
-            name={name}
-            value={value}
-            onChange={onChange}
-            disabled={readOnly}
-            {...props}
-          >
-            <option value="">{placeholder}</option>
-            {options.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-          <div style={selectArrowStyle}>▼</div>
-        </div>
-      ) : type === "textarea" ? (
-        <textarea
-          name={name}
-          placeholder={placeholder}
-          style={textareaStyle}
-          rows={3}
-          readOnly={readOnly}
-          value={value}
-          onChange={onChange}
-          {...props}
-        />
-      ) : type === "date" ? (
-        <input
-          type="date"
-          name={name}
-          placeholder={placeholder}
-          style={inputStyle}
-          value={value}
-          onChange={onChange}
-          readOnly={readOnly}
-          {...props}
-        />
-      ) : type === "checkbox" ? (
-        <input
-          type="checkbox"
-          name={name}
-          checked={value}
-          onChange={onChange}
-          style={checkboxStyle}
-          {...props}
-        />
-      ) : (
-        <input
-          type={type}
-          name={name}
-          placeholder={placeholder}
-          style={{
-            ...inputStyle,
-            backgroundColor: readOnly ? "#f3f4f6" : "#ffffff",
-          }}
-          readOnly={readOnly}
-          value={value}
-          onChange={onChange}
-          {...props}
-        />
-      )}
-    </div>
-  );
 
   if (isLoading) {
     return <div style={containerStyle}>Loading...</div>;
@@ -501,6 +768,14 @@ const DeliveryChallanEditPage = () => {
                 onChange={handleInputChange}
               />
               <Field
+                label="Payment Type"
+                name="payment_type"
+                placeholder="Enter payment Type"
+                value={formData.payment_type}
+                onChange={handleInputChange}
+                disabled
+              />
+              <Field
                 label="Order Number"
                 name="order_number"
                 placeholder="Enter Order Number"
@@ -517,7 +792,6 @@ const DeliveryChallanEditPage = () => {
                 onChange={handleInputChange}
                 options={[
                   { value: "Pending", label: "Pending" },
-                  { value: "Dispatched", label: "Dispatched" },
                   { value: "Delivered", label: "Delivered" },
                 ]}
                 required
@@ -883,17 +1157,12 @@ const DeliveryChallanEditPage = () => {
                           <TableCell>
                             {formData.type === "Rent" ? (
                               <>
-                                {/* <div>Day: {product.rent_price_per_day}</div> */}
                                 <div>Month: {product.rent_price_per_month}</div>
-                                {/* <div>
-                                  6 Months: {product.rent_price_6_months}
-                                </div>
-                                <div>1 Year: {product.rent_price_1_year}</div> */}
                               </>
                             ) : (
                               product.purchase_price
                             )}
-                          </TableCell>{" "}
+                          </TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
@@ -935,275 +1204,6 @@ const DeliveryChallanEditPage = () => {
       </form>
     </div>
   );
-};
-
-// Styles (same as in your original code)
-const containerStyle = {
-  padding: "2rem",
-  fontFamily:
-    '"Inter", "Segoe UI", -apple-system, BlinkMacSystemFont, sans-serif',
-  minHeight: "100vh",
-  lineHeight: 1.6,
-};
-
-const headerStyle = {
-  marginBottom: "2rem",
-  maxWidth: "1400px",
-};
-
-const titleStyle = {
-  fontSize: "2rem",
-  fontWeight: "700",
-  color: "#1e293b",
-  margin: "0 0 0.5rem 0",
-  letterSpacing: "-0.025em",
-};
-
-const subtitleStyle = {
-  fontSize: "1rem",
-  color: "#64748b",
-  margin: 0,
-};
-
-const formContainerStyle = {
-  display: "grid",
-  gap: "1.5rem",
-  maxWidth: "1400px",
-  gridTemplateColumns: "repeat(auto-fit, minmax(400px, 1fr))",
-};
-
-const cardStyle = {
-  backgroundColor: "#ffffff",
-  padding: "1.5rem",
-  borderRadius: "12px",
-  boxShadow: "0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06)",
-  border: "1px solid #e2e8f0",
-  transition: "box-shadow 0.2s ease",
-};
-
-const cardHeaderContainerStyle = {
-  display: "flex",
-  alignItems: "center",
-  marginBottom: "1.5rem",
-  paddingBottom: "1rem",
-  borderBottom: "1px solid #e2e8f0",
-};
-
-const iconStyle = {
-  fontSize: "1.25rem",
-  marginRight: "0.75rem",
-  backgroundColor: "#f1f5f9",
-  padding: "0.5rem",
-  borderRadius: "8px",
-};
-
-const cardHeaderStyle = {
-  fontSize: "1.125rem",
-  fontWeight: "600",
-  color: "#1e293b",
-  margin: 0,
-};
-
-const fieldsGridStyle = {
-  display: "grid",
-  gap: "1rem",
-  gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))",
-};
-
-const fieldContainerStyle = {
-  display: "flex",
-  flexDirection: "column",
-};
-
-const labelStyle = {
-  display: "block",
-  marginBottom: "0.5rem",
-  fontWeight: "500",
-  fontSize: "0.875rem",
-  color: "#374151",
-  letterSpacing: "0.025em",
-};
-
-const requiredStyle = {
-  color: "#ef4444",
-  marginLeft: "0.25rem",
-};
-
-const inputStyle = {
-  width: "100%",
-  padding: "0.75rem",
-  borderRadius: "8px",
-  border: "1px solid #d1d5db",
-  fontSize: "0.875rem",
-  backgroundColor: "#ffffff",
-  transition: "all 0.2s ease",
-  outline: "none",
-  boxSizing: "border-box",
-};
-
-const selectWrapperStyle = {
-  position: "relative",
-  width: "100%",
-};
-
-const selectStyle = {
-  width: "100%",
-  padding: "0.75rem",
-  paddingRight: "2.5rem",
-  borderRadius: "8px",
-  border: "1px solid #d1d5db",
-  fontSize: "0.875rem",
-  backgroundColor: "#ffffff",
-  appearance: "none",
-  transition: "all 0.2s ease",
-  outline: "none",
-  boxSizing: "border-box",
-  cursor: "pointer",
-};
-
-const selectArrowStyle = {
-  position: "absolute",
-  right: "0.75rem",
-  top: "50%",
-  transform: "translateY(-50%)",
-  pointerEvents: "none",
-  fontSize: "0.75rem",
-  color: "#6b7280",
-};
-
-const textareaStyle = {
-  width: "100%",
-  padding: "0.75rem",
-  borderRadius: "8px",
-  border: "1px solid #d1d5db",
-  fontSize: "0.875rem",
-  backgroundColor: "#ffffff",
-  transition: "all 0.2s ease",
-  outline: "none",
-  resize: "vertical",
-  fontFamily: "inherit",
-  boxSizing: "border-box",
-};
-
-const checkboxContainerStyle = {
-  marginTop: "0.5rem",
-  gridColumn: "1 / -1",
-};
-
-const checkboxLabelStyle = {
-  display: "flex",
-  alignItems: "flex-start",
-  cursor: "pointer",
-  gap: "0.75rem",
-};
-
-const checkboxStyle = {
-  display: "none",
-};
-
-const checkboxCustomStyle = {
-  width: "20px",
-  height: "20px",
-  borderRadius: "4px",
-  border: "2px solid #d1d5db",
-  backgroundColor: "#ffffff",
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  transition: "all 0.2s ease",
-  flexShrink: 0,
-  marginTop: "2px",
-};
-
-const checkmarkStyle = {
-  color: "#ffffff",
-  fontSize: "12px",
-  fontWeight: "bold",
-};
-
-const checkboxTextStyle = {
-  fontSize: "0.875rem",
-  fontWeight: "500",
-  color: "#374151",
-  display: "block",
-};
-
-const checkboxDescStyle = {
-  fontSize: "0.75rem",
-  color: "#6b7280",
-  display: "block",
-  marginTop: "0.25rem",
-};
-
-const buttonContainerStyle = {
-  display: "flex",
-  justifyContent: "flex-end",
-  gap: "0.75rem",
-  marginTop: "2rem",
-  maxWidth: "1200px",
-  margin: "2rem auto 0",
-  padding: "0 1.5rem",
-};
-
-const cancelBtnStyle = {
-  padding: "0.75rem 1.5rem",
-  backgroundColor: "#f3f4f6",
-  color: "#374151",
-  border: "1px solid #d1d5db",
-  borderRadius: "8px",
-  cursor: "pointer",
-  fontSize: "0.875rem",
-  fontWeight: "500",
-  transition: "all 0.2s ease",
-  outline: "none",
-};
-
-const createBtnStyle = {
-  padding: "0.75rem 1.5rem",
-  backgroundColor: "#2563eb",
-  color: "white",
-  border: "none",
-  borderRadius: "8px",
-  cursor: "pointer",
-  fontSize: "0.875rem",
-  fontWeight: "500",
-  transition: "all 0.2s ease",
-  outline: "none",
-};
-
-const selectProductBtnStyle = {
-  padding: "0.75rem 1.5rem",
-  backgroundColor: "#ffffff",
-  color: "#2563eb",
-  border: "1px solid #2563eb",
-  borderRadius: "8px",
-  cursor: "pointer",
-  fontSize: "0.875rem",
-  fontWeight: "500",
-  transition: "all 0.2s ease",
-  outline: "none",
-  width: "100%",
-};
-
-const fileUploadContainer = {
-  gridColumn: "1 / -1",
-};
-
-const fileUploadLabel = {
-  display: "block",
-  cursor: "pointer",
-};
-
-const fileUploadButton = {
-  display: "inline-block",
-  padding: "0.75rem 1.5rem",
-  backgroundColor: "#ffffff",
-  color: "#374151",
-  border: "1px solid #d1d5db",
-  borderRadius: "8px",
-  fontSize: "0.875rem",
-  fontWeight: "500",
-  transition: "all 0.2s ease",
 };
 
 export default DeliveryChallanEditPage;

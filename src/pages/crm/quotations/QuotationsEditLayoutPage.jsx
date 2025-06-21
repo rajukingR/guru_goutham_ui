@@ -643,7 +643,7 @@ const QuotationsEditLayoutPage = () => {
                   handleInputChange("phoneNumber", e.target.value)
                 }
               />
-              <Field
+              {/* <Field
                 label="Rental Duration (Months)"
                 placeholder="Enter Duration"
                 type="number"
@@ -669,7 +669,7 @@ const QuotationsEditLayoutPage = () => {
                 onChange={(e) =>
                   handleInputChange("rentalEndDate", e.target.value)
                 }
-              />
+              /> */}
               <Field
                 label="Quotation Date"
                 type="date"

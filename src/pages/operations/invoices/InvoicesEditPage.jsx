@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback, memo } from "react";
 import {
   Box,
   TextField,
@@ -192,44 +192,45 @@ const InvoicesEditPage = () => {
   }, [id]);
 
   // Calculate dates when month selection changes
-  useEffect(() => {
-    const today = new Date();
-    let startDate, endDate;
-    let prevStartDate, prevEndDate;
+useEffect(() => {
+  const today = new Date();
+  let startDate, endDate;
+  let prevStartDate, prevEndDate;
 
-    if (selectedMonth === "previous") {
-      startDate = new Date(today.getFullYear(), today.getMonth() - 1, 1);
-      endDate = new Date(today.getFullYear(), today.getMonth(), 0);
-      prevStartDate = new Date(today.getFullYear(), today.getMonth() - 2, 1);
-      prevEndDate = new Date(today.getFullYear(), today.getMonth() - 1, 0);
-    } else if (selectedMonth === "current") {
-      startDate = new Date(today.getFullYear(), today.getMonth(), 1);
-      endDate = new Date(today.getFullYear(), today.getMonth() + 1, 0);
-      prevStartDate = new Date(today.getFullYear(), today.getMonth() - 1, 1);
-      prevEndDate = new Date(today.getFullYear(), today.getMonth(), 0);
-    } else if (selectedMonth === "next") {
-      startDate = new Date(today.getFullYear(), today.getMonth() + 1, 1);
-      endDate = new Date(today.getFullYear(), today.getMonth() + 2, 0);
-      prevStartDate = new Date(today.getFullYear(), today.getMonth(), 1);
-      prevEndDate = new Date(today.getFullYear(), today.getMonth() + 1, 0);
-    }
+  if (selectedMonth === "previous") {
+    startDate = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+    endDate = new Date(today.getFullYear(), today.getMonth(), 0);
+    prevStartDate = new Date(today.getFullYear(), today.getMonth() - 2, 1);
+    prevEndDate = new Date(today.getFullYear(), today.getMonth() - 1, 0);
+  } else if (selectedMonth === "current") {
+    startDate = new Date(today.getFullYear(), today.getMonth(), 1);
+    endDate = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+    prevStartDate = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+    prevEndDate = new Date(today.getFullYear(), today.getMonth(), 0);
+  } else if (selectedMonth === "next") {
+    startDate = new Date(today.getFullYear(), today.getMonth() + 1, 1);
+    endDate = new Date(today.getFullYear(), today.getMonth() + 2, 0);
+    prevStartDate = new Date(today.getFullYear(), today.getMonth(), 1);
+    prevEndDate = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+  }
 
-    const formatDate = (date) => {
-      const day = String(date.getDate()).padStart(2, "0");
-      const month = String(date.getMonth() + 1).padStart(2, "0");
-      const year = date.getFullYear();
-      return `${day}-${month}-${year}`;
-    };
+  const formatDate = (date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`; // ✅ correct format
+  };
 
-    setDateRanges({
-      invoiceStartDate: formatDate(startDate),
-      invoiceEndDate: formatDate(endDate),
-      previousDeliveredStartDate: formatDate(prevStartDate),
-      previousDeliveredEndDate: formatDate(prevEndDate),
-      creditNoteStartDate: formatDate(prevStartDate),
-      creditNoteEndDate: formatDate(prevEndDate),
-    });
-  }, [selectedMonth]);
+  setDateRanges({
+    invoiceStartDate: formatDate(startDate),
+    invoiceEndDate: formatDate(endDate),
+    previousDeliveredStartDate: formatDate(prevStartDate),
+    previousDeliveredEndDate: formatDate(prevEndDate),
+    creditNoteStartDate: formatDate(prevStartDate),
+    creditNoteEndDate: formatDate(prevEndDate),
+  });
+}, [selectedMonth]);
+
 
   // Handle return quantity changes
   const handleReturnQtyChange = (productId, value) => {
@@ -737,7 +738,7 @@ const InvoicesEditPage = () => {
             onChange={(e) =>
               setDateRanges({ ...dateRanges, invoiceStartDate: e.target.value })
             }
-            type="text"
+            type="date"
           />
           <Field
             label="Invoice End Date"
@@ -746,7 +747,7 @@ const InvoicesEditPage = () => {
             onChange={(e) =>
               setDateRanges({ ...dateRanges, invoiceEndDate: e.target.value })
             }
-            type="text"
+            type="date"
           />
           <Field
             label="Previous Delivered Start Date"
@@ -758,7 +759,7 @@ const InvoicesEditPage = () => {
                 previousDeliveredStartDate: e.target.value,
               })
             }
-            type="text"
+            type="date"
           />
           <Field
             label="Previous Delivered End Date"
@@ -770,7 +771,7 @@ const InvoicesEditPage = () => {
                 previousDeliveredEndDate: e.target.value,
               })
             }
-            type="text"
+            type="date"
           />
           <Field
             label="Credit Note Start Date"
@@ -782,7 +783,7 @@ const InvoicesEditPage = () => {
                 creditNoteStartDate: e.target.value,
               })
             }
-            type="text"
+            type="date"
           />
           <Field
             label="Credit Note End Date"
@@ -794,7 +795,7 @@ const InvoicesEditPage = () => {
                 creditNoteEndDate: e.target.value,
               })
             }
-            type="text"
+            type="date"
           />
         </Box>
       </Box>
@@ -857,13 +858,13 @@ const InvoicesEditPage = () => {
                 value={formData.invoice_date}
                 onChange={handleInputChange}
               />
-              <Field
+              {/* <Field
                 label="Due Date"
                 type="date"
                 name="invoice_due_date"
                 value={formData.invoice_due_date}
                 onChange={handleInputChange}
-              />
+              /> */}
 
               <FormControl fullWidth>
                 <InputLabel>Select Customer</InputLabel>
@@ -900,7 +901,7 @@ const InvoicesEditPage = () => {
                 />
               </div>
 
-              <Field
+              {/* <Field
                 label="PO Number"
                 name="purchase_order_number"
                 value={formData.purchase_order_number}
@@ -913,7 +914,7 @@ const InvoicesEditPage = () => {
                 name="purchase_order_date"
                 value={formData.purchase_order_date}
                 onChange={handleInputChange}
-              />
+              /> */}
               <Field
                 label="Customer GST"
                 name="customer_gst_number"
@@ -1464,7 +1465,7 @@ const InvoicesEditPage = () => {
 };
 
 // Field component
-const Field = ({
+const Field = memo(({
   label,
   name,
   value,
@@ -1514,7 +1515,7 @@ const Field = ({
       />
     )}
   </div>
-);
+));
 
 // Styles (same as InvoicesAddPage.jsx)
 const monthButtonContainerStyle = {
