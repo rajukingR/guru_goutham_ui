@@ -16,10 +16,11 @@ import {
 } from "@mui/material";
 import { Add, Remove } from "@mui/icons-material";
 import API_URL from "../../../api/Api_url";
+import { useNavigate } from "react-router-dom";
 
 const generateQuotationId = () => {
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-  let randomPart = '';
+  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+  let randomPart = "";
   for (let i = 0; i < 6; i++) {
     randomPart += chars.charAt(Math.floor(Math.random() * chars.length));
   }
@@ -27,6 +28,8 @@ const generateQuotationId = () => {
 };
 
 const QuotationsAddLayoutPage = () => {
+    const navigate = useNavigate();
+  
   const [leads, setLeads] = useState([]);
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState({
@@ -59,8 +62,9 @@ const QuotationsAddLayoutPage = () => {
     remarks: "",
     quotationGeneratedBy: "",
     activeStatus: true,
-    firstName: "",
-    lastName: "",
+    customer_id: "",
+    customer_first_name: "",
+    customer_last_name: "",
     email: "",
     phoneNumber: "",
     rentalDurationMonths: "",
@@ -77,9 +81,9 @@ const QuotationsAddLayoutPage = () => {
     country: "India",
   });
   useEffect(() => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      quotationId: generateQuotationId()
+      quotationId: generateQuotationId(),
     }));
   }, []);
 
@@ -149,17 +153,18 @@ const QuotationsAddLayoutPage = () => {
         remarks: selectedLead.remarks,
         quotationGeneratedBy: selectedLead.lead_generated_by,
         activeStatus: selectedLead.is_active,
-        firstName: selectedLead.contact?.first_name || "",
-        lastName: selectedLead.contact?.last_name || "",
+        customer_id: selectedLead.contact?.id || "",
+        customer_first_name: selectedLead.contact?.first_name || "",
+        customer_last_name: selectedLead.contact?.last_name || "",
         email: selectedLead.contact?.email || "",
         phoneNumber: selectedLead.contact?.phone_number || "",
         rentalDurationMonths: selectedLead.rental_duration_months || "",
-        rentalDurationDays:selectedLead.rental_duration_days || "",
+        rentalDurationDays: selectedLead.rental_duration_days || "",
         rentalStartDate: selectedLead.rental_start_date || "",
         rentalEndDate: selectedLead.rental_end_date || "",
         industry: selectedLead.contact?.industry || "",
         street: selectedLead.contact?.address?.street || "",
-        pincode: selectedLead.contact?.address?.zip || "",
+        pincode: selectedLead.contact?.address?.pincode || "",
         city: selectedLead.contact?.address?.city || "",
         state: selectedLead.contact?.address?.state || "",
         country: selectedLead.contact?.address?.country || "India",
@@ -264,6 +269,9 @@ const QuotationsAddLayoutPage = () => {
         quotation_date: formData.quotationDate,
         rental_duration: parseInt(formData.rentalDurationMonths) || 0,
         rental_duration_days: parseInt(formData.rentalDurationDays) || 0,
+        customer_id: formData.customer_id,
+        customer_first_name: formData.customer_first_name,
+        customer_last_name: formData.customer_last_name,
         remarks: formData.remarks,
         quotation_generated_by: formData.quotationGeneratedBy,
         status: formData.quotationStatus,
@@ -475,14 +483,18 @@ const QuotationsAddLayoutPage = () => {
               <Field
                 label="First Name"
                 placeholder="Enter First Name"
-                value={formData.firstName}
-                onChange={(e) => handleInputChange("firstName", e.target.value)}
+                value={formData.customer_first_name}
+                onChange={(e) =>
+                  handleInputChange("customer_first_name", e.target.value)
+                }
               />
               <Field
                 label="Last Name"
                 placeholder="Enter Last Name"
-                value={formData.lastName}
-                onChange={(e) => handleInputChange("lastName", e.target.value)}
+                value={formData.customer_last_name}
+                onChange={(e) =>
+                  handleInputChange("customer_last_name", e.target.value)
+                }
               />
               <Field
                 label="Email ID"

@@ -11,7 +11,6 @@ const InventoryTable = () => {
     { id: "id", label: "S.No." },
     { id: "name", label: "Product Name" },
     { id: "model", label: "Model" },
-   
     { id: "specifications", label: "Specifications" },
     { id: "total_quantity", label: "Total Quantity" },
     { id: "available_quantity", label: "Available Quantity" },
@@ -67,14 +66,14 @@ const InventoryTable = () => {
               storage: p.storage || "",
               graphics: p.graphics || "",
               specifications,
-              total_quantity: item.total_quantity,
-              available_quantity: item.available_quantity,
-              rented_qty: item.rented_qty,
-              buy_qty: item.buy_qty,
-              purchase_price: `₹${item.purchase_price.toLocaleString("en-IN")}`,
-              total_value: `₹${item.total_value.toLocaleString("en-IN")}`,
-              used_rent_value: `₹${item.used_rent_value.toLocaleString("en-IN")}`,
-              used_buy_value: `₹${item.used_buy_value.toLocaleString("en-IN")}`,
+              total_quantity: item.total_quantity || 0,
+              available_quantity: item.available_quantity || 0,
+              rented_qty: item.used_quantity || 0, // Changed from rented_qty to used_quantity
+              buy_qty: 0, // Not in API response, default to 0
+              purchase_price: `₹${Number(item.purchase_price || 0).toLocaleString("en-IN")}`,
+              total_value: `₹${Number(item.total_value || 0).toLocaleString("en-IN")}`,
+              used_rent_value: "₹0", // Not in API response, default to 0
+              used_buy_value: "₹0", // Not in API response, default to 0
             };
           });
 

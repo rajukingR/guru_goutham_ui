@@ -18,10 +18,476 @@ import {
   InputLabel,
   FormControl,
   Button,
+  Typography,
+  FormControlLabel,
+  FormHelperText,
 } from "@mui/material";
 import { Add, Remove } from "@mui/icons-material";
 import API_URL from "../../../api/Api_url";
 import { useNavigate, useParams } from "react-router-dom";
+
+// Reuse the same styles from InvoicesAddPage
+const containerStyle = {
+  padding: "2rem",
+  fontFamily:
+    '"Inter", "Segoe UI", -apple-system, BlinkMacSystemFont, sans-serif',
+  minHeight: "100vh",
+  lineHeight: 1.6,
+};
+
+const headerStyle = {
+  marginBottom: "2rem",
+  maxWidth: "1400px",
+};
+
+const titleStyle = {
+  fontSize: "20px",
+  fontWeight: "700",
+  color: "#1e293b",
+  margin: "0 0 0.5rem 0",
+  letterSpacing: "-0.025em",
+};
+
+const subtitleStyle = {
+  fontSize: "1rem",
+  color: "#64748b",
+  margin: 0,
+};
+
+const formContainerStyle = {
+  display: "grid",
+  gap: "1.5rem",
+  maxWidth: "1400px",
+  gridTemplateColumns: "repeat(auto-fit, minmax(400px, 1fr))",
+};
+
+const cardStyle = {
+  backgroundColor: "#ffffff",
+  padding: "1.5rem",
+  borderRadius: "12px",
+  boxShadow: "0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06)",
+  border: "1px solid #e2e8f0",
+  transition: "box-shadow 0.2s ease",
+};
+
+const cardHeaderContainerStyle = {
+  display: "flex",
+  alignItems: "center",
+  marginBottom: "1.5rem",
+  paddingBottom: "1rem",
+  borderBottom: "1px solid #e2e8f0",
+};
+
+const iconStyle = {
+  fontSize: "1.25rem",
+  marginRight: "0.75rem",
+  backgroundColor: "#f1f5f9",
+  padding: "0.5rem",
+  borderRadius: "8px",
+};
+
+const cardHeaderStyle = {
+  fontSize: "1.125rem",
+  fontWeight: "600",
+  color: "#1e293b",
+  margin: 0,
+};
+
+const fieldsGridStyle = {
+  display: "grid",
+  gap: "1rem",
+  gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))",
+};
+
+const fieldContainerStyle = {
+  display: "flex",
+  flexDirection: "column",
+};
+
+const labelStyle = {
+  display: "block",
+  marginBottom: "0.5rem",
+  fontWeight: "500",
+  fontSize: "0.875rem",
+  color: "#374151",
+  letterSpacing: "0.025em",
+};
+
+const inputStyle = {
+  width: "100%",
+  padding: "0.75rem",
+  borderRadius: "8px",
+  border: "1px solid #d1d5db",
+  fontSize: "0.875rem",
+  backgroundColor: "#ffffff",
+  transition: "all 0.2s ease",
+  outline: "none",
+  boxSizing: "border-box",
+};
+
+const selectWrapperStyle = {
+  position: "relative",
+  width: "100%",
+};
+
+const selectStyle = {
+  width: "100%",
+  padding: "0.75rem",
+  paddingRight: "2.5rem",
+  borderRadius: "8px",
+  border: "1px solid #d1d5db",
+  fontSize: "0.875rem",
+  backgroundColor: "#ffffff",
+  appearance: "none",
+  transition: "all 0.2s ease",
+  outline: "none",
+  boxSizing: "border-box",
+  cursor: "pointer",
+};
+
+const selectArrowStyle = {
+  position: "absolute",
+  right: "0.75rem",
+  top: "50%",
+  transform: "translateY(-50%)",
+  pointerEvents: "none",
+  fontSize: "0.75rem",
+  color: "#6b7280",
+};
+
+const buttonContainerStyle = {
+  display: "flex",
+  justifyContent: "center",
+  gap: "1rem",
+  marginTop: "2rem",
+  maxWidth: "1200px",
+  margin: "2rem auto 0",
+  padding: "0 1.5rem",
+  flexWrap: "wrap",
+};
+
+const cancelBtnStyle = {
+  padding: "0.75rem 1.5rem",
+  backgroundColor: "#f3f4f6",
+  color: "#374151",
+  border: "1px solid #d1d5db",
+  borderRadius: "8px",
+  cursor: "pointer",
+  fontSize: "0.875rem",
+  fontWeight: "500",
+  transition: "all 0.2s ease",
+  outline: "none",
+};
+
+const submitBtnStyle = {
+  padding: "0.75rem 1.5rem",
+  backgroundColor: "#2563eb",
+  color: "white",
+  border: "none",
+  borderRadius: "8px",
+  cursor: "pointer",
+  fontSize: "0.875rem",
+  fontWeight: "500",
+  transition: "all 0.2s ease",
+  outline: "none",
+};
+
+const monthButtonContainerStyle = {
+  display: "flex",
+  justifyContent: "center",
+  gap: "1rem",
+  marginBottom: "1rem",
+  width: "100%",
+};
+
+const monthButtonStyle = (isSelected) => ({
+  padding: "0.5rem 1rem",
+  backgroundColor: isSelected ? "#2563eb" : "#f3f4f6",
+  color: isSelected ? "white" : "#374151",
+  border: "1px solid #d1d5db",
+  borderRadius: "4px",
+  cursor: "pointer",
+  transition: "all 0.2s ease",
+  "&:hover": {
+    backgroundColor: isSelected ? "#1d4ed8" : "#e5e7eb",
+  },
+});
+
+// Field component moved outside and memoized
+const Field = memo(
+  ({
+    label,
+    name,
+    value,
+    onChange,
+    placeholder,
+    type = "text",
+    options = [],
+    readOnly = false,
+    required = false,
+    ...props
+  }) => (
+    <div style={fieldContainerStyle}>
+      <label style={labelStyle}>
+        {label}
+        {required && <span style={requiredStyle}>*</span>}
+      </label>
+
+      {type === "select" ? (
+        <div style={selectWrapperStyle}>
+          <select
+            name={name}
+            value={value}
+            onChange={onChange}
+            disabled={readOnly}
+            style={selectStyle}
+            {...props}
+          >
+            <option value="">{placeholder}</option>
+            {options.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+          <div style={selectArrowStyle}>▼</div>
+        </div>
+      ) : type === "date" ? (
+        <input
+          type="date"
+          name={name}
+          value={value}
+          onChange={onChange}
+          style={inputStyle}
+          readOnly={readOnly}
+          {...props}
+        />
+      ) : (
+        <input
+          type={type}
+          name={name}
+          value={value}
+          onChange={onChange}
+          placeholder={placeholder}
+          style={{
+            ...inputStyle,
+            backgroundColor: readOnly ? "#f3f4f6" : "#ffffff",
+          }}
+          readOnly={readOnly}
+          {...props}
+        />
+      )}
+    </div>
+  )
+);
+
+// DateRangeSelector component moved outside and memoized
+const DateRangeSelector = memo(
+  ({ selectedMonth, setSelectedMonth, dateRanges, setDateRanges }) => {
+    const [monthOffset, setMonthOffset] = useState(0);
+
+    const formatDate = (date) => {
+      const day = String(date.getDate()).padStart(2, "0");
+      const month = String(date.getMonth() + 1).padStart(2, "0");
+      const year = date.getFullYear();
+      return `${year}-${month}-${day}`;
+    };
+
+    const calculateDates = useCallback(
+      (offset) => {
+        const baseDate = new Date();
+        const currentMonth = new Date(
+          baseDate.getFullYear(),
+          baseDate.getMonth() + offset,
+          1
+        );
+
+        const startDate = new Date(
+          currentMonth.getFullYear(),
+          currentMonth.getMonth(),
+          1
+        );
+        const endDate = new Date(
+          currentMonth.getFullYear(),
+          currentMonth.getMonth() + 1,
+          0
+        );
+        const prevStartDate = new Date(
+          currentMonth.getFullYear(),
+          currentMonth.getMonth() - 1,
+          1
+        );
+        const prevEndDate = new Date(
+          currentMonth.getFullYear(),
+          currentMonth.getMonth(),
+          0
+        );
+
+        setDateRanges({
+          invoiceStartDate: formatDate(startDate),
+          invoiceEndDate: formatDate(endDate),
+          previousDeliveredStartDate: formatDate(prevStartDate),
+          previousDeliveredEndDate: formatDate(prevEndDate),
+          creditNoteStartDate: formatDate(prevStartDate),
+          creditNoteEndDate: formatDate(prevEndDate),
+        });
+      },
+      [setDateRanges]
+    );
+
+    useEffect(() => {
+      calculateDates(monthOffset);
+      if (monthOffset === 0) {
+        setSelectedMonth("current");
+      }
+    }, [monthOffset, calculateDates, setSelectedMonth]);
+
+    const handleMonthChange = (type) => {
+      if (type === "previous") {
+        setMonthOffset((prev) => prev - 1);
+        setSelectedMonth("previous");
+      } else if (type === "current") {
+        setMonthOffset(0);
+        setSelectedMonth("current");
+      } else if (type === "next") {
+        setMonthOffset((prev) => prev + 1);
+        setSelectedMonth("next");
+      }
+    };
+
+    return (
+      <Box sx={{ width: "100%", mb: 10 }}>
+        <Box sx={monthButtonContainerStyle}>
+          <button
+            type="button"
+            onClick={() => handleMonthChange("previous")}
+            style={monthButtonStyle(selectedMonth === "previous")}
+          >
+            Previous Month
+          </button>
+          <button
+            type="button"
+            onClick={() => handleMonthChange("current")}
+            style={monthButtonStyle(selectedMonth === "current")}
+          >
+            Current Month
+          </button>
+          <button
+            type="button"
+            onClick={() => handleMonthChange("next")}
+            style={monthButtonStyle(selectedMonth === "next")}
+          >
+            Next Month
+          </button>
+        </Box>
+
+        <Box
+          sx={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))",
+            gap: "1rem",
+            width: "100%",
+          }}
+        >
+          <Field
+            label="Invoice Start Date"
+            type="date"
+            name="invoiceStartDate"
+            value={dateRanges.invoiceStartDate}
+            onChange={(e) =>
+              setDateRanges({ ...dateRanges, invoiceStartDate: e.target.value })
+            }
+          />
+          <Field
+            label="Invoice End Date"
+            type="date"
+            name="invoiceEndDate"
+            value={dateRanges.invoiceEndDate}
+            onChange={(e) =>
+              setDateRanges({ ...dateRanges, invoiceEndDate: e.target.value })
+            }
+          />
+          <Field
+            label="Previous Delivered Start Date"
+            type="date"
+            name="previousDeliveredStartDate"
+            value={dateRanges.previousDeliveredStartDate}
+            onChange={(e) =>
+              setDateRanges({
+                ...dateRanges,
+                previousDeliveredStartDate: e.target.value,
+              })
+            }
+          />
+          <Field
+            label="Previous Delivered End Date"
+            type="date"
+            name="previousDeliveredEndDate"
+            value={dateRanges.previousDeliveredEndDate}
+            onChange={(e) =>
+              setDateRanges({
+                ...dateRanges,
+                previousDeliveredEndDate: e.target.value,
+              })
+            }
+          />
+          <Field
+            label="Credit Note Start Date"
+            type="date"
+            name="creditNoteStartDate"
+            value={dateRanges.creditNoteStartDate}
+            onChange={(e) =>
+              setDateRanges({
+                ...dateRanges,
+                creditNoteStartDate: e.target.value,
+              })
+            }
+          />
+          <Field
+            label="Credit Note End Date"
+            type="date"
+            name="creditNoteEndDate"
+            value={dateRanges.creditNoteEndDate}
+            onChange={(e) =>
+              setDateRanges({
+                ...dateRanges,
+                creditNoteEndDate: e.target.value,
+              })
+            }
+          />
+        </Box>
+      </Box>
+    );
+  }
+);
+
+const calculateRentalPrice = (product, months = 0, days = 0) => {
+  const perDay = product.rent_price_per_day || 0;
+  const perMonth = product.rent_price_per_month || 0;
+  const rent6Months = product.rent_price_6_months || perMonth * 6;
+  const rent1Year = product.rent_price_1_year || perMonth * 12;
+
+  let price = 0;
+
+  if (months === 0 && days > 0) {
+    const dayCost = perDay * days;
+    price = days >= 30 && dayCost > perMonth ? perMonth : dayCost;
+  } else if (days === 0 && months > 0) {
+    if (months === 6) price = rent6Months;
+    else if (months === 12) price = rent1Year;
+    else price = perMonth * months;
+  } else if (months > 0 && days > 0) {
+    let monthPrice = 0;
+
+    if (months === 6) monthPrice = rent6Months;
+    else if (months === 12) monthPrice = rent1Year;
+    else monthPrice = perMonth * months;
+
+    price = monthPrice + perDay * days;
+  }
+
+  return price;
+};
 
 const InvoicesEditPage = () => {
   const { id } = useParams();
@@ -33,7 +499,7 @@ const InvoicesEditPage = () => {
     customer_id: "",
     customer_name: "",
     invoice_date: new Date().toISOString().split("T")[0],
-    invoice_due_date: "",
+    invoice_due_date: new Date().toISOString().split("T")[0],
     purchase_order_date: "",
     purchase_order_number: "",
     customer_gst_number: "",
@@ -43,11 +509,19 @@ const InvoicesEditPage = () => {
     pan_number: "",
     payment_terms: "",
     payment_mode: "",
-    approval_status: "Approved",
-    approval_date: new Date().toISOString().slice(0, 19).replace("T", " "),
+    approval_status: "",
+    approval_date: "",
     invoice_consulting_by: "",
     industry: "",
     remarks: "",
+    // Add rental fields
+    rental_duration: "1", // Default to 1 month
+    rental_duration_days: 0,
+    rental_duration_months: 1,
+    rental_start_date: new Date().toISOString().split("T")[0],
+    rental_end_date: new Date(new Date().setMonth(new Date().getMonth() + 1))
+      .toISOString()
+      .split("T")[0],
     items: [],
     shippingDetails: {
       consignee_name: "",
@@ -80,6 +554,16 @@ const InvoicesEditPage = () => {
   const [newDeviceIds, setNewDeviceIds] = useState({});
   const [returnedDeviceIds, setReturnedDeviceIds] = useState({});
   const [selectedMonth, setSelectedMonth] = useState("current");
+  const [productOrderMap, setProductOrderMap] = useState({});
+  const [selectedReturnIds, setSelectedReturnIds] = useState({});
+  const [isLoading, setIsLoading] = useState(true);
+  const [returnedDates, setReturnedDates] = useState({});
+  const [upgradedRams, setUpgradedRams] = useState({});
+  const [upgradeDates, setUpgradeDates] = useState({});
+
+  const [deviceIds, setDeviceIds] = useState({});
+  const [selectedReturnDeviceIds, setSelectedReturnDeviceIds] = useState({});
+
   const [dateRanges, setDateRanges] = useState({
     invoiceStartDate: "",
     invoiceEndDate: "",
@@ -89,60 +573,119 @@ const InvoicesEditPage = () => {
     creditNoteEndDate: "",
   });
 
-  // Fetch invoice data when component mounts
   useEffect(() => {
     const fetchInvoiceData = async () => {
       try {
         const response = await fetch(`${API_URL}/invoices/${id}`);
         if (!response.ok) throw new Error("Failed to fetch invoice");
+
         const invoiceData = await response.json();
 
-        // Set form data from fetched invoice
+        // Safely parse returned_device_ids
+        const itemsWithParsedIds = invoiceData.items.map((item) => ({
+          ...item,
+          device_ids: item.device_ids || [],
+          unit_price: item.unit_price,
+          returned_device_ids: (() => {
+            const ids = item.returned_device_ids;
+            if (typeof ids === "string" && ids.trim().startsWith("[")) {
+              try {
+                return JSON.parse(ids);
+              } catch (e) {
+                console.warn("Failed to parse returned_device_ids:", ids);
+                return [];
+              }
+            }
+            return Array.isArray(ids) ? ids : [];
+          })(),
+        }));
+
+        // Initialize device IDs state
+        const initialDeviceIds = {};
+        const initialSelectedReturns = {};
+
+        itemsWithParsedIds.forEach((item) => {
+          initialDeviceIds[item.product_id] = item.device_ids;
+          if (item.returned_device_ids && item.returned_device_ids.length > 0) {
+            initialSelectedReturns[item.product_id] = item.returned_device_ids;
+          }
+        });
+
+        setDeviceIds(initialDeviceIds);
+        setSelectedReturnDeviceIds(initialSelectedReturns);
+
+        // Set form data from the fetched invoice
         setFormData({
           ...invoiceData,
-          invoice_date: invoiceData.invoice_date.split("T")[0],
-          invoice_due_date: invoiceData.invoice_due_date?.split("T")[0] || "",
-          purchase_order_date:
-            invoiceData.purchase_order_date?.split("T")[0] || "",
-          // Fix the shipping details mapping here:
-          shippingDetails: invoiceData.shippingDetail || {
-            // Note: shippingDetail (singular)
-            consignee_name: "",
-            country: "India",
-            state: "",
-            city: "",
-            street: "",
-            landmark: "",
-            pincode: "",
-            phone_number: "",
-            email: "",
+          items: itemsWithParsedIds,
+          customer_id: invoiceData.customer_id,
+          shippingDetails: {
+            consignee_name: invoiceData.shippingDetail?.consignee_name || "",
+            country: invoiceData.shippingDetail?.country || "India",
+            state: invoiceData.shippingDetail?.state || "",
+            city: invoiceData.shippingDetail?.city || "",
+            street: invoiceData.shippingDetail?.street || "",
+            landmark: invoiceData.shippingDetail?.landmark || "",
+            pincode: invoiceData.shippingDetail?.pincode || "",
+            phone_number: invoiceData.shippingDetail?.phone_number || "",
+            email: invoiceData.shippingDetail?.email || "",
           },
         });
 
-        // Set product-related states
-        const productIds = invoiceData.items.map((item) => item.product_id);
+        if (invoiceData.invoice_start_date) {
+          setDateRanges({
+            invoiceStartDate: invoiceData.invoice_start_date,
+            invoiceEndDate: invoiceData.invoice_end_date,
+            previousDeliveredStartDate:
+              invoiceData.previous_delivered_start_date,
+            previousDeliveredEndDate: invoiceData.previous_delivered_end_date,
+            creditNoteStartDate: invoiceData.credit_note_start_date,
+            creditNoteEndDate: invoiceData.credit_note_end_date,
+          });
+        }
+
+        // Set selected products and quantities
+        const productIds = itemsWithParsedIds.map((item) => item.product_id);
         setSelectedProductIds(productIds);
 
-        const qtyMap = {};
-        const newQtyMap = {};
-        const returnQtyMap = {};
-        const newDeviceIdsMap = {};
-        const returnedDeviceIdsMap = {};
+        const initialQuantities = {};
+        const initialReturnQuantities = {};
+        const initialNewQuantities = {};
+        const initialNewDeviceIds = {};
+        const initialReturnedDeviceIds = {};
+        const initialSelectedReturnIds = {};
+        const initialReturnedDates = {};
+        const initialUpgradedRams = {};
+        const initialUpgradeDates = {};
 
-        invoiceData.items.forEach((item) => {
-          qtyMap[item.product_id] = item.quantity;
-          newQtyMap[item.product_id] = item.new_quantity || 0;
-          returnQtyMap[item.product_id] = item.return_quantity || 0;
-          newDeviceIdsMap[item.product_id] = item.new_device_ids || [];
-          returnedDeviceIdsMap[item.product_id] =
+        itemsWithParsedIds.forEach((item) => {
+          initialQuantities[item.product_id] = item.quantity || 0;
+          initialReturnQuantities[item.product_id] = item.return_quantity || 0;
+          initialNewQuantities[item.product_id] = item.new_quantity || 0;
+          initialNewDeviceIds[item.product_id] = item.new_device_ids || [];
+          initialReturnedDeviceIds[item.product_id] =
             item.returned_device_ids || [];
+          initialReturnedDates[item.product_id] = item.returned_date || "";
+          initialUpgradedRams[item.product_id] = item.upgraded_ram || "";
+          initialUpgradeDates[item.product_id] = item.upgrade_date || "";
+
+          if (item.returned_device_ids && item.returned_device_ids.length > 0) {
+            initialSelectedReturnIds[item.product_id] =
+              item.returned_device_ids;
+          }
         });
 
-        setQuantities(qtyMap);
-        setNewQuantities(newQtyMap);
-        setReturnQuantities(returnQtyMap);
-        setNewDeviceIds(newDeviceIdsMap);
-        setReturnedDeviceIds(returnedDeviceIdsMap);
+        setQuantities(initialQuantities);
+        setReturnQuantities(initialReturnQuantities);
+        setNewQuantities(initialNewQuantities);
+        setNewDeviceIds(initialNewDeviceIds);
+        setReturnedDeviceIds(initialReturnedDeviceIds);
+        setSelectedReturnIds(initialSelectedReturnIds);
+        setReturnedDates(initialReturnedDates);
+        setUpgradedRams(initialUpgradedRams);
+        setUpgradeDates(initialUpgradeDates);
+
+        setIsLoading(false);
       } catch (error) {
         console.error("Error fetching invoice:", error);
         setSnackbar({
@@ -150,365 +693,350 @@ const InvoicesEditPage = () => {
           message: "Error fetching invoice: " + error.message,
           severity: "error",
         });
+        setIsLoading(false);
       }
     };
 
+    fetchInvoiceData();
+  }, [id]);
+
+  const handleReturnDeviceCheckboxChange = (productId, deviceId) => (event) => {
+    const isChecked = event.target.checked;
+    setSelectedReturnDeviceIds((prev) => {
+      const currentSelected = prev[productId] || [];
+      return {
+        ...prev,
+        [productId]: isChecked
+          ? [...currentSelected, deviceId]
+          : currentSelected.filter((id) => id !== deviceId),
+      };
+    });
+  };
+
+  // Fetch other necessary data (products, orders, tax types)
+  useEffect(() => {
     const fetchInitialData = async () => {
       try {
-        // Fetch orders
-        const orderApprovedResponse = await fetch(
-          `${API_URL}/orders/order-approved`
-        );
-        if (!orderApprovedResponse.ok)
-          throw new Error("Failed to fetch orders");
-        const orderApprovedData = await orderApprovedResponse.json();
-        setOrders(orderApprovedData);
+        const [prodResponse, taxResponse, ordersResponse] = await Promise.all([
+          fetch(`${API_URL}/product-templete`),
+          fetch(`${API_URL}/tax-types`),
+          fetch(`${API_URL}/delivery-challans/approved-delivery-challan`),
+        ]);
 
-        // Fetch products
-        const prodResponse = await fetch(`${API_URL}/product-templete`);
         if (!prodResponse.ok) throw new Error("Failed to fetch products");
-        const prodData = await prodResponse.json();
-        setProducts(prodData);
-
-        // Fetch tax types
-        const taxResponse = await fetch(`${API_URL}/tax-types`);
         if (!taxResponse.ok) throw new Error("Failed to fetch tax types");
-        const taxData = await taxResponse.json();
+        if (!ordersResponse.ok) throw new Error("Failed to fetch orders");
+
+        const [prodData, taxData, ordersData] = await Promise.all([
+          prodResponse.json(),
+          taxResponse.json(),
+          ordersResponse.json(),
+        ]);
+
+        setProducts(prodData);
         setTaxTypes(taxData);
 
-        // Fetch invoice data after other data is loaded
-        await fetchInvoiceData();
+        // Transform orders data
+        const transformedOrders = ordersData.map((dc) => ({
+          id: dc.id,
+          order_id: dc.order_id,
+          personalDetails: {
+            first_name: dc.shipping_name || dc.customer?.first_name,
+            last_name: dc.customer?.last_name || "",
+            email: dc.email || dc.customer?.email,
+            phone_number: dc.shipping_phone_number || dc.customer?.phone_number,
+            gst_number: dc.gst_number || dc.customer?.gst,
+            pan_number: dc.pan_number || dc.customer?.pan_number,
+          },
+          address: {
+            country: dc.country || "India",
+            state: dc.state,
+            city: dc.city,
+            street: dc.street,
+            pincode: dc.pincode,
+            landmark: dc.landmark,
+          },
+          items: dc.items.map((item) => ({
+            product_id: item.product_id,
+            product_name: item.product_name,
+            quantity: item.quantity,
+            unit_price: item.unit_price,
+            total_price: item.total_price,
+            product: item.product,
+          })),
+          rental_start_date: dc.rental_start_date,
+          rental_end_date: dc.rental_end_date,
+          rental_duration: dc.duration,
+          transaction_type: dc.type || "Rent",
+          payment_type: dc.payment_type || "Postpaid",
+        }));
+
+        setOrders(transformedOrders);
       } catch (error) {
-        console.error("Error fetching data:", error);
+        console.error("Error fetching initial data:", error);
         setSnackbar({
           open: true,
-          message: "Error fetching data: " + error.message,
+          message: "Error fetching initial data: " + error.message,
           severity: "error",
         });
       }
     };
 
     fetchInitialData();
-  }, [id]);
+  }, []);
 
-  // Calculate dates when month selection changes
-useEffect(() => {
-  const today = new Date();
-  let startDate, endDate;
-  let prevStartDate, prevEndDate;
+  const [errors, setErrors] = useState({});
 
-  if (selectedMonth === "previous") {
-    startDate = new Date(today.getFullYear(), today.getMonth() - 1, 1);
-    endDate = new Date(today.getFullYear(), today.getMonth(), 0);
-    prevStartDate = new Date(today.getFullYear(), today.getMonth() - 2, 1);
-    prevEndDate = new Date(today.getFullYear(), today.getMonth() - 1, 0);
-  } else if (selectedMonth === "current") {
-    startDate = new Date(today.getFullYear(), today.getMonth(), 1);
-    endDate = new Date(today.getFullYear(), today.getMonth() + 1, 0);
-    prevStartDate = new Date(today.getFullYear(), today.getMonth() - 1, 1);
-    prevEndDate = new Date(today.getFullYear(), today.getMonth(), 0);
-  } else if (selectedMonth === "next") {
-    startDate = new Date(today.getFullYear(), today.getMonth() + 1, 1);
-    endDate = new Date(today.getFullYear(), today.getMonth() + 2, 0);
-    prevStartDate = new Date(today.getFullYear(), today.getMonth(), 1);
-    prevEndDate = new Date(today.getFullYear(), today.getMonth() + 1, 0);
-  }
-
-  const formatDate = (date) => {
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, "0");
-    const day = String(date.getDate()).padStart(2, "0");
-    return `${year}-${month}-${day}`; // ✅ correct format
-  };
-
-  setDateRanges({
-    invoiceStartDate: formatDate(startDate),
-    invoiceEndDate: formatDate(endDate),
-    previousDeliveredStartDate: formatDate(prevStartDate),
-    previousDeliveredEndDate: formatDate(prevEndDate),
-    creditNoteStartDate: formatDate(prevStartDate),
-    creditNoteEndDate: formatDate(prevEndDate),
-  });
-}, [selectedMonth]);
-
-
-  // Handle return quantity changes
   const handleReturnQtyChange = (productId, value) => {
+    const qty = parseInt(value, 10) || 0;
+    const issuedQty = quantities[productId] || 0;
+
+    if (qty > issuedQty) {
+      setErrors((prev) => ({
+        ...prev,
+        [productId]: `Cannot return more than ${issuedQty} item(s).`,
+      }));
+    } else {
+      setErrors((prev) => ({ ...prev, [productId]: "" }));
+    }
+
     setReturnQuantities((prev) => ({
       ...prev,
-      [productId]: parseInt(value) || 0,
+      [productId]: qty,
     }));
   };
 
-  const incrementReturnQty = (productId) => {
+  const incrementReturnQty = useCallback((productId) => {
     setReturnQuantities((prev) => ({
       ...prev,
       [productId]: (prev[productId] || 0) + 1,
     }));
-  };
+  }, []);
 
-  const decrementReturnQty = (productId) => {
+  const decrementReturnQty = useCallback((productId) => {
     setReturnQuantities((prev) => ({
       ...prev,
       [productId]: Math.max((prev[productId] || 0) - 1, 0),
     }));
-  };
+  }, []);
 
-  // Handle new quantity changes
-  const handleNewQtyChange = (productId, value) => {
+  const handleReturnedDateChange = useCallback((productId, date) => {
+    setReturnedDates((prev) => ({
+      ...prev,
+      [productId]: date,
+    }));
+  }, []);
+
+  const handleUpgradedRamChange = useCallback((productId, ram) => {
+    setUpgradedRams((prev) => ({
+      ...prev,
+      [productId]: ram,
+    }));
+  }, []);
+
+  const handleUpgradeDateChange = useCallback((productId, date) => {
+    setUpgradeDates((prev) => ({
+      ...prev,
+      [productId]: date,
+    }));
+  }, []);
+
+  const handleNewQtyChange = useCallback((productId, value) => {
     const updated = { ...newQuantities, [productId]: parseInt(value) || 0 };
     setNewQuantities(updated);
-  };
+  }, []);
 
-  const incrementNewQty = (productId) => {
+  const incrementNewQty = useCallback((productId) => {
     setNewQuantities((prev) => ({
       ...prev,
       [productId]: (prev[productId] || 0) + 1,
     }));
-  };
+  }, []);
 
-  const decrementNewQty = (productId) => {
+  const decrementNewQty = useCallback((productId) => {
     setNewQuantities((prev) => ({
       ...prev,
       [productId]: Math.max((prev[productId] || 0) - 1, 0),
     }));
+  }, []);
+
+  const handleSelectReturnId = (productId, id) => {
+    setSelectedReturnIds((prev) => ({
+      ...prev,
+      [productId]: id,
+    }));
   };
 
-  // Calculate rental price
-  const calculateRentalPrice = (product, months = 0, days = 0) => {
-    const perDay = product.rent_price_per_day || 0;
-    const perMonth = product.rent_price_per_month || 0;
-    const rent6Months = product.rent_price_6_months || perMonth * 6;
-    const rent1Year = product.rent_price_1_year || perMonth * 12;
+  const handleCustomerSelect = useCallback(
+    (customerId) => {
+      const selectedOrder = orders.find(
+        (order) => order.id === parseInt(customerId)
+      );
+      if (!selectedOrder) return;
 
-    let price = 0;
+      // Initialize quantities from order items
+      const initialQuantities = {};
+      selectedOrder.items.forEach((item) => {
+        initialQuantities[item.product_id] = item.quantity;
+      });
 
-    if (months === 0 && days > 0) {
-      const dayCost = perDay * days;
-      price = days >= 30 && dayCost > perMonth ? perMonth : dayCost;
-    } else if (days === 0 && months > 0) {
-      if (months === 6) price = rent6Months;
-      else if (months === 12) price = rent1Year;
-      else price = perMonth * months;
-    } else if (months > 0 && days > 0) {
-      let monthPrice = 0;
+      setQuantities(initialQuantities);
 
-      if (months === 6) monthPrice = rent6Months;
-      else if (months === 12) monthPrice = rent1Year;
-      else monthPrice = perMonth * months;
+      const personal = selectedOrder.personalDetails;
+      const address = selectedOrder.address;
+      const orderItems = selectedOrder.items || [];
 
-      price = monthPrice + perDay * days;
-    }
+      const productDeviceMap = {};
+      const productOrderMapLocal = {};
 
-    return price;
-  };
-
-  // Handle customer selection
-  const handleCustomerSelect = (customerId) => {
-    const selectedOrder = orders.find(
-      (order) => order.id === parseInt(customerId)
-    );
-    if (!selectedOrder) return;
-
-    const personal = selectedOrder.personalDetails;
-    const address = selectedOrder.address;
-
-    const orderItems = selectedOrder.items || [];
-    const productIds = orderItems.map((item) => item.product_id);
-    const productQuantities = {};
-
-    orderItems.forEach((item) => {
-      productQuantities[item.product_id] = item.requested_quantity;
-    });
-
-    setSelectedProductIds(productIds);
-    setQuantities(productQuantities);
-
-    const selectedProducts = products.filter((product) =>
-      productIds.includes(product.id)
-    );
-
-    let amount = 0;
-    const items = selectedProducts.map((product) => {
-      const quantity = quantities[product.id] || 0;
-      let price = product.purchase_price;
-
-      if (formData.transaction_type === "Rent") {
-        const months = parseInt(formData.rental_duration) || 0;
-        const days = parseInt(formData.rental_duration_days) || 0;
-        price = calculateRentalPrice(product, months, days);
-      }
-
-      const totalPrice = quantity * price;
-      amount += totalPrice;
-
-      return {
-        product_id: product.id,
-        product_name: product.product_name,
-        quantity: quantity,
-      };
-    });
-
-    // Tax Calculation
-    const cgstRate =
-      taxTypes.find((t) => t.tax_type_name === "CGST")?.percentage || 0;
-    const sgstRate =
-      taxTypes.find((t) => t.tax_type_name === "SGST")?.percentage || 0;
-    const cgst = (amount * parseFloat(cgstRate)) / 100;
-    const sgst = (amount * parseFloat(sgstRate)) / 100;
-    const totalTax = cgst + sgst;
-    const totalAmount = amount + totalTax;
-
-    // Set Form Data
-    setFormData({
-      ...formData,
-      customer_id: selectedOrder.id,
-      customer_name: `${personal?.first_name || ""} ${
-        personal?.last_name || ""
-      }`,
-      email: personal?.email || "",
-      phone_number: personal?.phone_number || "",
-      customer_gst_number: personal?.gst_number || "",
-      pan_number: "",
-      order_id: selectedOrder.order_id,
-      transaction_type: selectedOrder.transaction_type || "Sale",
-      payment_type: selectedOrder.payment_type || "Postpaid",
-      rental_duration: selectedOrder.rental_duration || "",
-      rental_duration_days: selectedOrder.rental_duration_days || 0,
-      purchase_order_date: selectedOrder.updated_at
-        ? new Date(selectedOrder.updated_at).toISOString().split("T")[0]
-        : "",
-      purchase_order_number: selectedOrder.order_id || "",
-      duration: selectedOrder.rental_duration || 0,
-      rental_start_date: selectedOrder.rental_start_date || "",
-      rental_end_date: selectedOrder.rental_end_date || "",
-      amount: amount,
-      cgst: cgst,
-      sgst: sgst,
-      total_tax: totalTax,
-      total_amount: totalAmount,
-      items: items,
-      shippingDetails: {
-        ...formData.shippingDetails,
-        consignee_name: `${personal?.first_name || ""} ${
-          personal?.last_name || ""
-        }`,
-        country: address?.country || "India",
-        state: address?.state || "",
-        city: address?.city || "",
-        street: address?.street || "",
-        pincode: address?.pincode || "",
-        phone_number: personal?.phone_number || "",
-        email: personal?.email || "",
-      },
-    });
-  };
-
-  // Fetch location data when pincode changes
-  useEffect(() => {
-    const fetchLocationFromPincode = async () => {
-      const pincode = formData.shippingDetails.pincode;
-
-      if (pincode && pincode.length === 6) {
-        try {
-          const response = await fetch(
-            `https://api.postalpincode.in/pincode/${pincode}`
-          );
-          const data = await response.json();
-
-          if (data && data[0]?.Status === "Success") {
-            const postOffice = data[0].PostOffice[0];
-
-            setFormData((prev) => ({
-              ...prev,
-              shippingDetails: {
-                ...prev.shippingDetails,
-                city: postOffice.District,
-                state: postOffice.State,
-                country: "India",
-              },
-            }));
-          } else {
-            setSnackbar({
-              open: true,
-              message: "Could not find location for this pincode",
-              severity: "warning",
-            });
-          }
-        } catch (error) {
-          console.error("Error fetching location data:", error);
-          setSnackbar({
-            open: true,
-            message:
-              "Error fetching location data. Please check the pincode and try again.",
-            severity: "error",
-          });
+      orderItems.forEach((item) => {
+        if (item.product_id && Array.isArray(item.device_ids)) {
+          productDeviceMap[item.product_id] = item.device_ids;
         }
-      }
-    };
+        if (item.product_id && item.order_id) {
+          productOrderMapLocal[item.product_id] = item.order_id;
+        }
+      });
 
-    const debounceTimer = setTimeout(() => {
-      fetchLocationFromPincode();
-    }, 500);
+      setReturnedDeviceIds(productDeviceMap);
+      setProductOrderMap(productOrderMapLocal);
 
-    return () => clearTimeout(debounceTimer);
-  }, [formData.shippingDetails.pincode]);
+      const productIds = orderItems.map((item) => item.product_id);
+      setSelectedProductIds(productIds);
+
+      const selectedProducts = products.filter((product) =>
+        productIds.includes(product.id)
+      );
+
+      let amount = 0;
+      const items = selectedProducts.map((product) => {
+        const quantity = initialQuantities[product.id] || 0;
+        let price = product.purchase_price;
+
+        if (selectedOrder.transaction_type === "Rent") {
+          const months = parseInt(selectedOrder.rental_duration) || 0;
+          const days = parseInt(selectedOrder.rental_duration_days) || 0;
+          price = calculateRentalPrice(product, months, days);
+        }
+
+        const totalPrice = quantity * price;
+        amount += totalPrice;
+
+        return {
+          product_id: product.id,
+          product_name: product.product_name,
+          quantity: quantity,
+        };
+      });
+
+      // Tax Calculation
+      const cgstRate =
+        taxTypes.find((t) => t.tax_type_name === "CGST")?.percentage || 0;
+      const sgstRate =
+        taxTypes.find((t) => t.tax_type_name === "SGST")?.percentage || 0;
+      const cgst = (amount * parseFloat(cgstRate)) / 100;
+      const sgst = (amount * parseFloat(sgstRate)) / 100;
+      const totalTax = cgst + sgst;
+      const totalAmount = amount + totalTax;
+
+      // Set Form Data
+      setFormData({
+        ...formData,
+        customer_id: selectedOrder.id,
+        customer_name: `${personal?.first_name || ""}`,
+        email: personal?.email || "",
+        phone_number: personal?.phone_number || "",
+        customer_gst_number: personal?.gst_number || "",
+        pan_number: selectedOrder.pan_number || personal?.pan_number || "",
+        order_id: selectedOrder.order_id,
+        transaction_type: selectedOrder.transaction_type || "Sale",
+        payment_type: selectedOrder.payment_type || "Postpaid",
+        rental_duration: selectedOrder.rental_duration || "",
+        rental_duration_days: selectedOrder.rental_duration_days || 0,
+        purchase_order_date: selectedOrder.updated_at
+          ? new Date(selectedOrder.updated_at).toISOString().split("T")[0]
+          : "",
+        purchase_order_number: selectedOrder.order_id || "",
+        duration: selectedOrder.rental_duration || 0,
+        rental_start_date: selectedOrder.rental_start_date || "",
+        rental_end_date: selectedOrder.rental_end_date || "",
+        amount: amount,
+        cgst: cgst,
+        sgst: sgst,
+        total_tax: totalTax,
+        total_amount: totalAmount,
+        items: items,
+        shippingDetails: {
+          ...formData.shippingDetails,
+          consignee_name: `${personal?.first_name || ""}`,
+          country: address?.country || "India",
+          state: address?.state || "",
+          city: address?.city || "",
+          street: address?.street || "",
+          pincode: address?.pincode || "",
+          phone_number: personal?.phone_number || "",
+          email: personal?.email || "",
+        },
+      });
+    },
+    [orders, products, taxTypes, formData]
+  );
 
   // Handle form field changes
-  const handleInputChange = (e) => {
+  const handleInputChange = useCallback((e) => {
     const { name, value } = e.target;
-    setFormData({
-      ...formData,
+    setFormData((prev) => ({
+      ...prev,
       [name]: value,
-    });
-  };
+    }));
+  }, []);
 
   // Handle shipping details changes
-  const handleShippingChange = (e) => {
+  const handleShippingChange = useCallback((e) => {
     const { name, value } = e.target;
-    setFormData({
-      ...formData,
+    setFormData((prev) => ({
+      ...prev,
       shippingDetails: {
-        ...formData.shippingDetails,
+        ...prev.shippingDetails,
         [name]: value,
       },
-    });
-  };
+    }));
+  }, []);
 
   // Handle product selection
-  const handleProductSelection = (productId) => {
-    if (selectedProductIds.includes(productId)) {
-      setSelectedProductIds(
-        selectedProductIds.filter((id) => id !== productId)
-      );
-    } else {
-      setSelectedProductIds([...selectedProductIds, productId]);
-      setQuantities((prev) => ({
-        ...prev,
-        [productId]: prev[productId] || 1,
-      }));
-    }
-  };
+  const handleProductSelection = useCallback((productId) => {
+    setSelectedProductIds((prev) => {
+      if (prev.includes(productId)) {
+        return prev.filter((id) => id !== productId);
+      } else {
+        return [...prev, productId];
+      }
+    });
+    setQuantities((prev) => ({
+      ...prev,
+      [productId]: prev[productId] || 1,
+    }));
+  }, []);
 
   // Handle quantity changes
-  const handleQtyChange = (productId, value) => {
+  const handleQtyChange = useCallback((productId, value) => {
     const qty = Math.max(0, parseInt(value) || 0);
     setQuantities((prev) => ({ ...prev, [productId]: qty }));
-  };
+  }, []);
 
-  const incrementQty = (productId) => {
+  const incrementQty = useCallback((productId) => {
     setQuantities((prev) => ({
       ...prev,
       [productId]: (prev[productId] || 0) + 1,
     }));
-  };
+  }, []);
 
-  const decrementQty = (productId) => {
+  const decrementQty = useCallback((productId) => {
     setQuantities((prev) => ({
       ...prev,
       [productId]: Math.max(0, (prev[productId] || 0) - 1),
     }));
-  };
+  }, []);
 
   // Filter products based on search term
   const filteredProducts = products.filter(
@@ -518,72 +1046,83 @@ useEffect(() => {
       product.description?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  // Calculate totals when dependencies change
+  // Calculate totals whenever relevant data changes
   useEffect(() => {
     const calculateTotals = () => {
-      const selectedProducts = products.filter((product) =>
-        selectedProductIds.includes(product.id)
-      );
+  const selectedProducts = products.filter((product) =>
+    selectedProductIds.includes(product.id)
+  );
 
-      let amount = 0;
+  let amount = 0;
 
-      const items = selectedProducts.map((product) => {
-        const previous_quantity = quantities[product.id] || 0;
-        const quantity = quantities[product.id] || 0;
-        const return_quantity = returnQuantities?.[product.id] || 0;
-        const new_quantity = newQuantities?.[product.id] || 0;
-        const new_device_ids = newDeviceIds?.[product.id] || [];
-        const returned_device_ids = returnedDeviceIds?.[product.id] || [];
+  const items = selectedProducts.map((product) => {
+    // Find existing item to preserve its unit_price
+    const existingItem = formData.items.find(i => i.product_id === product.id);
+    const unit_price = existingItem?.unit_price || product.purchase_price;
 
-        let price = product.purchase_price;
+    const previous_quantity = quantities[product.id] || 0;
+    const quantity = quantities[product.id] || 0;
+    const return_quantity = returnQuantities?.[product.id] || 0;
+    const new_quantity = newQuantities?.[product.id] || 0;
+    const new_device_ids = newDeviceIds?.[product.id] || [];
+    const returned_device_ids = returnedDeviceIds?.[product.id] || [];
+    const returned_date = returnedDates?.[product.id] || "";
+    const upgraded_ram = upgradedRams?.[product.id] || "";
+    const upgrade_date = upgradeDates?.[product.id] || "";
 
-        if (formData.transaction_type === "Rent") {
-          const months = parseInt(formData.rental_duration) || 0;
-          const days = parseInt(formData.rental_duration_days) || 0;
+    let price = unit_price; // Use the preserved unit_price
 
-          if (months === 0 && days > 0) {
-            price = (product.rent_price_per_day || 0) * days;
-          } else if (days === 0 && months > 0) {
-            if (months === 6) {
-              price =
-                product.rent_price_6_months ||
-                (product.rent_price_per_month || 0) * 6;
-            } else if (months === 12) {
-              price =
-                product.rent_price_1_year ||
-                (product.rent_price_per_month || 0) * 12;
-            } else {
-              price = (product.rent_price_per_month || 0) * months;
-            }
-          } else if (months > 0 && days > 0) {
-            const monthPrice =
-              months === 6
-                ? product.rent_price_6_months ||
-                  (product.rent_price_per_month || 0) * 6
-                : months === 12
-                ? product.rent_price_1_year ||
-                  (product.rent_price_per_month || 0) * 12
-                : (product.rent_price_per_month || 0) * months;
+    if (formData.transaction_type === "Rent") {
+      const months = parseInt(formData.rental_duration) || 0;
+      const days = parseInt(formData.rental_duration_days) || 0;
 
-            const dayPrice = (product.rent_price_per_day || 0) * days;
-            price = monthPrice + dayPrice;
-          }
+      if (months === 0 && days > 0) {
+        price = (product.rent_price_per_day || 0) * days;
+      } else if (days === 0 && months > 0) {
+        if (months === 6) {
+          price =
+            product.rent_price_6_months ||
+            (product.rent_price_per_month || 0) * 6;
+        } else if (months === 12) {
+          price =
+            product.rent_price_1_year ||
+            (product.rent_price_per_month || 0) * 12;
+        } else {
+          price = (product.rent_price_per_month || 0) * months;
         }
+      } else if (months > 0 && days > 0) {
+        const monthPrice =
+          months === 6
+            ? product.rent_price_6_months ||
+              (product.rent_price_per_month || 0) * 6
+            : months === 12
+            ? product.rent_price_1_year ||
+              (product.rent_price_per_month || 0) * 12
+            : (product.rent_price_per_month || 0) * months;
 
-        const totalPrice = new_quantity * price;
-        amount += totalPrice;
+        const dayPrice = (product.rent_price_per_day || 0) * days;
+        price = monthPrice + dayPrice;
+      }
+    }
 
-        return {
-          product_id: product.id,
-          product_name: product.product_name,
-          previous_quantity,
-          quantity,
-          return_quantity,
-          new_quantity,
-          new_device_ids,
-          returned_device_ids,
-        };
-      });
+    const totalPrice = new_quantity * price;
+    amount += totalPrice;
+
+    return {
+      product_id: product.id,
+      product_name: product.product_name,
+      previous_quantity,
+      quantity,
+      return_quantity,
+      new_quantity,
+      new_device_ids,
+      returned_device_ids,
+      returned_date,
+      upgraded_ram,
+      upgrade_date,
+      unit_price: price.toString(), // Preserve the calculated price
+    };
+  });
 
       const cgstRate =
         taxTypes.find((t) => t.tax_type_name === "CGST")?.percentage || 0;
@@ -617,71 +1156,88 @@ useEffect(() => {
     formData.transaction_type,
     formData.rental_duration,
     formData.rental_duration_days,
+    returnedDates,
+    upgradedRams,
+    upgradeDates,
   ]);
 
-  // Handle form submission for editing
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+const handleSubmit = async (e) => {
+  e.preventDefault();
 
-    try {
-      const submissionData = {
-        ...formData,
-        invoice_start_date: dateRanges.invoiceStartDate,
-        invoice_end_date: dateRanges.invoiceEndDate,
-        previous_delivered_start_date: dateRanges.previousDeliveredStartDate,
-        previous_delivered_end_date: dateRanges.previousDeliveredEndDate,
-        credit_note_start_date: dateRanges.creditNoteStartDate,
-        credit_note_end_date: dateRanges.creditNoteEndDate,
+  try {
+    const submissionData = {
+      ...formData,
+      invoice_start_date: dateRanges.invoiceStartDate,
+      invoice_end_date: dateRanges.invoiceEndDate,
+      previous_delivered_start_date: dateRanges.previousDeliveredStartDate,
+      previous_delivered_end_date: dateRanges.previousDeliveredEndDate,
+      credit_note_start_date: dateRanges.creditNoteStartDate,
+      credit_note_end_date: dateRanges.creditNoteEndDate,
+
+      rental_duration: formData.rental_duration || "0",
+      rental_duration_days: formData.rental_duration_days || 0,
+      rental_duration_months: formData.rental_duration
+        ? parseInt(formData.rental_duration)
+        : 0,
+      rental_start_date: formData.rental_start_date || dateRanges.invoiceStartDate,
+      rental_end_date: formData.rental_end_date || dateRanges.invoiceEndDate,
+
+      purchase_order_number: formData.purchase_order_number || "",
+      purchase_order_date: formData.purchase_order_date || "",
+
+      payment_mode: formData.payment_type || "Postpaid",
+
+      items: formData.items.map((item) => ({
+        ...item,
+        order_id: productOrderMap[item.product_id] || "",
+        device_ids: deviceIds[item.product_id] || [],
+        new_device_ids: newDeviceIds[item.product_id] || [],
+        returned_device_ids: selectedReturnDeviceIds[item.product_id] || [],
+        returned_date: returnedDates[item.product_id] || "",
+        upgraded_ram: upgradedRams[item.product_id] || "",
+        upgrade_date: upgradeDates[item.product_id] || "",
         rental_duration: formData.rental_duration || "0",
         rental_duration_days: formData.rental_duration_days || 0,
         rental_duration_months: formData.rental_duration
           ? parseInt(formData.rental_duration)
           : 0,
-        payment_mode: formData.payment_type || "Postpaid",
-        items: formData.items.map((item) => ({
-          ...item,
-          new_device_ids: newDeviceIds[item.product_id] || [],
-          returned_device_ids: returnedDeviceIds[item.product_id] || [],
-          rental_duration: formData.rental_duration || "0",
-          rental_duration_days: formData.rental_duration_days || 0,
-          rental_duration_months: formData.rental_duration
-            ? parseInt(formData.rental_duration)
-            : 0,
-        })),
-      };
+      })),
+    };
 
-      const response = await fetch(`${API_URL}/invoices/${id}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(submissionData),
-      });
+    console.log("Submitting data:", submissionData); // For debugging
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || "Failed to update invoice");
-      }
+    const response = await fetch(`${API_URL}/invoices/${id}`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(submissionData),
+    });
 
-      const result = await response.json();
-      setSnackbar({
-        open: true,
-        message: "Invoice updated successfully!",
-        severity: "success",
-      });
-
-      setTimeout(() => {
-        navigate("/dashboard/operations/invoices");
-      }, 1500);
-    } catch (error) {
-      console.error("Error updating invoice:", error);
-      setSnackbar({
-        open: true,
-        message: "Error updating invoice: " + error.message,
-        severity: "error",
-      });
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || "Failed to update invoice");
     }
-  };
+
+    const result = await response.json();
+    setSnackbar({
+      open: true,
+      message: "Invoice updated successfully!",
+      severity: "success",
+    });
+
+    setTimeout(() => {
+      navigate("/dashboard/operations/invoices");
+    }, 1500);
+  } catch (error) {
+    console.error("Error updating invoice:", error);
+    setSnackbar({
+      open: true,
+      message: "Error updating invoice: " + error.message,
+      severity: "error",
+    });
+  }
+};
 
   const formatINR = (number) =>
     new Intl.NumberFormat("en-IN", {
@@ -690,117 +1246,15 @@ useEffect(() => {
       maximumFractionDigits: 2,
     }).format(number || 0);
 
-  // Date Range Selector Component
-  const DateRangeSelector = ({
-    selectedMonth,
-    setSelectedMonth,
-    dateRanges,
-    setDateRanges,
-  }) => {
+  if (isLoading) {
     return (
-      <Box sx={{ width: "100%", mb: 10 }}>
-        <Box sx={monthButtonContainerStyle}>
-          <button
-            type="button"
-            onClick={() => setSelectedMonth("previous")}
-            style={monthButtonStyle(selectedMonth === "previous")}
-          >
-            Previous Month
-          </button>
-          <button
-            type="button"
-            onClick={() => setSelectedMonth("current")}
-            style={monthButtonStyle(selectedMonth === "current")}
-          >
-            Current Month
-          </button>
-          <button
-            type="button"
-            onClick={() => setSelectedMonth("next")}
-            style={monthButtonStyle(selectedMonth === "next")}
-          >
-            Next Month
-          </button>
-        </Box>
-
-        <Box
-          sx={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))",
-            gap: "1rem",
-            width: "100%",
-          }}
-        >
-          <Field
-            label="Invoice Start Date"
-            name="invoiceStartDate"
-            value={dateRanges.invoiceStartDate}
-            onChange={(e) =>
-              setDateRanges({ ...dateRanges, invoiceStartDate: e.target.value })
-            }
-            type="date"
-          />
-          <Field
-            label="Invoice End Date"
-            name="invoiceEndDate"
-            value={dateRanges.invoiceEndDate}
-            onChange={(e) =>
-              setDateRanges({ ...dateRanges, invoiceEndDate: e.target.value })
-            }
-            type="date"
-          />
-          <Field
-            label="Previous Delivered Start Date"
-            name="previousDeliveredStartDate"
-            value={dateRanges.previousDeliveredStartDate}
-            onChange={(e) =>
-              setDateRanges({
-                ...dateRanges,
-                previousDeliveredStartDate: e.target.value,
-              })
-            }
-            type="date"
-          />
-          <Field
-            label="Previous Delivered End Date"
-            name="previousDeliveredEndDate"
-            value={dateRanges.previousDeliveredEndDate}
-            onChange={(e) =>
-              setDateRanges({
-                ...dateRanges,
-                previousDeliveredEndDate: e.target.value,
-              })
-            }
-            type="date"
-          />
-          <Field
-            label="Credit Note Start Date"
-            name="creditNoteStartDate"
-            value={dateRanges.creditNoteStartDate}
-            onChange={(e) =>
-              setDateRanges({
-                ...dateRanges,
-                creditNoteStartDate: e.target.value,
-              })
-            }
-            type="date"
-          />
-          <Field
-            label="Credit Note End Date"
-            name="creditNoteEndDate"
-            value={dateRanges.creditNoteEndDate}
-            onChange={(e) =>
-              setDateRanges({
-                ...dateRanges,
-                creditNoteEndDate: e.target.value,
-              })
-            }
-            type="date"
-          />
-        </Box>
-      </Box>
+      <div style={containerStyle}>
+        <div style={headerStyle}>
+          <h1 style={titleStyle}>Loading Invoice...</h1>
+        </div>
+      </div>
     );
-  };
+  }
 
   return (
     <div style={containerStyle}>
@@ -822,7 +1276,7 @@ useEffect(() => {
       <div style={headerStyle}>
         <h1 style={titleStyle}>Edit Invoice</h1>
         <p style={subtitleStyle}>
-          Edit the details below to update the invoice
+          Edit the details below for invoice {formData.invoice_number}
         </p>
       </div>
 
@@ -858,31 +1312,23 @@ useEffect(() => {
                 value={formData.invoice_date}
                 onChange={handleInputChange}
               />
-              {/* <Field
-                label="Due Date"
-                type="date"
-                name="invoice_due_date"
-                value={formData.invoice_due_date}
-                onChange={handleInputChange}
-              /> */}
 
-              <FormControl fullWidth>
-                <InputLabel>Select Customer</InputLabel>
-                <Select
-                  value={formData.customer_id}
-                  onChange={(e) => handleCustomerSelect(e.target.value)}
-                  label="Select Customer"
-                >
-                  {orders.map((order) => (
-                    <MenuItem key={order.id} value={order.id}>
-                      {order.order_id} || {order.personalDetails?.first_name}{" "}
-                      {order.personalDetails?.last_name}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
+              <Field
+                label="Select Customer"
+                name="customer_id"
+                type="select"
+                placeholder="Choose customer"
+                value={formData.customer_id}
+                onChange={(e) => handleCustomerSelect(e.target.value)}
+                options={orders.map((order) => ({
+                  value: order.id,
+                  label: `${order.order_id} || ${
+                    order.personalDetails?.first_name || ""
+                  }`,
+                }))}
+              />
 
-              {/* Date Range Selector */}
+              {/* Date Range Selector - spans full width */}
               <div
                 style={{
                   gridColumn: "1 / -1",
@@ -901,20 +1347,6 @@ useEffect(() => {
                 />
               </div>
 
-              {/* <Field
-                label="PO Number"
-                name="purchase_order_number"
-                value={formData.purchase_order_number}
-                onChange={handleInputChange}
-                placeholder="Enter PO Number"
-              />
-              <Field
-                label="PO Date"
-                type="date"
-                name="purchase_order_date"
-                value={formData.purchase_order_date}
-                onChange={handleInputChange}
-              /> */}
               <Field
                 label="Customer GST"
                 name="customer_gst_number"
@@ -1144,21 +1576,21 @@ useEffect(() => {
                           Specifications
                         </TableCell>
                         <TableCell sx={{ color: "#fff" }}>Quantity</TableCell>
-                        <TableCell sx={{ color: "#fff" }}>
-                          New Quantity
-                        </TableCell>
-                        <TableCell sx={{ color: "#fff" }}>
-                          New Asset IDs
-                        </TableCell>
-
-                        <TableCell sx={{ color: "#fff" }}>
+                        {/* <TableCell sx={{ color: "#fff" }}>
                           Return Quantity
                         </TableCell>
-
-                        <TableCell sx={{ color: "#fff" }}>
-                          Returned Asset IDs
+                        <TableCell sx={{ color: "#fff", minWidth: "250px" }}>
+                          Returned Device IDs
                         </TableCell>
-
+                        <TableCell sx={{ color: "#fff" }}>
+                          Returned Date
+                        </TableCell>
+                        <TableCell sx={{ color: "#fff" }}>
+                          Upgraded RAM
+                        </TableCell>
+                        <TableCell sx={{ color: "#fff" }}>
+                          Upgrade Date
+                        </TableCell> */}
                         <TableCell sx={{ color: "#fff" }}>
                           Price for Durations
                         </TableCell>
@@ -1169,268 +1601,225 @@ useEffect(() => {
                         .filter((product) =>
                           selectedProductIds.includes(product.id)
                         )
-                        .map((product) => (
-                          <TableRow key={product.id}>
-                            <TableCell padding="checkbox">
-                              <Checkbox
-                                checked={selectedProductIds.includes(
-                                  product.id
-                                )}
-                                onChange={() =>
-                                  handleProductSelection(product.id)
-                                }
-                              />
-                            </TableCell>
-                            <TableCell>{product.product_name}</TableCell>
-                            <TableCell>{product.brand}</TableCell>
-                            <TableCell>
-                              {[
-                                product.model,
-                                product.processor,
-                                product.ram,
-                                product.storage,
-                                product.graphics,
-                              ]
-                                .filter(Boolean)
-                                .join(" | ")}
-                            </TableCell>
-                            <TableCell>
-                              <Box display="flex" alignItems="center">
-                                <IconButton
-                                  size="small"
-                                  onClick={() => decrementQty(product.id)}
-                                  disabled={
-                                    !selectedProductIds.includes(product.id)
+                        .map((product) => {
+                          const productDeviceIds = deviceIds[product.id] || [];
+                          const selectedDevices =
+                            selectedReturnDeviceIds[product.id] || [];
+
+                          return (
+                            <TableRow key={product.id}>
+                              <TableCell padding="checkbox">
+                                <Checkbox
+                                  checked={selectedProductIds.includes(
+                                    product.id
+                                  )}
+                                  onChange={() =>
+                                    handleProductSelection(product.id)
                                   }
-                                >
-                                  <Remove fontSize="small" />
-                                </IconButton>
-                                <TextField
-                                  type="number"
-                                  size="small"
-                                  value={
-                                    selectedProductIds.includes(product.id)
-                                      ? quantities[product.id] || ""
-                                      : ""
-                                  }
-                                  onChange={(e) =>
-                                    handleQtyChange(product.id, e.target.value)
-                                  }
-                                  disabled={
-                                    !selectedProductIds.includes(product.id)
-                                  }
-                                  inputProps={{
-                                    min: 0,
-                                    style: { width: 50, textAlign: "center" },
-                                  }}
                                 />
-                                <IconButton
-                                  size="small"
-                                  onClick={() => incrementQty(product.id)}
-                                  disabled={
-                                    !selectedProductIds.includes(product.id)
-                                  }
-                                >
-                                  <Add fontSize="small" />
-                                </IconButton>
-                              </Box>
-                            </TableCell>
-                            <TableCell>
-                              <Box display="flex" alignItems="center">
-                                <IconButton
-                                  size="small"
-                                  onClick={() => decrementNewQty(product.id)}
-                                  disabled={
-                                    !selectedProductIds.includes(product.id)
-                                  }
-                                >
-                                  <Remove fontSize="small" />
-                                </IconButton>
+                              </TableCell>
+                              <TableCell>{product.product_name}</TableCell>
+                              <TableCell>{product.brand}</TableCell>
+                              <TableCell>
+                                {[
+                                  product.model,
+                                  product.processor,
+                                  product.ram,
+                                  product.storage,
+                                  product.graphics,
+                                ]
+                                  .filter(Boolean)
+                                  .join(" | ")}
+                              </TableCell>
+                              <TableCell>
+                                <Box display="flex" alignItems="center">
+                                  <IconButton
+                                    size="small"
+                                    onClick={() => decrementQty(product.id)}
+                                    disabled={
+                                      !selectedProductIds.includes(product.id)
+                                    }
+                                  >
+                                    <Remove fontSize="small" />
+                                  </IconButton>
+                                  <TextField
+                                    type="number"
+                                    size="small"
+                                    value={
+                                      selectedProductIds.includes(product.id)
+                                        ? quantities[product.id] || ""
+                                        : ""
+                                    }
+                                    onChange={(e) =>
+                                      handleQtyChange(
+                                        product.id,
+                                        e.target.value
+                                      )
+                                    }
+                                    disabled={
+                                      !selectedProductIds.includes(product.id)
+                                    }
+                                    inputProps={{
+                                      min: 0,
+                                      style: {
+                                        width: "50px",
+                                        textAlign: "center",
+                                      },
+                                    }}
+                                  />
+                                  <IconButton
+                                    size="small"
+                                    onClick={() => incrementQty(product.id)}
+                                    disabled={
+                                      !selectedProductIds.includes(product.id)
+                                    }
+                                  >
+                                    <Add fontSize="small" />
+                                  </IconButton>
+                                </Box>
+                              </TableCell>
+                              {/* <TableCell>
+                                <FormControl error={!!errors[product.id]}>
+                                  <Box display="flex" alignItems="center">
+                                    <IconButton
+                                      size="small"
+                                      onClick={() =>
+                                        decrementReturnQty(product.id)
+                                      }
+                                      disabled={
+                                        !selectedProductIds.includes(product.id)
+                                      }
+                                    >
+                                      <Remove fontSize="small" />
+                                    </IconButton>
+                                    <TextField
+                                      type="number"
+                                      size="small"
+                                      value={
+                                        selectedProductIds.includes(product.id)
+                                          ? returnQuantities[product.id] || ""
+                                          : ""
+                                      }
+                                      onChange={(e) =>
+                                        handleReturnQtyChange(
+                                          product.id,
+                                          e.target.value
+                                        )
+                                      }
+                                      disabled={
+                                        !selectedProductIds.includes(product.id)
+                                      }
+                                      inputProps={{
+                                        min: 0,
+                                        style: {
+                                          width: "50px",
+                                          textAlign: "center",
+                                        },
+                                      }}
+                                    />
+                                    <IconButton
+                                      size="small"
+                                      onClick={() =>
+                                        incrementReturnQty(product.id)
+                                      }
+                                      disabled={
+                                        !selectedProductIds.includes(product.id)
+                                      }
+                                    >
+                                      <Add fontSize="small" />
+                                    </IconButton>
+                                  </Box>
+                                  {errors[product.id] && (
+                                    <FormHelperText>
+                                      {errors[product.id]}
+                                    </FormHelperText>
+                                  )}
+                                </FormControl>
+                              </TableCell>
+
+                              <TableCell>
+                                {returnQuantities[product.id] > 0 &&
+                                  productDeviceIds.length > 0 &&
+                                  !errors[product.id] && ( // ✅ Check for no error
+                                    <Box display="flex" flexDirection="column">
+                                      {productDeviceIds.map((deviceId) => (
+                                        <FormControlLabel
+                                          key={deviceId}
+                                          control={
+                                            <Checkbox
+                                              checked={selectedDevices.includes(
+                                                deviceId
+                                              )}
+                                              onChange={handleReturnDeviceCheckboxChange(
+                                                product.id,
+                                                deviceId
+                                              )}
+                                            />
+                                          }
+                                          label={deviceId}
+                                        />
+                                      ))}
+                                    </Box>
+                                  )}
+                              </TableCell>
+
+                              <TableCell>
                                 <TextField
-                                  type="number"
+                                  type="date"
                                   size="small"
-                                  value={
-                                    selectedProductIds.includes(product.id)
-                                      ? newQuantities[product.id] || ""
-                                      : ""
-                                  }
+                                  value={returnedDates[product.id] || ""}
                                   onChange={(e) =>
-                                    handleNewQtyChange(
+                                    handleReturnedDateChange(
                                       product.id,
                                       e.target.value
                                     )
                                   }
-                                  disabled={
-                                    !selectedProductIds.includes(product.id)
-                                  }
-                                  inputProps={{
-                                    min: 0,
-                                    style: { width: 50, textAlign: "center" },
-                                  }}
+                                  InputLabelProps={{ shrink: true }}
                                 />
-                                <IconButton
-                                  size="small"
-                                  onClick={() => incrementNewQty(product.id)}
-                                  disabled={
-                                    !selectedProductIds.includes(product.id)
-                                  }
-                                >
-                                  <Add fontSize="small" />
-                                </IconButton>
-                              </Box>
-                            </TableCell>
-                            {/* New Asset IDs */}
-                            <TableCell>
-                              {newQuantities[product.id] > 0 && (
-                                <Box
-                                  display="flex"
-                                  flexDirection="column"
-                                  gap={1}
-                                >
-                                  {(newDeviceIds[product.id] || []).map(
-                                    (id, idx) => (
-                                      <TextField
-                                        key={idx}
-                                        size="small"
-                                        placeholder={`New Device ID ${idx + 1}`}
-                                        value={id}
-                                        onChange={(e) => {
-                                          const updated = [
-                                            ...(newDeviceIds[product.id] || []),
-                                          ];
-                                          updated[idx] = e.target.value;
-                                          setNewDeviceIds((prev) => ({
-                                            ...prev,
-                                            [product.id]: updated,
-                                          }));
-                                        }}
-                                      />
-                                    )
-                                  )}
-                                  {(newDeviceIds[product.id]?.length || 0) <
-                                    (newQuantities[product.id] || 0) && (
-                                    <Button
-                                      size="small"
-                                      variant="outlined"
-                                      onClick={() =>
-                                        setNewDeviceIds((prev) => ({
-                                          ...prev,
-                                          [product.id]: [
-                                            ...(prev[product.id] || []),
-                                            "",
-                                          ],
-                                        }))
-                                      }
-                                    >
-                                      + Add New ID
-                                    </Button>
-                                  )}
-                                </Box>
-                              )}
-                            </TableCell>
-                            <TableCell>
-                              <Box display="flex" alignItems="center">
-                                <IconButton
-                                  size="small"
-                                  onClick={() => decrementReturnQty(product.id)}
-                                  disabled={
-                                    !selectedProductIds.includes(product.id)
-                                  }
-                                >
-                                  <Remove fontSize="small" />
-                                </IconButton>
+                              </TableCell>
+                              <TableCell>
                                 <TextField
-                                  type="number"
                                   size="small"
-                                  value={
-                                    selectedProductIds.includes(product.id)
-                                      ? returnQuantities[product.id] || ""
-                                      : ""
-                                  }
+                                  value={upgradedRams[product.id] || ""}
                                   onChange={(e) =>
-                                    handleReturnQtyChange(
+                                    handleUpgradedRamChange(
                                       product.id,
                                       e.target.value
                                     )
                                   }
-                                  disabled={
-                                    !selectedProductIds.includes(product.id)
-                                  }
-                                  inputProps={{
-                                    min: 0,
-                                    style: { width: 50, textAlign: "center" },
-                                  }}
+                                  placeholder="RAM upgrade"
                                 />
-                                <IconButton
+                              </TableCell>
+                              <TableCell>
+                                <TextField
+                                  type="date"
                                   size="small"
-                                  onClick={() => incrementReturnQty(product.id)}
-                                  disabled={
-                                    !selectedProductIds.includes(product.id)
-                                  }
-                                >
-                                  <Add fontSize="small" />
-                                </IconButton>
-                              </Box>
-                            </TableCell>
-                            <TableCell>
-                              {returnQuantities[product.id] > 0 && (
-                                <Box
-                                  display="flex"
-                                  flexDirection="column"
-                                  gap={1}
-                                >
-                                  {(returnedDeviceIds[product.id] || []).map(
-                                    (id, idx) => (
-                                      <TextField
-                                        key={idx}
-                                        size="small"
-                                        placeholder={`Returned Device ID ${
-                                          idx + 1
-                                        }`}
-                                        value={id}
-                                        onChange={(e) => {
-                                          const updated = [
-                                            ...(returnedDeviceIds[product.id] ||
-                                              []),
-                                          ];
-                                          updated[idx] = e.target.value;
-                                          setReturnedDeviceIds((prev) => ({
-                                            ...prev,
-                                            [product.id]: updated,
-                                          }));
-                                        }}
-                                      />
+                                  value={upgradeDates[product.id] || ""}
+                                  onChange={(e) =>
+                                    handleUpgradeDateChange(
+                                      product.id,
+                                      e.target.value
                                     )
-                                  )}
-                                  {(returnedDeviceIds[product.id]?.length ||
-                                    0) <
-                                    (returnQuantities[product.id] || 0) && (
-                                    <Button
-                                      size="small"
-                                      variant="outlined"
-                                      onClick={() =>
-                                        setReturnedDeviceIds((prev) => ({
-                                          ...prev,
-                                          [product.id]: [
-                                            ...(prev[product.id] || []),
-                                            "",
-                                          ],
-                                        }))
-                                      }
-                                    >
-                                      + Add Returned ID
-                                    </Button>
-                                  )}
+                                  }
+                                  InputLabelProps={{ shrink: true }}
+                                />
+                              </TableCell> */}
+                              <TableCell>
+                                <Box display="flex" flexDirection="column">
+                                  <Typography variant="body2">
+                                    Month: {product.rent_price_per_month}
+                                  </Typography>
+                                  {/* <Typography variant="body2">
+                                    6 Months: {product.rent_price_6_months}
+                                  </Typography>
+                                  <Typography variant="body2">
+                                    Year: {product.rent_price_1_year}
+                                  </Typography> */}
                                 </Box>
-                              )}
-                            </TableCell>
-                            <TableCell>
-                              <>
-                                <div>Month: {product.rent_price_per_month}</div>
-                              </>
-                            </TableCell>
-                          </TableRow>
-                        ))}
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
                     </TableBody>
                   </Table>
                 </TableContainer>
@@ -1444,9 +1833,9 @@ useEffect(() => {
           <button
             type="button"
             style={cancelBtnStyle}
+            onClick={() => navigate("/dashboard/operations/invoices")}
             onMouseEnter={(e) => (e.target.style.backgroundColor = "#e5e7eb")}
             onMouseLeave={(e) => (e.target.style.backgroundColor = "#f3f4f6")}
-            onClick={() => navigate("/dashboard/operations/invoices")}
           >
             Cancel
           </button>
@@ -1462,246 +1851,6 @@ useEffect(() => {
       </form>
     </div>
   );
-};
-
-// Field component
-const Field = memo(({
-  label,
-  name,
-  value,
-  onChange,
-  placeholder,
-  type = "text",
-  readOnly = false,
-}) => (
-  <div style={fieldContainerStyle}>
-    <label style={labelStyle}>{label}</label>
-    {type === "select" ? (
-      <div style={selectWrapperStyle}>
-        <select
-          style={selectStyle}
-          name={name}
-          value={value}
-          onChange={onChange}
-          disabled={readOnly}
-        >
-          <option value="" disabled>
-            {placeholder}
-          </option>
-        </select>
-        <div style={selectArrowStyle}>▼</div>
-      </div>
-    ) : type === "date" ? (
-      <input
-        type="date"
-        style={inputStyle}
-        name={name}
-        value={value}
-        onChange={onChange}
-        disabled={readOnly}
-      />
-    ) : (
-      <input
-        type={type}
-        name={name}
-        value={value}
-        onChange={onChange}
-        placeholder={placeholder}
-        style={{
-          ...inputStyle,
-          backgroundColor: readOnly ? "#f3f4f6" : "#ffffff",
-        }}
-        readOnly={readOnly}
-      />
-    )}
-  </div>
-));
-
-// Styles (same as InvoicesAddPage.jsx)
-const monthButtonContainerStyle = {
-  display: "flex",
-  justifyContent: "center",
-  gap: "1rem",
-  marginBottom: "1rem",
-  width: "100%",
-};
-
-const monthButtonStyle = (isSelected) => ({
-  padding: "0.5rem 1rem",
-  backgroundColor: isSelected ? "#2563eb" : "#f3f4f6",
-  color: isSelected ? "white" : "#374151",
-  border: "1px solid #d1d5db",
-  borderRadius: "4px",
-  cursor: "pointer",
-  transition: "all 0.2s ease",
-  "&:hover": {
-    backgroundColor: isSelected ? "#1d4ed8" : "#e5e7eb",
-  },
-});
-
-const containerStyle = {
-  padding: "2rem",
-  fontFamily:
-    '"Inter", "Segoe UI", -apple-system, BlinkMacSystemFont, sans-serif',
-  minHeight: "100vh",
-  lineHeight: 1.6,
-};
-
-const headerStyle = {
-  marginBottom: "2rem",
-  maxWidth: "1400px",
-};
-
-const titleStyle = {
-  fontSize: "20px",
-  fontWeight: "700",
-  color: "#1e293b",
-  margin: "0 0 0.5rem 0",
-  letterSpacing: "-0.025em",
-};
-
-const subtitleStyle = {
-  fontSize: "1rem",
-  color: "#64748b",
-  margin: 0,
-};
-
-const formContainerStyle = {
-  display: "grid",
-  gap: "1.5rem",
-  maxWidth: "1400px",
-  gridTemplateColumns: "repeat(auto-fit, minmax(400px, 1fr))",
-};
-
-const cardStyle = {
-  backgroundColor: "#ffffff",
-  padding: "1.5rem",
-  borderRadius: "12px",
-  boxShadow: "0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06)",
-  border: "1px solid #e2e8f0",
-  transition: "box-shadow 0.2s ease",
-};
-
-const cardHeaderContainerStyle = {
-  display: "flex",
-  alignItems: "center",
-  marginBottom: "1.5rem",
-  paddingBottom: "1rem",
-  borderBottom: "1px solid #e2e8f0",
-};
-
-const iconStyle = {
-  fontSize: "1.25rem",
-  marginRight: "0.75rem",
-  backgroundColor: "#f1f5f9",
-  padding: "0.5rem",
-  borderRadius: "8px",
-};
-
-const cardHeaderStyle = {
-  fontSize: "1.125rem",
-  fontWeight: "600",
-  color: "#1e293b",
-  margin: 0,
-};
-
-const fieldsGridStyle = {
-  display: "grid",
-  gap: "1rem",
-  gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))",
-};
-
-const fieldContainerStyle = {
-  display: "flex",
-  flexDirection: "column",
-};
-
-const labelStyle = {
-  display: "block",
-  marginBottom: "0.5rem",
-  fontWeight: "500",
-  fontSize: "0.875rem",
-  color: "#374151",
-  letterSpacing: "0.025em",
-};
-
-const inputStyle = {
-  width: "100%",
-  padding: "0.75rem",
-  borderRadius: "8px",
-  border: "1px solid #d1d5db",
-  fontSize: "0.875rem",
-  backgroundColor: "#ffffff",
-  transition: "all 0.2s ease",
-  outline: "none",
-  boxSizing: "border-box",
-};
-
-const selectWrapperStyle = {
-  position: "relative",
-  width: "100%",
-};
-
-const selectStyle = {
-  width: "100%",
-  padding: "0.75rem",
-  paddingRight: "2.5rem",
-  borderRadius: "8px",
-  border: "1px solid #d1d5db",
-  fontSize: "0.875rem",
-  backgroundColor: "#ffffff",
-  appearance: "none",
-  transition: "all 0.2s ease",
-  outline: "none",
-  boxSizing: "border-box",
-  cursor: "pointer",
-};
-
-const selectArrowStyle = {
-  position: "absolute",
-  right: "0.75rem",
-  top: "50%",
-  transform: "translateY(-50%)",
-  pointerEvents: "none",
-  fontSize: "0.75rem",
-  color: "#6b7280",
-};
-
-const buttonContainerStyle = {
-  display: "flex",
-  justifyContent: "center",
-  gap: "1rem",
-  marginTop: "2rem",
-  maxWidth: "1200px",
-  margin: "2rem auto 0",
-  padding: "0 1.5rem",
-  flexWrap: "wrap",
-};
-
-const cancelBtnStyle = {
-  padding: "0.75rem 1.5rem",
-  backgroundColor: "#f3f4f6",
-  color: "#374151",
-  border: "1px solid #d1d5db",
-  borderRadius: "8px",
-  cursor: "pointer",
-  fontSize: "0.875rem",
-  fontWeight: "500",
-  transition: "all 0.2s ease",
-  outline: "none",
-};
-
-const submitBtnStyle = {
-  padding: "0.75rem 1.5rem",
-  backgroundColor: "#2563eb",
-  color: "white",
-  border: "none",
-  borderRadius: "8px",
-  cursor: "pointer",
-  fontSize: "0.875rem",
-  fontWeight: "500",
-  transition: "all 0.2s ease",
-  outline: "none",
 };
 
 export default InvoicesEditPage;

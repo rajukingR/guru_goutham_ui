@@ -35,7 +35,7 @@ const ContactsAddLayoutPage = () => {
       street: "",
       city: "",
       state: "",
-      zip: "",
+      pincode: "",
       country: "India",
     },
     gst: "",
@@ -71,10 +71,10 @@ const ContactsAddLayoutPage = () => {
   // Fetch location data when pincode changes
   useEffect(() => {
     const fetchLocationData = async () => {
-      if (formData.address.zip.length === 6) {
+      if (formData.address.pincode.length === 6) {
         try {
           const response = await fetch(
-            `https://api.postalpincode.in/pincode/${formData.address.zip}`
+            `https://api.postalpincode.in/pincode/${formData.address.pincode}`
           );
           const data = await response.json();
 
@@ -108,7 +108,7 @@ const ContactsAddLayoutPage = () => {
       }
     };
     fetchLocationData();
-  }, [formData.address.zip]);
+  }, [formData.address.pincode]);
   const handleInputChange = (field, value) => {
     // Handle nested address fields
     if (field.includes("address.")) {
@@ -285,9 +285,9 @@ const ContactsAddLayoutPage = () => {
 
               <Field
                 label="Pincode"
-                name="address.zip"
+                name="address.pincode"
                 placeholder="Enter Pincode"
-                value={formData.address.zip}
+                value={formData.address.pincode}
                 onChange={handleInputChange}
               />
 

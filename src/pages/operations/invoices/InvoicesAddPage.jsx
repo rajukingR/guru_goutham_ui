@@ -18,6 +18,7 @@ import {
   InputLabel,
   FormControl,
   Button,
+  Typography,
 } from "@mui/material";
 import { Add, Remove } from "@mui/icons-material";
 import API_URL from "../../../api/Api_url";
@@ -211,153 +212,239 @@ const monthButtonStyle = (isSelected) => ({
 });
 
 // Field component moved outside and memoized
-const Field = memo(({
-  label,
-  name,
-  value,
-  onChange,
-  placeholder,
-  type = "text",
-  readOnly = false,
-}) => (
-  <div style={fieldContainerStyle}>
-    <label style={labelStyle}>{label}</label>
-    {type === "select" ? (
-      <div style={selectWrapperStyle}>
-        <select
-          style={selectStyle}
+const Field = memo(
+  ({
+    label,
+    name,
+    value,
+    onChange,
+    placeholder,
+    type = "text",
+    readOnly = false,
+  }) => (
+    <div style={fieldContainerStyle}>
+      <label style={labelStyle}>{label}</label>
+      {type === "select" ? (
+        <div style={selectWrapperStyle}>
+          <select
+            style={selectStyle}
+            name={name}
+            value={value}
+            onChange={onChange}
+            disabled={readOnly}
+          >
+            <option value="" disabled>
+              {placeholder}
+            </option>
+          </select>
+          <div style={selectArrowStyle}>▼</div>
+        </div>
+      ) : type === "date" ? (
+        <input
+          type="date"
+          style={inputStyle}
           name={name}
           value={value}
           onChange={onChange}
           disabled={readOnly}
-        >
-          <option value="" disabled>
-            {placeholder}
-          </option>
-        </select>
-        <div style={selectArrowStyle}>▼</div>
-      </div>
-    ) : type === "date" ? (
-      <input
-        type="date"
-        style={inputStyle}
-        name={name}
-        value={value}
-        onChange={onChange}
-        disabled={readOnly}
-      />
-    ) : (
-      <input
-        type={type}
-        name={name}
-        value={value}
-        onChange={onChange}
-        placeholder={placeholder}
-        style={{
-          ...inputStyle,
-          backgroundColor: readOnly ? "#f3f4f6" : "#ffffff",
-        }}
-        readOnly={readOnly}
-      />
-    )}
-  </div>
-));
+        />
+      ) : (
+        <input
+          type={type}
+          name={name}
+          value={value}
+          onChange={onChange}
+          placeholder={placeholder}
+          style={{
+            ...inputStyle,
+            backgroundColor: readOnly ? "#f3f4f6" : "#ffffff",
+          }}
+          readOnly={readOnly}
+        />
+      )}
+    </div>
+  )
+);
 
 // DateRangeSelector component moved outside and memoized
-const DateRangeSelector = memo(({ selectedMonth, setSelectedMonth, dateRanges, setDateRanges }) => {
-  const [monthOffset, setMonthOffset] = useState(0);
+const DateRangeSelector = memo(
+  ({ selectedMonth, setSelectedMonth, dateRanges, setDateRanges }) => {
+    const [monthOffset, setMonthOffset] = useState(0);
 
-  const formatDate = (date) => {
-    const day = String(date.getDate()).padStart(2, "0");
-    const month = String(date.getMonth() + 1).padStart(2, "0");
-    const year = date.getFullYear();
-    return `${year}-${month}-${day}`;
-  };
+    const formatDate = (date) => {
+      const day = String(date.getDate()).padStart(2, "0");
+      const month = String(date.getMonth() + 1).padStart(2, "0");
+      const year = date.getFullYear();
+      return `${year}-${month}-${day}`;
+    };
 
-  const calculateDates = useCallback((offset) => {
-    const baseDate = new Date();
-    const currentMonth = new Date(baseDate.getFullYear(), baseDate.getMonth() + offset, 1);
+    const calculateDates = useCallback(
+      (offset) => {
+        const baseDate = new Date();
+        const currentMonth = new Date(
+          baseDate.getFullYear(),
+          baseDate.getMonth() + offset,
+          1
+        );
 
-    const startDate = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1);
-    const endDate = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0);
-    const prevStartDate = new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1);
-    const prevEndDate = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 0);
+        const startDate = new Date(
+          currentMonth.getFullYear(),
+          currentMonth.getMonth(),
+          1
+        );
+        const endDate = new Date(
+          currentMonth.getFullYear(),
+          currentMonth.getMonth() + 1,
+          0
+        );
+        const prevStartDate = new Date(
+          currentMonth.getFullYear(),
+          currentMonth.getMonth() - 1,
+          1
+        );
+        const prevEndDate = new Date(
+          currentMonth.getFullYear(),
+          currentMonth.getMonth(),
+          0
+        );
 
-    setDateRanges({
-      invoiceStartDate: formatDate(startDate),
-      invoiceEndDate: formatDate(endDate),
-      previousDeliveredStartDate: formatDate(prevStartDate),
-      previousDeliveredEndDate: formatDate(prevEndDate),
-      creditNoteStartDate: formatDate(prevStartDate),
-      creditNoteEndDate: formatDate(prevEndDate),
-    });
-  }, [setDateRanges]);
+        setDateRanges({
+          invoiceStartDate: formatDate(startDate),
+          invoiceEndDate: formatDate(endDate),
+          previousDeliveredStartDate: formatDate(prevStartDate),
+          previousDeliveredEndDate: formatDate(prevEndDate),
+          creditNoteStartDate: formatDate(prevStartDate),
+          creditNoteEndDate: formatDate(prevEndDate),
+        });
+      },
+      [setDateRanges]
+    );
 
-  useEffect(() => {
-  calculateDates(monthOffset);
-  if (monthOffset === 0) {
-    setSelectedMonth("current");
+    useEffect(() => {
+      calculateDates(monthOffset);
+      if (monthOffset === 0) {
+        setSelectedMonth("current");
+      }
+    }, [monthOffset, calculateDates, setSelectedMonth]);
+
+    const handleMonthChange = (type) => {
+      if (type === "previous") {
+        setMonthOffset((prev) => prev - 1);
+        setSelectedMonth("previous");
+      } else if (type === "current") {
+        setMonthOffset(0); // ✅ Reset to current
+        setSelectedMonth("current");
+      } else if (type === "next") {
+        setMonthOffset((prev) => prev + 1);
+        setSelectedMonth("next");
+      }
+    };
+
+    return (
+      <Box sx={{ width: "100%", mb: 10 }}>
+        <Box sx={monthButtonContainerStyle}>
+          <button
+            type="button"
+            onClick={() => handleMonthChange("previous")}
+            style={monthButtonStyle(selectedMonth === "previous")}
+          >
+            Previous Month
+          </button>
+          <button
+            type="button"
+            onClick={() => handleMonthChange("current")}
+            style={monthButtonStyle(selectedMonth === "current")}
+          >
+            Current Month
+          </button>
+          <button
+            type="button"
+            onClick={() => handleMonthChange("next")}
+            style={monthButtonStyle(selectedMonth === "next")}
+          >
+            Next Month
+          </button>
+        </Box>
+
+        <Box
+          sx={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))",
+            gap: "1rem",
+            width: "100%",
+          }}
+        >
+          <Field
+            label="Invoice Start Date"
+            type="date"
+            name="invoiceStartDate"
+            value={dateRanges.invoiceStartDate}
+            onChange={(e) =>
+              setDateRanges({ ...dateRanges, invoiceStartDate: e.target.value })
+            }
+          />
+          <Field
+            label="Invoice End Date"
+            type="date"
+            name="invoiceEndDate"
+            value={dateRanges.invoiceEndDate}
+            onChange={(e) =>
+              setDateRanges({ ...dateRanges, invoiceEndDate: e.target.value })
+            }
+          />
+          <Field
+            label="Previous Delivered Start Date"
+            type="date"
+            name="previousDeliveredStartDate"
+            value={dateRanges.previousDeliveredStartDate}
+            onChange={(e) =>
+              setDateRanges({
+                ...dateRanges,
+                previousDeliveredStartDate: e.target.value,
+              })
+            }
+          />
+          <Field
+            label="Previous Delivered End Date"
+            type="date"
+            name="previousDeliveredEndDate"
+            value={dateRanges.previousDeliveredEndDate}
+            onChange={(e) =>
+              setDateRanges({
+                ...dateRanges,
+                previousDeliveredEndDate: e.target.value,
+              })
+            }
+          />
+          <Field
+            label="Credit Note Start Date"
+            type="date"
+            name="creditNoteStartDate"
+            value={dateRanges.creditNoteStartDate}
+            onChange={(e) =>
+              setDateRanges({
+                ...dateRanges,
+                creditNoteStartDate: e.target.value,
+              })
+            }
+          />
+          <Field
+            label="Credit Note End Date"
+            type="date"
+            name="creditNoteEndDate"
+            value={dateRanges.creditNoteEndDate}
+            onChange={(e) =>
+              setDateRanges({
+                ...dateRanges,
+                creditNoteEndDate: e.target.value,
+              })
+            }
+          />
+        </Box>
+      </Box>
+    );
   }
-}, [monthOffset, calculateDates, setSelectedMonth]);
-
-
-  const handleMonthChange = (type) => {
-    if (type === "previous") {
-      setMonthOffset((prev) => prev - 1);
-      setSelectedMonth("previous");
-    } else if (type === "current") {
-      setMonthOffset(0); // ✅ Reset to current
-      setSelectedMonth("current");
-    } else if (type === "next") {
-      setMonthOffset((prev) => prev + 1);
-      setSelectedMonth("next");
-    }
-  };
-
-  return (
-    <Box sx={{ width: "100%", mb: 10 }}>
-      <Box sx={monthButtonContainerStyle}>
-        <button
-          type="button"
-          onClick={() => handleMonthChange("previous")}
-          style={monthButtonStyle(selectedMonth === "previous")}
-        >
-          Previous Month
-        </button>
-        <button
-          type="button"
-          onClick={() => handleMonthChange("current")}
-          style={monthButtonStyle(selectedMonth === "current")}
-        >
-          Current Month
-        </button>
-        <button
-          type="button"
-          onClick={() => handleMonthChange("next")}
-          style={monthButtonStyle(selectedMonth === "next")}
-        >
-          Next Month
-        </button>
-      </Box>
-
-      <Box
-        sx={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))",
-          gap: "1rem",
-          width: "100%",
-        }}
-      >
-        <Field label="Invoice Start Date" type="date" name="invoiceStartDate" value={dateRanges.invoiceStartDate} onChange={(e) => setDateRanges({ ...dateRanges, invoiceStartDate: e.target.value })} />
-        <Field label="Invoice End Date" type="date" name="invoiceEndDate" value={dateRanges.invoiceEndDate} onChange={(e) => setDateRanges({ ...dateRanges, invoiceEndDate: e.target.value })} />
-        <Field label="Previous Delivered Start Date" type="date" name="previousDeliveredStartDate" value={dateRanges.previousDeliveredStartDate} onChange={(e) => setDateRanges({ ...dateRanges, previousDeliveredStartDate: e.target.value })} />
-        <Field label="Previous Delivered End Date" type="date" name="previousDeliveredEndDate" value={dateRanges.previousDeliveredEndDate} onChange={(e) => setDateRanges({ ...dateRanges, previousDeliveredEndDate: e.target.value })} />
-        <Field label="Credit Note Start Date" type="date" name="creditNoteStartDate" value={dateRanges.creditNoteStartDate} onChange={(e) => setDateRanges({ ...dateRanges, creditNoteStartDate: e.target.value })} />
-        <Field label="Credit Note End Date" type="date" name="creditNoteEndDate" value={dateRanges.creditNoteEndDate} onChange={(e) => setDateRanges({ ...dateRanges, creditNoteEndDate: e.target.value })} />
-      </Box>
-    </Box>
-  );
-});
+);
 
 const generateInvoiceId = () => {
   const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
@@ -380,6 +467,7 @@ const InvoicesAddPage = () => {
     invoice_due_date: new Date().toISOString().split("T")[0],
     purchase_order_date: "",
     purchase_order_number: "",
+    dc_id: "",
     customer_gst_number: "",
     duration: "",
     email: "",
@@ -424,15 +512,17 @@ const InvoicesAddPage = () => {
   const [newDeviceIds, setNewDeviceIds] = useState({});
   const [returnedDeviceIds, setReturnedDeviceIds] = useState({});
   const [selectedMonth, setSelectedMonth] = useState("current");
-  const [dateRanges, setDateRanges] = useState({
-  invoiceStartDate: '',
-  invoiceEndDate: '',
-  previousDeliveredStartDate: '',
-  previousDeliveredEndDate: '',
-  creditNoteStartDate: '',
-  creditNoteEndDate: '',
-});
+  const [productOrderMap, setProductOrderMap] = useState({});
+  const [selectedReturnIds, setSelectedReturnIds] = useState({});
 
+  const [dateRanges, setDateRanges] = useState({
+    invoiceStartDate: "",
+    invoiceEndDate: "",
+    previousDeliveredStartDate: "",
+    previousDeliveredEndDate: "",
+    creditNoteStartDate: "",
+    creditNoteEndDate: "",
+  });
 
   useEffect(() => {
     setFormData((prev) => ({
@@ -462,6 +552,55 @@ const InvoicesAddPage = () => {
     }));
   }, []);
 
+  const handleNewDeviceCheckboxChange = (productId, deviceId, isChecked) => {
+    setNewDeviceIds((prev) => {
+      const currentSelected = prev[productId] || [];
+      let updatedSelected;
+
+      if (isChecked) {
+        // Add the device if checked and we haven't reached the new quantity limit
+        if (currentSelected.length < (newQuantities[productId] || 0)) {
+          updatedSelected = [...currentSelected, deviceId];
+        } else {
+          return prev; // Don't exceed the new quantity
+        }
+      } else {
+        // Remove the device if unchecked
+        updatedSelected = currentSelected.filter((id) => id !== deviceId);
+      }
+
+      return {
+        ...prev,
+        [productId]: updatedSelected,
+      };
+    });
+  };
+
+  // New function to handle checkbox selection for returned device IDs
+  const handleReturnDeviceCheckboxChange = (productId, deviceId, isChecked) => {
+    setReturnedDeviceIds((prev) => {
+      const currentSelected = prev[productId] || [];
+      let updatedSelected;
+
+      if (isChecked) {
+        // Add the device if checked and we haven't reached the return quantity limit
+        if (currentSelected.length < (returnQuantities[productId] || 0)) {
+          updatedSelected = [...currentSelected, deviceId];
+        } else {
+          return prev; // Don't exceed the return quantity
+        }
+      } else {
+        // Remove the device if unchecked
+        updatedSelected = currentSelected.filter((id) => id !== deviceId);
+      }
+
+      return {
+        ...prev,
+        [productId]: updatedSelected,
+      };
+    });
+  };
+
   const handleNewQtyChange = useCallback((productId, value) => {
     const updated = { ...newQuantities, [productId]: parseInt(value) || 0 };
     setNewQuantities(updated);
@@ -485,22 +624,59 @@ const InvoicesAddPage = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        // Fetch orders
-        const orderApprovedResponse = await fetch(
-          `${API_URL}/orders/order-approved`
+        const approvedDeliveryChallansResponse = await fetch(
+          `${API_URL}/delivery-challans/approved-delivery-challan`
         );
-        if (!orderApprovedResponse.ok)
-          throw new Error("Failed to fetch orders");
-        const orderApprovedData = await orderApprovedResponse.json();
-        setOrders(orderApprovedData);
+        if (!approvedDeliveryChallansResponse.ok)
+          throw new Error("Failed to fetch approved Delivery Challans");
+        const approvedDeliveryChallansData =
+          await approvedDeliveryChallansResponse.json();
 
-        // Fetch products
+        const transformedOrders = approvedDeliveryChallansData.map((dc) => ({
+          id: dc.id,
+          order_id: dc.order_id,
+          dc_id:dc.id,
+          customer_code: dc.customer_code, // ✅ include this
+          customer_id: dc.customer?.id, // ✅ now accessible in handleCustomerSelect
+          personalDetails: {
+            first_name: dc.shipping_name || dc.customer?.first_name,
+            last_name: dc.customer?.last_name || "",
+            email: dc.email || dc.customer?.email,
+            phone_number: dc.shipping_phone_number || dc.customer?.phone_number,
+            gst_number: dc.gst_number || dc.customer?.gst,
+            pan_number: dc.pan_number || dc.customer?.pan_no, // Fix field typo
+          },
+          address: {
+            country: dc.country || "India",
+            state: dc.state,
+            city: dc.city,
+            street: dc.street,
+            pincode: dc.pincode,
+            landmark: dc.landmark,
+          },
+          items: dc.items.map((item) => ({
+            product_id: item.product_id,
+            product_name: item.product_name,
+            quantity: item.quantity,
+            unit_price: item.unit_price,
+            total_price: item.total_price,
+            product: item.product,
+            device_ids: item.device_ids ? JSON.parse(item.device_ids) : [], // ✅ parse safely
+          })),
+          rental_start_date: dc.order?.rental_start_date || null, // ✅ from `order`
+          rental_end_date: dc.order?.rental_end_date || null,
+          rental_duration: dc.order?.rental_duration || null,
+          transaction_type: dc.type || "Rent",
+          payment_type: dc.payment_type || "Postpaid",
+        }));
+
+        setOrders(transformedOrders);
+
         const prodResponse = await fetch(`${API_URL}/product-templete`);
         if (!prodResponse.ok) throw new Error("Failed to fetch products");
         const prodData = await prodResponse.json();
         setProducts(prodData);
 
-        // Fetch tax types
         const taxResponse = await fetch(`${API_URL}/tax-types`);
         if (!taxResponse.ok) throw new Error("Failed to fetch tax types");
         const taxData = await taxResponse.json();
@@ -579,12 +755,11 @@ const InvoicesAddPage = () => {
     }
 
     const formatDate = (date) => {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`; // ✅ valid format: yyyy-mm-dd
-};
-
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, "0");
+      const day = String(date.getDate()).padStart(2, "0");
+      return `${year}-${month}-${day}`; // ✅ valid format: yyyy-mm-dd
+    };
 
     setDateRanges({
       invoiceStartDate: formatDate(startDate),
@@ -596,105 +771,130 @@ const InvoicesAddPage = () => {
     });
   }, [selectedMonth]);
 
-  const handleCustomerSelect = useCallback((customerId) => {
-    const selectedOrder = orders.find(
-      (order) => order.id === parseInt(customerId)
-    );
-    if (!selectedOrder) return;
+  const handleSelectReturnId = (productId, id) => {
+    setSelectedReturnIds((prev) => ({
+      ...prev,
+      [productId]: id,
+    }));
+  };
 
-    const personal = selectedOrder.personalDetails;
-    const address = selectedOrder.address;
+  const handleCustomerSelect = useCallback(
+    (customerId) => {
+      const selectedOrder = orders.find(
+        (order) => order.id === parseInt(customerId)
+      );
+      if (!selectedOrder) return;
 
-    const orderItems = selectedOrder.items || [];
-    const productIds = orderItems.map((item) => item.product_id);
-    const productQuantities = {};
+      // Initialize quantities from order items
+      const initialQuantities = {};
+      selectedOrder.items.forEach((item) => {
+        initialQuantities[item.product_id] = item.quantity;
+      });
 
-    orderItems.forEach((item) => {
-      productQuantities[item.product_id] = item.requested_quantity;
-    });
 
-    setSelectedProductIds(productIds);
-    setQuantities(productQuantities);
+      setQuantities(initialQuantities);
 
-    const selectedProducts = products.filter((product) =>
-      productIds.includes(product.id)
-    );
+      const personal = selectedOrder.personalDetails;
 
-    let amount = 0;
-    const items = selectedProducts.map((product) => {
-      const quantity = quantities[product.id] || 0;
-      let price = product.purchase_price;
+      const address = selectedOrder.address;
+      const orderItems = selectedOrder.items || [];
 
-      if (formData.transaction_type === "Rent") {
-        const months = parseInt(formData.rental_duration) || 0;
-        const days = parseInt(formData.rental_duration_days) || 0;
-        price = calculateRentalPrice(product, months, days);
-      }
+      const productDeviceMap = {};
+      const productOrderMapLocal = {};
 
-      const totalPrice = quantity * price;
-      amount += totalPrice;
+      orderItems.forEach((item) => {
+        if (item.product_id && Array.isArray(item.device_ids)) {
+          productDeviceMap[item.product_id] = item.device_ids;
+        }
+        if (item.product_id && item.order_id) {
+          productOrderMapLocal[item.product_id] = item.order_id;
+        }
+      });
 
-      return {
-        product_id: product.id,
-        product_name: product.product_name,
-        quantity: quantity,
-      };
-    });
+      setReturnedDeviceIds(productDeviceMap);
+      setProductOrderMap(productOrderMapLocal);
 
-    // Tax Calculation
-    const cgstRate =
-      taxTypes.find((t) => t.tax_type_name === "CGST")?.percentage || 0;
-    const sgstRate =
-      taxTypes.find((t) => t.tax_type_name === "SGST")?.percentage || 0;
-    const cgst = (amount * parseFloat(cgstRate)) / 100;
-    const sgst = (amount * parseFloat(sgstRate)) / 100;
-    const totalTax = cgst + sgst;
-    const totalAmount = amount + totalTax;
+      const productIds = orderItems.map((item) => item.product_id);
+      setSelectedProductIds(productIds);
 
-    // Set Form Data
-    setFormData({
-      ...formData,
-      customer_id: selectedOrder.id,
-      customer_name: `${personal?.first_name || ""} ${
-        personal?.last_name || ""
-      }`,
-      email: personal?.email || "",
-      phone_number: personal?.phone_number || "",
-      customer_gst_number: personal?.gst_number || "",
-      pan_number: "",
-      order_id: selectedOrder.order_id,
-      transaction_type: selectedOrder.transaction_type || "Sale",
-      payment_type: selectedOrder.payment_type || "Postpaid",
-      rental_duration: selectedOrder.rental_duration || "",
-      rental_duration_days: selectedOrder.rental_duration_days || 0,
-      purchase_order_date: selectedOrder.updated_at
-        ? new Date(selectedOrder.updated_at).toISOString().split("T")[0]
-        : "",
-      purchase_order_number: selectedOrder.order_id || "",
-      duration: selectedOrder.rental_duration || 0,
-      rental_start_date: selectedOrder.rental_start_date || "",
-      rental_end_date: selectedOrder.rental_end_date || "",
-      amount: amount,
-      cgst: cgst,
-      sgst: sgst,
-      total_tax: totalTax,
-      total_amount: totalAmount,
-      items: items,
-      shippingDetails: {
-        ...formData.shippingDetails,
-        consignee_name: `${personal?.first_name || ""} ${
-          personal?.last_name || ""
-        }`,
-        country: address?.country || "India",
-        state: address?.state || "",
-        city: address?.city || "",
-        street: address?.street || "",
-        pincode: address?.pincode || "",
-        phone_number: personal?.phone_number || "",
+      const selectedProducts = products.filter((product) =>
+        productIds.includes(product.id)
+      );
+
+      let amount = 0;
+      const items = selectedProducts.map((product) => {
+        const quantity = initialQuantities[product.id] || 0;
+        let price = product.purchase_price;
+
+        if (selectedOrder.transaction_type === "Rent") {
+          const months = parseInt(selectedOrder.rental_duration) || 0;
+          const days = parseInt(selectedOrder.rental_duration_days) || 0;
+          price = calculateRentalPrice(product, months, days);
+        }
+
+        const totalPrice = quantity * price;
+        amount += totalPrice;
+
+        return {
+          product_id: product.id,
+          product_name: product.product_name,
+          quantity: quantity,
+        };
+      });
+
+      // Tax Calculation
+      const cgstRate =
+        taxTypes.find((t) => t.tax_type_name === "CGST")?.percentage || 0;
+      const sgstRate =
+        taxTypes.find((t) => t.tax_type_name === "SGST")?.percentage || 0;
+      const cgst = (amount * parseFloat(cgstRate)) / 100;
+      const sgst = (amount * parseFloat(sgstRate)) / 100;
+      const totalTax = cgst + sgst;
+      const totalAmount = amount + totalTax;
+
+      // Set Form Data
+      setFormData({
+        ...formData,
+        customer_id: selectedOrder.customer_id || "",
+        customer_name: `${personal?.first_name || ""}`,
         email: personal?.email || "",
-      },
-    });
-  }, [orders, products, quantities, taxTypes, formData, calculateRentalPrice]);
+        phone_number: personal?.phone_number || "",
+        customer_gst_number: personal?.gst_number || "",
+        pan_number: selectedOrder.pan_number || personal?.pan_number || "",
+        order_id: selectedOrder.order_id,
+        transaction_type: selectedOrder.transaction_type || "Rent",
+        payment_type: selectedOrder.payment_type || "Prepaid",
+        rental_duration: selectedOrder.rental_duration || "",
+        rental_duration_days: selectedOrder.rental_duration_days || 0,
+        purchase_order_date: selectedOrder.updated_at
+          ? new Date(selectedOrder.updated_at).toISOString().split("T")[0]
+          : "",
+        purchase_order_number: selectedOrder.order_id || "",
+        dc_id:selectedOrder.id,
+        duration: selectedOrder.rental_duration || 0,
+        rental_start_date: selectedOrder.rental_start_date || "",
+        rental_end_date: selectedOrder.rental_end_date || "",
+        amount: amount,
+        cgst: cgst,
+        sgst: sgst,
+        total_tax: totalTax,
+        total_amount: totalAmount,
+        items: items,
+        shippingDetails: {
+          ...formData.shippingDetails,
+          consignee_name: `${personal?.first_name || ""}`,
+          country: address?.country || "India",
+          state: address?.state || "",
+          city: address?.city || "",
+          street: address?.street || "",
+          pincode: address?.pincode || "",
+          phone_number: personal?.phone_number || "",
+          email: personal?.email || "",
+        },
+      });
+    },
+    [orders, products, taxTypes, formData, calculateRentalPrice]
+  );
 
   const getRentalPrice = useCallback((product, duration) => {
     switch (duration) {
@@ -943,6 +1143,7 @@ const InvoicesAddPage = () => {
       const submissionData = {
         ...formData,
         // Include date ranges in the submission
+        dc_id:formData.dc_id,
         invoice_start_date: dateRanges.invoiceStartDate,
         invoice_end_date: dateRanges.invoiceEndDate,
         previous_delivered_start_date: dateRanges.previousDeliveredStartDate,
@@ -958,11 +1159,14 @@ const InvoicesAddPage = () => {
           : 0,
         payment_mode: formData.payment_type || "Postpaid",
 
-        // Make sure items have the correct rental duration information
         items: formData.items.map((item) => ({
           ...item,
+          order_id: productOrderMap[item.product_id] || "", // ✅ set here
+          device_ids: returnedDeviceIds[item.product_id] || [],
           new_device_ids: newDeviceIds[item.product_id] || [],
-          returned_device_ids: returnedDeviceIds[item.product_id] || [],
+          returned_device_ids: selectedReturnIds[item.product_id]
+            ? [selectedReturnIds[item.product_id]]
+            : [],
           rental_duration: formData.rental_duration || "0",
           rental_duration_days: formData.rental_duration_days || 0,
           rental_duration_months: formData.rental_duration
@@ -1077,7 +1281,6 @@ const InvoicesAddPage = () => {
                   {orders.map((order) => (
                     <MenuItem key={order.id} value={order.id}>
                       {order.order_id} || {order.personalDetails?.first_name}{" "}
-                      {order.personalDetails?.last_name}
                     </MenuItem>
                   ))}
                 </Select>
@@ -1331,20 +1534,7 @@ const InvoicesAddPage = () => {
                           Specifications
                         </TableCell>
                         <TableCell sx={{ color: "#fff" }}>Quantity</TableCell>
-                        <TableCell sx={{ color: "#fff" }}>
-                          New Quantity
-                        </TableCell>
-                        <TableCell sx={{ color: "#fff" }}>
-                          New Asset IDs
-                        </TableCell>
-
-                        <TableCell sx={{ color: "#fff" }}>
-                          Return Quantity
-                        </TableCell>
-
-                        <TableCell sx={{ color: "#fff" }}>
-                          Returned Asset IDs
-                        </TableCell>
+                        
 
                         <TableCell sx={{ color: "#fff" }}>
                           Price for Durations
@@ -1422,195 +1612,8 @@ const InvoicesAddPage = () => {
                                 </IconButton>
                               </Box>
                             </TableCell>
-                            <TableCell>
-                              <Box display="flex" alignItems="center">
-                                <IconButton
-                                  size="small"
-                                  onClick={() => decrementNewQty(product.id)}
-                                  disabled={
-                                    !selectedProductIds.includes(product.id)
-                                  }
-                                >
-                                  <Remove fontSize="small" />
-                                </IconButton>
-                                <TextField
-                                  type="number"
-                                  size="small"
-                                  value={
-                                    selectedProductIds.includes(product.id)
-                                      ? newQuantities[product.id] || ""
-                                      : ""
-                                  }
-                                  onChange={(e) =>
-                                    handleNewQtyChange(
-                                      product.id,
-                                      e.target.value
-                                    )
-                                  }
-                                  disabled={
-                                    !selectedProductIds.includes(product.id)
-                                  }
-                                  inputProps={{
-                                    min: 0,
-                                    style: { width: 50, textAlign: "center" },
-                                  }}
-                                />
-                                <IconButton
-                                  size="small"
-                                  onClick={() => incrementNewQty(product.id)}
-                                  disabled={
-                                    !selectedProductIds.includes(product.id)
-                                  }
-                                >
-                                  <Add fontSize="small" />
-                                </IconButton>
-                              </Box>
-                            </TableCell>
-                            {/* New Asset IDs */}
-                            <TableCell>
-                              {newQuantities[product.id] > 0 && (
-                                <Box
-                                  display="flex"
-                                  flexDirection="column"
-                                  gap={1}
-                                >
-                                  {(newDeviceIds[product.id] || []).map(
-                                    (id, idx) => (
-                                      <TextField
-                                        key={idx}
-                                        size="small"
-                                        placeholder={`New Device ID ${idx + 1}`}
-                                        value={id}
-                                        onChange={(e) => {
-                                          const updated = [
-                                            ...(newDeviceIds[product.id] || []),
-                                          ];
-                                          updated[idx] = e.target.value;
-                                          setNewDeviceIds((prev) => ({
-                                            ...prev,
-                                            [product.id]: updated,
-                                          }));
-                                        }}
-                                      />
-                                    )
-                                  )}
-                                  {(newDeviceIds[product.id]?.length || 0) <
-                                    (newQuantities[product.id] || 0) && (
-                                    <Button
-                                      size="small"
-                                      variant="outlined"
-                                      onClick={() =>
-                                        setNewDeviceIds((prev) => ({
-                                          ...prev,
-                                          [product.id]: [
-                                            ...(prev[product.id] || []),
-                                            "",
-                                          ],
-                                        }))
-                                      }
-                                    >
-                                      + Add New ID
-                                    </Button>
-                                  )}
-                                </Box>
-                              )}
-                            </TableCell>
-                            <TableCell>
-                              <Box display="flex" alignItems="center">
-                                <IconButton
-                                  size="small"
-                                  onClick={() => decrementReturnQty(product.id)}
-                                  disabled={
-                                    !selectedProductIds.includes(product.id)
-                                  }
-                                >
-                                  <Remove fontSize="small" />
-                                </IconButton>
-                                <TextField
-                                  type="number"
-                                  size="small"
-                                  value={
-                                    selectedProductIds.includes(product.id)
-                                      ? returnQuantities[product.id] || ""
-                                      : ""
-                                  }
-                                  onChange={(e) =>
-                                    handleReturnQtyChange(
-                                      product.id,
-                                      e.target.value
-                                    )
-                                  }
-                                  disabled={
-                                    !selectedProductIds.includes(product.id)
-                                  }
-                                  inputProps={{
-                                    min: 0,
-                                    style: { width: 50, textAlign: "center" },
-                                  }}
-                                />
-                                <IconButton
-                                  size="small"
-                                  onClick={() => incrementReturnQty(product.id)}
-                                  disabled={
-                                    !selectedProductIds.includes(product.id)
-                                  }
-                                >
-                                  <Add fontSize="small" />
-                                </IconButton>
-                              </Box>
-                            </TableCell>
-                            <TableCell>
-                              {returnQuantities[product.id] > 0 && (
-                                <Box
-                                  display="flex"
-                                  flexDirection="column"
-                                  gap={1}
-                                >
-                                  {(returnedDeviceIds[product.id] || []).map(
-                                    (id, idx) => (
-                                      <TextField
-                                        key={idx}
-                                        size="small"
-                                        placeholder={`Returned Device ID ${
-                                          idx + 1
-                                        }`}
-                                        value={id}
-                                        onChange={(e) => {
-                                          const updated = [
-                                            ...(returnedDeviceIds[product.id] ||
-                                              []),
-                                          ];
-                                          updated[idx] = e.target.value;
-                                          setReturnedDeviceIds((prev) => ({
-                                            ...prev,
-                                            [product.id]: updated,
-                                          }));
-                                        }}
-                                      />
-                                    )
-                                  )}
-                                  {(returnedDeviceIds[product.id]?.length ||
-                                    0) <
-                                    (returnQuantities[product.id] || 0) && (
-                                    <Button
-                                      size="small"
-                                      variant="outlined"
-                                      onClick={() =>
-                                        setReturnedDeviceIds((prev) => ({
-                                          ...prev,
-                                          [product.id]: [
-                                            ...(prev[product.id] || []),
-                                            "",
-                                          ],
-                                        }))
-                                      }
-                                    >
-                                      + Add Returned ID
-                                    </Button>
-                                  )}
-                                </Box>
-                              )}
-                            </TableCell>
+                            
+                            
                             <TableCell>
                               <>
                                 <div>Month: {product.rent_price_per_month}</div>

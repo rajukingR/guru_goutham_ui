@@ -209,18 +209,13 @@ const Sidebar = ({ section }) => {
           icon: <AccountBalanceIcon />,
           description: "Delivery documents",
         },
-         {
-          text: "GRN",
-          path: "/dashboard/operations/grn",
-          icon: <ReceiptLongIcon />,
-          description: "Goods received notes",
-        },
         {
           text: "Invoices",
           path: "/dashboard/operations/invoices",
           icon: <ReceiptIcon />,
           description: "Invoice management",
         },
+        
         {
           text: "Credit Notes",
           path: "/dashboard/operations/credit_notes",
@@ -239,6 +234,12 @@ const Sidebar = ({ section }) => {
           path: "/dashboard/operations/service",
           icon: <MiscellaneousServicesIcon />,
           description: "Service management",
+        },
+         {
+          text: "GRN",
+          path: "/dashboard/operations/grn",
+          icon: <ReceiptLongIcon />,
+          description: "Goods received notes",
         },
         {
           text: "Client Journey",

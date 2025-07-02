@@ -9,13 +9,12 @@ const QuotationsTable = () => {
   const columns = [
     { id: "id", label: "S.No." },
     { id: "quotation_id", label: "Quotation ID" },
-    { id: "quotation_title", label: "Title" },
+    { id: "full_name", label: "Client Name" },
     { id: "lead_id", label: "Lead ID" },
     { id: "quotation_date", label: "Quotation Date" },
     // { id: "rental_start_date", label: "Rental Start" },
     // { id: "rental_end_date", label: "Rental End" },
     // { id: "rental_duration", label: "Duration (months)" },
-    { id: "remarks", label: "Remarks" },
     { id: "status", label: "Status" },
   ];
 
@@ -34,6 +33,7 @@ const QuotationsTable = () => {
           const dataWithSno = response.data.map((item, index) => ({
             id: index + 1,
             ...item,
+            full_name: `${item.customer_first_name} ${item.customer_last_name}`
           }));
           setData(dataWithSno);
         }

@@ -41,12 +41,15 @@ const SalesOrdersAddLayoutPage = ({ product }) => {
     return entry ? entry.available_quantity : "N/A";
   };
 
+  
+
   const navigate = useNavigate();
 
   const [formData, setFormData] = useState({
     order_id: "",
     order_title: "",
     quotation_id: "",
+    customer_id: "",
     transaction_type: "",
     payment_type: "",
     order_status: "Pending",
@@ -85,6 +88,8 @@ const SalesOrdersAddLayoutPage = ({ product }) => {
   const [products, setProducts] = useState([]);
   const [deviceIds, setDeviceIds] = useState({});
   const [deviceIdErrors, setDeviceIdErrors] = useState({});
+  const [selectedAssetIds, setSelectedAssetIds] = useState({});
+  const [availableAssetIds, setAvailableAssetIds] = useState({});
 
   const [loading, setLoading] = useState({
     quotations: true,
@@ -221,45 +226,45 @@ const SalesOrdersAddLayoutPage = ({ product }) => {
     );
     if (!selectedQuotation) return;
 
-    try {
-      // Fetch lead details for the selected quotation
-      const leadResponse = await fetch(
-        `${API_URL}/leads/${selectedQuotation.lead_id}`
-      );
-      if (!leadResponse.ok) {
-        throw new Error("Failed to fetch lead details");
-      }
-      const leadData = await leadResponse.json();
+    const assetIdsMap = {};
+    selectedQuotation.items.forEach((item) => {
+      assetIdsMap[item.product_id] = item.available_asset_ids || [];
+    });
+    setAvailableAssetIds(assetIdsMap);
 
-      // Update form data with quotation and lead information
+    try {
+      // Update form data with quotation information
       setFormData((prev) => ({
         ...prev,
         quotation_id: selectedQuotation.id,
-        transaction_type: leadData.transaction_type,
-        payment_type: leadData.contact.payment_type,
+        customer_id: selectedQuotation.customer_id,
+        transaction_type:
+          selectedQuotation.payment_type === "Prepaid" ? "Rental" : "Sale",
+        payment_type: selectedQuotation.payment_type,
         rental_duration: selectedQuotation.rental_duration,
         rental_duration_days: selectedQuotation.rental_duration_days,
         rental_start_date: selectedQuotation.rental_start_date,
         rental_end_date: selectedQuotation.rental_end_date,
         order_title: `Order for Quotation ${selectedQuotation.quotation_id}`,
-        owner: leadData.owner,
+        owner: selectedQuotation.customer?.owner || "", // Access owner from customer
         remarks: selectedQuotation.remarks,
         personal_details: {
-          first_name: leadData.contact.first_name || "",
-          last_name: leadData.contact.last_name || "",
-          phone_number: leadData.contact.phone_number,
-          email: leadData.contact.email,
-          gst_number: leadData.contact.gst,
-          pan_number: leadData.contact.pan,
+          ...prev.personal_details,
+          first_name: selectedQuotation.customer?.first_name || "",
+          last_name: selectedQuotation.customer?.last_name || "",
+          phone_number: selectedQuotation.customer?.phone_number || "",
+          email: selectedQuotation.customer?.email || "",
+          gst_number: selectedQuotation.customer?.gst || "",
+          pan_number: selectedQuotation.customer?.pan_no || "",
         },
         address: {
           ...prev.address,
-          billing_address: leadData.contact.address.street,
-          shipping_address: leadData.contact.address.street,
-          city: leadData.contact.address.city,
-          state: leadData.contact.address.state,
-          pincode: leadData.contact.address.zip,
-          country: leadData.contact.address.country,
+          billing_address: selectedQuotation.customer?.address?.street || "",
+          shipping_address: selectedQuotation.customer?.address?.street || "",
+          city: selectedQuotation.customer?.address?.city || "",
+          state: selectedQuotation.customer?.address?.state || "",
+          pincode: selectedQuotation.customer?.address?.pincode || "",
+          country: selectedQuotation.customer?.address?.country || "India",
         },
         items: selectedQuotation.items.map((item) => ({
           product_id: item.product_id,
@@ -280,7 +285,7 @@ const SalesOrdersAddLayoutPage = ({ product }) => {
     } catch (err) {
       setSnackbar({
         open: true,
-        message: "Failed to load lead details",
+        message: "Failed to load quotation details",
         severity: "error",
       });
     }
@@ -431,36 +436,37 @@ const SalesOrdersAddLayoutPage = ({ product }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // Validate Asset IDs
-    let hasErrors = false;
-    const newDeviceIdErrors = {};
+    // // Validate Asset IDs
+    // let hasErrors = false;
+    // const newDeviceIdErrors = {};
 
-    selectedProductIds.forEach((productId) => {
-      const qty = quantities[productId] || 0;
-      const ids = deviceIds[productId] || [];
+    // selectedProductIds.forEach((productId) => {
+    //   const qty = quantities[productId] || 0;
+    //   const ids = deviceIds[productId] || [];
 
-      if (ids.length !== qty) {
-        newDeviceIdErrors[productId] = `Please add ${qty} Asset IDs`;
-        hasErrors = true;
-      } else {
-        const emptyIds = ids.filter((id) => !id.trim());
-        if (emptyIds.length > 0) {
-          newDeviceIdErrors[productId] = `All Asset IDs are required`;
-          hasErrors = true;
-        }
-      }
-    });
+    //   if (ids.length !== qty) {
+    //     newDeviceIdErrors[productId] = `Please add ${qty} Asset IDs`;
+    //     hasErrors = true;
+    //   } else {
+    //     const emptyIds = ids.filter((id) => !id.trim());
+    //     if (emptyIds.length > 0) {
+    //       newDeviceIdErrors[productId] = `All Asset IDs are required`;
+    //       hasErrors = true;
+    //     }
+    //   }
+    // });
 
-    setDeviceIdErrors(newDeviceIdErrors);
+    // setDeviceIdErrors(newDeviceIdErrors);
 
-    if (hasErrors) {
-      setSnackbar({
-        open: true,
-        message: "Please provide all required Asset IDs",
-        severity: "error",
-      });
-      return;
-    }
+    // if (hasErrors) {
+    //   setSnackbar({
+    //     open: true,
+    //     message: "Please provide all required Asset IDs",
+    //     severity: "error",
+    //   });
+    //   return;
+    // }
+
     // Prepare items array with Asset IDs
     const orderItems = selectedProductIds.map((productId) => {
       const product = products.find((p) => p.id === productId);
@@ -592,7 +598,7 @@ const SalesOrdersAddLayoutPage = ({ product }) => {
                 }
                 options={quotations.map((q) => ({
                   value: q.id,
-                  label: `${q.quotation_id} - ${q.quotation_title}`,
+                  label: `${q.quotation_id} - ${q.customer_first_name} ${q.customer_last_name}`,
                 }))}
               />
               <Field
@@ -821,7 +827,7 @@ const SalesOrdersAddLayoutPage = ({ product }) => {
               <Field
                 label="PAN Number"
                 placeholder="Enter PAN Number"
-                value={formData.personal_details.pan_number}
+                value={formData.personal_details.pan_number || ""} // Added optional chaining
                 onChange={(e) =>
                   handleChange({
                     target: {
@@ -873,7 +879,7 @@ const SalesOrdersAddLayoutPage = ({ product }) => {
                 label="Pincode"
                 placeholder="Enter Pincode"
                 type="number"
-                value={formData.address.pincode}
+                value={formData.address.pincode || ""} // Correct path
                 onChange={(e) =>
                   handleChange({
                     target: { name: "address.pincode", value: e.target.value },
@@ -976,7 +982,7 @@ const SalesOrdersAddLayoutPage = ({ product }) => {
                           Price per Piece
                         </TableCell>
                         <TableCell sx={{ color: "#fff" }}>Quantity</TableCell>
-                        <TableCell sx={{ color: "#fff" }}>Asset IDs</TableCell>
+                        {/* <TableCell sx={{ color: "#fff" }}>Asset IDs</TableCell> */}
                       </TableRow>
                     </TableHead>
                     <TableBody>
@@ -1064,69 +1070,52 @@ const SalesOrdersAddLayoutPage = ({ product }) => {
                                 </IconButton>
                               </Box>
                             </TableCell>
-                            <TableCell>
-                              {quantities[product.id] > 0 && (
+                            {/* <TableCell>
+                              {availableAssetIds[product.id]?.length > 0 && (
                                 <Box
                                   display="flex"
                                   flexDirection="column"
                                   gap={1}
                                 >
-                                  {(deviceIds[product.id] || []).map(
-                                    (id, idx) => (
-                                      <TextField
-                                        key={idx}
-                                        size="small"
-                                        placeholder={`Asset ID ${idx + 1}`}
-                                        value={id}
-                                        onChange={(e) => {
-                                          const updated = [
-                                            ...(deviceIds[product.id] || []),
-                                          ];
-                                          updated[idx] = e.target.value;
-                                          setDeviceIds((prev) => ({
-                                            ...prev,
-                                            [product.id]: updated,
-                                          }));
-                                          if (deviceIdErrors[product.id]) {
-                                            setDeviceIdErrors((prev) => {
-                                              const newErrors = { ...prev };
-                                              delete newErrors[product.id];
-                                              return newErrors;
-                                            });
+                                  {(availableAssetIds[product.id] || []).map(
+                                    (assetId, idx) => (
+                                      <Box
+                                        key={assetId}
+                                        display="flex"
+                                        alignItems="center"
+                                      >
+                                        <FormControlLabel
+                                          control={
+                                            <Checkbox
+                                              checked={(
+                                                deviceIds[product.id] || []
+                                              ).includes(assetId)}
+                                              onChange={(e) => {
+                                                const isChecked =
+                                                  e.target.checked;
+                                                setDeviceIds((prev) => {
+                                                  const currentIds =
+                                                    prev[product.id] || [];
+                                                  return {
+                                                    ...prev,
+                                                    [product.id]: isChecked
+                                                      ? [...currentIds, assetId]
+                                                      : currentIds.filter(
+                                                          (id) => id !== assetId
+                                                        ),
+                                                  };
+                                                });
+                                              }}
+                                            />
                                           }
-                                        }}
-                                        error={Boolean(
-                                          deviceIdErrors[product.id]
-                                        )}
-                                        helperText={
-                                          idx === 0
-                                            ? deviceIdErrors[product.id]
-                                            : ""
-                                        }
-                                      />
+                                          label={assetId}
+                                        />
+                                      </Box>
                                     )
-                                  )}
-                                  {(deviceIds[product.id]?.length || 0) <
-                                    (quantities[product.id] || 0) && (
-                                    <Button
-                                      size="small"
-                                      variant="outlined"
-                                      onClick={() =>
-                                        setDeviceIds((prev) => ({
-                                          ...prev,
-                                          [product.id]: [
-                                            ...(prev[product.id] || []),
-                                            "",
-                                          ],
-                                        }))
-                                      }
-                                    >
-                                      + Add Asset ID
-                                    </Button>
                                   )}
                                 </Box>
                               )}
-                            </TableCell>
+                            </TableCell> */}
                           </TableRow>
                         ))}
                     </TableBody>

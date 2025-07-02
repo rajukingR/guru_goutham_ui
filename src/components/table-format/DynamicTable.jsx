@@ -50,7 +50,7 @@ const apiEndpoints = {
   stock_locations: `${API_URL}/stock-location`,
   "purchase-orders": `${API_URL}/purchase-orders`,
   "client-list": `${API_URL}/clients`,
-  leads: `${API_URL}/leads`,
+  lead: `${API_URL}/leads`,
   orders: `${API_URL}/orders`,
   contact_type: `${API_URL}/contact-types`,
   taxt_list: `${API_URL}/tax-list`,
@@ -655,42 +655,50 @@ const numberToWords = (amount) => {
 const capitalize = (text) =>
   text.replace(/\b\w/g, (char) => char.toUpperCase());
 
-const calculateDays = (startDate, endDate) => {
-  if (!startDate || !endDate) return 0;
-
-  const start = new Date(startDate);
-  start.setHours(0, 0, 0, 0);
-
-  const end = new Date(endDate);
-  end.setHours(0, 0, 0, 0);
-
-  const diffTime = Math.abs(end - start);
-  return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-};
-
 // Invoices Dialog Component
 
+// Invoices Dialog Component
 // Invoices Dialog Component
 const InvoiceDialog = ({ open, onClose, invoiceData }) => {
   if (!invoiceData) return null;
 
   const invoiceType = invoiceData.type || "current";
-  const rentalStartDate = new Date(invoiceData.rental_start_date);
-  const rentalEndDate = new Date(invoiceData.rental_end_date);
+
+  // Use invoice dates instead of rental dates
+  const invoiceStartDate = new Date(invoiceData.invoice_start_date);
+  const invoiceEndDate = new Date(invoiceData.invoice_end_date);
+  const previousDeliveredStartDate = new Date(
+    invoiceData.previous_delivered_start_date
+  );
+  const previousDeliveredEndDate = new Date(
+    invoiceData.previous_delivered_end_date
+  );
+  const creditNoteStartDate = (() => {
+    const firstItem = invoiceData.items[0];
+    if (!firstItem) return null;
+
+    const date = new Date(firstItem.returned_date);
+    return isNaN(date.getTime()) ? null : date;
+  })();
+
+  const creditNoteEndDate = new Date(invoiceData.rental_end_date);
+
+  // Calculate date ranges based on invoice dates
   const currentMonthStart = new Date(
-    rentalStartDate.getFullYear(),
-    rentalStartDate.getMonth(),
+    invoiceStartDate.getFullYear(),
+    invoiceStartDate.getMonth(),
     1
   );
   const currentMonthEnd = new Date(
-    rentalStartDate.getFullYear(),
-    rentalStartDate.getMonth(),
+    invoiceStartDate.getFullYear(),
+    invoiceStartDate.getMonth() + 1,
     0
   );
+
   // Calculate next month dates
   const nextMonthStart = new Date(
-    rentalStartDate.getFullYear(),
-    rentalStartDate.getMonth() + 1,
+    invoiceStartDate.getFullYear(),
+    invoiceStartDate.getMonth() + 1,
     1
   );
   const nextMonthEnd = new Date(
@@ -699,182 +707,7 @@ const InvoiceDialog = ({ open, onClose, invoiceData }) => {
     0
   );
 
-  const getMonthRange = (dateStr) => {
-    if (!dateStr) return { start: "-", end: "-" };
-    const date = new Date(dateStr);
-    const year = date.getFullYear();
-    const month = date.getMonth();
-    const start = new Date(year, month, 1);
-    const end = new Date(year, month + 1, 0);
-    return {
-      start: start.toLocaleDateString(),
-      end: end.toLocaleDateString(),
-    };
-  };
-
-  const currentInvoicePeriod = getMonthRange(invoiceData?.rental_start_date);
-
-  // 2. Credit note month (prefer returned_date, fallback to rental_end_date)
-  const creditDateSource =
-    invoiceData?.items?.find((item) => item.returned_date)?.returned_date ||
-    invoiceData?.rental_end_date;
-  const creditNotePeriod = getMonthRange(creditDateSource);
-
-  // Calculate invoice items with proper amounts
-  const calculateInvoiceItems = () => {
-    return invoiceData.items
-      ?.map((item) => {
-        const indianDateOptions = {
-          day: "2-digit",
-          month: "2-digit",
-          year: "numeric",
-        };
-
-        // Initialize all variables
-        let quantity = 0;
-        let NextQty = 0;
-        let amount = 0;
-        let days = 0;
-        let description = "";
-        let deviceIds = [];
-        let newQtyDays = 0;
-        let returnQtyDays = 0;
-        let returnedQtyAmount = 0;
-        let creditReturnDays = 0; // This is the correct variable name
-        let CreditNoteQty = 0;
-        let currentNewQtyAmount = 0;
-        let currentReturnedAmount = 0;
-        let currentFinalQty = 0;
-
-        const rate = Number(item.unit_price) || 0;
-        const dailyRate = rate / 30;
-
-        const addedDate = item.added_date ? new Date(item.added_date) : null;
-        const returnedDate = item.returned_date
-          ? new Date(item.returned_date)
-          : null;
-
-        // Calculate days for new devices
-        if (addedDate) {
-          const endOfAddedMonth = new Date(
-            addedDate.getFullYear(),
-            addedDate.getMonth() + 1,
-            0
-          );
-          newQtyDays = calculateDays(addedDate, endOfAddedMonth);
-        }
-
-        // Calculate days for returned devices
-        if (returnedDate) {
-          returnQtyDays = calculateDays(returnedDate, rentalEndDate);
-          creditReturnDays = calculateDays(returnedDate, rentalEndDate); // This is the correct variable
-        }
-
-        switch (invoiceType) {
-          case "current":
-            const currentbaseQty = Number(item.previous_quantity) || 0;
-            const currentnewQty = Number(item.new_quantity) || 0;
-            const currentreturnQty = Number(item.return_quantity) || 0;
-
-            quantity = currentbaseQty;
-            currentFinalQty = quantity + currentnewQty - currentreturnQty;
-
-            days = calculateDays(rentalStartDate, currentMonthEnd);
-            const currentNewQtyAmount = dailyRate * newQtyDays * currentnewQty;
-            const currentReturnedAmount =
-              dailyRate * currentreturnQty * returnQtyDays;
-            amount = quantity * dailyRate * days + currentNewQtyAmount;
-            deviceIds = [
-              ...(item.device_ids || []),
-              ...(item.new_device_ids || []),
-            ].filter((id) => !(item.returned_device_ids || []).includes(id));
-            description = `Rental for ${days} days (${rentalStartDate.toLocaleDateString(
-              "en-IN",
-              indianDateOptions
-            )} to ${currentMonthEnd.toLocaleDateString(
-              "en-IN",
-              indianDateOptions
-            )})`;
-            break;
-
-          case "next":
-            const baseQty = Number(item.previous_quantity) || 0;
-            const newQty = Number(item.new_quantity) || 0;
-            const returnQty = Number(item.return_quantity) || 0;
-
-            quantity = baseQty + newQty;
-            NextQty = quantity;
-            days = calculateDays(nextMonthStart, nextMonthEnd);
-            const mainAmount = quantity * rate;
-            const newQtyAmount = newQty * dailyRate * newQtyDays;
-            returnedQtyAmount = returnQty * dailyRate * creditReturnDays; // Using the correct variable here
-
-            amount = mainAmount + newQtyAmount;
-
-            deviceIds = [
-              ...(item.device_ids || []),
-              ...(item.new_device_ids || []),
-            ];
-            break;
-
-          case "credit":
-            quantity = Number(item.return_quantity) || 0;
-            CreditNoteQty = quantity;
-
-            if (quantity > 0 && returnedDate) {
-              days = creditReturnDays; // Using the correct variable here
-              amount = quantity * dailyRate * days;
-              description = `Credit for returned devices (${returnedDate.toLocaleDateString(
-                "en-IN",
-                indianDateOptions
-              )} to ${rentalEndDate.toLocaleDateString(
-                "en-IN",
-                indianDateOptions
-              )})`;
-              deviceIds = item.returned_device_ids || [];
-            }
-            break;
-
-          default:
-            break;
-        }
-
-        return {
-          ...item,
-          quantity,
-          NextQty,
-          days,
-          amount,
-          description,
-          deviceIds,
-          rate,
-          total: amount,
-          newQtyDays,
-          returnQtyDays,
-          returnedQtyAmount,
-          creditReturnDays, // Correct variable name
-          CreditNoteQty,
-          currentNewQtyAmount,
-          currentReturnedAmount,
-          currentFinalQty,
-        };
-      })
-      .filter((item) => item.amount > 0 || item.quantity > 0);
-  };
-
-  const items = calculateInvoiceItems();
-  const totalReturnedAmount = items.reduce(
-    (sum, item) => sum + (item.returnedQtyAmount || 0),
-    0
-  );
-  const totalAmount =
-    items.reduce((sum, item) => sum + item.amount, 0) - totalReturnedAmount;
-
-  const finalTotalAmount = items.reduce((sum, item) => sum + item.amount, 0);
-
-  {
-    /* Invoice Period */
-  }
+  // Helper functions
   const formatDate = (dateStr) => {
     if (!dateStr) return "-";
     const date = new Date(dateStr);
@@ -893,8 +726,247 @@ const InvoiceDialog = ({ open, onClose, invoiceData }) => {
     );
   };
 
-  // Function to render the invoice
-  // Render the invoice
+  const calculateInvoiceItems = () => {
+    return invoiceData.items
+      ?.map((item) => {
+        const invoiceType = invoiceData.type || "current";
+
+        // Common data
+        const rate = Number(item.unit_price) || 0;
+        const dailyRate = rate / 30;
+
+        const addedDate = item.added_date ? new Date(item.added_date) : null;
+        const returnedDate = item.returned_date
+          ? new Date(item.returned_date)
+          : null;
+
+        const isReturnInSameMonth = isSameMonth(returnedDate, invoiceStartDate);
+        const safeReturnQty = isReturnInSameMonth
+          ? Number(item.return_quantity) || 0
+          : 0;
+
+        const calculateDays = (startDate, endDate) => {
+          if (!startDate || !endDate) return 0;
+
+          const start = new Date(startDate);
+          const end = new Date(endDate);
+
+          // If start is 1st and end is last day of month, return 30
+          const isFullMonth =
+            start.getDate() === 1 &&
+            (end.getDate() === 30 ||
+              end.getDate() === 31 ||
+              (end.getMonth() === 1 &&
+                (end.getDate() === 28 || end.getDate() === 29)));
+
+          if (isFullMonth) return 30;
+
+          const diffTime = Math.abs(end - start);
+          return Math.ceil(diffTime / (1000 * 60 * 60 * 24)); // +1 to include both days
+        };
+
+        const getReturnEndDate = () => {
+          switch (invoiceType) {
+            case "previous":
+              return previousDeliveredEndDate;
+            case "current":
+              return invoiceEndDate;
+            case "next":
+              return nextMonthEnd;
+            case "credit":
+              return returnedDate
+                ? new Date(
+                    returnedDate.getFullYear(),
+                    returnedDate.getMonth() + 1,
+                    0
+                  )
+                : invoiceEndDate; // fallback to something safe
+            default:
+              return invoiceEndDate;
+          }
+        };
+
+
+        const getReturnStartDate = () => {
+  switch (invoiceType) {
+    case "previous":
+      return previousDeliveredStartDate;
+    case "current":
+      return invoiceStartDate;
+    case "next":
+      return nextMonthStart;
+    case "credit":
+      return returnedDate || invoiceStartDate; // Use returned date or fallback
+    default:
+      return invoiceStartDate;
+  }
+};
+
+
+        const creditNoteEndDate = new Date(getReturnEndDate());
+
+        // Return days
+        const returnQtyDays = returnedDate
+          ? calculateDays(returnedDate, getReturnEndDate())
+          : 0;
+
+          console.log(returnQtyDays,"jjjjjjjjjjjjjjjjj");
+          
+
+
+        const creditReturnDays = returnedDate
+          ? calculateDays(returnedDate, getReturnStartDate())
+          : 0;
+
+          
+
+        // Added (new) device days
+        let newQtyDays = 0;
+        if (addedDate) {
+          const endOfAddedMonth = new Date(
+            addedDate.getFullYear(),
+            addedDate.getMonth() + 1,
+            0
+          );
+          newQtyDays = calculateDays(addedDate, endOfAddedMonth);
+        }
+
+        // Init result variables
+        let quantity = 0;
+        let days = 0;
+        let amount = 0;
+        let description = "";
+        let deviceIds = [];
+        let PrevQty = 0;
+        let NextQty = 0;
+        let CreditNoteQty = 0;
+        let returnedQtyAmount = 0;
+        let currentNewQtyAmount = 0;
+        let currentReturnedAmount = 0;
+        let currentFinalQty = 0;
+        let usedAmount = 0;
+
+        switch (invoiceType) {
+          case "previous":
+            quantity = Number(item.previous_quantity) || 0;
+            PrevQty = quantity;
+            days = calculateDays(
+              previousDeliveredStartDate,
+              previousDeliveredEndDate
+            );
+            amount = quantity * dailyRate * days;
+            description = `Billing Start Date: (${formatDate(
+              previousDeliveredStartDate
+            )} - Billing End Date: ${formatDate(previousDeliveredEndDate)})`;
+            deviceIds = item.device_ids || [];
+            break;
+
+          case "current":
+            const currentbaseQty = Number(item.previous_quantity) || 0;
+            const currentnewQty = Number(item.new_quantity) || 0;
+            const currentreturnQty = safeReturnQty;
+            usedAmount = currentreturnQty * dailyRate * creditReturnDays;
+
+            quantity = currentbaseQty - currentreturnQty;
+            currentFinalQty = quantity + currentnewQty;
+            days = calculateDays(invoiceStartDate, invoiceEndDate);
+            currentNewQtyAmount = dailyRate * newQtyDays * currentnewQty;
+            currentReturnedAmount =
+              dailyRate * currentreturnQty * creditReturnDays;
+
+            amount = quantity * dailyRate * days;
+            deviceIds = [
+              ...(item.device_ids || []),
+              ...(item.new_device_ids || []),
+            ].filter((id) =>
+              isReturnInSameMonth
+                ? !(item.returned_device_ids || []).includes(id)
+                : true
+            );
+
+            description = `Billing Start Date: (${formatDate(
+              invoiceStartDate
+            )} - Billing End Date: ${formatDate(invoiceEndDate)})`;
+            break;
+
+          case "next":
+            const baseQty = Number(item.previous_quantity) || 0;
+            const newQty = Number(item.new_quantity) || 0;
+            const returnQty =
+              item.return_quantity != null ? Number(item.return_quantity) : "-";
+
+            quantity = baseQty + newQty - returnQty;
+            NextQty = quantity;
+            days = calculateDays(nextMonthStart, nextMonthEnd);
+            const mainAmount = quantity * rate;
+            const newQtyAmount = newQty * dailyRate * newQtyDays;
+            returnedQtyAmount = returnQty * dailyRate * creditReturnDays;
+            amount = mainAmount + newQtyAmount;
+            description = `Billing Start Date: (${formatDate(
+              nextMonthStart
+            )} - Billing End Date: ${formatDate(nextMonthEnd)})`;
+            deviceIds = [
+              ...(item.device_ids || []),
+              ...(item.new_device_ids || []),
+            ];
+            break;
+
+          case "credit":
+            quantity =
+              item.return_quantity != null ? Number(item.return_quantity) : "-";
+            CreditNoteQty = quantity;
+
+            if (quantity > 0 && returnedDate) {
+              days = returnQtyDays;
+              amount = quantity * dailyRate * days;
+              description = `Credit for returned devices ${returnQtyDays} Days (${formatDate(
+                returnedDate
+              )} to ${formatDate(creditNoteEndDate)})`;
+              deviceIds = item.returned_device_ids || [];
+            }
+            break;
+
+          default:
+            break;
+        }
+
+        return {
+          ...item,
+          quantity,
+          PrevQty,
+          NextQty,
+          CreditNoteQty,
+          days,
+          amount,
+          description,
+          deviceIds,
+          rate,
+          total: amount,
+          newQtyDays,
+          returnQtyDays,
+          returnedQtyAmount,
+          creditReturnDays,
+          currentNewQtyAmount,
+          currentReturnedAmount,
+          currentFinalQty,
+          usedAmount,
+        };
+      })
+      .filter((item) => item.amount > 0 || item.quantity > 0);
+  };
+
+  const items = calculateInvoiceItems();
+  const totalReturnedAmount = items.reduce(
+    (sum, item) => sum + (item.returnedQtyAmount || 0),
+    0
+  );
+  const totalAmount = items.reduce(
+    (sum, item) => sum + item.amount + item.usedAmount,
+    0
+  );
+
+  const finalTotalAmount = items.reduce((sum, item) => sum + item.amount, 0);
+
   const renderInvoice = () => {
     const isCreditNote = invoiceType === "credit";
     const title =
@@ -902,6 +974,8 @@ const InvoiceDialog = ({ open, onClose, invoiceData }) => {
         ? "Current Month Invoice"
         : invoiceType === "next"
         ? "Next Month Projection"
+        : invoiceType === "previous"
+        ? "Previous Month Invoice"
         : "Return Credit Note";
 
     const cgst = totalAmount * 0.09;
@@ -909,26 +983,44 @@ const InvoiceDialog = ({ open, onClose, invoiceData }) => {
     const totalTax = cgst + sgst;
     const grandTotal = totalAmount + totalTax;
 
+    const transformedItems = items.flatMap((item) => {
+      const assetIds = Array.isArray(item.deviceIds) ? item.deviceIds : [];
+
+      return assetIds.map((assetId) => ({
+        ...item,
+        singleAssetId: assetId,
+        days: item.days || 0,
+        perDay: item.rate / 30,
+        totalAmount: ((item.rate / 30) * item.days).toFixed(2),
+      }));
+    });
+
+    const calculateDaysBetweenDates = (startDate, endDate) => {
+      const diffTime = Math.abs(endDate - startDate);
+      return Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1; // +1 to include both start and end dates
+    };
+
     return (
       <div
+        className="invoice-container"
         style={receiptContainerStyle}
-        id={`invoice-${title.replace(/\s+/g, "-").toLowerCase()}`}
+        id={`invoice-${
+          invoiceType === "current"
+            ? "current-month-invoice"
+            : invoiceType === "next"
+            ? "next-month-projection"
+            : "return-credit-note"
+        }`}
       >
-        {/* Header Color Bar */}
+        {/* Header and company info */}
         <div style={headerBarStyle}></div>
-
-        {/* Company Header */}
         <div style={companyHeaderStyle}>
           <div style={companyInfoContainerStyle}>
             <div style={logoStyle}>
               <img
                 src="/SORT-ICON.png"
                 alt="Company Logo"
-                style={{
-                  width: "100%",
-                  height: "100%",
-                  objectFit: "contain",
-                }}
+                style={{ width: "100%", height: "100%", objectFit: "contain" }}
               />
             </div>
             <div>
@@ -945,28 +1037,19 @@ const InvoiceDialog = ({ open, onClose, invoiceData }) => {
               {isCreditNote ? "CREDIT NOTE" : "TAX INVOICE"}
             </div>
             <div style={challanDetailsStyle}>
-  {isCreditNote ? "Credit Note No." : "Invoice No."} &nbsp;:{" "}
-  {invoiceData.invoice_number}
-  <br />
-  Invoice Date :{" "}
-  {invoiceType === "credit"
-    ? formatDate(
-        invoiceData?.items?.find((item) => item.returned_date)
-          ?.returned_date || invoiceData?.rental_end_date
-      )
-    : invoiceType === "next"
-    ? formatDate(nextMonthStart)
-    : formatDate(invoiceData?.rental_start_date)}
-
-  {!isCreditNote && (
-    <>
-      <br />
-      {/* Due Date &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;:{" "}
-      {invoiceData.invoice_due_date} */}
-    </>
-  )}
-</div>
-
+              {isCreditNote ? "Credit Note No." : "Invoice No."} &nbsp;:{" "}
+              {invoiceData.invoice_number}
+              <br />
+              Invoice Date :{" "}
+              {invoiceType === "credit"
+                ? formatDate(
+                    invoiceData?.items?.find((item) => item.returned_date)
+                      ?.returned_date || invoiceEndDate
+                  )
+                : invoiceType === "next"
+                ? formatDate(nextMonthStart)
+                : formatDate(invoiceStartDate)}
+            </div>
           </div>
         </div>
 
@@ -998,7 +1081,7 @@ const InvoiceDialog = ({ open, onClose, invoiceData }) => {
               </div>
               <div>
                 <div style={detailLabelStyle}>PO Number :</div>
-                {invoiceData.purchase_order_number}
+                {invoiceData.order_table_id}
               </div>
               <div>
                 <div style={detailLabelStyle}>PO Date :</div>
@@ -1018,240 +1101,257 @@ const InvoiceDialog = ({ open, onClose, invoiceData }) => {
 
         {/* Invoice Period */}
 
+        {/* Invoice Period */}
         <div style={invoicePeriodStyle}>
-          {invoiceType === "credit" ? (
+          {invoiceType === "previous" && (
             <div>
-              <strong>Credit Note Period:</strong>{" "}
-              {formatDate(
-                invoiceData?.items?.find((item) => item.returned_date)
-                  ?.returned_date || invoiceData?.rental_end_date
-              )}{" "}
-              to {formatDate(invoiceData?.rental_end_date)}
+              <strong>Previous Invoice Period:</strong>{" "}
+              {formatDate(previousDeliveredStartDate)} to{" "}
+              {formatDate(previousDeliveredEndDate)}
             </div>
-          ) : invoiceType === "current" ? (
+          )}
+          {invoiceType === "current" && (
             <div>
-              <strong>Current Invoice:</strong>{" "}
-              {formatDate(invoiceData?.rental_start_date)} to{" "}
-              {formatDate(
-                new Date(
-                  new Date(invoiceData?.rental_start_date).getFullYear(),
-                  new Date(invoiceData?.rental_start_date).getMonth() + 1,
-                  0
-                )
-              )}
+              <strong>Current Invoice Period:</strong>{" "}
+              {formatDate(currentMonthStart)} to {formatDate(currentMonthEnd)}
             </div>
-          ) : invoiceType === "next" ? (
+          )}
+          {invoiceType === "next" && (
             <div>
               <strong>Next Month Period:</strong> {formatDate(nextMonthStart)}{" "}
               to {formatDate(nextMonthEnd)}
             </div>
-          ) : null}
+          )}
+          {invoiceType === "credit" && (
+            <div>
+              <strong>Credit Note Period:</strong>{" "}
+              {formatDate(creditNoteStartDate)} to{" "}
+              {formatDate(creditNoteEndDate)}
+            </div>
+          )}
         </div>
+
         <table style={tableStyle}>
           <thead>
             <tr>
-              <th style={tableHeaderNoStyle}>NO.</th>
-              <th style={tableHeaderParticularsStyle}>Product Details</th>
-
-              {invoiceType !== "credit" && (
-                <>
-                  <th style={tableHeaderQtyStyle}>Prev Qty</th>
-                  <th style={tableHeaderQtyStyle}>New Qty</th>
-                </>
-              )}
-
-              <th style={tableHeaderQtyStyle}>Return Qty</th>
-              {invoiceType === "credit" && (
-                <>
-                  <th style={tableHeaderDaysStyle}></th>
-                  <th style={tableHeaderDaysStyle}></th>
-                  <th style={tableHeaderDaysStyle}></th>
-                </>
-              )}
-
-              {invoiceType !== "credit" && (
-                <th style={tableHeaderQtyStyle}>Final Qty</th>
-              )}
-
+              <th style={tableHeaderNoStyle}>S.No</th>
+              <th style={tableHeaderParticularsStyle}>Particulars</th>
+              <th style={tableHeaderQtyStyle}>Asset ID</th>
               {(invoiceType === "credit" ||
                 invoiceType === "next" ||
+                invoiceType === "previous" ||
                 invoiceType === "current") && (
-                <>
-                  <th style={tableHeaderDaysStyle}>Days</th>
-                  <th style={tableHeaderDaysStyle}>Per Day</th>
-                </>
+                <th style={tableHeaderDaysStyle}>Days</th>
               )}
-
               <th style={tableHeaderRateStyle}>Per Month</th>
-              <th style={tableHeaderRateStyle}>TOTAL</th>
+              {(invoiceType === "credit" ||
+                invoiceType === "next" ||
+                invoiceType === "previous" ||
+                invoiceType === "current") && (
+                <th style={tableHeaderDaysStyle}>Per Day</th>
+              )}
+              <th style={tableHeaderRateStyle}>Total</th>
             </tr>
           </thead>
           <tbody>
-            {items.map((item, index) => {
-              const showNewQty =
-                item.new_quantity > 0 &&
-                ((invoiceType === "current" &&
-                  isSameMonth(
-                    item.added_date,
-                    invoiceData?.rental_start_date
-                  )) ||
-                  (invoiceType === "next" &&
-                    isSameMonth(item.added_date, nextMonthStart)));
+            {items.flatMap((item, index) => {
+              const invoiceStart = new Date(invoiceData?.rental_start_date); // or invoice_start_date
 
+              // ✅ Only show return if returned_date is same month as invoice start
               const showReturnQty =
                 item.return_quantity > 0 &&
                 ((invoiceType === "current" &&
-                  isSameMonth(
-                    item.returned_date,
-                    invoiceData?.rental_start_date
-                  )) ||
+                  isSameMonth(item.returned_date, invoiceStart)) ||
                   (invoiceType === "next" &&
-                    isSameMonth(item.returned_date, nextMonthStart)));
+                    isSameMonth(item.returned_date, nextMonthStart)) ||
+                  (invoiceType === "credit" &&
+                    isSameMonth(item.returned_date, creditNoteStartDate)));
 
-              const showCurrentDays =
-                invoiceType === "current" || invoiceType === "next";
+              const assetIds =
+                invoiceType === "credit"
+                  ? item.returned_device_ids
+                  : invoiceType === "previous"
+                  ? item.device_ids
+                  : (invoiceType === "current" &&
+                      isSameMonth(item.returned_date, invoiceStart)) ||
+                    (invoiceType === "next" &&
+                      isSameMonth(item.returned_date, nextMonthStart)) ||
+                    (invoiceType === "credit" &&
+                      isSameMonth(item.returned_date, creditNoteStartDate))
+                  ? item.remaining_device_ids ?? item.device_ids
+                  : item.device_ids;
 
-              return (
+              const assetList = Array.isArray(assetIds)
+                ? assetIds.filter((id) => typeof id === "string" && id.trim())
+                : [];
+
+              const returnedAssetIds = item.returned_device_ids || [];
+
+              const assetRows = assetList.map((assetId, assetIndex) => (
                 <tr
-                  key={item.id}
+                  key={`${item.id}-asset-${assetIndex}`}
                   style={index % 2 === 0 ? tableRowOddStyle : tableRowEvenStyle}
                 >
-                  <td style={tableCellCenterStyle}>{index + 1}</td>
-
-                  {/* Product Details */}
+                  <td
+                    style={{
+                      ...tableCellCenterStyle,
+                      backgroundColor: index % 2 === 0 ? "#f9f9f9" : "#ffffff",
+                    }}
+                  >
+                    {assetIndex === 0 ? index + 1 : ""}
+                  </td>
                   <td style={tableCellStyle}>
                     <div style={itemTitleStyle}>{item.product_name}</div>
+                    {/* Product details here */}
                     <div
-                      style={{ marginTop: 4, fontSize: "10px", color: "#555" }}
+                      style={{
+                        fontSize: "12px",
+                        color: "#555",
+                        textAlign: "justify",
+                        lineHeight: "1.4",
+                      }}
                     >
-                      <div>
-                        <strong>Brand:</strong> {item.productDetails?.brand}
-                      </div>
-                      <div>
-                        <strong>Model:</strong> {item.productDetails?.model}
-                      </div>
-                      {item.deviceIds?.length > 0 && (
-                        <div>
-                          <strong>Asset IDs:</strong>{" "}
-                          {item.deviceIds.join(", ")}
-                        </div>
+                      Specifications:{" "}
+                      {item.productDetails?.brand && (
+                        <span>
+                          <strong>Brand:</strong> {item.productDetails.brand}.{" "}
+                        </span>
                       )}
-                      <div style={{ marginTop: 4, fontStyle: "italic" }}>
-                        {item.description}
-                      </div>
+                      {item.productDetails?.model && (
+                        <span>
+                          <strong>Model:</strong> {item.productDetails.model}.{" "}
+                        </span>
+                      )}
+                      {item.productDetails?.processor && (
+                        <span>
+                          <strong>Processor:</strong>{" "}
+                          {item.productDetails.processor}.{" "}
+                        </span>
+                      )}
+                      {item.productDetails?.ram && (
+                        <span>
+                          <strong>RAM:</strong> {item.productDetails.ram}.{" "}
+                        </span>
+                      )}
+                      {item.productDetails?.storage && (
+                        <span>
+                          <strong>Storage:</strong>{" "}
+                          {item.productDetails.storage}.{" "}
+                        </span>
+                      )}
+                      {item.productDetails?.disk_type && (
+                        <span>
+                          <strong>Disk Type:</strong>{" "}
+                          {item.productDetails.disk_type}.{" "}
+                        </span>
+                      )}
+                      {item.productDetails?.graphics && (
+                        <span>
+                          <strong>Graphics:</strong>{" "}
+                          {item.productDetails.graphics}.{" "}
+                        </span>
+                      )}
+                      {item.productDetails?.os && (
+                        <span>
+                          <strong>OS:</strong> {item.productDetails.os}.{" "}
+                        </span>
+                      )}
                     </div>
+                    <br />
+                    <div style={itemTitleStyle}>{item.description}</div>
                   </td>
-
-                  {/* Prev + New Qty */}
-                  {invoiceType !== "credit" && (
-                    <>
-                      <td style={tableCellCenterStyle}>{item.quantity || 0}</td>
-                      <td style={tableCellCenterStyle}>
-                        {showNewQty ? (
-                          <>
-                            {item.new_quantity}
-                            <div style={{ fontSize: "10px" }}>
-                              {new Date(item.added_date).toLocaleDateString(
-                                "en-IN"
-                              )}
-                            </div>
-                          </>
-                        ) : (
-                          "-"
-                        )}
-                      </td>
-                    </>
+                  <td style={tableCellCenterStyle}>{assetId}</td>
+                  {(invoiceType === "credit" ||
+                    invoiceType === "next" ||
+                    invoiceType === "previous" ||
+                    invoiceType === "current") && (
+                    <td style={tableCellCenterStyle}>{item.days}</td>
                   )}
-
-                  {/* Return Qty */}
-                  <td style={tableCellCenterStyle}>
-                    {showReturnQty ? (
-                      <>
-                        {item.return_quantity}
-                        <div style={{ fontSize: "10px" }}>
-                          {new Date(item.returned_date).toLocaleDateString(
-                            "en-IN"
-                          )}
-                        </div>
-                      </>
-                    ) : (
-                      ""
-                    )}
-                    {invoiceType === "credit" && (
-                      <div>{item.return_quantity}</div>
-                    )}
-                  </td>
-
-                  {/* Final Qty */}
-                  {invoiceType !== "credit" && invoiceType !== "current" && (
-                    <td style={tableCellCenterStyle}>{item.quantity}</td>
-                  )}
-                  {invoiceType === "current" && (
-                    <td style={tableCellCenterStyle}>{item.currentFinalQty}</td>
-                  )}
-
-                  {/* Days and Per Day */}
-                  {showCurrentDays && (
-                    <>
-                      <td style={tableCellCenterStyle}>
-                        {item.days > 0 && (
-                          <div>
-                            <strong>Total:</strong> {item.days} days
-                          </div>
-                        )}
-                        {item.newQtyDays > 0 && showNewQty && (
-                          <div>
-                            <strong>New:</strong> {item.newQtyDays} days
-                          </div>
-                        )}
-                        {item.returnQtyDays > 0 && showReturnQty && (
-                          <div>
-                            <strong>Return:</strong> {item.returnQtyDays} days
-                          </div>
-                        )}
-                      </td>
-                      <td style={tableCellCenterStyle}>
-                        {formatINRCurrency(item.rate / 30)}
-                      </td>
-                    </>
-                  )}
-
-                  {/* Credit Type Days */}
-                  {invoiceType === "credit" && (
-                    <>
-                      <td style={tableCellCenterStyle}></td>
-                      <td style={tableCellCenterStyle}></td>
-                      <td style={tableCellCenterStyle}></td>
-                      <td style={tableCellCenterStyle}>
-                        {item.creditReturnDays} Days
-                      </td>
-                      <td style={tableCellCenterStyle}>
-                        {formatINRCurrency(item.rate / 30)}
-                      </td>
-                    </>
-                  )}
-
-                  {/* Rate + Total */}
                   <td style={tableCellRightStyle}>
                     {formatINRCurrency(item.rate)}
                   </td>
+                  {(invoiceType === "credit" ||
+                    invoiceType === "next" ||
+                    invoiceType === "previous" ||
+                    invoiceType === "current") && (
+                    <td style={tableCellRightStyle}>
+                      {formatINRCurrency(item.rate / 30)}
+                    </td>
+                  )}
                   <td style={tableCellRightStyle}>
-                    {formatINRCurrency(item.amount)}
+                    {formatINRCurrency((item.rate / 30) * item.days)}
                   </td>
                 </tr>
-              );
+              ));
+
+              // ✅ Only show return row if returned_date is in same month as invoice start
+              const returnedAssetRows =
+                invoiceType !== "credit" && showReturnQty
+                  ? (Array.isArray(returnedAssetIds)
+                      ? returnedAssetIds.filter(
+                          (id) => typeof id === "string" && id.trim()
+                        )
+                      : []
+                    ).map((assetId, assetIndex) => (
+                      <tr
+                        key={`${item.id}-returned-${assetIndex}`}
+                        style={
+                          index % 2 === 0 ? tableRowOddStyle : tableRowEvenStyle
+                        }
+                      >
+                        <td style={tableCellCenterStyle}></td>
+                        <td style={tableCellStyle}>
+                          <div style={itemTitleStyle}>{item.product_name}</div>
+                          <div style={{ fontSize: "10px", color: "#555" }}>
+                            <strong>Brand:</strong> {item.productDetails?.brand}
+                            <br />
+                            <strong>Model:</strong> {item.productDetails?.model}
+                          </div>
+                          <div
+                            style={{ paddingLeft: "20px", fontStyle: "italic" }}
+                          >
+                            <strong>Returned Start Date:</strong>{" "}
+                            {formatDate(new Date(item.returned_date))} -{" "}
+                            <strong>Invoice End Date:</strong>{" "}
+                            {formatDate(
+                              invoiceType === "next"
+                                ? nextMonthEnd
+                                : invoiceType === "previous"
+                                ? previousDeliveredEndDate
+                                : invoiceEndDate
+                            )}
+                          </div>
+                        </td>
+                        <td style={tableCellCenterStyle}>{assetId}</td>
+                        <td style={tableCellCenterStyle}>
+                          {item.creditReturnDays}
+                        </td>
+                        <td style={tableCellRightStyle}></td>
+                        <td style={tableCellRightStyle}>
+                          {formatINRCurrency(item.rate / 30)}
+                        </td>
+                        <td style={tableCellRightStyle}>
+                          {formatINRCurrency(
+                            (item.rate / 30) * item.creditReturnDays
+                          )}
+                        </td>
+                      </tr>
+                    ))
+                  : [];
+
+              return [...assetRows, ...returnedAssetRows];
             })}
 
-            {/* Totals Row */}
+            {/* Total row */}
             <tr style={totalsRowStyle}>
-              <td style={tableCellCenterStyle} colSpan={6}>
+              <td style={tableCellCenterStyle} colSpan={3}>
                 <strong>TOTAL</strong>
               </td>
-              <td></td>
-              <td></td>
+              <td style={tableCellRightStyle}></td>
+              <td style={tableCellRightStyle}></td>
               <td style={tableCellRightStyle}></td>
               <td style={tableCellRightStyle}>
-                {formatINRCurrency(finalTotalAmount)}
+                {formatINRCurrency(totalAmount)}
               </td>
             </tr>
           </tbody>
@@ -1260,14 +1360,6 @@ const InvoiceDialog = ({ open, onClose, invoiceData }) => {
         {/* Tax and Total Section */}
         <div style={taxTotalContainerStyle}>
           <div style={taxDetailsStyle}>
-            {(invoiceType === "current" || invoiceType === "next") &&
-              totalReturnedAmount > 0 && (
-                <div style={taxRowStyle}>
-                  <span>Returned Amount:</span>
-                  <span>- {formatINRCurrency(totalReturnedAmount)}</span>
-                </div>
-              )}
-
             <div style={taxRowStyle}>
               <span>Subtotal:</span>
               <span>{formatINRCurrency(totalAmount)}</span>
@@ -1370,33 +1462,130 @@ const InvoiceDialog = ({ open, onClose, invoiceData }) => {
 
   // Handle PDF download
   // Handle PDF download
-  const handleDownloadPDF = () => {
-    const element = document.getElementById(
-      `invoice-${
+  const handleDownloadPDF = async () => {
+    try {
+      // Wait for dialog to fully render
+      await new Promise((resolve) => setTimeout(resolve, 300));
+
+      const title =
         invoiceType === "current"
           ? "current-month-invoice"
           : invoiceType === "next"
           ? "next-month-projection"
-          : "return-credit-note"
-      }`
-    );
+          : invoiceType === "previous"
+          ? "previous-month-invoice"
+          : "return-credit-note";
 
-    if (!element) return;
+      // Try multiple selectors to find the invoice element
+      const element =
+        document.getElementById(`invoice-${title}`) ||
+        document.querySelector(".MuiDialog-paper .invoice-container");
 
-    html2canvas(element, { scale: 2 }).then((canvas) => {
+      if (!element) {
+        throw new Error("Could not find invoice element in DOM");
+      }
+
+      // Create a clone for PDF generation to avoid layout issues
+      const clone = element.cloneNode(true);
+      clone.style.position = "absolute";
+      clone.style.left = "-9999px";
+      clone.style.visibility = "visible";
+      clone.style.width = "210mm";
+      document.body.appendChild(clone);
+
+      const options = {
+        scale: 2,
+        logging: true,
+        useCORS: true,
+        scrollX: 0,
+        scrollY: 0,
+        windowWidth: clone.scrollWidth,
+        windowHeight: clone.scrollHeight,
+        backgroundColor: "#FFFFFF",
+      };
+
+      const canvas = await html2canvas(clone, options);
+      document.body.removeChild(clone);
+
       const imgData = canvas.toDataURL("image/png");
       const pdf = new jsPDF("p", "mm", "a4");
-      pdf.addImage(imgData, "PNG", 0, 0, 210, 297);
-      pdf.save(
-        `${
-          invoiceType === "current"
-            ? "invoice"
-            : invoiceType === "next"
-            ? "next-month"
-            : "credit-note"
-        }-${invoiceData.invoice_number}.pdf`
-      );
-    });
+
+      const imgProps = pdf.getImageProperties(imgData);
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+
+      // Handle multi-page PDF
+      let heightLeft = pdfHeight;
+      let position = 0;
+      const pageHeight = pdf.internal.pageSize.getHeight();
+
+      pdf.addImage(imgData, "PNG", 0, position, pdfWidth, pdfHeight);
+      heightLeft -= pageHeight;
+
+      while (heightLeft >= 0) {
+        position = heightLeft - pdfHeight;
+        pdf.addPage();
+        pdf.addImage(imgData, "PNG", 0, position, pdfWidth, pdfHeight);
+        heightLeft -= pageHeight;
+      }
+
+      pdf.save(`invoice-${invoiceData.invoice_number}.pdf`);
+    } catch (error) {
+      console.error("PDF Generation Error:", error);
+      alert(`Failed to generate PDF: ${error.message}`);
+    }
+  };
+
+  const handlePrint = () => {
+    const title =
+      invoiceType === "current"
+        ? "current-month-invoice"
+        : invoiceType === "next"
+        ? "next-month-projection"
+        : invoiceType === "previous"
+        ? "previous-month-invoice"
+        : "return-credit-note";
+
+    const element = document.getElementById(`invoice-${title}`);
+
+    if (!element) {
+      console.error("Print element not found");
+      return;
+    }
+
+    const printWindow = window.open("", "_blank");
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>${title}</title>
+          <style>
+            @page { size: A4; margin: 0; }
+            body { margin: 0; padding: 0; }
+            .print-container { 
+              width: 210mm; 
+              min-height: 297mm; 
+              padding: 10mm; 
+              box-sizing: border-box;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="print-container">
+            ${element.innerHTML}
+          </div>
+          <script>
+            window.onload = function() {
+              setTimeout(function() {
+                window.print();
+                window.close();
+              }, 300);
+            }
+          </script>
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
   };
 
   return (
@@ -1406,12 +1595,19 @@ const InvoiceDialog = ({ open, onClose, invoiceData }) => {
       maxWidth="lg"
       fullWidth
       scroll="paper"
+      TransitionProps={{
+        onEntered: () => {
+          // Ensures content is rendered before PDF/print
+        },
+      }}
     >
       <DialogTitle>
         {invoiceType === "current"
           ? "Current Month Invoice"
           : invoiceType === "next"
           ? "Next Month Invoice"
+          : invoiceType === "previous"
+          ? "Previous Month Invoice"
           : "Return Credit Note"}
       </DialogTitle>
       <DialogContent>
@@ -1419,7 +1615,15 @@ const InvoiceDialog = ({ open, onClose, invoiceData }) => {
       </DialogContent>
       <DialogActions>
         <Button onClick={onClose}>Close</Button>
-        <Button onClick={handleDownloadPDF} variant="contained" color="primary">
+        <Button onClick={handlePrint} variant="contained" color="secondary">
+          Print
+        </Button>
+        <Button
+          onClick={handleDownloadPDF}
+          variant="contained"
+          color="primary"
+          style={{ marginLeft: "10px" }}
+        >
           Download PDF
         </Button>
       </DialogActions>
@@ -1630,16 +1834,17 @@ const DynamicTable = ({
                 tableType !== "quotations" &&
                 tableType !== "orders" &&
                 tableType !== "operations" &&
-                tableType !== "grn" && (
+                tableType !== "grn" &&
+                tableType !== "credit_notes" && (
                   <TableCell align="center" sx={{ fontWeight: "bold" }}>
                     Active Status
                   </TableCell>
                 )}
               {tableType === "invoices" && (
                 <>
-                  {/* <TableCell align="center" sx={{ fontWeight: "bold" }}>
+                  <TableCell align="center" sx={{ fontWeight: "bold" }}>
                     Previous Invoice
-                  </TableCell> */}
+                  </TableCell>
                   <TableCell align="center" sx={{ fontWeight: "bold" }}>
                     Current Invoice
                   </TableCell>
@@ -1733,7 +1938,8 @@ const DynamicTable = ({
                     tableType !== "quotations" &&
                     tableType !== "orders" &&
                     tableType !== "operations" &&
-                    tableType !== "grn" && (
+                    tableType !== "grn" &&
+                    tableType !== "credit_notes" && (
                       <TableCell align="center">
                         <Button onClick={() => toggleStatus(rowIndex)}>
                           <img
@@ -1749,7 +1955,7 @@ const DynamicTable = ({
                   {tableType === "invoices" && (
                     <>
                       {/* Previous Invoice Button */}
-                      {/* <TableCell align="center">
+                      <TableCell align="center">
                         <Button
                           onClick={() => handleViewInvoice(row, "previous")}
                           sx={{ minWidth: "30px", p: 0 }}
@@ -1762,7 +1968,7 @@ const DynamicTable = ({
                             height="35"
                           />
                         </Button>
-                      </TableCell> */}
+                      </TableCell>
 
                       {/* Current Invoice Button */}
                       <TableCell align="center">
@@ -2072,7 +2278,6 @@ const tableHeaderAmountStyle = {
 const tableCellRightStyle = {
   padding: "1rem",
   textAlign: "right",
-  fontWeight: "bold",
   fontSize: "0.75rem",
 };
 
@@ -2248,7 +2453,6 @@ const tableCellStyle = {
 const tableCellCenterStyle = {
   padding: "1rem",
   textAlign: "center",
-  fontWeight: "bold",
   fontSize: "0.75rem",
 };
 
@@ -2353,8 +2557,7 @@ const invoicePeriodStyle = {
   padding: "8px 16px",
   backgroundColor: "#f5f5f5",
   borderBottom: "1px solid #ddd",
-  fontSize: "14px",
-  fontWeight: "bold",
+  fontSize: "15px",
   textAlign: "center",
   marginBottom: "16px",
 };

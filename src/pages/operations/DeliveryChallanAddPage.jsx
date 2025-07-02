@@ -13,10 +13,12 @@ import {
   Checkbox,
   Snackbar,
   Alert,
+  Typography,
 } from "@mui/material";
 import { Add, Remove } from "@mui/icons-material";
 import { useNavigate } from "react-router-dom";
 import API_URL from "../../api/Api_url";
+import { useInventory } from "../../contexts/InventoryContext";
 
 // Styles (same as in your original code)
 const containerStyle = {
@@ -384,8 +386,17 @@ const generateDcId = () => {
   return `DC-${randomPart}`;
 };
 
-const DeliveryChallanAddPage = () => {
+const DeliveryChallanAddPage = ({ product }) => {
   const navigate = useNavigate();
+
+  // State for form data
+  const { inventoryData } = useInventory();
+
+  const getAvailableQty = (productId) => {
+    const entry = inventoryData.find((item) => item.id === productId);
+    return entry ? entry.available_quantity : "N/A";
+  };
+
   const [formData, setFormData] = useState({
     dc_id: "",
     dc_title: "",
@@ -428,6 +439,10 @@ const DeliveryChallanAddPage = () => {
   const [quantities, setQuantities] = useState({});
   const [searchTerm, setSearchTerm] = useState("");
   const [showProductTable, setShowProductTable] = useState(false);
+  const [availableAssetIds, setAvailableAssetIds] = useState({});
+  const [deviceIds, setDeviceIds] = useState({});
+  const [deviceIdErrors, setDeviceIdErrors] = useState({});
+
   const [snackbar, setSnackbar] = useState({
     open: false,
     message: "",
@@ -478,12 +493,24 @@ const DeliveryChallanAddPage = () => {
 
     const { personalDetails, address, items } = selectedOrder;
 
+    // Set available asset IDs for each product
+    const newAvailableAssetIds = {};
+    const newDeviceIds = {};
+
+    items.forEach((item) => {
+      newAvailableAssetIds[item.product_id] = item.available_asset_ids || [];
+      newDeviceIds[item.product_id] = item.device_ids || []; // Initialize with order's device_ids
+    });
+
+    setAvailableAssetIds(newAvailableAssetIds);
+    setDeviceIds(newDeviceIds); // Make sure this is set
+
     setFormData({
       ...formData,
       order_id: selectedOrder.id,
-      customer_code: personalDetails.id, // ✅ FIXED HERE
+      customer_code: selectedOrder.customer_id,
       order_number: selectedOrder.order_id,
-      payment_type:selectedOrder.payment_type,
+      payment_type: selectedOrder.payment_type,
       email: personalDetails.email,
       gst_number: personalDetails.gst_number,
       shipping_ordered_by: `${personalDetails.first_name} ${personalDetails.last_name}`,
@@ -501,6 +528,7 @@ const DeliveryChallanAddPage = () => {
         product_name: item.product_name,
         quantity: item.requested_quantity,
         item_total_value: item.item_total_value,
+        device_ids: item.device_ids || [],
       })),
     });
 
@@ -621,22 +649,50 @@ const DeliveryChallanAddPage = () => {
       product.description?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  // Handle form submission
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    // Validate Asset IDs
+    let hasErrors = false;
+    const newDeviceIdErrors = {};
+
+    selectedProductIds.forEach((productId) => {
+      const qty = quantities[productId] || 0;
+      const ids = deviceIds[productId] || [];
+
+      if (ids.length !== qty) {
+        newDeviceIdErrors[productId] = `Please select exactly ${qty} Asset IDs`;
+        hasErrors = true;
+      } else {
+        const emptyIds = ids.filter((id) => !id.trim());
+        if (emptyIds.length > 0) {
+          newDeviceIdErrors[productId] = `All Asset IDs are required`;
+          hasErrors = true;
+        }
+      }
+    });
+
+    setDeviceIdErrors(newDeviceIdErrors);
+
+    if (hasErrors) {
+      setSnackbar({
+        open: true,
+        message: "Please provide all required Asset IDs",
+        severity: "error",
+      });
+      return;
+    }
 
     try {
       // Prepare items data
       const items = selectedProductIds.map((productId) => {
         const product = products.find((p) => p.id === productId);
         const quantity = quantities[productId] || 1;
+        const selectedDeviceIds = deviceIds[productId] || []; // Get the selected device IDs
 
         let total_price = 0;
         if (formData.type === "Rent") {
-          const rentalDuration =
-            formData.items.find((item) => item.product_id === productId)
-              ?.rental_duration || 1;
-
+          const rentalDuration = 1; // Default to 1 month if not specified
           if (rentalDuration === 12) {
             total_price = product.rent_price_1_year * quantity;
           } else if (rentalDuration === 6) {
@@ -645,15 +701,15 @@ const DeliveryChallanAddPage = () => {
             total_price = product.rent_price_per_month * quantity;
           }
         } else {
-          // For Sale transactions
           total_price = product.purchase_price * quantity;
         }
 
         return {
           product_id: productId,
           product_name: product.product_name,
-          quantity: quantity,
-          total_price: total_price,
+          quantity,
+          total_price,
+          device_ids: selectedDeviceIds, // Include the selected device IDs
         };
       });
 
@@ -661,6 +717,8 @@ const DeliveryChallanAddPage = () => {
         ...formData,
         items,
       };
+
+      console.log("Submitting payload:", payload); // For debugging
 
       const response = await fetch(`${API_URL}/delivery-challans/create`, {
         method: "POST",
@@ -691,7 +749,6 @@ const DeliveryChallanAddPage = () => {
       });
     }
   };
-
   return (
     <div style={containerStyle}>
       <Snackbar
@@ -746,18 +803,25 @@ const DeliveryChallanAddPage = () => {
                 placeholder="Select Order"
                 value={formData.order_id}
                 onChange={(e) => handleOrderSelect(e.target.value)}
-                options={orders.map((order) => ({
-                  value: order.id,
-                  label: `${order.order_id} - ${order.order_title}`,
-                }))}
+                options={orders.map((order) => {
+                  const customer =
+                    order.personalDetails || order.personal_details || {};
+                  return {
+                    value: order.id,
+                    label: `${order.order_id} - ${customer.first_name || ""} ${
+                      customer.last_name || ""
+                    }`,
+                  };
+                })}
               />
-              <Field
+
+              {/* <Field
                 label="Customer Code"
                 name="customer_code"
                 placeholder="Enter Customer Code"
                 value={formData.customer_code}
                 onChange={handleInputChange}
-              />
+              /> */}
               <Field
                 label="Order Number"
                 name="order_number"
@@ -810,7 +874,7 @@ const DeliveryChallanAddPage = () => {
                 onChange={handleInputChange}
                 required
               />
-              <Field
+              {/* <Field
                 label="GST Number"
                 name="gst_number"
                 placeholder="Enter GST Number"
@@ -825,7 +889,7 @@ const DeliveryChallanAddPage = () => {
                 value={formData.pan_number}
                 onChange={handleInputChange}
                 required
-              />
+              /> */}
               <Field
                 label="Remarks"
                 name="remarks"
@@ -1082,80 +1146,153 @@ const DeliveryChallanAddPage = () => {
                         <TableCell sx={{ color: "#fff" }}>RAM</TableCell>
                         <TableCell sx={{ color: "#fff" }}>Storage</TableCell>
                         <TableCell sx={{ color: "#fff" }}>Graphics</TableCell>
+                        <TableCell sx={{ color: "#fff" }}>
+                          Available Quantity
+                        </TableCell>
+
                         <TableCell sx={{ color: "#fff" }}>Quantity</TableCell>
+                        <TableCell sx={{ color: "#fff" }}>Asset IDs</TableCell>
+
                         <TableCell sx={{ color: "#fff" }}>Price</TableCell>
                       </TableRow>
                     </TableHead>
                     <TableBody>
-                      {filteredProducts.map((product) => (
-                        <TableRow key={product.id}>
-                          <TableCell padding="checkbox">
-                            <Checkbox
-                              checked={selectedProductIds.includes(product.id)}
-                              onChange={() =>
-                                handleProductSelection(product.id)
-                              }
-                            />
-                          </TableCell>
-                          <TableCell>{product.product_name}</TableCell>
-                          <TableCell>{product.brand}</TableCell>
-                          <TableCell>{product.model}</TableCell>
-                          <TableCell>{product.processor}</TableCell>
-                          <TableCell>{product.ram}</TableCell>
-                          <TableCell>{product.storage}</TableCell>
-                          <TableCell>{product.graphics}</TableCell>
-                          <TableCell>
-                            <Box display="flex" alignItems="center">
-                              <IconButton
-                                size="small"
-                                onClick={() => decrementQty(product.id)}
-                                disabled={
-                                  !selectedProductIds.includes(product.id)
+                      {filteredProducts
+                        .filter((product) =>
+                          selectedProductIds.includes(product.id)
+                        )
+                        .map((product) => (
+                          <TableRow key={product.id}>
+                            <TableCell padding="checkbox">
+                              <Checkbox
+                                checked={selectedProductIds.includes(
+                                  product.id
+                                )}
+                                onChange={() =>
+                                  handleProductSelection(product.id)
                                 }
-                              >
-                                <Remove fontSize="small" />
-                              </IconButton>
-                              <TextField
-                                type="number"
-                                size="small"
-                                value={
-                                  selectedProductIds.includes(product.id)
-                                    ? quantities[product.id] || ""
-                                    : ""
-                                }
-                                onChange={(e) =>
-                                  handleQtyChange(product.id, e.target.value)
-                                }
-                                disabled={
-                                  !selectedProductIds.includes(product.id)
-                                }
-                                inputProps={{
-                                  min: 0,
-                                  style: { width: 50, textAlign: "center" },
-                                }}
                               />
-                              <IconButton
-                                size="small"
-                                onClick={() => incrementQty(product.id)}
-                                disabled={
-                                  !selectedProductIds.includes(product.id)
-                                }
-                              >
-                                <Add fontSize="small" />
-                              </IconButton>
-                            </Box>
-                          </TableCell>
-                          <TableCell>
-                            {formData.type === "Rent" ? (
-                              <>
-                                <div>Month: {product.rent_price_per_month}</div>
-                              </>
-                            ) : (
-                              product.purchase_price
-                            )}
-                          </TableCell>
-                        </TableRow>
-                      ))}
+                            </TableCell>
+                            <TableCell>{product.product_name}</TableCell>
+                            <TableCell>{product.brand}</TableCell>
+                            <TableCell>{product.model}</TableCell>
+                            <TableCell>{product.processor}</TableCell>
+                            <TableCell>{product.ram}</TableCell>
+                            <TableCell>{product.storage}</TableCell>
+                            <TableCell>{product.graphics}</TableCell>
+                            <TableCell>{getAvailableQty(product.id)}</TableCell>
+
+                            <TableCell>
+                              <Box display="flex" alignItems="center">
+                                <IconButton
+                                  size="small"
+                                  onClick={() => decrementQty(product.id)}
+                                  disabled={
+                                    !selectedProductIds.includes(product.id)
+                                  }
+                                >
+                                  <Remove fontSize="small" />
+                                </IconButton>
+                                <TextField
+                                  type="number"
+                                  size="small"
+                                  value={
+                                    selectedProductIds.includes(product.id)
+                                      ? quantities[product.id] || ""
+                                      : ""
+                                  }
+                                  onChange={(e) =>
+                                    handleQtyChange(product.id, e.target.value)
+                                  }
+                                  disabled={
+                                    !selectedProductIds.includes(product.id)
+                                  }
+                                  inputProps={{
+                                    min: 0,
+                                    style: { width: 50, textAlign: "center" },
+                                  }}
+                                />
+                                <IconButton
+                                  size="small"
+                                  onClick={() => incrementQty(product.id)}
+                                  disabled={
+                                    !selectedProductIds.includes(product.id)
+                                  }
+                                >
+                                  <Add fontSize="small" />
+                                </IconButton>
+                              </Box>
+                            </TableCell>
+                            <TableCell>
+                              {availableAssetIds[product.id]?.length > 0 && (
+                                <Box
+                                  display="flex"
+                                  flexDirection="column"
+                                  gap={1}
+                                >
+                                  {availableAssetIds[product.id].map(
+                                    (assetId, idx) => (
+                                      <Box
+                                        key={assetId}
+                                        display="flex"
+                                        alignItems="center"
+                                      >
+                                        <Checkbox
+                                          checked={(
+                                            deviceIds[product.id] || []
+                                          ).includes(assetId)}
+                                          onChange={(e) => {
+                                            const isChecked = e.target.checked;
+                                            setDeviceIds((prev) => {
+                                              const currentIds =
+                                                prev[product.id] || [];
+                                              return {
+                                                ...prev,
+                                                [product.id]: isChecked
+                                                  ? [...currentIds, assetId]
+                                                  : currentIds.filter(
+                                                      (id) => id !== assetId
+                                                    ),
+                                              };
+                                            });
+                                          }}
+                                          disabled={
+                                            !selectedProductIds.includes(
+                                              product.id
+                                            ) ||
+                                            (!(
+                                              deviceIds[product.id] || []
+                                            ).includes(assetId) &&
+                                              (deviceIds[product.id] || [])
+                                                .length >=
+                                                (quantities[product.id] || 0))
+                                          }
+                                        />
+                                        <Typography>{assetId}</Typography>
+                                      </Box>
+                                    )
+                                  )}
+                                  {deviceIdErrors[product.id] && (
+                                    <Typography color="error" variant="caption">
+                                      {deviceIdErrors[product.id]}
+                                    </Typography>
+                                  )}
+                                </Box>
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              {formData.type === "Rent" ? (
+                                <>
+                                  <div>
+                                    Month: {product.rent_price_per_month}
+                                  </div>
+                                </>
+                              ) : (
+                                product.purchase_price
+                              )}
+                            </TableCell>
+                          </TableRow>
+                        ))}
                     </TableBody>
                   </Table>
                 </TableContainer>

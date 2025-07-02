@@ -14,7 +14,6 @@ const ContactsTable = () => {
     { id: "company_name", label: "Company" },
     { id: "industry", label: "Industry" },
     { id: "payment_type", label: "Payment Type" },
-    { id: "status", label: "Status" },
     { id: "owner", label: "Owner" }
   ];
 

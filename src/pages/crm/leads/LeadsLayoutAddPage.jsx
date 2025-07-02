@@ -170,7 +170,7 @@ useEffect(() => {
         companyName: selectedCustomer.company_name,
         industry: selectedCustomer.industry,
         street: selectedCustomer.address?.street || "",
-        pincode: selectedCustomer.address?.zip || "",
+        pincode: selectedCustomer.address?.pincode || "",
         city: selectedCustomer.address?.city || "",
         state: selectedCustomer.address?.state || "",
         country: selectedCustomer.address?.country || "",
@@ -380,7 +380,7 @@ useEffect(() => {
               onChange={(value) => handleInputChange("transactionType", value)}
               options={["Rent", "Buy"]}
             />
-            <Field
+            {/* <Field
               label="Lead Status"
               type="select"
               placeholder="Select Lead Status"
@@ -395,7 +395,7 @@ useEffect(() => {
                 "Closed Won",
                 "Closed Lost",
               ]}
-            />
+            /> */}
             <Field
               label="Source of Enquiry"
               type="select"
@@ -411,7 +411,7 @@ useEffect(() => {
                 "Existing Customer",
               ]}
             />
-            <Field
+            {/* <Field
               label="Rental Duration (Months)"
               placeholder="Enter Rental Duration"
               value={formData.rentalDuration}
@@ -473,7 +473,7 @@ useEffect(() => {
                   />
                 </div>
               </LocalizationProvider>
-            </div>
+            </div> */}
             <div style={{ gridColumn: "1 / -1" }}>
               <LocalizationProvider dateAdapter={AdapterDateFns}>
                 <div style={dateFieldContainer}>

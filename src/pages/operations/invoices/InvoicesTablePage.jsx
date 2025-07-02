@@ -11,7 +11,7 @@ const InvoicesTablePage = () => {
     { id: "invoice_number", label: "Invoice Number" },
     { id: "invoice_title", label: "Title" },
     { id: "customer_name", label: "Customer Name" },
-    { id: "invoice_date", label: "Invoice Date" },
+    { id: "invoice_start_date", label: "Invoice Date" },
     { id: "purchase_order_number", label: "PO Number" },
     { id: "customer_gst_number", label: "GST No." },
     { id: "email", label: "Email" },
