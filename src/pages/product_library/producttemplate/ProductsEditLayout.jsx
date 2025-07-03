@@ -1,10 +1,9 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
-import API_URL from "../../../api/Api_url";
+import API_URL, { IMAGE_API_URL } from "../../../api/Api_url";
 import Snackbar from "@mui/material/Snackbar";
 import MuiAlert from "@mui/material/Alert";
 import { useNavigate, useParams } from "react-router-dom";
-const IMAGE_API_URL = "http://localhost:5000/uploads";
 
 const Alert = React.forwardRef(function Alert(props, ref) {
   return <MuiAlert elevation={6} ref={ref} variant="filled" {...props} />;
@@ -428,14 +427,14 @@ const ProductsEditLayout = () => {
               required
             />
 
-            <Field
+            {/* <Field
               label="ST. Number"
               name="st_number"
               placeholder="Enter ST. Number"
               value={formData.st_number}
               onChange={handleChange}
               required
-            />
+            /> */}
           </>
         );
       case "Assembled":

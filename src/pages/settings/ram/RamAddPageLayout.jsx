@@ -1,45 +1,31 @@
 import React, { useState, useEffect } from 'react';
-import { Snackbar, Alert } from '@mui/material';
-import { useNavigate, useParams } from 'react-router-dom';
 import axios from 'axios';
+import { useNavigate } from 'react-router-dom';
+import Snackbar from '@mui/material/Snackbar';
+import MuiAlert from '@mui/material/Alert';
 import API_URL, { IMAGE_API_URL } from "../../../api/Api_url";
 
-const TaxListEdit = () => {
-  const navigate = useNavigate();
-  const { id } = useParams(); // get id from URL param
+const Alert = React.forwardRef(function Alert(props, ref) {
+  return <MuiAlert elevation={6} ref={ref} variant="filled" {...props} />;
+});
 
+const RamAddPageLayout = () => {
+  const navigate = useNavigate();
   const [formData, setFormData] = useState({
-    taxCode: '',
-    taxName: '',
-    percentage: '',
+    ramType: '',
+    sizeGb: '',
+    frequencyMhz: '',
+    manufacturer: '',
     activeStatus: true
   });
+  const [openSnackbar, setOpenSnackbar] = useState(false);
+  const [snackbarMessage, setSnackbarMessage] = useState('');
+  const [snackbarSeverity, setSnackbarSeverity] = useState('success');
 
-  const [snackbarOpen, setSnackbarOpen] = useState(false);
-  const [loading, setLoading] = useState(true);
-
-  // Load data on mount
-  useEffect(() => {
-    const fetchTaxData = async () => {
-      try {
-        const response = await axios.get(`${API_URL}/tax-list/${id}`);
-        const data = response.data;
-
-        setFormData({
-          taxCode: data.tax_code || '',
-          taxName: data.tax_name || '',
-          percentage: data.percentage ? data.percentage.toString() : '',
-          activeStatus: data.is_active ?? true,
-        });
-      } catch (error) {
-        console.error('Error fetching tax data:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchTaxData();
-  }, [id]);
+  // Options for dropdowns
+  const ramTypes = ['DDR3', 'DDR4', 'DDR5', 'LPDDR4', 'LPDDR5'];
+  const sizes = ['4', '8', '16', '32', '64'];
+  const manufacturers = ['Corsair', 'Kingston', 'G.Skill', 'Samsung', 'Crucial', 'Other'];
 
   const handleInputChange = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -50,96 +36,91 @@ const TaxListEdit = () => {
   };
 
   const handleSubmit = async () => {
-    try {
-      // Validate required fields
-      if (!formData.taxCode || !formData.taxName || !formData.percentage) {
-        setSnackbarOpen(true);
-        return;
-      }
+    const payload = {
+      ram_type: formData.ramType,
+      size_gb: formData.sizeGb,
+      frequency_mhz: formData.frequencyMhz,
+      manufacturer: formData.manufacturer,
+      is_active: formData.activeStatus
+    };
 
-      await axios.put(`${API_URL}/tax-list/update/${id}`, {
-        tax_code: formData.taxCode,
-        tax_name: formData.taxName,
-        percentage: parseFloat(formData.percentage),
-        is_active: formData.activeStatus
+    try {
+      const response = await axios.post(`${API_URL}/ram-specs/create`, payload);
+      setSnackbarMessage('RAM created successfully!');
+      setSnackbarSeverity('success');
+      setOpenSnackbar(true);
+      setFormData({
+        ramType: '',
+        sizeGb: '',
+        frequencyMhz: '',
+        manufacturer: '',
+        activeStatus: true
       });
 
-      setSnackbarOpen(true);
       setTimeout(() => {
-        navigate('/dashboard/settings/tax_list');
+        navigate("/dashboard/settings/ram");
       }, 3000);
     } catch (error) {
-      console.error('Error updating tax:', error);
+      console.error('Error creating RAM:', error);
+      setSnackbarMessage('Failed to create RAM.');
+      setSnackbarSeverity('error');
+      setOpenSnackbar(true);
     }
   };
 
-  if (loading) {
-    return <div style={{ padding: '2rem' }}>Loading...</div>;
-  }
+  const handleCloseSnackbar = (event, reason) => {
+    if (reason === 'clickaway') {
+      return;
+    }
+    setOpenSnackbar(false);
+  };
 
   return (
     <div style={containerStyle}>
-      {/* Snackbar */}
-      <Snackbar
-        open={snackbarOpen}
-        autoHideDuration={3000}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-      >
-        <Alert severity="success" sx={{ width: '100%' }}>
-          Tax updated successfully!
-        </Alert>
-      </Snackbar>
-
-      {/* Breadcrumb */}
       <div style={breadcrumbStyle}>
-        Masters / Tax list / Edit Tax list
+        Inventory / RAM / Add RAM
       </div>
 
-      {/* Main Form Container */}
       <div style={formContainerStyle}>
-        {/* Tax List Section */}
         <div style={cardStyle}>
           <div style={cardHeaderContainerStyle}>
-            <div style={iconStyle}>📋</div>
-            <h3 style={cardHeaderStyle}>Tax list:</h3>
+            <div style={iconStyle}>💾</div>
+            <h3 style={cardHeaderStyle}>RAM Specifications:</h3>
           </div>
           <div style={fieldsGridStyle}>
-            <Field
-              label="Tax Code"
-              placeholder="OS"
-              value={formData.taxCode}
-              onChange={(value) => handleInputChange('taxCode', value)}
+            <SelectField
+              label="RAM Type"
+              value={formData.ramType}
+              onChange={(value) => handleInputChange('ramType', value)}
+              options={ramTypes}
+              required
+            />
+            <SelectField
+              label="Size (GB)"
+              value={formData.sizeGb}
+              onChange={(value) => handleInputChange('sizeGb', value)}
+              options={sizes}
               required
             />
             <Field
-              label="Tax Name"
-              placeholder="Enter Tax Name"
-              value={formData.taxName}
-              onChange={(value) => handleInputChange('taxName', value)}
-              required
-            />
-          </div>
-        </div>
-
-        {/* Percentage Section */}
-        <div style={cardStyle}>
-          <div style={cardHeaderContainerStyle}>
-            <div style={iconStyle}>%</div>
-            <h3 style={cardHeaderStyle}>Percentage:</h3>
-          </div>
-          <div style={fieldsGridStyle}>
-            <Field
-              label="Percentage"
-              placeholder="18.00"
-              value={formData.percentage}
-              onChange={(value) => handleInputChange('percentage', value)}
+              label="Frequency (MHz)"
+              placeholder="Enter Frequency"
               type="number"
+              value={formData.frequencyMhz}
+              onChange={(value) => handleInputChange('frequencyMhz', value)}
+              required
+            />
+            <Field
+              label="Manufacturer"
+               placeholder="Enter Manufacturer"
+              type="text"
+              value={formData.manufacturer}
+              onChange={(value) => handleInputChange('manufacturer', value)}
               required
             />
           </div>
         </div>
 
-        {/* Control Section */}
         <div style={cardStyle}>
           <div style={cardHeaderContainerStyle}>
             <div style={iconStyle}>⚙️</div>
@@ -149,7 +130,6 @@ const TaxListEdit = () => {
             <div style={toggleFieldStyle}>
               <label style={labelStyle}>
                 Active Status
-                <span style={requiredStyle}>*</span>
               </label>
               <div style={toggleContainerStyle}>
                 <div
@@ -172,58 +152,80 @@ const TaxListEdit = () => {
         </div>
       </div>
 
-      {/* Action Buttons */}
       <div style={buttonContainerStyle}>
         <button
           style={cancelBtnStyle}
-          onClick={() => navigate('/dashboard/settings/tax_list')}
           onMouseEnter={(e) => e.target.style.backgroundColor = '#e5e7eb'}
           onMouseLeave={(e) => e.target.style.backgroundColor = '#f3f4f6'}
+          onClick={() => navigate("/dashboard/inventory/rams")}
         >
           Cancel
         </button>
         <button
-          style={saveBtnStyle}
-          onClick={handleSubmit}
-          onMouseEnter={(e) => e.target.style.backgroundColor = '#3b82f6'}
+          style={createBtnStyle}
+          onMouseEnter={(e) => e.target.style.backgroundColor = '#1d4ed8'}
           onMouseLeave={(e) => e.target.style.backgroundColor = '#2563eb'}
+          onClick={handleSubmit}
         >
-          Update
+          Create RAM
         </button>
       </div>
+
+      <Snackbar
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+        open={openSnackbar}
+        autoHideDuration={3000}
+        onClose={handleCloseSnackbar}
+      >
+        <Alert onClose={handleCloseSnackbar} severity={snackbarSeverity} sx={{ width: '100%' }}>
+          {snackbarMessage}
+        </Alert>
+      </Snackbar>
     </div>
   );
 };
 
-const Field = ({ label, placeholder, type = 'text', required = false, value, onChange, isTextarea = false }) => (
+// Custom Select Field Component
+const SelectField = ({ label, value, onChange, options, required = false }) => (
   <div style={fieldContainerStyle}>
     <label style={labelStyle}>
       {label}
       {required && <span style={requiredStyle}>*</span>}
     </label>
-    {isTextarea ? (
-      <textarea
-        placeholder={placeholder}
-        style={textareaStyle}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        required={required}
-        rows={4}
-      />
-    ) : (
-      <input
-        type={type}
-        placeholder={placeholder}
-        style={inputStyle}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        required={required}
-      />
-    )}
+    <select
+      style={selectStyle}
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      required={required}
+    >
+      <option value="">Select {label}</option>
+      {options.map(option => (
+        <option key={option} value={option}>{option}</option>
+      ))}
+    </select>
   </div>
 );
 
-// === Styles ===
+// Field Component (same as in your Branch form)
+const Field = ({ label, placeholder, type = 'text', required = false, value, onChange, readOnly = false }) => (
+  <div style={fieldContainerStyle}>
+    <label style={labelStyle}>
+      {label}
+      {required && <span style={requiredStyle}>*</span>}
+    </label>
+    <input
+      type={type}
+      placeholder={placeholder}
+      style={inputStyle}
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      required={required}
+      readOnly={readOnly}
+    />
+  </div>
+);
+
+// Styles (same as in your Branch form)
 const containerStyle = {
   padding: '2rem',
   fontFamily: '"Inter", "Segoe UI", -apple-system, BlinkMacSystemFont, sans-serif',
@@ -316,18 +318,14 @@ const inputStyle = {
   boxSizing: 'border-box',
 };
 
-const textareaStyle = {
-  width: '100%',
-  padding: '0.75rem',
-  borderRadius: '8px',
-  border: '1px solid #d1d5db',
-  fontSize: '0.875rem',
-  backgroundColor: '#ffffff',
-  transition: 'all 0.2s ease',
-  outline: 'none',
-  boxSizing: 'border-box',
-  resize: 'vertical',
-  fontFamily: 'inherit',
+const selectStyle = {
+  ...inputStyle,
+  appearance: 'none',
+  backgroundImage: 'url("data:image/svg+xml;charset=US-ASCII,<svg width=\'20\' height=\'20\' xmlns=\'http://www.w3.org/2000/svg\'><path d=\'M5 8l5 5 5-5z\' fill=\'%23374151\'/></svg>")',
+  backgroundRepeat: 'no-repeat',
+  backgroundPosition: 'right 0.5rem center',
+  backgroundSize: '1.5em',
+  paddingRight: '2.5rem',
 };
 
 const controlSectionStyle = {
@@ -390,7 +388,7 @@ const cancelBtnStyle = {
   outline: 'none',
 };
 
-const saveBtnStyle = {
+const createBtnStyle = {
   padding: '0.75rem 1.5rem',
   backgroundColor: '#2563eb',
   color: 'white',
@@ -403,4 +401,4 @@ const saveBtnStyle = {
   outline: 'none',
 };
 
-export default TaxListEdit;
+export default RamAddPageLayout;

@@ -22,7 +22,7 @@ import {
   InputLabel,
 } from "@mui/material";
 import { Add, CheckBox, Remove } from "@mui/icons-material";
-import API_URL from "../../../api/Api_url";
+import API_URL, { IMAGE_API_URL } from "../../../api/Api_url";
 
 const Alert = React.forwardRef(function Alert(props, ref) {
   return <MuiAlert elevation={6} ref={ref} variant="filled" {...props} />;

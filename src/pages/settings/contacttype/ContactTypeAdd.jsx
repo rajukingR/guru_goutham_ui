@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Snackbar, Alert } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import API_URL from "../../../api/Api_url";
+import API_URL, { IMAGE_API_URL } from "../../../api/Api_url";
 
 const ContactTypeAdd = () => {
   const navigate = useNavigate();

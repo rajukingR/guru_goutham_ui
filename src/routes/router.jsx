@@ -10,9 +10,9 @@ import {
 import SignIn from "../pages/auth_page/SignIn";
 import DashBoard from "../pages/dashboard_page/DashBoard";
 import SignUp from "../pages/auth_page/SignUp";
-import LayOut from "../layouts/LayOut.jsx"; 
-import ProfilePage from "../pages/user-profile/ProfilePage.jsx"
-import EditProfile from "../pages/user-profile/EditProfile.jsx"
+import LayOut from "../layouts/LayOut.jsx";
+import ProfilePage from "../pages/user-profile/ProfilePage.jsx";
+import EditProfile from "../pages/user-profile/EditProfile.jsx";
 import ProductTemplatePage from "../pages/product_library/producttemplate/ProductTable.jsx";
 import ProductTable from "../pages/product_library/producttemplate/ProductTable.jsx";
 import ProductCategoriesPage from "../pages/product_library/productcategories/ProductCategoriesPage.jsx";
@@ -108,6 +108,9 @@ import UserPerformance from "../pages/userperformance/user/UserPerformance.jsx";
 import ClinetTableLayout from "../pages/client/ClinetTableLayout.jsx";
 import ClientDataAddTable from "../pages/client/ClientDataAddTable.jsx";
 import ClientDataEditTable from "../pages/client/ClientDataEditTable.jsx";
+import RamTable from "../pages/settings/ram/RamTable.jsx";
+import RamEditPageLayout from "../pages/settings/ram/RamEditPageLayout.jsx";
+import RamAddPageLayout from "../pages/settings/ram/RamAddPageLayout.jsx";
 const ProtectedRoute = ({ element }) => {
   const user = useSelector((state) => state.auth.user);
   return user ? element : <Navigate to="/signin" replace />;
@@ -121,111 +124,308 @@ const RoutesConfig = () => {
           <Route path="/signin" element={<SignIn />} />
           <Route path="/signup" element={<SignUp />} />
           {/* Dashboard */}
-          <Route path="/dashboard/*" element={<ProtectedRoute element={<LayOut />} />}>
-          <Route index element={<DashBoard />} />
+          <Route
+            path="/dashboard/*"
+            element={<ProtectedRoute element={<LayOut />} />}
+          >
+            <Route index element={<DashBoard />} />
 
-            
             <Route path="profile" element={<ProfilePage />} />
             <Route path="profile/edit-profile/:id" element={<EditProfile />} />
             <Route path="product_library" element={<ProductTemplatePage />} />
-            <Route path="product_library/add" element={<ProductsAddLayout/>} />
-            <Route path="product_library/edit/:id" element={<ProductsEditLayout/>} />
-            <Route path="product_library/brands" element={<BrandsTablePage />} />
-            <Route path="product_library/brands/add" element={<BrandsPageAddLayout />} />
-            <Route path="product_library/brands/edit/:id" element={<BrandsPageEditLayout />} />
-            <Route path="product_library/product_categories" element={<ProductCategoriesPage/>} />
-            <Route path="product_library/product_categories/add" element={<ProductCategoriesAddPage/>} />
-            <Route path="product_library/product_categories" element={<ProductCategoriesPage/>} />
+            <Route path="product_library/add" element={<ProductsAddLayout />} />
+            <Route
+              path="product_library/edit/:id"
+              element={<ProductsEditLayout />}
+            />
+            <Route
+              path="product_library/brands"
+              element={<BrandsTablePage />}
+            />
+            <Route
+              path="product_library/brands/add"
+              element={<BrandsPageAddLayout />}
+            />
+            <Route
+              path="product_library/brands/edit/:id"
+              element={<BrandsPageEditLayout />}
+            />
+            <Route
+              path="product_library/product_categories"
+              element={<ProductCategoriesPage />}
+            />
+            <Route
+              path="product_library/product_categories/add"
+              element={<ProductCategoriesAddPage />}
+            />
+            <Route
+              path="product_library/product_categories"
+              element={<ProductCategoriesPage />}
+            />
 
-            <Route path="product_library/item_master" element={<ItemMasterPageLayout/>} />
-            <Route path="product_library/item_master/add" element={<ItemMasterPageLayoutAdd/>} />
-            <Route path="product_library/item_master/edit/:id" element={<ItemMasterPageLayoutEdit/>} />
-            <Route path="product_library/item_variant" element={<ItemVarientPageLayout/>} />
-            <Route path="product_library/item_variant/add" element={<ItemVariantPageLayoutAdd/>} />
-            <Route path="product_library/item_variant/edit/:id" element={<ItemVariantPageLayoutEdit/>} />
-            <Route path="product_library/asset" element={<AssetPageLayout/>} />
-            <Route path="product_library/asset/add" element={<AssetPageLayoutAdd/>} />
-            <Route path="product_library/asset/edit/:id" element={<AssetPageLayoutEdit/>} />
-            <Route path="product_library/asset_modification_tracker" element={<AssetmtTrackerPageLayout/>} />
-            <Route path="product_library/asset_modification_tracker/add" element={<AssetmtTrackerPageLayoutAdd/>} />
-            <Route path="product_library/asset_modification_tracker/edit/:id" element={<AssetmtTrackerPageLayoutEdit/>} />
-            <Route path="product_library/grade" element={<GradePageLayoutPage/>} />
-            <Route path="product_library/grade/add" element={<GradeAddPage/>} />
-            <Route path="product_library/grade/edit/:id" element={<GradeEditPage/>} />
-            <Route path="product_library/stock_locations" element={<StockLocationPageLayout/>} />
-            <Route path="product_library/stock_locations/add/" element={<StockLoAddPage/>} />
-            <Route path="product_library/stock_locations/edit/:id" element={<StockLoEditPage/>} />
-            <Route path="procurement/purchase-requests" element={<PurchaseRequestTableLayout />} />
-            <Route path="procurement/purchase-requests/add" element={<PurchaseRequestAdd />} />
-            <Route path="procurement/purchase-requests/edit/:id" element={<PurchaseRequestEdit />} />
-            <Route path="procurement/po-quotations" element={<POQuotationTable />} />
-            <Route path="procurement/po-quotations/add" element={<PoOperationAddPageLayout />} />
-            <Route path="procurement/po-quotations/edit/:id" element={<POQuotationEdit />} />
-            <Route path="procurement/purchase-orders" element={<PurchaseOrderTable />} />
-            <Route path="procurement/purchase-orders/add" element={<PurchaseOrderAddLayout />} />
-            <Route path="procurement/purchase-orders" element={<PurchaseOrderTable />} />
-            <Route path="procurement/purchase-orders/edit/:id" element={<PurchaseOrderEditLayout />} />
-            <Route path="procurement/goodsreceipt" element={<GoodsReceiptsTable />} />
-            <Route path="procurement/goodsreceipt/add" element={<GoodsReceiptsAddLayout />} />
-            <Route path="procurement/goodsreceipt/edit/:id" element={<GoodsReceiptsEditLayout />} />
+            <Route
+              path="product_library/item_master"
+              element={<ItemMasterPageLayout />}
+            />
+            <Route
+              path="product_library/item_master/add"
+              element={<ItemMasterPageLayoutAdd />}
+            />
+            <Route
+              path="product_library/item_master/edit/:id"
+              element={<ItemMasterPageLayoutEdit />}
+            />
+            <Route
+              path="product_library/item_variant"
+              element={<ItemVarientPageLayout />}
+            />
+            <Route
+              path="product_library/item_variant/add"
+              element={<ItemVariantPageLayoutAdd />}
+            />
+            <Route
+              path="product_library/item_variant/edit/:id"
+              element={<ItemVariantPageLayoutEdit />}
+            />
+            <Route path="product_library/asset" element={<AssetPageLayout />} />
+            <Route
+              path="product_library/asset/add"
+              element={<AssetPageLayoutAdd />}
+            />
+            <Route
+              path="product_library/asset/edit/:id"
+              element={<AssetPageLayoutEdit />}
+            />
+            <Route
+              path="product_library/asset_modification_tracker"
+              element={<AssetmtTrackerPageLayout />}
+            />
+            <Route
+              path="product_library/asset_modification_tracker/add"
+              element={<AssetmtTrackerPageLayoutAdd />}
+            />
+            <Route
+              path="product_library/asset_modification_tracker/edit/:id"
+              element={<AssetmtTrackerPageLayoutEdit />}
+            />
+            <Route
+              path="product_library/grade"
+              element={<GradePageLayoutPage />}
+            />
+            <Route
+              path="product_library/grade/add"
+              element={<GradeAddPage />}
+            />
+            <Route
+              path="product_library/grade/edit/:id"
+              element={<GradeEditPage />}
+            />
+            <Route
+              path="product_library/stock_locations"
+              element={<StockLocationPageLayout />}
+            />
+            <Route
+              path="product_library/stock_locations/add/"
+              element={<StockLoAddPage />}
+            />
+            <Route
+              path="product_library/stock_locations/edit/:id"
+              element={<StockLoEditPage />}
+            />
+            <Route
+              path="procurement/purchase-requests"
+              element={<PurchaseRequestTableLayout />}
+            />
+            <Route
+              path="procurement/purchase-requests/add"
+              element={<PurchaseRequestAdd />}
+            />
+            <Route
+              path="procurement/purchase-requests/edit/:id"
+              element={<PurchaseRequestEdit />}
+            />
+            <Route
+              path="procurement/po-quotations"
+              element={<POQuotationTable />}
+            />
+            <Route
+              path="procurement/po-quotations/add"
+              element={<PoOperationAddPageLayout />}
+            />
+            <Route
+              path="procurement/po-quotations/edit/:id"
+              element={<POQuotationEdit />}
+            />
+            <Route
+              path="procurement/purchase-orders"
+              element={<PurchaseOrderTable />}
+            />
+            <Route
+              path="procurement/purchase-orders/add"
+              element={<PurchaseOrderAddLayout />}
+            />
+            <Route
+              path="procurement/purchase-orders"
+              element={<PurchaseOrderTable />}
+            />
+            <Route
+              path="procurement/purchase-orders/edit/:id"
+              element={<PurchaseOrderEditLayout />}
+            />
+            <Route
+              path="procurement/goodsreceipt"
+              element={<GoodsReceiptsTable />}
+            />
+            <Route
+              path="procurement/goodsreceipt/add"
+              element={<GoodsReceiptsAddLayout />}
+            />
+            <Route
+              path="procurement/goodsreceipt/edit/:id"
+              element={<GoodsReceiptsEditLayout />}
+            />
             <Route path="procurement/supplier" element={<SuppliersTable />} />
-            <Route path="procurement/supplier/add" element={<SupplierAddLayout />} />
-            <Route path="procurement/supplier/edit/:id" element={<SupplierEditLayout />} />
+            <Route
+              path="procurement/supplier/add"
+              element={<SupplierAddLayout />}
+            />
+            <Route
+              path="procurement/supplier/edit/:id"
+              element={<SupplierEditLayout />}
+            />
             <Route path="inventory" element={<InventoryTable />} />
             <Route path="crm/client-list" element={<ContactsTable />} />
-            <Route path="crm/client-list/add" element={<ContactsAddLayoutPage />} />
-            <Route path="crm/client-list/edit/:id" element={<ContactsEditLayoutPage />} />
+            <Route
+              path="crm/client-list/add"
+              element={<ContactsAddLayoutPage />}
+            />
+            <Route
+              path="crm/client-list/edit/:id"
+              element={<ContactsEditLayoutPage />}
+            />
             <Route path="crm/lead" element={<LeadsTable />} />
             <Route path="crm/lead/add" element={<LeadsLayoutAddPage />} />
             <Route path="crm/lead/edit/:id" element={<LeadsLayoutEditPage />} />
             <Route path="crm/quotations" element={<QuotationsTable />} />
-            <Route path="crm/quotations/add" element={<QuotationsAddLayoutPage />} />
-            <Route path="crm/quotations/edit/:id" element={<QuotationsEditLayoutPage />} />
+            <Route
+              path="crm/quotations/add"
+              element={<QuotationsAddLayoutPage />}
+            />
+            <Route
+              path="crm/quotations/edit/:id"
+              element={<QuotationsEditLayoutPage />}
+            />
             <Route path="crm/orders" element={<OrdersTable />} />
-            <Route path="crm/orders/add" element={<SalesOrdersAddLayoutPage />} />
-            <Route path="crm/orders/edit/:id" element={<SalesOrdersEditLayoutPage />} />
+            <Route
+              path="crm/orders/add"
+              element={<SalesOrdersAddLayoutPage />}
+            />
+            <Route
+              path="crm/orders/edit/:id"
+              element={<SalesOrdersEditLayoutPage />}
+            />
             <Route path="operations" element={<DeliveryChallanTable />} />
             <Route path="operations/add" element={<DeliveryChallanAddPage />} />
-            <Route path="operations/edit/:id" element={<DeliveryChallanEditPage />} />
+            <Route
+              path="operations/edit/:id"
+              element={<DeliveryChallanEditPage />}
+            />
             <Route path="operations/invoices" element={<InvoicesTablePage />} />
-            <Route path="operations/invoices/add" element={<InvoicesAddPage />} />
-            <Route path="operations/invoices/edit/:id" element={<InvoicesEditPage />} />
+            <Route
+              path="operations/invoices/add"
+              element={<InvoicesAddPage />}
+            />
+            <Route
+              path="operations/invoices/edit/:id"
+              element={<InvoicesEditPage />}
+            />
             <Route path="operations/grn" element={<GrnLayoutTableContent />} />
             <Route path="operations/grn/add" element={<GrnAddForm />} />
             <Route path="operations/grn/edit/:id" element={<GrnEditForm />} />
-            <Route path="operations/asset_modification_tracker" element={<AssetTrackerOp />} />
-            <Route path="operations/asset_modification_tracker/add" element={<AssetModificationTrackerAdd/>} />
-            <Route path="operations/asset_modification_tracker/edit/:id" element={<AssetModificationTrackerEdit/>} />
+            <Route
+              path="operations/asset_modification_tracker"
+              element={<AssetTrackerOp />}
+            />
+            <Route
+              path="operations/asset_modification_tracker/add"
+              element={<AssetModificationTrackerAdd />}
+            />
+            <Route
+              path="operations/asset_modification_tracker/edit/:id"
+              element={<AssetModificationTrackerEdit />}
+            />
             <Route path="operations/service" element={<ServiceTableOp />} />
             <Route path="operations/service/add" element={<ServiceAdd />} />
-            <Route path="operations/service/edit/:id" element={<ServiceEdit />} />
-            <Route path="operations/client_journey" element={<ClientJourneyOp/>} />
-            <Route path="operations/credit_notes" element={<CreaditNotesTableLayout/>} />
-            <Route path="operations/credit_notes/add" element={<CreaditNotesAddFormLayout/>} />
-            <Route path="operations/credit_notes/edit/:id" element={<CreaditNotesEditFormLayout/>} />
+            <Route
+              path="operations/service/edit/:id"
+              element={<ServiceEdit />}
+            />
+            <Route
+              path="operations/client_journey"
+              element={<ClientJourneyOp />}
+            />
+            <Route
+              path="operations/credit_notes"
+              element={<CreaditNotesTableLayout />}
+            />
+            <Route
+              path="operations/credit_notes/add"
+              element={<CreaditNotesAddFormLayout />}
+            />
+            <Route
+              path="operations/credit_notes/edit/:id"
+              element={<CreaditNotesEditFormLayout />}
+            />
 
-                                       {/* settings */}                                                                               
-            <Route path="settings/users" element={<UsersTablePage/>} />
-            <Route path="settings/users/add" element={<UsersAddPage/>} />
-            <Route path="settings/users/edit/:id" element={<UsersEditPage/>} />
-            <Route path="settings/roles" element={<RolesTablePage/>} />
-            <Route path="settings/roles/add" element={<RolesAddPage/>} />
-            <Route path="settings/roles/edit/:id" element={<RolesEditPage/>} />
-            
-            <Route path="settings/contact_type" element={<ContactTypeTable/>} />
-            <Route path="settings/contact_type/add" element={<ContactTypeAdd/>} />
-            <Route path="settings/contact_type/edit/:id" element={<ContactTypeEdit/>} />
-            <Route path="settings/taxt_list" element={<TaxListTable/>} />
-            <Route path="settings/taxt_list/add" element={<TaxListAdd/>} />
-            <Route path="settings/taxt_list/edit/:id" element={<TaxListEdit/>} />
-            <Route path="settings/address" element={<AddressTable/>} />
-            <Route path="settings/branch" element={<BranchTablePageLayout/>} />
-            <Route path="settings/branch/add" element={<BranchAddPageLayout/>} />
-            <Route path="settings/branch/edit/:id" element={<BranchEditPageLayout/>} />
-            <Route path="users_performance/user" element={<UserPerformance/>} />
-            <Route path="client/client" element={<ClinetTableLayout/>} />
-            <Route path="client/client/add" element={<ClientDataAddTable/>} />
-            <Route path="client/client/edit/:id" element={<ClientDataEditTable/>} />
+            {/* settings */}
+            <Route path="settings/users" element={<UsersTablePage />} />
+            <Route path="settings/users/add" element={<UsersAddPage />} />
+            <Route path="settings/users/edit/:id" element={<UsersEditPage />} />
+            <Route path="settings/roles" element={<RolesTablePage />} />
+            <Route path="settings/roles/add" element={<RolesAddPage />} />
+            <Route path="settings/roles/edit/:id" element={<RolesEditPage />} />
+            <Route path="settings/ram" element={<RamTable />} />
+            <Route path="settings/ram/add" element={<RamAddPageLayout />} />
+            <Route path="settings/ram/edit/:id" element={<RamEditPageLayout />} />
+
+            <Route
+              path="settings/contact_type"
+              element={<ContactTypeTable />}
+            />
+            <Route
+              path="settings/contact_type/add"
+              element={<ContactTypeAdd />}
+            />
+            <Route
+              path="settings/contact_type/edit/:id"
+              element={<ContactTypeEdit />}
+            />
+            <Route path="settings/taxt_list" element={<TaxListTable />} />
+            <Route path="settings/taxt_list/add" element={<TaxListAdd />} />
+            <Route
+              path="settings/taxt_list/edit/:id"
+              element={<TaxListEdit />}
+            />
+            <Route path="settings/address" element={<AddressTable />} />
+            <Route path="settings/branch" element={<BranchTablePageLayout />} />
+            <Route
+              path="settings/branch/add"
+              element={<BranchAddPageLayout />}
+            />
+            <Route
+              path="settings/branch/edit/:id"
+              element={<BranchEditPageLayout />}
+            />
+            <Route
+              path="users_performance/user"
+              element={<UserPerformance />}
+            />
+            <Route path="client/client" element={<ClinetTableLayout />} />
+            <Route path="client/client/add" element={<ClientDataAddTable />} />
+            <Route
+              path="client/client/edit/:id"
+              element={<ClientDataEditTable />}
+            />
           </Route>
         </Routes>
       </Router>

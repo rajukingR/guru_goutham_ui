@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import DynamicTable from "../../../components/table-format/DynamicTable";
-import API_URL from "../../../api/Api_url";
+import API_URL, { IMAGE_API_URL } from "../../../api/Api_url";
 
 const UsersTablePage = () => {
   const [users, setUsers] = useState([]);

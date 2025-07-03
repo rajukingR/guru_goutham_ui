@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import DynamicTable from "../../../components/table-format/DynamicTable";
 import axios from "axios";
-import API_URL from "../../../api/Api_url"; // assuming IMAGE_API_URL is defined
+import API_URL, { IMAGE_API_URL } from "../../../api/Api_url"; // assuming IMAGE_API_URL is defined
 
 const BrandsTablePage = () => {
   const [data, setData] = useState([]);

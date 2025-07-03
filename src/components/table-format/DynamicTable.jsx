@@ -61,6 +61,8 @@ const apiEndpoints = {
   service: `${API_URL}/service`,
   credit_notes: `${API_URL}/credit-notes`,
   clients: `${API_URL}/clients`,
+    asset_modification_tracker: `${API_URL}/asset-modifications`,
+
 };
 
 // Delivery Challan Dialog Component
@@ -681,8 +683,9 @@ const InvoiceDialog = ({ open, onClose, invoiceData }) => {
     return isNaN(date.getTime()) ? null : date;
   })();
 
-  const creditNoteEndDate = new Date(invoiceData.rental_end_date);
-
+const creditNoteEndDate = creditNoteStartDate
+  ? new Date(creditNoteStartDate.getFullYear(), creditNoteStartDate.getMonth() + 1, 0)
+  : null;
   // Calculate date ranges based on invoice dates
   const currentMonthStart = new Date(
     invoiceStartDate.getFullYear(),
@@ -810,7 +813,6 @@ const InvoiceDialog = ({ open, onClose, invoiceData }) => {
           ? calculateDays(returnedDate, getReturnEndDate())
           : 0;
 
-          console.log(returnQtyDays,"jjjjjjjjjjjjjjjjj");
           
 
 
@@ -1085,7 +1087,7 @@ const InvoiceDialog = ({ open, onClose, invoiceData }) => {
               </div>
               <div>
                 <div style={detailLabelStyle}>PO Date :</div>
-                {invoiceData.purchase_order_date}
+                {invoiceData.order_date}
               </div>
               <div>
                 <div style={detailLabelStyle}>Email :</div>

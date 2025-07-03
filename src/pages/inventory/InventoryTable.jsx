@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import DynamicTable from "../../components/table-format/DynamicTable";
 import axios from "axios";
-import API_URL from "../../api/Api_url";
+import API_URL, { IMAGE_API_URL } from "../../api/Api_url";
 
 const InventoryTable = () => {
   const [data, setData] = useState([]);
@@ -9,6 +9,8 @@ const InventoryTable = () => {
 
   const columns = [
     { id: "id", label: "S.No." },
+    { id: "product_image", label: "Image" },
+
     { id: "name", label: "Product Name" },
     { id: "model", label: "Model" },
     { id: "specifications", label: "Specifications" },
@@ -29,11 +31,14 @@ const InventoryTable = () => {
       try {
         const token = localStorage.getItem("token");
 
-        const response = await axios.get(`${API_URL}/goods-receipts/approved-receipt-products`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
+        const response = await axios.get(
+          `${API_URL}/goods-receipts/approved-receipt-products`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
 
         if (response.status === 200) {
           const { products, summary } = response.data;
@@ -59,6 +64,23 @@ const InventoryTable = () => {
 
             return {
               id: index + 1,
+              product_image: (
+                <img
+                  src={`${IMAGE_API_URL}/${p.product_image}`}
+                  alt={p.product_name}
+                  style={{
+                    width: "65px",
+                    height: "65px",
+                    objectFit: "contain",
+                    border: "2px solid gray",
+                    borderRadius: "6px",
+                  }}
+                  onError={(e) => {
+                    e.target.onerror = null;
+                    e.target.src = "https://via.placeholder.com/50x50?text=N/A";
+                  }}
+                />
+              ),
               name: p.product_name || "",
               model: p.model || "",
               processor: p.processor || "",
@@ -68,12 +90,16 @@ const InventoryTable = () => {
               specifications,
               total_quantity: item.total_quantity || 0,
               available_quantity: item.available_quantity || 0,
-              rented_qty: item.used_quantity || 0, // Changed from rented_qty to used_quantity
-              buy_qty: 0, // Not in API response, default to 0
-              purchase_price: `₹${Number(item.purchase_price || 0).toLocaleString("en-IN")}`,
-              total_value: `₹${Number(item.total_value || 0).toLocaleString("en-IN")}`,
-              used_rent_value: "₹0", // Not in API response, default to 0
-              used_buy_value: "₹0", // Not in API response, default to 0
+              rented_qty: item.used_quantity || 0,
+              buy_qty: 0,
+              purchase_price: `₹${Number(
+                item.purchase_price || 0
+              ).toLocaleString("en-IN")}`,
+              total_value: `₹${Number(item.total_value || 0).toLocaleString(
+                "en-IN"
+              )}`,
+              used_rent_value: "₹0",
+              used_buy_value: "₹0",
             };
           });
 

@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from "react";
 import DynamicTable from "../../../components/table-format/DynamicTable";
 import axios from "axios";
-import API_URL from "../../../api/Api_url";
-const IMAGE_API_URL = "http://localhost:5000/uploads";
+import API_URL, { IMAGE_API_URL } from "../../../api/Api_url";
+
 
 const ProductTable = () => {
   const [data, setData] = useState([]);
@@ -48,7 +48,13 @@ const ProductTable = () => {
               <img
                 src={`${IMAGE_API_URL}/${item.product_image}`}
                 alt={item.product_name}
-                style={{ width: "50px", height: "50px", objectFit: "contain" }}
+                style={{
+                  width: "65px",
+                  height: "65px",
+                  objectFit: "contain",
+                  border: "2px solid rgb(13, 18, 24)",
+                  borderRadius: "6px",
+                }}
               />
             ) : (
               "No Image"
@@ -75,7 +81,6 @@ const ProductTable = () => {
             rent_price_6_months: formatCurrency(item.rent_price_6_months),
             rent_price_1_year: formatCurrency(item.rent_price_1_year),
             status: item.is_active ? "Active" : "Inactive",
-
           }));
           setData(formattedData);
         }

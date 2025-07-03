@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import axios from "axios";
 import DynamicTable from "../../../components/table-format/DynamicTable";
 import { id } from "date-fns/locale";
-import API_URL from "../../../api/Api_url";
+import API_URL, { IMAGE_API_URL } from "../../../api/Api_url";
 
 const TaxListTable = () => {
   const [data, setData] = useState([]);

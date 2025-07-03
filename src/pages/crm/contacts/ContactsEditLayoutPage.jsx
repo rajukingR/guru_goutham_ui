@@ -3,7 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import Snackbar from "@mui/material/Snackbar";
 import Alert from "@mui/material/Alert";
 import { useSelector } from "react-redux";
-import API_URL from "../../../api/Api_url";
+import API_URL, { IMAGE_API_URL } from "../../../api/Api_url";
 
 const ContactsEditLayoutPage = () => {
   const { user } = useSelector((state) => state.auth);

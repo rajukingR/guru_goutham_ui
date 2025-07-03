@@ -223,7 +223,7 @@ const Sidebar = ({ section }) => {
           description: "Credit note management",
         },
         {
-          text: "Asset Modification Tracker",
+          text: "Asset Modification",
           path: "/dashboard/operations/asset_modification_tracker",
           icon: <BuildCircleIcon />,
           description: "Track asset changes",
@@ -310,11 +310,23 @@ const Sidebar = ({ section }) => {
           icon: <FaUserTie />,
           description: "Tax configuration",
         },
-        {
+         {
           text: "Branch",
           path: "/dashboard/settings/Branch",
           icon: <MdOutlineAirlineSeatLegroomNormal />,
           description: "Branch management",
+        },
+        {
+          text: "RAM",
+          path: "/dashboard/settings/ram",
+          icon: <MdOutlineAirlineSeatLegroomNormal />,
+          description: "Ram",
+        },
+        {
+          text: "Hard Disc",
+          path: "/dashboard/settings/hard-disc",
+          icon: <MdOutlineAirlineSeatLegroomNormal />,
+          description: "Hard Disc",
         },
       ];
       break;

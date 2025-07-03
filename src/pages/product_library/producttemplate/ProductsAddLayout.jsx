@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
-import API_URL from "../../../api/Api_url";
+import API_URL, { IMAGE_API_URL } from "../../../api/Api_url";
 import Snackbar from "@mui/material/Snackbar";
 import MuiAlert from "@mui/material/Alert";
 import { useNavigate } from "react-router-dom";
@@ -24,6 +24,13 @@ const ProductsAddLayout = () => {
 
   // State for form data
   const [formData, setFormData] = useState({
+    generation: "",
+    maxSpeed: "",
+    speed: "",
+    ramType: "",
+    sizeGb: "",
+    frequencyMhz: "",
+    manufacturer: "",
     product_category: "",
     product_id: "",
     product_name: "",
@@ -76,7 +83,7 @@ const ProductsAddLayout = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(false);
-const [stockLocations, setStockLocations] = useState([]);
+  const [stockLocations, setStockLocations] = useState([]);
 
   const [snackbar, setSnackbar] = useState({
     open: false,
@@ -96,35 +103,50 @@ const [stockLocations, setStockLocations] = useState([]);
   }, []);
 
   useEffect(() => {
-   const fetchData = async () => {
-  try {
-    const [brandsRes, categoriesRes, stockLocationRes] = await Promise.all([
-      axios.get(`${API_URL}/product-brands/active`),
-      axios.get(`${API_URL}/product-categories/active`),
-      axios.get(`${API_URL}/stock-location/active-stock-location`)
-    ]);
+    const fetchData = async () => {
+      try {
+        const [brandsRes, categoriesRes, stockLocationRes] = await Promise.all([
+          axios.get(`${API_URL}/product-brands/active`),
+          axios.get(`${API_URL}/product-categories/active`),
+          axios.get(`${API_URL}/stock-location/active-stock-location`),
+        ]);
 
-    setBrands(brandsRes.data);
-    setCategories(categoriesRes.data);
-    setStockLocations(
-      stockLocationRes.data.map((item) => ({
-        stockLocationId: item.stock_location_id,
-        stockName: item.stock_name,
-      }))
-    );
+        setBrands(brandsRes.data);
+        setCategories(categoriesRes.data);
+        setStockLocations(
+          stockLocationRes.data.map((item) => ({
+            stockLocationId: item.stock_location_id,
+            stockName: item.stock_name,
+          }))
+        );
 
-    setLoading(false);
-  } catch (err) {
-    setError(err.message);
-    setLoading(false);
-  }
-};
+        setLoading(false);
+      } catch (err) {
+        setError(err.message);
+        setLoading(false);
+      }
+    };
 
     fetchData();
   }, []);
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
+    // Add this to your handleChange function
+    if (name === "maxSpeed" || name === "speed") {
+      // Ensure speed values are reasonable
+      const floatValue = parseFloat(value);
+      if (floatValue > 10) {
+        // Assuming 10GHz is a reasonable max
+        showSnackbar("Please enter a valid speed (max 10GHz)", "error");
+        return;
+      }
+      if (floatValue <= 0) {
+        showSnackbar("Speed must be greater than 0", "error");
+        return;
+      }
+    }
+
     setFormData((prev) => ({
       ...prev,
       [name]: type === "checkbox" ? checked : value,
@@ -431,17 +453,75 @@ const [stockLocations, setStockLocations] = useState([]);
               required
             />
 
-            <Field
+            {/* <Field
               label="ST. Number"
               name="st_number"
               placeholder="Enter ST. Number"
               value={formData.st_number}
               onChange={handleChange}
               required
-            />
+            /> */}
           </>
         );
-      case "Assembled":
+      case "Processor":
+        return (
+          <div style={formContainerStyle}>
+            {/* Product Info Card */}
+            <div style={cardStyle}>
+              <div style={fieldsGridStyle}>
+                <Field
+                  label="Generation"
+                  name="generation"
+                  placeholder="Enter Generation (e.g., 12th Gen)"
+                  value={formData.generation}
+                  onChange={handleChange}
+                  required
+                />
+
+                <Field
+                  label="Max Speed (GHz)"
+                  name="maxSpeed"
+                  type="number"
+                  placeholder="Enter Max Speed"
+                  value={formData.maxSpeed}
+                  onChange={handleChange}
+                  required
+                  step="0.1"
+                />
+
+                <Field
+                  label="Speed (GHz)"
+                  name="speed"
+                  type="number"
+                  placeholder="Enter Base Speed"
+                  value={formData.speed}
+                  onChange={handleChange}
+                  required
+                  step="0.1"
+                />
+              </div>
+            </div>
+
+            {/* Control Card */}
+            <div style={cardStyle}>
+              <div style={cardHeaderContainerStyle}>
+                <div style={iconStyle}>⚙️</div>
+                <h3 style={cardHeaderStyle}>Control</h3>
+              </div>
+              <div style={controlSectionStyle}>
+                <CheckboxField
+                  label="Active Status"
+                  name="is_active"
+                  checked={formData.is_active}
+                  onChange={handleChange}
+                  required
+                />
+              </div>
+            </div>
+          </div>
+        );
+
+      case "Assembled Desktop":
         return (
           <>
             <Field
@@ -512,6 +592,83 @@ const [stockLocations, setStockLocations] = useState([]);
               required
             /> */}
           </>
+        );
+
+      case "RAM":
+        return (
+          <div style={formContainerStyle}>
+            <div style={cardStyle}>
+              <div style={fieldsGridStyle}>
+                <Field
+                  label="RAM Type"
+                  name="ramType"
+                  type="select"
+                  value={formData.ramType}
+                  onChange={handleChange}
+                  required
+                >
+                  <option value="">Select RAM Type</option>
+                  <option value="DDR3">DDR3</option>
+                  <option value="DDR4">DDR4</option>
+                  <option value="DDR5">DDR5</option>
+                  <option value="LPDDR4">LPDDR4</option>
+                  <option value="LPDDR5">LPDDR5</option>
+                </Field>
+
+                <Field
+                  label="Size (GB)"
+                  name="sizeGb"
+                  type="select"
+                  value={formData.sizeGb}
+                  onChange={handleChange}
+                  required
+                >
+                  <option value="">Select Size</option>
+                  <option value="4">4 GB</option>
+                  <option value="8">8 GB</option>
+                  <option value="16">16 GB</option>
+                  <option value="32">32 GB</option>
+                  <option value="64">64 GB</option>
+                </Field>
+
+                <Field
+                  label="Frequency (MHz)"
+                  name="frequencyMhz"
+                  type="number"
+                  placeholder="Enter Frequency"
+                  value={formData.frequencyMhz}
+                  onChange={handleChange}
+                  required
+                />
+
+                <Field
+                  label="Manufacturer"
+                  name="manufacturer"
+                  type="text"
+                  placeholder="Enter Manufacturer"
+                  value={formData.manufacturer}
+                  onChange={handleChange}
+                  required
+                />
+              </div>
+            </div>
+
+            <div style={cardStyle}>
+              <div style={cardHeaderContainerStyle}>
+                <div style={iconStyle}>⚙️</div>
+                <h3 style={cardHeaderStyle}>Control:</h3>
+              </div>
+              <div style={controlSectionStyle}>
+                <CheckboxField
+                  label="Active Status"
+                  name="is_active"
+                  checked={formData.is_active}
+                  onChange={handleChange}
+                  required
+                />
+              </div>
+            </div>
+          </div>
         );
       case "Monitors":
         return (
@@ -705,7 +862,7 @@ const [stockLocations, setStockLocations] = useState([]);
               required
             />
 
-            {formData.product_category !== "Assembled" && (
+            {formData.product_category !== "Assembled Desktop" && (
               <Field
                 label="Brand"
                 type="select"
@@ -749,21 +906,20 @@ const [stockLocations, setStockLocations] = useState([]);
             />
 
             <Field
-  label="Stock Location"
-  type="select"
-  name="stock_location"
-  value={formData.stock_location}
-  onChange={handleChange}
-  required
->
-  <option value="">Select Stock Location</option>
-  {stockLocations.map((loc) => (
-    <option key={loc.stockLocationId} value={loc.stockName}>
-      {loc.stockName}
-    </option>
-  ))}
-</Field>
-
+              label="Stock Location"
+              type="select"
+              name="stock_location"
+              value={formData.stock_location}
+              onChange={handleChange}
+              required
+            >
+              <option value="">Select Stock Location</option>
+              {stockLocations.map((loc) => (
+                <option key={loc.stockLocationId} value={loc.stockName}>
+                  {loc.stockName}
+                </option>
+              ))}
+            </Field>
 
             <div style={{ gridColumn: "1 / -1" }}>
               <Field
@@ -1004,6 +1160,20 @@ const CheckboxField = ({ label, name, checked, onChange }) => (
 );
 
 // Styles
+
+const breadcrumbStyle = {
+  marginBottom: "1.5rem",
+  fontSize: "0.875rem",
+  color: "#6b7280",
+  fontWeight: "400",
+};
+
+const controlSectionStyle = {
+  display: "flex",
+  flexDirection: "column",
+  gap: "1rem",
+};
+
 const loadingStyle = {
   display: "flex",
   justifyContent: "center",

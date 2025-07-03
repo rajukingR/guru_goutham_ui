@@ -15,7 +15,7 @@ import {
   TextField,
 } from "@mui/material";
 import { Add, Remove } from "@mui/icons-material";
-import API_URL from "../../../api/Api_url";
+import API_URL, { IMAGE_API_URL } from "../../../api/Api_url";
 import { useNavigate, useParams } from "react-router-dom";
 import { Snackbar, Alert } from "@mui/material";
 

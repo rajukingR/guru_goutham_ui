@@ -2,117 +2,375 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Snackbar from '@mui/material/Snackbar';
 import Alert from '@mui/material/Alert';
-import API_URL from "../../../api/Api_url";
-
-const generateAssetId = () => {
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-  let randomPart = '';
-  for (let i = 0; i < 5; i++) {
-    randomPart += chars.charAt(Math.floor(Math.random() * chars.length));
-  }
-  return `AST-${randomPart}`;
-};
+import API_URL, { IMAGE_API_URL } from "../../../api/Api_url";
 
 const AssetModificationTrackerAdd = () => {
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
     assetId: '',
-    assetName: '',
+    product_name: '',
     modificationType: '',
+    currentRAM: '',
+    newRAM: '',
+    newRAMCost: '',
+    currentStorage: '',
+    newStorage: '',
+    newStorageCost: '',
     reason: '',
     requestedBy: '',
     approvedBy: '',
     requestDate: '',
     approvalDate: '',
-    estimatedCost: '',
     status: '',
     remarks: '',
     activeStatus: false,
   });
 
-  const [snackbarOpen, setSnackbarOpen] = useState(false);
+  const [invoices, setInvoices] = useState([]);
+  const [customers, setCustomers] = useState([]);
+  const [selectedCustomer, setSelectedCustomer] = useState(null);
+  const [selectedInvoice, setSelectedInvoice] = useState(null);
+  const [availableAssets, setAvailableAssets] = useState([]);
+  const [snackbar, setSnackbar] = useState({
+    open: false,
+    message: '',
+    severity: 'success',
+  });
 
+  // Fetch invoices data when component mounts
   useEffect(() => {
-    const newId = generateAssetId();
-    setFormData((prev) => ({ ...prev, assetId: newId }));
+    const fetchInvoices = async () => {
+      try {
+        const response = await fetch(`${API_URL}/asset-modification`);
+        if (!response.ok) throw new Error("Failed to fetch invoices");
+        const data = await response.json();
+        setInvoices(data.data);
+        
+        // Extract unique customers
+        const uniqueCustomers = data.data.reduce((acc, invoice) => {
+          if (!acc.some(c => c.customer_id === invoice.customer_id)) {
+            acc.push({
+              customer_id: invoice.customer_id,
+              customer_name: invoice.customer_name
+            });
+          }
+          return acc;
+        }, []);
+        setCustomers(uniqueCustomers);
+      } catch (error) {
+        console.error("Error fetching invoices:", error);
+        setSnackbar({
+          open: true,
+          message: "Error fetching invoices: " + error.message,
+          severity: "error",
+        });
+      }
+    };
+    fetchInvoices();
   }, []);
+
+  // When customer is selected, filter available invoices
+  useEffect(() => {
+    if (selectedCustomer) {
+      const customerInvoices = invoices.filter(
+        invoice => invoice.customer_id === selectedCustomer
+      );
+      setSelectedInvoice(null);
+      setAvailableAssets([]);
+      setFormData(prev => ({
+        ...prev,
+        assetId: '',
+        product_name: '',
+        currentRAM: '',
+        currentStorage: ''
+      }));
+    }
+  }, [selectedCustomer, invoices]);
+
+  // When invoice is selected, set available assets
+  useEffect(() => {
+    if (selectedInvoice) {
+      const selectedInvoiceData = invoices.find(
+        invoice => invoice.invoice_id === selectedInvoice
+      );
+      if (selectedInvoiceData) {
+        setAvailableAssets(selectedInvoiceData.assets);
+        setFormData(prev => ({
+          ...prev,
+          assetId: '',
+          product_name: '',
+          currentRAM: '',
+          currentStorage: ''
+        }));
+      }
+    }
+  }, [selectedInvoice, invoices]);
 
   const handleInputChange = (field, value) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
-  };
+    
+    // When assetId changes, auto-fill the asset details
+    if (field === 'assetId') {
+      const selectedAsset = availableAssets.find(asset => asset.asset_id === value);
+      if (selectedAsset) {
+        // Extract numeric values from "16GB" format
+        const parseSpecValue = (spec) => {
+          if (!spec) return '';
+          const numValue = spec.replace(/[^\d.]/g, '');
+          return numValue || '';
+        };
 
-  const handleFileUpload = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      console.log('Asset image uploaded:', file.name);
+        setFormData(prev => ({
+          ...prev,
+          product_name: selectedAsset.product_name || '',
+          currentRAM: parseSpecValue(selectedAsset.ram),
+          currentStorage: parseSpecValue(selectedAsset.storage)
+        }));
+      }
     }
   };
 
-  const handleSubmit = async () => {
-  try {
-    const payload = {
-      asset_image_url: '', 
-      asset_id: formData.assetId,
-      asset_name: formData.assetName,
-      modification_type: formData.modificationType,
-      reason_for_modification: formData.reason,
-      requested_by: formData.requestedBy,
-      approved_by: formData.approvedBy,
-      request_date: formData.requestDate,
-      approval_date: formData.approvalDate,
-      estimated_cost: parseFloat(formData.estimatedCost || 0),
-      status: formData.status,
-      remarks: formData.remarks,
-      active_status: formData.activeStatus
-    };
+const handleSubmit = async () => {
+    try {
+      const selectedInvoiceData = invoices.find(invoice => invoice.invoice_id === selectedInvoice);
+      const selectedAsset = availableAssets.find(asset => asset.asset_id === formData.assetId);
+      const selectedCustomerData = customers.find(customer => customer.customer_id === selectedCustomer);
 
-    const response = await fetch(`${API_URL}/asset-modifications/create`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    });
+      const payload = {
+        // Customer Information
+        customer_id: selectedCustomer,
+        customer_name: selectedCustomerData?.customer_name || '',
 
-    if (response.ok) {
-      setSnackbarOpen(true);
-      setTimeout(() => navigate('/dashboard/operations/asset_modification_tracker'), 1500);
-    } else {
-      const errText = await response.text();
-      console.error('Submission failed:', errText);
+        // Invoice Information
+        invoice_id: selectedInvoice,
+        invoice_number: selectedInvoiceData?.invoice_number || '',
+        invoice_date: selectedInvoiceData?.invoice_date || '',
+
+        // Asset Information
+        asset_id: formData.assetId,
+        product_id: selectedAsset?.product_id || '',
+        product_name: formData.product_name,
+        brand: selectedAsset?.brand || '',
+        model: selectedAsset?.model || '',
+
+        // Hardware Specifications
+        ram: `${formData.currentRAM}GB`,
+        new_ram: formData.newRAM ? `${formData.newRAM}GB` : null,
+        new_ram_cost: parseFloat(formData.newRAMCost || 0),
+        storage: `${formData.currentStorage}GB`,
+        new_storage: formData.newStorage ? `${formData.newStorage}GB` : null,
+        new_storage_cost: parseFloat(formData.newStorageCost || 0),
+        processor: selectedAsset?.processor || '',
+        os: selectedAsset?.os || '',
+        graphics: selectedAsset?.graphics || '',
+        disk_type: selectedAsset?.disk_type || '',
+        grade: selectedAsset?.grade || '',
+
+        // Modification Details
+        modification_type: formData.modificationType,
+        reason: formData.reason,
+
+        // Request & Approval
+        requested_by: formData.requestedBy,
+        approved_by: formData.approvedBy,
+        request_date: formData.requestDate,
+        approval_date: formData.approvalDate,
+        status: formData.status,
+        remarks: formData.remarks,
+        active_status: formData.activeStatus
+      };
+
+      const response = await fetch(`${API_URL}/asset-modifications/create`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Failed to create asset modification");
+      }
+
+      const result = await response.json();
+      setSnackbar({
+        open: true,
+        message: "Asset modification created successfully!",
+        severity: "success",
+      });
+
+      setTimeout(() => {
+        navigate("/dashboard/operations/asset_modification_tracker");
+      }, 1500);
+      
+    } catch (error) {
+      console.error("Error creating asset modification:", error);
+      setSnackbar({
+        open: true,
+        message: error.message || "Error creating asset modification",
+        severity: "error",
+      });
     }
-  } catch (err) {
-    console.error('Submission error:', err);
-  }
-};
+  };
+
 
   return (
     <div style={containerStyle}>
-      <Snackbar open={snackbarOpen} autoHideDuration={3000}>
-        <Alert severity="success" variant="filled">Asset Modification Created Successfully!</Alert>
+      <Snackbar
+        anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+        open={snackbar.open}
+        autoHideDuration={6000}
+        onClose={() => setSnackbar((prev) => ({ ...prev, open: false }))}
+      >
+        <Alert
+          onClose={() => setSnackbar((prev) => ({ ...prev, open: false }))}
+          severity={snackbar.severity}
+          sx={{ width: "100%", whiteSpace: "pre-line" }}
+        >
+          {snackbar.message}
+        </Alert>
       </Snackbar>
 
       <div style={formContainerStyle}>
+        {/* Customer and Invoice Selection */}
+        <div style={cardStyle}>
+          <div style={cardHeaderContainerStyle}>
+            <div style={iconStyle}>👤</div>
+            <h3 style={cardHeaderStyle}>Customer & Asset Selection</h3>
+          </div>
+          
+          <div style={fieldsContainerStyle}>
+            <div style={fieldContainerStyle}>
+              <label style={labelStyle}>Select Customer</label>
+              <select
+                style={inputStyle}
+                value={selectedCustomer || ''}
+                onChange={(e) => setSelectedCustomer(Number(e.target.value))}
+              >
+                <option value="">Select a Customer</option>
+                {customers.map((customer) => (
+                  <option key={customer.customer_id} value={customer.customer_id}>
+                    {customer.customer_name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            
+            <div style={fieldContainerStyle}>
+              <label style={labelStyle}>Select Invoice</label>
+              <select
+                style={inputStyle}
+                value={selectedInvoice || ''}
+                onChange={(e) => setSelectedInvoice(Number(e.target.value))}
+                disabled={!selectedCustomer}
+              >
+                <option value="">Select an Invoice</option>
+                {selectedCustomer && invoices
+                  .filter(invoice => invoice.customer_id === selectedCustomer)
+                  .map((invoice) => (
+                    <option key={invoice.invoice_id} value={invoice.invoice_id}>
+                      {invoice.invoice_number} - {invoice.invoice_date}
+                    </option>
+                  ))}
+              </select>
+            </div>
+            
+            <div style={fieldContainerStyle}>
+              <label style={labelStyle}>Asset ID</label>
+              <select
+                style={inputStyle}
+                value={formData.assetId}
+                onChange={(e) => handleInputChange('assetId', e.target.value)}
+                disabled={!selectedInvoice}
+              >
+                <option value="">Select an Asset</option>
+                {availableAssets.map((asset) => (
+                  <option key={asset.asset_id} value={asset.asset_id}>
+                    {asset.asset_id} - {asset.product_name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+        </div>
+
         {/* Asset Information Section */}
         <div style={cardStyle}>
           <div style={cardHeaderContainerStyle}>
             <div style={iconStyle}>🏢</div>
-            <h3 style={cardHeaderStyle}>Asset Information</h3>
+            <h3 style={cardHeaderStyle}>Asset Modification</h3>
           </div>
           
-          <div style={uploadContainerStyle}>
-            <label style={uploadButtonStyle}>
-              <input type="file" accept="image/png, image/jpeg" style={{ display: 'none' }} onChange={handleFileUpload} />
-              <span style={uploadIconStyle}>☁️</span>
-              Upload Asset Image
-            </label>
-            <span style={uploadHintStyle}>Supported formats: JPG, PNG (max size: 2MB)</span>
-          </div>
-
           <div style={fieldsContainerStyle}>
-            <Field label="Asset ID" placeholder="Auto-generated Asset ID" value={formData.assetId} onChange={(v) => handleInputChange('assetId', v)} />
-            <Field label="Asset Name" placeholder="Enter Asset Name" value={formData.assetName} onChange={(v) => handleInputChange('assetName', v)} />
-            <Field label="Modification Type" placeholder="Enter Modification Type" value={formData.modificationType} onChange={(v) => handleInputChange('modificationType', v)} />
+            <Field 
+              label="Product name" 
+              placeholder="Product name" 
+              value={formData.product_name} 
+              onChange={(v) => handleInputChange('product_name', v)} 
+              disabled
+            />
+            
+            <Field 
+              label="Modification Type" 
+              placeholder="Enter Modification Type" 
+              value={formData.modificationType} 
+              onChange={(v) => handleInputChange('modificationType', v)} 
+            />
           </div>
         </div>
+
+        {/* Hardware Specifications Section */}
+      <div style={cardStyle}>
+        <div style={cardHeaderContainerStyle}>
+          <div style={iconStyle}>💾</div>
+          <h3 style={cardHeaderStyle}>Hardware Specifications</h3>
+        </div>
+        <div style={fieldsContainerStyle}>
+          <Field 
+            label="Current RAM (GB)" 
+            placeholder="Current RAM capacity" 
+            type="number" 
+            value={formData.currentRAM} 
+            onChange={(v) => handleInputChange('currentRAM', v)} 
+            disabled
+          />
+          <Field 
+            label="New RAM (GB)" 
+            placeholder="New RAM capacity" 
+            type="number" 
+            value={formData.newRAM} 
+            onChange={(v) => handleInputChange('newRAM', v)} 
+          />
+          <Field 
+            label="New RAM Cost ($)" 
+            placeholder="Enter RAM upgrade cost" 
+            type="number" 
+            value={formData.newRAMCost} 
+            onChange={(v) => handleInputChange('newRAMCost', v)} 
+          />
+          <Field 
+            label="Current Storage (GB)" 
+            placeholder="Current storage capacity" 
+            type="number" 
+            value={formData.currentStorage} 
+            onChange={(v) => handleInputChange('currentStorage', v)} 
+            disabled
+          />
+          <Field 
+            label="New Storage (GB)" 
+            placeholder="New storage capacity" 
+            type="number" 
+            value={formData.newStorage} 
+            onChange={(v) => handleInputChange('newStorage', v)} 
+          />
+          <Field 
+            label="New Storage Cost ($)" 
+            placeholder="Enter storage upgrade cost" 
+            type="number" 
+            value={formData.newStorageCost} 
+            onChange={(v) => handleInputChange('newStorageCost', v)} 
+          />
+        </div>
+      </div>
 
         {/* Request & Approval Details Section */}
         <div style={{ ...cardStyle, gridColumn: 'span 2' }}>
@@ -127,54 +385,40 @@ const AssetModificationTrackerAdd = () => {
             <Field label="Approved By" placeholder="Enter Approved By" value={formData.approvedBy} onChange={(v) => handleInputChange('approvedBy', v)} />
             <Field label="Approval Date" placeholder="" type="date" value={formData.approvalDate} onChange={(v) => handleInputChange('approvalDate', v)} />
             <Field label="Estimated Cost" placeholder="Enter Estimated Cost" type="number" value={formData.estimatedCost} onChange={(v) => handleInputChange('estimatedCost', v)} />
-            <Field label="Status" placeholder="Enter Status" value={formData.status} onChange={(v) => handleInputChange('status', v)} />
             <Field label="Remarks" placeholder="Enter Remarks" value={formData.remarks} onChange={(v) => handleInputChange('remarks', v)} />
-          </div>
-        </div>
-
-        {/* Control Section */}
-        <div style={cardStyle}>
-          <div style={cardHeaderContainerStyle}>
-            <div style={iconStyle}>🎛️</div>
-            <h3 style={cardHeaderStyle}>Control</h3>
-          </div>
-          <div style={checkboxContainerStyle}>
-            <label style={checkboxLabelStyle}>
-              <input type="checkbox" style={checkboxStyle} checked={formData.activeStatus} onChange={(e) => handleInputChange('activeStatus', e.target.checked)} />
-              <div style={{
-                ...checkboxCustomStyle,
-                backgroundColor: formData.activeStatus ? '#2563eb' : '#ffffff',
-                borderColor: formData.activeStatus ? '#2563eb' : '#d1d5db',
-              }}>
-                {formData.activeStatus && <span style={checkmarkStyle}>✓</span>}
-              </div>
-              <div>
-                <span style={checkboxTextStyle}>Active Status</span>
-                <span style={checkboxDescStyle}>Enable this asset modification tracker for use in the system</span>
-              </div>
-            </label>
           </div>
         </div>
       </div>
 
       {/* Action Buttons */}
       <div style={buttonContainerStyle}>
-        <button style={cancelBtnStyle}>Cancel</button>
-        <button style={createBtnStyle} onClick={handleSubmit}>Create</button>
+        <button style={cancelBtnStyle} onClick={() => navigate("/dashboard/operations/asset_modification_tracker")}>
+          Cancel
+        </button>
+        <button style={createBtnStyle} onClick={handleSubmit} disabled={!formData.assetId}>
+          Create
+        </button>
       </div>
     </div>
   );
 };
 
-// Reusable Field Component
-const Field = ({ label, placeholder, type = 'text', value, onChange }) => (
+// Enhanced Field Component with disabled prop
+const Field = ({ label, placeholder, type = 'text', value, onChange, disabled = false }) => (
   <div style={fieldContainerStyle}>
     <label style={labelStyle}>{label}</label>
-    <input type={type} placeholder={placeholder} style={inputStyle} value={value} onChange={(e) => onChange(e.target.value)} />
+    <input 
+      type={type} 
+      placeholder={placeholder} 
+      style={{ ...inputStyle, backgroundColor: disabled ? '#f3f4f6' : '#ffffff' }} 
+      value={value} 
+      onChange={(e) => onChange(e.target.value)} 
+      disabled={disabled}
+    />
   </div>
 );
 
-// Styles (same as before – preserved)
+// Styles remain the same as in your original code
 const containerStyle = {
   padding: '2rem',
   fontFamily: '"Inter", "Segoe UI", -apple-system, BlinkMacSystemFont, sans-serif',
@@ -221,27 +465,6 @@ const cardHeaderStyle = {
   margin: 0,
 };
 
-const uploadContainerStyle = {
-  marginBottom: '1.5rem',
-};
-
-const uploadButtonStyle = {
-  display: 'inline-flex',
-  alignItems: 'center',
-  gap: '0.5rem',
-  padding: '0.75rem 1rem',
-  backgroundColor: '#2563eb',
-  color: 'white',
-  borderRadius: '8px',
-  cursor: 'pointer',
-  fontSize: '0.875rem',
-  fontWeight: '500',
-  marginBottom: '0.5rem',
-  transition: 'background-color 0.2s',
-};
-
-const uploadIconStyle = { fontSize: '1rem' };
-const uploadHintStyle = { fontSize: '0.75rem', color: '#6b7280' };
 const fieldsContainerStyle = { display: 'flex', flexDirection: 'column', gap: '1rem' };
 const fieldsGridStyle = { display: 'grid', gap: '1rem', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))' };
 const fieldContainerStyle = { display: 'flex', flexDirection: 'column' };
@@ -250,18 +473,6 @@ const inputStyle = {
   width: '100%', padding: '0.75rem', borderRadius: '8px',
   border: '1px solid #d1d5db', fontSize: '0.875rem', backgroundColor: '#ffffff'
 };
-
-const checkboxContainerStyle = { marginTop: '0.5rem' };
-const checkboxLabelStyle = { display: 'flex', alignItems: 'flex-start', cursor: 'pointer', gap: '0.75rem' };
-const checkboxStyle = { display: 'none' };
-const checkboxCustomStyle = {
-  width: '20px', height: '20px', borderRadius: '4px',
-  border: '2px solid #d1d5db', backgroundColor: '#ffffff',
-  display: 'flex', alignItems: 'center', justifyContent: 'center'
-};
-const checkmarkStyle = { color: '#ffffff', fontSize: '12px', fontWeight: 'bold' };
-const checkboxTextStyle = { fontSize: '0.875rem', fontWeight: '500', color: '#374151' };
-const checkboxDescStyle = { fontSize: '0.75rem', color: '#6b7280', marginTop: '0.25rem' };
 
 const buttonContainerStyle = {
   display: 'flex', justifyContent: 'flex-end', gap: '0.75rem',

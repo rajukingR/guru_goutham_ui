@@ -21,7 +21,7 @@ import {
 } from "@mui/material";
 import { Add, Remove } from "@mui/icons-material";
 
-import API_URL from "../../../api/Api_url";
+import API_URL, { IMAGE_API_URL } from "../../../api/Api_url";
 import { useInventory } from "../../../contexts/InventoryContext";
 
 const SalesOrdersEditLayoutPage = ({ product }) => {
