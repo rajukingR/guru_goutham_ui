@@ -16,9 +16,9 @@ import {
   Typography,
 } from "@mui/material";
 import { Add, Remove } from "@mui/icons-material";
-import { useNavigate, useParams } from "react-router-dom";
-import API_URL from "../../api/Api_url";
-import { useInventory } from "../../contexts/InventoryContext";
+import { useNavigate } from "react-router-dom";
+import API_URL from "../../../api/Api_url";
+import { useInventory } from "../../../contexts/InventoryContext";
 
 // Styles (same as in your original code)
 const containerStyle = {
@@ -377,9 +377,17 @@ const Field = memo(
   )
 );
 
-const DeliveryChallanEditPage = () => {
+const generateDispatchOrderId = () => {
+  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+  let randomPart = "";
+  for (let i = 0; i < 6; i++) {
+    randomPart += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return `DC-${randomPart}`;
+};
+
+const DispatchOrdersAddForm = ({ product }) => {
   const navigate = useNavigate();
-  const { id } = useParams(); // Get the delivery challan ID from URL params
 
   // State for form data
   const { inventoryData } = useInventory();
@@ -391,22 +399,22 @@ const DeliveryChallanEditPage = () => {
   };
 
   const [formData, setFormData] = useState({
-    dc_id: "",
-    dc_title: "",
-    is_dc: false,
+    dispatch_order_id: "",
+    dispatch_order_title: "",
+    is_dispatch_order: false,
     order_id: "",
     customer_code: "",
     order_number: "",
     payment_type: "",
-    dc_date: new Date().toISOString().split("T")[0],
-    dc_status: "Dispatched",
+    dispatch_order_date: new Date().toISOString().split("T")[0],
+    dispatch_order_status: "Dispatched",
     dealer_reference: "",
     email: "",
     gst_number: "",
     pan_number: "",
     remarks: "",
-    type: "Sale",
-    regular_dc: true,
+    transaction_type: "",
+    regular_dispatch_order: true,
     industry: "",
     shipping_ordered_by: "",
     shipping_phone_number: "",
@@ -417,16 +425,11 @@ const DeliveryChallanEditPage = () => {
     city: "",
     state: "",
     country: "India",
-    vehicle_number: "",
-    delivery_person_name: "",
-    delivery_person_phone_number: "",
-    receiver_name: "",
-    receiver_phone_number: "",
     items: [],
   });
 
   // State for UI and data
-  const [dispatchOrders, setDispatchOrders] = useState([]);
+  const [orders, setOrders] = useState([]);
   const [products, setProducts] = useState([]);
   const [selectedProductIds, setSelectedProductIds] = useState([]);
   const [quantities, setQuantities] = useState({});
@@ -442,50 +445,28 @@ const DeliveryChallanEditPage = () => {
     severity: "success",
   });
 
-  // Fetch delivery challan data and other required data on component mount
+  useEffect(() => {
+    setFormData((prev) => ({
+      ...prev,
+      dispatch_order_id: generateDispatchOrderId(),
+    }));
+  }, []);
+
+  // Fetch orders and products on component mount
   useEffect(() => {
     const fetchData = async () => {
       try {
-        // Fetch the delivery challan to edit
-        const dcResponse = await fetch(`${API_URL}/delivery-challans/${id}`);
-        if (!dcResponse.ok) throw new Error("Failed to fetch delivery challan");
-        const dcData = await dcResponse.json();
-        
-        // Set form data with the fetched delivery challan
-        setFormData({
-          ...dcData,
-          dc_date: dcData.dc_date.split('T')[0] // Format date if needed
-        });
-
-        // Set selected products and quantities
-        const productIds = dcData.items.map(item => item.product_id);
-        setSelectedProductIds(productIds);
-        
-        const newQuantities = {};
-        dcData.items.forEach(item => {
-          newQuantities[item.product_id] = item.quantity;
-        });
-        setQuantities(newQuantities);
-
-        // Set device IDs
-        const newDeviceIds = {};
-        dcData.items.forEach(item => {
-          newDeviceIds[item.product_id] = item.device_ids || [];
-        });
-        setDeviceIds(newDeviceIds);
-
-        // Fetch approved dispatch orders
-        const dispatchOrderResponse = await fetch(`${API_URL}/dispatch-orders/approved`);
-        if (!dispatchOrderResponse.ok) throw new Error("Failed to fetch dispatch orders");
-        const dispatchOrderData = await dispatchOrderResponse.json();
-        setDispatchOrders(dispatchOrderData);
+        // Fetch approved orders
+        const orderResponse = await fetch(`${API_URL}/orders/order-approved`);
+        if (!orderResponse.ok) throw new Error("Failed to fetch orders");
+        const orderData = await orderResponse.json();
+        setOrders(orderData);
 
         // Fetch products
         const prodResponse = await fetch(`${API_URL}/product-templete`);
         if (!prodResponse.ok) throw new Error("Failed to fetch products");
         const prodData = await prodResponse.json();
         setProducts(prodData);
-
       } catch (error) {
         console.error("Error fetching data:", error);
         setSnackbar({
@@ -497,47 +478,52 @@ const DeliveryChallanEditPage = () => {
     };
 
     fetchData();
-  }, [id]);
+  }, []);
 
-  // Handle dispatch order selection
+  // Handle order selection
   const handleOrderSelect = (orderId) => {
-    const selectedOrder = dispatchOrders.find(
+    const selectedOrder = orders.find(
       (order) => order.id === parseInt(orderId)
     );
     if (!selectedOrder) return;
 
-    const { contact, items } = selectedOrder;
+    const { personalDetails, address, items } = selectedOrder;
 
-    // Set device IDs from the order items
+    // Set available asset IDs for each product
+    const newAvailableAssetIds = {};
     const newDeviceIds = {};
+
     items.forEach((item) => {
+      newAvailableAssetIds[item.product_id] = item.available_asset_ids || [];
       newDeviceIds[item.product_id] = item.device_ids || [];
     });
+
+    setAvailableAssetIds(newAvailableAssetIds);
     setDeviceIds(newDeviceIds);
 
     setFormData({
       ...formData,
       order_id: selectedOrder.id,
-      customer_code: selectedOrder.customer_code,
-      order_number: selectedOrder.order_number,
+      customer_code: selectedOrder.customer_id,
+      order_number: selectedOrder.order_id,
       payment_type: selectedOrder.payment_type,
-      email: selectedOrder.email,
-      gst_number: selectedOrder.gst_number,
-      shipping_ordered_by: selectedOrder.shipping_ordered_by,
-      shipping_phone_number: selectedOrder.shipping_phone_number,
-      shipping_name: selectedOrder.shipping_name,
-      street: selectedOrder.street || "",
-      landmark: selectedOrder.landmark || "",
-      pincode: selectedOrder.pincode,
-      city: selectedOrder.city,
-      state: selectedOrder.state,
-      country: selectedOrder.country || "India",
-      type: selectedOrder.type,
+      email: personalDetails.email,
+      gst_number: personalDetails.gst_number,
+      shipping_ordered_by: `${personalDetails.first_name} ${personalDetails.last_name}`,
+      shipping_phone_number: personalDetails.phone_number,
+      shipping_name: `${personalDetails.first_name} ${personalDetails.last_name}`,
+      street: address.street || "",
+      landmark: address.landmark || "",
+      pincode: address.pincode,
+      city: address.city,
+      state: address.state,
+      country: address.country,
+      transaction_type: selectedOrder.transaction_type,
       items: items.map((item) => ({
         product_id: item.product_id,
         product_name: item.product_name,
-        quantity: item.quantity,
-        item_total_value: item.total_price,
+        quantity: item.requested_quantity,
+        item_total_value: item.item_total_value,
         device_ids: item.device_ids || [],
       })),
     });
@@ -549,7 +535,7 @@ const DeliveryChallanEditPage = () => {
     // Set quantities
     const newQuantities = {};
     items.forEach((item) => {
-      newQuantities[item.product_id] = item.quantity;
+      newQuantities[item.product_id] = item.requested_quantity;
     });
     setQuantities(newQuantities);
   };
@@ -659,6 +645,37 @@ const DeliveryChallanEditPage = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
+    // Validate Asset IDs
+    let hasErrors = false;
+    const newDeviceIdErrors = {};
+
+    selectedProductIds.forEach((productId) => {
+      const qty = quantities[productId] || 0;
+      const ids = deviceIds[productId] || [];
+
+      if (ids.length !== qty) {
+        newDeviceIdErrors[productId] = `Please select exactly ${qty} Asset IDs`;
+        hasErrors = true;
+      } else {
+        const emptyIds = ids.filter((id) => !id.trim());
+        if (emptyIds.length > 0) {
+          newDeviceIdErrors[productId] = `All Asset IDs are required`;
+          hasErrors = true;
+        }
+      }
+    });
+
+    setDeviceIdErrors(newDeviceIdErrors);
+
+    if (hasErrors) {
+      setSnackbar({
+        open: true,
+        message: "Please provide all required Asset IDs",
+        severity: "error",
+      });
+      return;
+    }
+
     try {
       // Prepare items data
       const items = selectedProductIds.map((productId) => {
@@ -691,36 +708,37 @@ const DeliveryChallanEditPage = () => {
 
       const payload = {
         ...formData,
+        type: formData.transaction_type,
         items,
       };
 
-      console.log("Updating payload:", payload);
+      console.log("Submitting payload:", payload);
 
-      const response = await fetch(`${API_URL}/delivery-challans/${id}`, {
-        method: "PUT",
+      const response = await fetch(`${API_URL}/dispatch-orders/create`, {
+        method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify(payload),
       });
 
-      if (!response.ok) throw new Error("Failed to update delivery challan");
+      if (!response.ok) throw new Error("Failed to create dispatch order");
 
       const result = await response.json();
       setSnackbar({
         open: true,
-        message: "Delivery Challan updated successfully!",
+        message: "Dispatch Order created successfully!",
         severity: "success",
       });
 
       setTimeout(() => {
-        navigate("/dashboard/operations");
+        navigate("/dashboard/crm/dispatch-orders");
       }, 1500);
     } catch (error) {
-      console.error("Error updating delivery challan:", error);
+      console.error("Error creating dispatch order:", error);
       setSnackbar({
         open: true,
-        message: "Error updating delivery challan: " + error.message,
+        message: "Error creating dispatch order: " + error.message,
         severity: "error",
       });
     }
@@ -744,47 +762,49 @@ const DeliveryChallanEditPage = () => {
       </Snackbar>
 
       <div style={headerStyle}>
-        <h1 style={titleStyle}>Edit Delivery Challan</h1>
-        <p style={subtitleStyle}>
-          Edit the details below for this delivery challan
-        </p>
+        <h1 style={titleStyle}>Create Dispatch Order</h1>
       </div>
 
       <form onSubmit={handleSubmit}>
         <div style={formContainerStyle}>
-          {/* Delivery Details Section */}
+          {/* Order Details Section */}
           <div style={cardStyle}>
             <div style={cardHeaderContainerStyle}>
               <div style={iconStyle}>📦</div>
-              <h3 style={cardHeaderStyle}>Delivery Details</h3>
+              <h3 style={cardHeaderStyle}>Order Details</h3>
             </div>
             <div style={fieldsGridStyle}>
               <Field
-                label="DC ID"
-                name="dc_id"
-                placeholder="Enter DC ID"
-                value={formData.dc_id}
-                onChange={handleInputChange}
-                readOnly
-              />
-              <Field
-                label="DC Title"
-                name="dc_title"
-                placeholder="Enter DC Title"
-                value={formData.dc_title}
+                label="Dispatch Order ID"
+                name="dispatch_order_id"
+                placeholder="Enter Dispatch Order ID"
+                value={formData.dispatch_order_id}
                 onChange={handleInputChange}
               />
               <Field
-                label="Dispatch Order Details"
+                label="Dispatch Order Title"
+                name="dispatch_order_title"
+                placeholder="Enter Dispatch Order Title"
+                value={formData.dispatch_order_title}
+                onChange={handleInputChange}
+              />
+              <Field
+                label="Order Details"
                 name="order_id"
                 type="select"
-                placeholder="Select Dispatch Order"
+                placeholder="Select Order"
                 value={formData.order_id}
                 onChange={(e) => handleOrderSelect(e.target.value)}
-                options={dispatchOrders.map((order) => ({
-                  value: order.id,
-                  label: `${order.dispatch_order_id} - ${order.shipping_name || ""}`,
-                }))}
+                options={orders.map((order) => {
+                  const customer =
+                    order.personalDetails || order.personal_details || {};
+                  return {
+                    value: order.id,
+                    label: `${order.order_id} - ${customer.first_name || ""} ${
+                      customer.last_name || ""
+                    }`,
+                  };
+                })}
               />
 
               <Field
@@ -796,6 +816,29 @@ const DeliveryChallanEditPage = () => {
                 required
               />
               <Field
+  label="Transaction Type"
+  name="transaction_type"
+  type="select"
+  placeholder="Select Type"
+  value={formData.transaction_type}
+  onChange={(e) => {
+    handleInputChange(e);
+    // Clear payment type when switching to Buy
+    if (e.target.value === "Buy") {
+      setFormData(prev => ({
+        ...prev,
+        payment_type: "" // Clear payment type for Buy transactions
+      }));
+    }
+  }}
+  options={[
+    { value: "Rent", label: "Rent" },
+    { value: "Buy", label: "Buy" },
+  ]}
+/>
+
+{formData.transaction_type === "Rent" && (
+  <Field
                 label="Payment type"
                 name="payment_type"
                 placeholder="Payment Type"
@@ -803,24 +846,27 @@ const DeliveryChallanEditPage = () => {
                 onChange={handleInputChange}
                 disabled
               />
+)}
+
+              
               <Field
-                label="DC Status"
-                name="dc_status"
+                label="Dispatch Order Status"
+                name="dispatch_order_status"
                 type="select"
                 placeholder="Select Status"
-                value={formData.dc_status}
+                value={formData.dispatch_order_status}
                 onChange={handleInputChange}
                 options={[
                   { value: "Pending", label: "Pending" },
-                  { value: "Delivered", label: "Delivered" },
+                  { value: "Approved", label: "Approved" },
                 ]}
                 required
               />
               <Field
-                label="DC Date"
-                name="dc_date"
+                label="Dispatch Order Date"
+                name="dispatch_order_date"
                 type="date"
-                value={formData.dc_date}
+                value={formData.dispatch_order_date}
                 onChange={handleInputChange}
               />
               <Field
@@ -839,33 +885,22 @@ const DeliveryChallanEditPage = () => {
                 onChange={handleInputChange}
                 required
               />
-              
-              <Field
-                label="Transaction Type"
-                name="type"
-                type="select"
-                placeholder="Select Type"
-                value={formData.type}
-                onChange={handleInputChange}
-                options={[
-                  { value: "Rent", label: "Rent" },
-                  { value: "Sale", label: "Sale" },
-                  { value: "Lease", label: "Lease" },
-                ]}
-              />
-              <Field
-                label="Industry"
-                name="industry"
-                placeholder="Enter Industry"
-                value={formData.industry}
-                onChange={handleInputChange}
-              />
+             
               <Field
                 label="Remarks"
                 name="remarks"
                 placeholder="Enter Remarks"
                 type="textarea"
                 value={formData.remarks}
+                onChange={handleInputChange}
+              />
+              
+              
+              <Field
+                label="Industry"
+                name="industry"
+                placeholder="Enter Industry"
+                value={formData.industry}
                 onChange={handleInputChange}
               />
             </div>
@@ -948,54 +983,6 @@ const DeliveryChallanEditPage = () => {
               />
             </div>
           </div>
-
-          {/* Other Details Section */}
-          <div style={cardStyle}>
-            <div style={cardHeaderContainerStyle}>
-              <div style={iconStyle}>📝</div>
-              <h3 style={cardHeaderStyle}>Other Details</h3>
-            </div>
-            <div style={fieldsGridStyle}>
-              <Field
-                label="Vehicle Number"
-                name="vehicle_number"
-                placeholder="Enter Vehicle Number"
-                value={formData.vehicle_number}
-                onChange={handleInputChange}
-                required
-              />
-              <Field
-                label="Delivery Person Name"
-                name="delivery_person_name"
-                placeholder="Enter Name"
-                value={formData.delivery_person_name}
-                onChange={handleInputChange}
-              />
-              <Field
-                label="Delivery Person Phone"
-                name="delivery_person_phone_number"
-                placeholder="Enter Phone"
-                type="tel"
-                value={formData.delivery_person_phone_number}
-                onChange={handleInputChange}
-              />
-              <Field
-                label="Receiver Name"
-                name="receiver_name"
-                placeholder="Enter Name"
-                value={formData.receiver_name}
-                onChange={handleInputChange}
-              />
-              <Field
-                label="Receiver Phone Number"
-                name="receiver_phone_number"
-                placeholder="Enter Phone"
-                type="tel"
-                value={formData.receiver_phone_number}
-                onChange={handleInputChange}
-              />
-            </div>
-          </div>
         </div>
 
         {/* Select Products Section */}
@@ -1022,7 +1009,7 @@ const DeliveryChallanEditPage = () => {
                 marginBottom: "1rem",
               }}
             >
-              {showProductTable ? "Hide Product List" : "Edit Products"}
+              {showProductTable ? "Hide Product List" : "Add Products"}
             </button>
 
             {showProductTable && (
@@ -1086,10 +1073,12 @@ const DeliveryChallanEditPage = () => {
                         <TableCell sx={{ color: "#fff" }}>
                           Available Quantity
                         </TableCell>
+
                         <TableCell sx={{ color: "#fff" }}>Quantity</TableCell>
                         <TableCell sx={{ color: "#fff" }}>
                           Selected Asset IDs
                         </TableCell>
+                        <TableCell sx={{ color: "#fff" }}>Choose Asset IDs</TableCell>
                         <TableCell sx={{ color: "#fff" }}>Price</TableCell>
                       </TableRow>
                     </TableHead>
@@ -1118,6 +1107,7 @@ const DeliveryChallanEditPage = () => {
                             <TableCell>{product.storage}</TableCell>
                             <TableCell>{product.graphics}</TableCell>
                             <TableCell>{getAvailableQty(product.id)}</TableCell>
+
                             <TableCell>
                               <TextField
                                 type="number"
@@ -1132,6 +1122,122 @@ const DeliveryChallanEditPage = () => {
                             </TableCell>
                             <TableCell>
                               {(deviceIds[product.id] || []).join(", ")}
+                            </TableCell>
+                            <TableCell>
+                              {availableAssetIds[product.id]?.length > 0 && (
+                                <Box
+                                  display="flex"
+                                  flexDirection="column"
+                                  gap={1}
+                                >
+                                  <TextField
+                                    size="small"
+                                    placeholder="Search Asset ID"
+                                    value={assetSearchTerms[product.id] || ""}
+                                    onChange={(e) => {
+                                      const value = e.target.value;
+                                      setAssetSearchTerms((prev) => ({
+                                        ...prev,
+                                        [product.id]: value,
+                                      }));
+                                    }}
+                                  />
+
+                                  {(
+                                    assetSearchTerms[product.id] || ""
+                                  ).trim() !== "" && (
+                                    <Box
+                                      sx={{
+                                        maxHeight: 150,
+                                        overflowY: "auto",
+                                        border: "1px solid #e0e0e0",
+                                        borderRadius: 1,
+                                        p: 1,
+                                      }}
+                                    >
+                                      {availableAssetIds[product.id]
+                                        .filter((assetId) =>
+                                          assetId
+                                            .toLowerCase()
+                                            .includes(
+                                              (
+                                                assetSearchTerms[product.id] ||
+                                                ""
+                                              ).toLowerCase()
+                                            )
+                                        )
+                                        .map((assetId) => (
+                                          <Box
+                                            key={assetId}
+                                            onClick={() => {
+                                              const currentDeviceIds =
+                                                deviceIds[product.id] || [];
+                                              const maxQty =
+                                                quantities[product.id] || 0;
+
+                                              if (
+                                                currentDeviceIds.includes(
+                                                  assetId
+                                                )
+                                              ) {
+                                                setDeviceIdErrors((prev) => ({
+                                                  ...prev,
+                                                  [product.id]: `Asset ID "${assetId}" is already selected.`,
+                                                }));
+                                                return;
+                                              }
+
+                                              if (
+                                                currentDeviceIds.length >=
+                                                maxQty
+                                              ) {
+                                                setDeviceIdErrors((prev) => ({
+                                                  ...prev,
+                                                  [product.id]: `Only ${maxQty} asset ID(s) allowed.`,
+                                                }));
+                                                return;
+                                              }
+
+                                              setDeviceIdErrors((prev) => {
+                                                const newErrors = { ...prev };
+                                                delete newErrors[product.id];
+                                                return newErrors;
+                                              });
+
+                                              setDeviceIds((prev) => ({
+                                                ...prev,
+                                                [product.id]: [
+                                                  ...currentDeviceIds,
+                                                  assetId,
+                                                ],
+                                              }));
+                                            }}
+                                            sx={{
+                                              p: 0.5,
+                                              cursor: "pointer",
+                                              backgroundColor: (
+                                                deviceIds[product.id] || []
+                                              ).includes(assetId)
+                                                ? "#e3f2fd"
+                                                : "transparent",
+                                              "&:hover": {
+                                                backgroundColor: "#f5f5f5",
+                                              },
+                                            }}
+                                          >
+                                            {assetId}
+                                          </Box>
+                                        ))}
+                                    </Box>
+                                  )}
+
+                                  {deviceIdErrors[product.id] && (
+                                    <Typography color="error" variant="caption">
+                                      {deviceIdErrors[product.id]}
+                                    </Typography>
+                                  )}
+                                </Box>
+                              )}
                             </TableCell>
                             <TableCell>
                               {formData.type === "Rent" ? (
@@ -1159,7 +1265,6 @@ const DeliveryChallanEditPage = () => {
           <button
             type="button"
             style={cancelBtnStyle}
-            onClick={() => navigate("/dashboard/operations")}
             onMouseEnter={(e) => (e.target.style.backgroundColor = "#e5e7eb")}
             onMouseLeave={(e) => (e.target.style.backgroundColor = "#f3f4f6")}
           >
@@ -1178,7 +1283,7 @@ const DeliveryChallanEditPage = () => {
                 fontSize: "1rem",
               }}
             >
-              Update Delivery Challan
+              Create Dispatch Order
             </button>
           </Box>
         </div>
@@ -1187,4 +1292,4 @@ const DeliveryChallanEditPage = () => {
   );
 };
 
-export default DeliveryChallanEditPage;
+export default DispatchOrdersAddForm;

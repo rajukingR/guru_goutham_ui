@@ -429,35 +429,35 @@ const SalesOrdersEditLayoutPage = ({ product }) => {
     e.preventDefault();
 
     // Validate Asset IDs
-    let hasErrors = false;
-    const newDeviceIdErrors = {};
+    // let hasErrors = false;
+    // const newDeviceIdErrors = {};
 
-    selectedProductIds.forEach((productId) => {
-      const qty = quantities[productId] || 0;
-      const ids = deviceIds[productId] || [];
+    // selectedProductIds.forEach((productId) => {
+    //   const qty = quantities[productId] || 0;
+    //   const ids = deviceIds[productId] || [];
 
-      if (ids.length !== qty) {
-        newDeviceIdErrors[productId] = `Please add ${qty} Asset IDs`;
-        hasErrors = true;
-      } else {
-        const emptyIds = ids.filter((id) => !id.trim());
-        if (emptyIds.length > 0) {
-          newDeviceIdErrors[productId] = `All Asset IDs are required`;
-          hasErrors = true;
-        }
-      }
-    });
+    //   if (ids.length !== qty) {
+    //     newDeviceIdErrors[productId] = `Please add ${qty} Asset IDs`;
+    //     hasErrors = true;
+    //   } else {
+    //     const emptyIds = ids.filter((id) => !id.trim());
+    //     if (emptyIds.length > 0) {
+    //       newDeviceIdErrors[productId] = `All Asset IDs are required`;
+    //       hasErrors = true;
+    //     }
+    //   }
+    // });
 
-    setDeviceIdErrors(newDeviceIdErrors);
+    // setDeviceIdErrors(newDeviceIdErrors);
 
-    if (hasErrors) {
-      setSnackbar({
-        open: true,
-        message: "Please provide all required Asset IDs",
-        severity: "error",
-      });
-      return;
-    }
+    // if (hasErrors) {
+    //   setSnackbar({
+    //     open: true,
+    //     message: "Please provide all required Asset IDs",
+    //     severity: "error",
+    //   });
+    //   return;
+    // }
 
     // Prepare items array with Asset IDs
     const orderItems = selectedProductIds.map((productId) => {
@@ -476,35 +476,50 @@ const SalesOrdersEditLayoutPage = ({ product }) => {
     };
 
     try {
-      const response = await fetch(`${API_URL}/orders/${id}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(payload),
-      });
+  const response = await fetch(`${API_URL}/orders/${id}`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
 
-      if (!response.ok) {
-        throw new Error("Failed to update order");
-      }
+  if (!response.ok) {
+    const errorData = await response.json(); // read error body
 
-      const data = await response.json();
-      setSnackbar({
-        open: true,
-        message: "Order updated successfully!",
-        severity: "success",
-      });
+    // Check if error contains a list of errors
+    if (errorData.errors && Array.isArray(errorData.errors)) {
+      const messages = errorData.errors.map(
+        (err) =>
+          `• ${err.message}` // Customize this line if needed
+      ).join("\n");
 
-      setTimeout(() => {
-        navigate("/dashboard/crm/orders");
-      }, 1500);
-    } catch (err) {
-      setSnackbar({
-        open: true,
-        message: "Failed to update order",
-        severity: "error",
-      });
+      throw new Error(`${errorData.message || "Update failed"}\n${messages}`);
     }
+
+    // fallback generic error
+    throw new Error(errorData.message || "Failed to update order");
+  }
+
+  const data = await response.json();
+  setSnackbar({
+    open: true,
+    message: "Order updated successfully!",
+    severity: "success",
+  });
+
+  setTimeout(() => {
+    navigate("/dashboard/crm/orders");
+  }, 1500);
+
+} catch (err) {
+  setSnackbar({
+    open: true,
+    message: err.message,
+    severity: "error",
+  });
+}
+
   };
   if (loading.order) {
     return (
@@ -978,162 +993,146 @@ const SalesOrdersEditLayoutPage = ({ product }) => {
                 </Box>
 
                 <TableContainer component={Paper}>
-                  <Table size="small">
-                    <TableHead>
-                      <TableRow sx={{ backgroundColor: "#0d47a1" }}>
-                        <TableCell padding="checkbox" sx={{ color: "#fff" }}>
-                          <Checkbox sx={{ color: "#fff" }} disabled />
-                        </TableCell>
-                        <TableCell sx={{ color: "#fff" }}>
-                          Product Name
-                        </TableCell>
-                        <TableCell sx={{ color: "#fff" }}>Brand</TableCell>
-                        <TableCell sx={{ color: "#fff" }}>
-                          Specifications
-                        </TableCell>
-                        <TableCell sx={{ color: "#fff" }}>
-                          Available Qty
-                        </TableCell>
-                        <TableCell sx={{ color: "#fff" }}>
-                          Price per Piece
-                        </TableCell>
-                        <TableCell sx={{ color: "#fff" }}>Quantity</TableCell>
-                        <TableCell sx={{ color: "#fff" }}>Asset IDs</TableCell>
-                      </TableRow>
-                    </TableHead>
+  <Table size="small">
+    <TableHead>
+      <TableRow sx={{ backgroundColor: "#0d47a1" }}>
+        <TableCell padding="checkbox" sx={{ color: "#fff" }}>
+          <Checkbox
+            sx={{ color: "#fff" }}
+            checked={
+              selectedProductIds.length > 0 &&
+              selectedProductIds.length === filteredProducts.length
+            }
+            indeterminate={
+              selectedProductIds.length > 0 &&
+              selectedProductIds.length < filteredProducts.length
+            }
+            onChange={(e) => {
+              if (e.target.checked) {
+                setSelectedProductIds(filteredProducts.map(p => p.id));
+                const newQuantities = {};
+                filteredProducts.forEach(p => {
+                  newQuantities[p.id] = quantities[p.id] || 1;
+                });
+                setQuantities(newQuantities);
+              } else {
+                setSelectedProductIds([]);
+                setQuantities({});
+              }
+            }}
+          />
+        </TableCell>
+        <TableCell sx={{ color: "#fff" }}>Product Name</TableCell>
+        <TableCell sx={{ color: "#fff" }}>Brand</TableCell>
+        <TableCell sx={{ color: "#fff" }}>Specifications</TableCell>
+        <TableCell sx={{ color: "#fff" }}>Available Qty</TableCell>
+        <TableCell sx={{ color: "#fff" }}>Price per Piece</TableCell>
+        <TableCell sx={{ color: "#fff" }}>Quantity</TableCell>
+      </TableRow>
+    </TableHead>
 
-                    <TableBody>
-                      {filteredProducts
-                        .filter((product) =>
-                          selectedProductIds.includes(product.id)
-                        )
-                        .map((product) => (
-                          <TableRow key={product.id}>
-                            <TableCell padding="checkbox">
-                              <Checkbox checked readOnly />
-                            </TableCell>
-                            <TableCell>{product.product_name}</TableCell>
-                            <TableCell>{product.brand}</TableCell>
-                            <TableCell>
-                              <div>
-                                <strong>Model:</strong> {product.model}
-                              </div>
-                              <div>
-                                <strong>Processor:</strong> {product.processor}
-                              </div>
-                              <div>
-                                <strong>RAM:</strong> {product.ram}
-                              </div>
-                              <div>
-                                <strong>Storage:</strong> {product.storage}
-                              </div>
-                              <div>
-                                <strong>Graphics:</strong> {product.graphics}
-                              </div>
-                            </TableCell>
-                            <TableCell>{getAvailableQty(product.id)}</TableCell>
-                            <TableCell>
-                              <div>
-                                <strong>Month:</strong> ₹
-                                {product.rent_price_per_month}
-                              </div>
-                            </TableCell>
-                            <TableCell>
-                              <Box display="flex" alignItems="center">
-                                <IconButton
-                                  size="small"
-                                  onClick={() => decrementQty(product.id)}
-                                >
-                                  <Remove fontSize="small" />
-                                </IconButton>
-                                <TextField
-                                  type="number"
-                                  size="small"
-                                  value={quantities[product.id] || ""}
-                                  onChange={(e) =>
-                                    handleQtyChange(product.id, e.target.value)
-                                  }
-                                  inputProps={{
-                                    min: 0,
-                                    style: { width: 50, textAlign: "center" },
-                                  }}
-                                />
-                                <IconButton
-                                  size="small"
-                                  onClick={() => incrementQty(product.id)}
-                                >
-                                  <Add fontSize="small" />
-                                </IconButton>
-                              </Box>
-                            </TableCell>
-                            <TableCell>
-                              {quantities[product.id] > 0 && (
-                                <Box
-                                  display="flex"
-                                  flexDirection="column"
-                                  gap={1}
-                                >
-                                  {(deviceIds[product.id] || []).map(
-                                    (id, idx) => (
-                                      <TextField
-                                        key={idx}
-                                        size="small"
-                                        placeholder={`Device ID ${idx + 1}`}
-                                        value={id}
-                                        onChange={(e) => {
-                                          const updated = [
-                                            ...(deviceIds[product.id] || []),
-                                          ];
-                                          updated[idx] = e.target.value;
-                                          setDeviceIds((prev) => ({
-                                            ...prev,
-                                            [product.id]: updated,
-                                          }));
-                                          if (deviceIdErrors[product.id]) {
-                                            setDeviceIdErrors((prev) => {
-                                              const newErrors = { ...prev };
-                                              delete newErrors[product.id];
-                                              return newErrors;
-                                            });
-                                          }
-                                        }}
-                                        error={Boolean(
-                                          deviceIdErrors[product.id]
-                                        )}
-                                        helperText={
-                                          idx === 0
-                                            ? deviceIdErrors[product.id]
-                                            : ""
-                                        }
-                                      />
-                                    )
-                                  )}
-                                  {(deviceIds[product.id]?.length || 0) <
-                                    (quantities[product.id] || 0) && (
-                                    <Button
-                                      size="small"
-                                      variant="outlined"
-                                      onClick={() =>
-                                        setDeviceIds((prev) => ({
-                                          ...prev,
-                                          [product.id]: [
-                                            ...(prev[product.id] || []),
-                                            "",
-                                          ],
-                                        }))
-                                      }
-                                    >
-                                      + Add Device ID
-                                    </Button>
-                                  )}
-                                </Box>
-                              )}
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                    </TableBody>
-                  </Table>
-                </TableContainer>
+    <TableBody>
+      {filteredProducts.map((product) => {
+        const isSelected = selectedProductIds.includes(product.id);
+        return (
+          <TableRow key={product.id}>
+            <TableCell padding="checkbox">
+              <Checkbox
+                checked={isSelected}
+                onChange={() => {
+                  if (isSelected) {
+                    setSelectedProductIds((prev) =>
+                      prev.filter((id) => id !== product.id)
+                    );
+                    const updatedQuantities = { ...quantities };
+                    delete updatedQuantities[product.id];
+                    setQuantities(updatedQuantities);
+                  } else {
+                    setSelectedProductIds((prev) => [...prev, product.id]);
+                    setQuantities((prev) => ({
+                      ...prev,
+                      [product.id]: prev[product.id] || 1,
+                    }));
+                  }
+                }}
+              />
+            </TableCell>
+            <TableCell>{product.product_name}</TableCell>
+            <TableCell>{product.brand}</TableCell>
+            <TableCell>
+              <div>
+                <strong>Model:</strong> {product.model}
+              </div>
+              <div>
+                <strong>Processor:</strong> {product.processor}
+              </div>
+              <div>
+                <strong>RAM:</strong> {product.ram}
+              </div>
+              <div>
+                <strong>Storage:</strong> {product.storage}
+              </div>
+              <div>
+                <strong>Graphics:</strong> {product.graphics}
+              </div>
+            </TableCell>
+            <TableCell>{getAvailableQty(product.id)}</TableCell>
+            <TableCell>
+              <strong>Month:</strong> ₹{product.rent_price_per_month}
+            </TableCell>
+            <TableCell>
+              {isSelected ? (
+                <Box display="flex" alignItems="center">
+                  <IconButton
+                    size="small"
+                    onClick={() =>
+                      setQuantities((prev) => ({
+                        ...prev,
+                        [product.id]: Math.max((prev[product.id] || 1) - 1, 1),
+                      }))
+                    }
+                  >
+                    <Remove fontSize="small" />
+                  </IconButton>
+                  <TextField
+                    type="number"
+                    size="small"
+                    value={quantities[product.id] || ""}
+                    onChange={(e) => {
+                      const value = Math.max(Number(e.target.value), 1);
+                      setQuantities((prev) => ({
+                        ...prev,
+                        [product.id]: value,
+                      }));
+                    }}
+                    inputProps={{
+                      min: 1,
+                      style: { width: 50, textAlign: "center" },
+                    }}
+                  />
+                  <IconButton
+                    size="small"
+                    onClick={() =>
+                      setQuantities((prev) => ({
+                        ...prev,
+                        [product.id]: (prev[product.id] || 1) + 1,
+                      }))
+                    }
+                  >
+                    <Add fontSize="small" />
+                  </IconButton>
+                </Box>
+              ) : (
+                "-"
+              )}
+            </TableCell>
+          </TableRow>
+        );
+      })}
+    </TableBody>
+  </Table>
+</TableContainer>
+
               </Box>
             )}
 

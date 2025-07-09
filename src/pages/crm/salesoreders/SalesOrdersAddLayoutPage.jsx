@@ -41,8 +41,6 @@ const SalesOrdersAddLayoutPage = ({ product }) => {
     return entry ? entry.available_quantity : "N/A";
   };
 
-  
-
   const navigate = useNavigate();
 
   const [formData, setFormData] = useState({
@@ -238,10 +236,10 @@ const SalesOrdersAddLayoutPage = ({ product }) => {
         ...prev,
         quotation_id: selectedQuotation.id,
         customer_id: selectedQuotation.customer_id,
-        transaction_type:
-          selectedQuotation.payment_type === "Prepaid" ? "Rental" : "Sale",
-        payment_type: selectedQuotation.payment_type,
+        payment_type: prev.payment_type, // ✅ RETAIN this!
+
         rental_duration: selectedQuotation.rental_duration,
+        transaction_type: selectedQuotation.transaction_type,
         rental_duration_days: selectedQuotation.rental_duration_days,
         rental_start_date: selectedQuotation.rental_start_date,
         rental_end_date: selectedQuotation.rental_end_date,
@@ -436,37 +434,6 @@ const SalesOrdersAddLayoutPage = ({ product }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // // Validate Asset IDs
-    // let hasErrors = false;
-    // const newDeviceIdErrors = {};
-
-    // selectedProductIds.forEach((productId) => {
-    //   const qty = quantities[productId] || 0;
-    //   const ids = deviceIds[productId] || [];
-
-    //   if (ids.length !== qty) {
-    //     newDeviceIdErrors[productId] = `Please add ${qty} Asset IDs`;
-    //     hasErrors = true;
-    //   } else {
-    //     const emptyIds = ids.filter((id) => !id.trim());
-    //     if (emptyIds.length > 0) {
-    //       newDeviceIdErrors[productId] = `All Asset IDs are required`;
-    //       hasErrors = true;
-    //     }
-    //   }
-    // });
-
-    // setDeviceIdErrors(newDeviceIdErrors);
-
-    // if (hasErrors) {
-    //   setSnackbar({
-    //     open: true,
-    //     message: "Please provide all required Asset IDs",
-    //     severity: "error",
-    //   });
-    //   return;
-    // }
-
     // Prepare items array with Asset IDs
     const orderItems = selectedProductIds.map((productId) => {
       const product = products.find((p) => p.id === productId);
@@ -612,29 +579,31 @@ const SalesOrdersAddLayoutPage = ({ product }) => {
                 readOnly
               />
               <Field
-                label="Transaction Type"
-                type="select"
-                placeholder="Select Type"
-                value={formData.transaction_type}
-                onChange={(e) =>
-                  handleChange({
-                    target: { name: "transaction_type", value: e.target.value },
-                  })
-                }
-                options={["Rent", "Sale"]}
-              />
-              <Field
-                label="Payment Type"
-                type="select"
-                placeholder="Select Type"
-                value={formData.payment_type}
-                onChange={(e) =>
-                  handleChange({
-                    target: { name: "payment_type", value: e.target.value },
-                  })
-                }
-                options={["Prepaid", "Postpaid"]}
-              />
+  label="Transaction Type"
+  type="select"
+  placeholder="Select Type"
+  value={formData.transaction_type}
+  onChange={(e) => {
+    handleChange({
+      target: { name: "transaction_type", value: e.target.value },
+    });
+    // Clear rental fields when switching to Buy
+    if (e.target.value === "Buy") {
+      setFormData(prev => ({
+        ...prev,
+        rental_duration: null,
+        rental_duration_days: null,
+        rental_start_date: null,
+        rental_end_date: null
+      }));
+    }
+  }}
+  options={["Rent", "Buy"]}
+/>
+              
+
+              
+
               <Field
                 label="Order Status"
                 type="select"
@@ -687,42 +656,59 @@ const SalesOrdersAddLayoutPage = ({ product }) => {
                 readOnly
               />
 
-              <Field
-                label="Rental Duration (months)"
-                placeholder="Enter Duration in Months"
-                type="number"
-                value={formData.rental_duration || ""}
-                onChange={(e) =>
-                  handleRentalDurationChange("rental_duration", e.target.value)
-                }
-              />
+              {formData.transaction_type === "Rent" && (
+  <>
+    <Field
+      label="Payment Type"
+      type="select"
+      placeholder="Select Payment Type"
+      value={formData.payment_type}
+      onChange={(e) =>
+        handleChange({
+          target: { name: "payment_type", value: e.target.value },
+        })
+      }
+      options={["Prepaid", "Postpaid"]}
+    />
 
-              <Field
-                label="Rental Start Date"
-                type="date"
-                placeholder="Select Date"
-                value={formData.rental_start_date || ""}
-                onChange={(e) =>
-                  handleChange({
-                    target: {
-                      name: "rental_start_date",
-                      value: e.target.value,
-                    },
-                  })
-                }
-              />
+    <Field
+      label="Rental Duration (months)"
+      placeholder="Enter Duration in Months"
+      type="number"
+      value={formData.rental_duration || ""}
+      onChange={(e) =>
+        handleRentalDurationChange("rental_duration", e.target.value)
+      }
+    />
 
-              <Field
-                label="Rental End Date"
-                type="date"
-                placeholder="Select Date"
-                value={formData.rental_end_date || ""}
-                onChange={(e) =>
-                  handleChange({
-                    target: { name: "rental_end_date", value: e.target.value },
-                  })
-                }
-              />
+    <Field
+      label="Rental Start Date"
+      type="date"
+      placeholder="Select Date"
+      value={formData.rental_start_date || ""}
+      onChange={(e) =>
+        handleChange({
+          target: {
+            name: "rental_start_date",
+            value: e.target.value,
+          },
+        })
+      }
+    />
+
+    <Field
+      label="Rental End Date"
+      type="date"
+      placeholder="Select Date"
+      value={formData.rental_end_date || ""}
+      onChange={(e) =>
+        handleChange({
+          target: { name: "rental_end_date", value: e.target.value },
+        })
+      }
+    />
+  </>
+)}
 
               <Field
                 label="Order Date"

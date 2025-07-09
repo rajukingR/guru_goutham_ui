@@ -111,6 +111,14 @@ import ClientDataEditTable from "../pages/client/ClientDataEditTable.jsx";
 import RamTable from "../pages/settings/ram/RamTable.jsx";
 import RamEditPageLayout from "../pages/settings/ram/RamEditPageLayout.jsx";
 import RamAddPageLayout from "../pages/settings/ram/RamAddPageLayout.jsx";
+import AssetIdsTable from "../pages/procurement/asset-ids/AssetIdsTable.jsx";
+import AssetIdsEditForm from "../pages/procurement/asset-ids/AssetIdsEditForm.jsx";
+import AssetIdUpdatedForm from "../pages/crm/salesoreders/AssetIdUpdatedForm.jsx";
+import AllReportsDataLayout from "../pages/reports/allthereports/AllTheReportsLayout.jsx";
+import SalesPerformanceReport from "../pages/reports/SalesPerformanceReport/SalesPerformanceReport.jsx";
+import FeedBackFormLayoutfb from "../pages/operations/feedback/FeedBackFormLayoutfb.jsx";
+import DispatchOrdersAddForm from "../pages/crm/dispatch-orders/DispatchOrdersAddForm.jsx";
+import DispatchOrdersTable from "../pages/crm/dispatch-orders/DispatchOrdersTable.jsx";
 const ProtectedRoute = ({ element }) => {
   const user = useSelector((state) => state.auth.user);
   return user ? element : <Navigate to="/signin" replace />;
@@ -293,6 +301,16 @@ const RoutesConfig = () => {
               path="procurement/supplier/edit/:id"
               element={<SupplierEditLayout />}
             />
+            <Route path="procurement/asset" element={<AssetIdsTable />} />
+            <Route
+              path="procurement/asset-modification/add"
+              element={<AssetIdsTable />}
+            />
+            <Route
+              path="crm/orders/edit/:id/:assetId"
+              element={<AssetIdUpdatedForm />}
+            />
+
             <Route path="inventory" element={<InventoryTable />} />
             <Route path="crm/client-list" element={<ContactsTable />} />
             <Route
@@ -324,6 +342,10 @@ const RoutesConfig = () => {
               path="crm/orders/edit/:id"
               element={<SalesOrdersEditLayoutPage />}
             />
+            <Route path="crm/dispatch-orders" element={<DispatchOrdersTable />} />
+            <Route path="crm/dispatch-orders/add" element={<DispatchOrdersAddForm />} />
+            <Route path="crm/dispatch-orders/edit/:id" element={<OrdersTable />} />
+
             <Route path="operations" element={<DeliveryChallanTable />} />
             <Route path="operations/add" element={<DeliveryChallanAddPage />} />
             <Route
@@ -386,7 +408,10 @@ const RoutesConfig = () => {
             <Route path="settings/roles/edit/:id" element={<RolesEditPage />} />
             <Route path="settings/ram" element={<RamTable />} />
             <Route path="settings/ram/add" element={<RamAddPageLayout />} />
-            <Route path="settings/ram/edit/:id" element={<RamEditPageLayout />} />
+            <Route
+              path="settings/ram/edit/:id"
+              element={<RamEditPageLayout />}
+            />
 
             <Route
               path="settings/contact_type"
@@ -425,6 +450,15 @@ const RoutesConfig = () => {
             <Route
               path="client/client/edit/:id"
               element={<ClientDataEditTable />}
+            />
+            <Route path="reports" element={<AllReportsDataLayout />} />
+            <Route
+              path="reports/sales_performance_report"
+              element={<SalesPerformanceReport />}
+            />
+            <Route
+              path="operations/feedback"
+              element={<FeedBackFormLayoutfb />}
             />
           </Route>
         </Routes>

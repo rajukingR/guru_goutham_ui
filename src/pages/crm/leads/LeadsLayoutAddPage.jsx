@@ -380,6 +380,17 @@ useEffect(() => {
               onChange={(value) => handleInputChange("transactionType", value)}
               options={["Rent", "Buy"]}
             />
+            {formData.transactionType === "Rent" && (
+  <Field
+    label="Payment Type"
+    type="select"
+    placeholder="Select Payment Type"
+    value={formData.paymentType}
+    onChange={(value) => handleInputChange("paymentType", value)}
+    options={["Prepaid", "Postpaid"]}
+  />
+)}
+
             {/* <Field
               label="Lead Status"
               type="select"
@@ -591,14 +602,7 @@ useEffect(() => {
               value={formData.panNo}
               onChange={(value) => handleInputChange("panNo", value)}
             />
-            <Field
-              label="Payment Type"
-              type="select"
-              placeholder="Select Payment Type"
-              value={formData.paymentType}
-              onChange={(value) => handleInputChange("paymentType", value)}
-              options={["Prepaid", "Postpaid", "COD", "Net 30", "Net 60"]}
-            />
+            
           </div>
         </div>
 

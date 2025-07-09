@@ -47,7 +47,8 @@ import KeyboardArrowUpIcon from "@mui/icons-material/KeyboardArrowUp";
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 import MoneyOffIcon from '@mui/icons-material/MoneyOff';
 import TravelExploreIcon from '@mui/icons-material/TravelExplore';
-
+import BarChartIcon from "@mui/icons-material/BarChart";
+import FeedbackIcon from '@mui/icons-material/Feedback';
 import { MdAttachMoney, MdOutlineComputer } from "react-icons/md";
 
 import {
@@ -121,6 +122,12 @@ const Sidebar = ({ section }) => {
       sectionIcon = <ShoppingCartIcon />;
       menuItems = [
         {
+          text: "Supplier",
+          path: "/dashboard/procurement/supplier",
+          icon: <LocalShippingIcon />,
+          description: "Supplier management",
+        },
+        {
           text: "Purchase Requests",
           path: "/dashboard/procurement/purchase-requests",
           icon: <PurchaseRequestsIcon />,
@@ -145,12 +152,13 @@ const Sidebar = ({ section }) => {
           icon: <InventoryIcon />,
           description: "Received goods tracking",
         },
-        {
-          text: "Supplier",
-          path: "/dashboard/procurement/supplier",
-          icon: <LocalShippingIcon />,
-          description: "Supplier management",
-        },
+        // {
+        //   text: "Asset-IDs",
+        //   path: "/dashboard/procurement/asset",
+        //   icon: <LocalShippingIcon />,
+        //   description: "Asset-IDs",
+        // },
+        
       ];
       break;
 
@@ -196,6 +204,19 @@ const Sidebar = ({ section }) => {
           icon: <AssignmentIcon />,
           description: "Customer orders",
         },
+       
+        {
+          text: "Dispatch Orders",
+          path: "/dashboard/crm/dispatch-orders",
+          icon: <AssignmentIcon />,
+          description: "Order Services",
+        },
+         {
+          text: "Order Asset Modification",
+          path: "/dashboard/crm/asset_modification_tracker",
+          icon: <BuildCircleIcon />,
+          description: "Track asset changes",
+        },
       ];
       break;
 
@@ -222,24 +243,17 @@ const Sidebar = ({ section }) => {
           icon: <MoneyOffIcon />,
           description: "Credit note management",
         },
+        // {
+        //   text: "Service",
+        //   path: "/dashboard/operations/service",
+        //   icon: <MiscellaneousServicesIcon />,
+        //   description: "Service management",
+        // },
         {
-          text: "Asset Modification",
-          path: "/dashboard/operations/asset_modification_tracker",
-          icon: <BuildCircleIcon />,
-          description: "Track asset changes",
-        },
-       
-        {
-          text: "Service",
-          path: "/dashboard/operations/service",
-          icon: <MiscellaneousServicesIcon />,
-          description: "Service management",
-        },
-         {
           text: "GRN",
           path: "/dashboard/operations/grn",
           icon: <ReceiptLongIcon />,
-          description: "Goods received notes",
+          description: "Goods return notes",
         },
         {
           text: "Client Journey",
@@ -247,6 +261,14 @@ const Sidebar = ({ section }) => {
           icon: <TravelExploreIcon />,
           description: "Customer journey tracking",
         },
+        
+
+        //  {
+        //   text: "Feedback",
+        //   path: "/dashboard/operations/feedback",
+        //   icon: <FeedbackIcon/>,
+        //   description: "Customer feedback",                                                                   
+        // },
       ];
       break;
 
@@ -275,6 +297,26 @@ const Sidebar = ({ section }) => {
         },
       ];
       break;
+      case "reports":
+      sectionTitle = "Reports";
+      sectionIcon = <BusinessIcon />;
+      menuItems = [
+        {
+          text: "Report Library",
+          path: "/dashboard/reports",
+          icon: <BarChartIcon />,
+          description: "Track overall sales metrics",
+        },
+        // {
+        //   text: "Sales Performance Report",
+        //   path: "/dashboard/reports/sales_performance_report",
+        //   icon: <BarChartIcon />,
+        //   description: "Track overall sales metrics",
+        // },
+      ];
+      break;
+
+      
 
     case "settings":
       sectionTitle = "Settings";

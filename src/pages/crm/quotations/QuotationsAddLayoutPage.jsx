@@ -263,6 +263,7 @@ const QuotationsAddLayoutPage = () => {
       const quotationPayload = {
         quotation_id: formData.quotationId,
         quotation_title: formData.quotationTitle,
+        transaction_type: formData.transactionType,
         lead_id: selectedLeadId,
         rental_start_date: formData.rentalStartDate,
         rental_end_date: formData.rentalEndDate,

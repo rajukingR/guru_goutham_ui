@@ -473,7 +473,7 @@ const InvoicesAddPage = () => {
     email: "",
     phone_number: "",
     pan_number: "",
-    payment_terms: "",
+    transaction_type: "",
     payment_mode: "",
     approval_status: "Approved",
     approval_date: new Date().toISOString().slice(0, 19).replace("T", " "),
@@ -635,16 +635,16 @@ const InvoicesAddPage = () => {
         const transformedOrders = approvedDeliveryChallansData.map((dc) => ({
           id: dc.id,
           order_id: dc.order_id,
-          dc_id:dc.id,
-          customer_code: dc.customer_code, // ✅ include this
-          customer_id: dc.customer?.id, // ✅ now accessible in handleCustomerSelect
+          dc_id: dc.id,
+          customer_code: dc.customer_code,
+          customer_id: dc.customer?.id,
           personalDetails: {
             first_name: dc.shipping_name || dc.customer?.first_name,
             last_name: dc.customer?.last_name || "",
             email: dc.email || dc.customer?.email,
             phone_number: dc.shipping_phone_number || dc.customer?.phone_number,
             gst_number: dc.gst_number || dc.customer?.gst,
-            pan_number: dc.pan_number || dc.customer?.pan_no, // Fix field typo
+            pan_number: dc.pan_number || dc.customer?.pan_no,
           },
           address: {
             country: dc.country || "India",
@@ -661,13 +661,13 @@ const InvoicesAddPage = () => {
             unit_price: item.unit_price,
             total_price: item.total_price,
             product: item.product,
-            device_ids: item.device_ids ? JSON.parse(item.device_ids) : [], // ✅ parse safely
+            device_ids: item.device_ids || [], // No JSON.parse needed if it's already an array
           })),
-          rental_start_date: dc.order?.rental_start_date || null, // ✅ from `order`
+          rental_start_date: dc.order?.rental_start_date || null,
           rental_end_date: dc.order?.rental_end_date || null,
           rental_duration: dc.order?.rental_duration || null,
-          transaction_type: dc.type || "Rent",
-          payment_type: dc.payment_type || "Postpaid",
+          transaction_type: dc.type || "",
+          payment_type: dc.payment_type || "",
         }));
 
         setOrders(transformedOrders);
@@ -791,7 +791,6 @@ const InvoicesAddPage = () => {
         initialQuantities[item.product_id] = item.quantity;
       });
 
-
       setQuantities(initialQuantities);
 
       const personal = selectedOrder.personalDetails;
@@ -862,15 +861,15 @@ const InvoicesAddPage = () => {
         customer_gst_number: personal?.gst_number || "",
         pan_number: selectedOrder.pan_number || personal?.pan_number || "",
         order_id: selectedOrder.order_id,
-        transaction_type: selectedOrder.transaction_type || "Rent",
-        payment_type: selectedOrder.payment_type || "Prepaid",
+        transaction_type: selectedOrder.transaction_type || "",
+        payment_type: selectedOrder.payment_type || "",
         rental_duration: selectedOrder.rental_duration || "",
         rental_duration_days: selectedOrder.rental_duration_days || 0,
         purchase_order_date: selectedOrder.updated_at
           ? new Date(selectedOrder.updated_at).toISOString().split("T")[0]
           : "",
         purchase_order_number: selectedOrder.order_id || "",
-        dc_id:selectedOrder.id,
+        dc_id: selectedOrder.id,
         duration: selectedOrder.rental_duration || 0,
         rental_start_date: selectedOrder.rental_start_date || "",
         rental_end_date: selectedOrder.rental_end_date || "",
@@ -1143,7 +1142,7 @@ const InvoicesAddPage = () => {
       const submissionData = {
         ...formData,
         // Include date ranges in the submission
-        dc_id:formData.dc_id,
+        dc_id: formData.dc_id,
         invoice_start_date: dateRanges.invoiceStartDate,
         invoice_end_date: dateRanges.invoiceEndDate,
         previous_delivered_start_date: dateRanges.previousDeliveredStartDate,
@@ -1157,7 +1156,7 @@ const InvoicesAddPage = () => {
         rental_duration_months: formData.rental_duration
           ? parseInt(formData.rental_duration)
           : 0,
-        payment_mode: formData.payment_type || "Postpaid",
+        payment_mode: formData.payment_type || "",
 
         items: formData.items.map((item) => ({
           ...item,
@@ -1272,38 +1271,69 @@ const InvoicesAddPage = () => {
               />
 
               <FormControl fullWidth>
-                <InputLabel>Select Customer</InputLabel>
-                <Select
-                  value={formData.customer_id}
-                  onChange={(e) => handleCustomerSelect(e.target.value)}
-                  label="Select Customer"
-                >
-                  {orders.map((order) => (
-                    <MenuItem key={order.id} value={order.id}>
-                      {order.order_id} || {order.personalDetails?.first_name}{" "}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
+  <InputLabel>Select Customer</InputLabel>
+  <Select
+    value={formData.customer_id}
+    onChange={(e) => handleCustomerSelect(e.target.value)}
+    label="Select Customer"
+  >
+    {orders.map((order) => (
+      <MenuItem key={order.id} value={order.id}>
+        {order.order_id} - {order.personalDetails?.first_name || ""} {order.personalDetails?.last_name || ""}
+      </MenuItem>
+    ))}
+  </Select>
+</FormControl>
 
-              {/* Date Range Selector - spans full width */}
-              <div
-                style={{
-                  gridColumn: "1 / -1",
-                  margin: "1rem 0",
-                  padding: "1rem",
-                  backgroundColor: "#f8f9fa",
-                  borderRadius: "8px",
-                  border: "1px solid #e0e0e0",
-                }}
-              >
-                <DateRangeSelector
-                  selectedMonth={selectedMonth}
-                  setSelectedMonth={setSelectedMonth}
-                  dateRanges={dateRanges}
-                  setDateRanges={setDateRanges}
-                />
-              </div>
+              <Field
+  label="Transaction Type"
+  name="transaction_type"
+  value={formData.transaction_type}
+  onChange={(e) => {
+    handleInputChange(e);
+    // Clear rental-specific fields when switching to Buy
+    if (e.target.value === "Buy") {
+      setFormData(prev => ({
+        ...prev,
+        payment_mode: "",
+        payment_type: "", // Clear payment type
+        rental_duration: "0",
+        rental_duration_days: 0,
+        rental_start_date: "",
+        rental_end_date: ""
+      }));
+    }
+  }}
+/>
+
+{formData.transaction_type === "Rent" && (
+  <>
+    <Field
+      label="Payment Mode"
+      name="payment_mode"
+      value={formData.payment_type}
+      onChange={handleInputChange}
+    />
+
+    <div
+      style={{
+        gridColumn: "1 / -1",
+        margin: "1rem 0",
+        padding: "1rem",
+        backgroundColor: "#f8f9fa",
+        borderRadius: "8px",
+        border: "1px solid #e0e0e0",
+      }}
+    >
+      <DateRangeSelector
+        selectedMonth={selectedMonth}
+        setSelectedMonth={setSelectedMonth}
+        dateRanges={dateRanges}
+        setDateRanges={setDateRanges}
+      />
+    </div>
+  </>
+)}
 
               <Field
                 label="Customer GST"
@@ -1335,20 +1365,7 @@ const InvoicesAddPage = () => {
                 onChange={handleInputChange}
                 placeholder="Enter PAN"
               />
-              <Field
-                label="Payment Terms"
-                name="payment_terms"
-                value={formData.payment_terms}
-                onChange={handleInputChange}
-                placeholder="Enter Payment Terms"
-              />
-              <Field
-                label="Payment Mode"
-                name="payment_mode"
-                value={formData.payment_type}
-                onChange={handleInputChange}
-                placeholder="Enter Payment Mode"
-              />
+              
               <Field
                 label="Consultant"
                 name="invoice_consulting_by"
@@ -1534,7 +1551,6 @@ const InvoicesAddPage = () => {
                           Specifications
                         </TableCell>
                         <TableCell sx={{ color: "#fff" }}>Quantity</TableCell>
-                        
 
                         <TableCell sx={{ color: "#fff" }}>
                           Price for Durations
@@ -1612,8 +1628,7 @@ const InvoicesAddPage = () => {
                                 </IconButton>
                               </Box>
                             </TableCell>
-                            
-                            
+
                             <TableCell>
                               <>
                                 <div>Month: {product.rent_price_per_month}</div>

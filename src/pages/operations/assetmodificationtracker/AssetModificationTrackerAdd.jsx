@@ -26,10 +26,10 @@ const AssetModificationTrackerAdd = () => {
     activeStatus: false,
   });
 
-  const [invoices, setInvoices] = useState([]);
+  const [deliveryChallans, setDeliveryChallans] = useState([]);
   const [customers, setCustomers] = useState([]);
   const [selectedCustomer, setSelectedCustomer] = useState(null);
-  const [selectedInvoice, setSelectedInvoice] = useState(null);
+  const [selectedChallan, setSelectedChallan] = useState(null);
   const [availableAssets, setAvailableAssets] = useState([]);
   const [snackbar, setSnackbar] = useState({
     open: false,
@@ -37,45 +37,46 @@ const AssetModificationTrackerAdd = () => {
     severity: 'success',
   });
 
-  // Fetch invoices data when component mounts
+  // Fetch delivery challans data when component mounts
   useEffect(() => {
-    const fetchInvoices = async () => {
+    const fetchDeliveryChallans = async () => {
       try {
-        const response = await fetch(`${API_URL}/asset-modification`);
-        if (!response.ok) throw new Error("Failed to fetch invoices");
+        const response = await fetch(`${API_URL}/delivery-challans/approved-delivery-challan`);
+        if (!response.ok) throw new Error("Failed to fetch delivery challans");
         const data = await response.json();
-        setInvoices(data.data);
+        setDeliveryChallans(data);
         
         // Extract unique customers
-        const uniqueCustomers = data.data.reduce((acc, invoice) => {
-          if (!acc.some(c => c.customer_id === invoice.customer_id)) {
+        const uniqueCustomers = data.reduce((acc, challan) => {
+          if (!acc.some(c => c.customer_code === challan.customer_code)) {
             acc.push({
-              customer_id: invoice.customer_id,
-              customer_name: invoice.customer_name
+              customer_id: challan.customer_code,
+              customer_name: challan.customer?.first_name + ' ' + challan.customer?.last_name,
+              customer_data: challan.customer
             });
           }
           return acc;
         }, []);
         setCustomers(uniqueCustomers);
       } catch (error) {
-        console.error("Error fetching invoices:", error);
+        console.error("Error fetching delivery challans:", error);
         setSnackbar({
           open: true,
-          message: "Error fetching invoices: " + error.message,
+          message: "Error fetching delivery challans: " + error.message,
           severity: "error",
         });
       }
     };
-    fetchInvoices();
+    fetchDeliveryChallans();
   }, []);
 
-  // When customer is selected, filter available invoices
+  // When customer is selected, filter available delivery challans
   useEffect(() => {
     if (selectedCustomer) {
-      const customerInvoices = invoices.filter(
-        invoice => invoice.customer_id === selectedCustomer
+      const customerChallans = deliveryChallans.filter(
+        challan => challan.customer_code === selectedCustomer
       );
-      setSelectedInvoice(null);
+      setSelectedChallan(null);
       setAvailableAssets([]);
       setFormData(prev => ({
         ...prev,
@@ -85,26 +86,50 @@ const AssetModificationTrackerAdd = () => {
         currentStorage: ''
       }));
     }
-  }, [selectedCustomer, invoices]);
+  }, [selectedCustomer, deliveryChallans]);
 
-  // When invoice is selected, set available assets
-  useEffect(() => {
-    if (selectedInvoice) {
-      const selectedInvoiceData = invoices.find(
-        invoice => invoice.invoice_id === selectedInvoice
-      );
-      if (selectedInvoiceData) {
-        setAvailableAssets(selectedInvoiceData.assets);
-        setFormData(prev => ({
-          ...prev,
-          assetId: '',
-          product_name: '',
-          currentRAM: '',
-          currentStorage: ''
-        }));
-      }
+  // When delivery challan is selected, set available assets
+// When delivery challan is selected, set available assets
+useEffect(() => {
+  if (selectedChallan) {
+    const selectedChallanData = deliveryChallans.find(
+      challan => challan.id === selectedChallan
+    );
+    
+    if (selectedChallanData) {
+      // Process only the assigned device IDs (not available_device_ids)
+      const assets = [];
+      selectedChallanData.items.forEach(item => {
+        // Only add the assigned device IDs
+        item.device_ids.forEach(deviceId => {
+          assets.push({
+            asset_id: deviceId,
+            product_id: item.product_id,
+            product_name: item.product_name,
+            ram: item.product.ram,
+            storage: item.product.storage,
+            brand: item.product.brand,
+            model: item.product.model,
+            processor: item.product.processor,
+            os: item.product.os,
+            graphics: item.product.graphics,
+            disk_type: item.product.disk_type,
+            grade: item.product.grade
+          });
+        });
+      });
+      
+      setAvailableAssets(assets);
+      setFormData(prev => ({
+        ...prev,
+        assetId: '',
+        product_name: '',
+        currentRAM: '',
+        currentStorage: ''
+      }));
     }
-  }, [selectedInvoice, invoices]);
+  }
+}, [selectedChallan, deliveryChallans]);
 
   const handleInputChange = (field, value) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -130,9 +155,9 @@ const AssetModificationTrackerAdd = () => {
     }
   };
 
-const handleSubmit = async () => {
+  const handleSubmit = async () => {
     try {
-      const selectedInvoiceData = invoices.find(invoice => invoice.invoice_id === selectedInvoice);
+      const selectedChallanData = deliveryChallans.find(challan => challan.id === selectedChallan);
       const selectedAsset = availableAssets.find(asset => asset.asset_id === formData.assetId);
       const selectedCustomerData = customers.find(customer => customer.customer_id === selectedCustomer);
 
@@ -140,11 +165,12 @@ const handleSubmit = async () => {
         // Customer Information
         customer_id: selectedCustomer,
         customer_name: selectedCustomerData?.customer_name || '',
+        customer_data: selectedCustomerData?.customer_data || {},
 
-        // Invoice Information
-        invoice_id: selectedInvoice,
-        invoice_number: selectedInvoiceData?.invoice_number || '',
-        invoice_date: selectedInvoiceData?.invoice_date || '',
+        // Delivery Challan Information
+        delivery_challan_id: selectedChallan,
+        dc_id: selectedChallanData?.dc_id || '',
+        dc_date: selectedChallanData?.dc_date || '',
 
         // Asset Information
         asset_id: formData.assetId,
@@ -177,7 +203,7 @@ const handleSubmit = async () => {
         approval_date: formData.approvalDate,
         status: formData.status,
         remarks: formData.remarks,
-        active_status: formData.activeStatus
+        active_status: formData.activeStatus,
       };
 
       const response = await fetch(`${API_URL}/asset-modifications/create`, {
@@ -212,7 +238,6 @@ const handleSubmit = async () => {
     }
   };
 
-
   return (
     <div style={containerStyle}>
       <Snackbar
@@ -231,7 +256,7 @@ const handleSubmit = async () => {
       </Snackbar>
 
       <div style={formContainerStyle}>
-        {/* Customer and Invoice Selection */}
+        {/* Customer and Delivery Challan Selection */}
         <div style={cardStyle}>
           <div style={cardHeaderContainerStyle}>
             <div style={iconStyle}>👤</div>
@@ -240,56 +265,68 @@ const handleSubmit = async () => {
           
           <div style={fieldsContainerStyle}>
             <div style={fieldContainerStyle}>
-              <label style={labelStyle}>Select Customer</label>
-              <select
-                style={inputStyle}
-                value={selectedCustomer || ''}
-                onChange={(e) => setSelectedCustomer(Number(e.target.value))}
-              >
-                <option value="">Select a Customer</option>
-                {customers.map((customer) => (
-                  <option key={customer.customer_id} value={customer.customer_id}>
-                    {customer.customer_name}
-                  </option>
-                ))}
-              </select>
-            </div>
+  <label style={labelStyle}>Select Customer</label>
+  <select
+    style={inputStyle}
+    value={selectedCustomer || ''}
+    onChange={(e) => {
+      const selectedValue = e.target.value;
+      if (selectedValue === "") {
+        setSelectedCustomer(null);
+      } else {
+        const [customerId, challanId] = selectedValue.split('|');
+        setSelectedCustomer(customerId);
+        setSelectedChallan(challanId ? Number(challanId) : null);
+      }
+    }}
+  >
+    <option value="">Select a Customer</option>
+    {deliveryChallans.map((challan) => (
+      <option 
+        key={`${challan.customer_code}|${challan.id}`} 
+        value={`${challan.customer_code}|${challan.id}`}
+      >
+        {challan.order_number} | {challan.customer?.first_name} {challan.customer?.last_name}
+      </option>
+    ))}
+  </select>
+</div>
             
             <div style={fieldContainerStyle}>
-              <label style={labelStyle}>Select Invoice</label>
+              <label style={labelStyle}>Select Delivery Challan</label>
               <select
                 style={inputStyle}
-                value={selectedInvoice || ''}
-                onChange={(e) => setSelectedInvoice(Number(e.target.value))}
+                value={selectedChallan || ''}
+                onChange={(e) => setSelectedChallan(Number(e.target.value))}
                 disabled={!selectedCustomer}
               >
-                <option value="">Select an Invoice</option>
-                {selectedCustomer && invoices
-                  .filter(invoice => invoice.customer_id === selectedCustomer)
-                  .map((invoice) => (
-                    <option key={invoice.invoice_id} value={invoice.invoice_id}>
-                      {invoice.invoice_number} - {invoice.invoice_date}
+                <option value="">Select a Delivery Challan</option>
+                {selectedCustomer && deliveryChallans
+                  .filter(challan => challan.customer_code === selectedCustomer)
+                  .map((challan) => (
+                    <option key={challan.id} value={challan.id}>
+                      {challan.dc_id} - {challan.dc_date}
                     </option>
                   ))}
               </select>
             </div>
             
             <div style={fieldContainerStyle}>
-              <label style={labelStyle}>Asset ID</label>
-              <select
-                style={inputStyle}
-                value={formData.assetId}
-                onChange={(e) => handleInputChange('assetId', e.target.value)}
-                disabled={!selectedInvoice}
-              >
-                <option value="">Select an Asset</option>
-                {availableAssets.map((asset) => (
-                  <option key={asset.asset_id} value={asset.asset_id}>
-                    {asset.asset_id} - {asset.product_name}
-                  </option>
-                ))}
-              </select>
-            </div>
+  <label style={labelStyle}>Asset ID</label>
+  <select
+    style={inputStyle}
+    value={formData.assetId}
+    onChange={(e) => handleInputChange('assetId', e.target.value)}
+    disabled={!selectedChallan}
+  >
+    <option value="">Select an Asset</option>
+    {availableAssets.map((asset) => (
+      <option key={asset.asset_id} value={asset.asset_id}>
+        {asset.asset_id} - {asset.product_name}
+      </option>
+    ))}
+  </select>
+</div>
           </div>
         </div>
 
@@ -319,58 +356,58 @@ const handleSubmit = async () => {
         </div>
 
         {/* Hardware Specifications Section */}
-      <div style={cardStyle}>
-        <div style={cardHeaderContainerStyle}>
-          <div style={iconStyle}>💾</div>
-          <h3 style={cardHeaderStyle}>Hardware Specifications</h3>
+        <div style={cardStyle}>
+          <div style={cardHeaderContainerStyle}>
+            <div style={iconStyle}>💾</div>
+            <h3 style={cardHeaderStyle}>Hardware Specifications</h3>
+          </div>
+          <div style={fieldsContainerStyle}>
+            <Field 
+              label="Current RAM (GB)" 
+              placeholder="Current RAM capacity" 
+              type="number" 
+              value={formData.currentRAM} 
+              onChange={(v) => handleInputChange('currentRAM', v)} 
+              disabled
+            />
+            <Field 
+              label="New RAM (GB)" 
+              placeholder="New RAM capacity" 
+              type="number" 
+              value={formData.newRAM} 
+              onChange={(v) => handleInputChange('newRAM', v)} 
+            />
+            <Field 
+              label="New RAM Cost ($)" 
+              placeholder="Enter RAM upgrade cost" 
+              type="number" 
+              value={formData.newRAMCost} 
+              onChange={(v) => handleInputChange('newRAMCost', v)} 
+            />
+            <Field 
+              label="Current Storage (GB)" 
+              placeholder="Current storage capacity" 
+              type="number" 
+              value={formData.currentStorage} 
+              onChange={(v) => handleInputChange('currentStorage', v)} 
+              disabled
+            />
+            <Field 
+              label="New Storage (GB)" 
+              placeholder="New storage capacity" 
+              type="number" 
+              value={formData.newStorage} 
+              onChange={(v) => handleInputChange('newStorage', v)} 
+            />
+            <Field 
+              label="New Storage Cost ($)" 
+              placeholder="Enter storage upgrade cost" 
+              type="number" 
+              value={formData.newStorageCost} 
+              onChange={(v) => handleInputChange('newStorageCost', v)} 
+            />
+          </div>
         </div>
-        <div style={fieldsContainerStyle}>
-          <Field 
-            label="Current RAM (GB)" 
-            placeholder="Current RAM capacity" 
-            type="number" 
-            value={formData.currentRAM} 
-            onChange={(v) => handleInputChange('currentRAM', v)} 
-            disabled
-          />
-          <Field 
-            label="New RAM (GB)" 
-            placeholder="New RAM capacity" 
-            type="number" 
-            value={formData.newRAM} 
-            onChange={(v) => handleInputChange('newRAM', v)} 
-          />
-          <Field 
-            label="New RAM Cost ($)" 
-            placeholder="Enter RAM upgrade cost" 
-            type="number" 
-            value={formData.newRAMCost} 
-            onChange={(v) => handleInputChange('newRAMCost', v)} 
-          />
-          <Field 
-            label="Current Storage (GB)" 
-            placeholder="Current storage capacity" 
-            type="number" 
-            value={formData.currentStorage} 
-            onChange={(v) => handleInputChange('currentStorage', v)} 
-            disabled
-          />
-          <Field 
-            label="New Storage (GB)" 
-            placeholder="New storage capacity" 
-            type="number" 
-            value={formData.newStorage} 
-            onChange={(v) => handleInputChange('newStorage', v)} 
-          />
-          <Field 
-            label="New Storage Cost ($)" 
-            placeholder="Enter storage upgrade cost" 
-            type="number" 
-            value={formData.newStorageCost} 
-            onChange={(v) => handleInputChange('newStorageCost', v)} 
-          />
-        </div>
-      </div>
 
         {/* Request & Approval Details Section */}
         <div style={{ ...cardStyle, gridColumn: 'span 2' }}>
@@ -384,7 +421,6 @@ const handleSubmit = async () => {
             <Field label="Request Date" placeholder="" type="date" value={formData.requestDate} onChange={(v) => handleInputChange('requestDate', v)} />
             <Field label="Approved By" placeholder="Enter Approved By" value={formData.approvedBy} onChange={(v) => handleInputChange('approvedBy', v)} />
             <Field label="Approval Date" placeholder="" type="date" value={formData.approvalDate} onChange={(v) => handleInputChange('approvalDate', v)} />
-            <Field label="Estimated Cost" placeholder="Enter Estimated Cost" type="number" value={formData.estimatedCost} onChange={(v) => handleInputChange('estimatedCost', v)} />
             <Field label="Remarks" placeholder="Enter Remarks" value={formData.remarks} onChange={(v) => handleInputChange('remarks', v)} />
           </div>
         </div>

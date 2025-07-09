@@ -25,10 +25,11 @@ import { useSelector } from "react-redux";
 const navItems = [
   { label: "Dashboard", path: "/dashboard" },
   { label: "Product Library", path: "/dashboard/product_library" },
-  { label: "Procurement", path: "/dashboard/procurement/purchase-requests" },
+  { label: "Procurement", path: "/dashboard/procurement/supplier" },
   { label: "Inventory", path: "/dashboard/inventory" },
   { label: "CRM", path: "/dashboard/crm/client-list" },
   { label: "Operations", path: "/dashboard/operations" },
+  // { label: "Reports", path: "/dashboard/reports" },
   // { label: "Users Performance", path: "/dashboard/users_performance" },
   // { label: "Client", path: "/dashboard/client" },
 ];
@@ -50,18 +51,15 @@ const LayOut = () => {
       return "product_library";
     if (location.pathname.includes("/dashboard/procurement"))
       return "procurement";
-    if (location.pathname.includes("/dashboard/inventory"))
-       return "inventory";
-    if (location.pathname.includes("/dashboard/crm")) 
-      return "crm";
+    if (location.pathname.includes("/dashboard/inventory")) return "inventory";
+    if (location.pathname.includes("/dashboard/crm")) return "crm";
     if (location.pathname.includes("/dashboard/operations"))
       return "operations";
     if (location.pathname.includes("/dashboard/users_performance"))
       return "users_performance";
-    if (location.pathname.includes("/dashboard/client"))
-       return "client";
-    if (location.pathname.includes("/dashboard/settings"))
-       return "settings";
+    if (location.pathname.includes("/dashboard/client")) return "client";
+    if (location.pathname.includes("/dashboard/reports")) return "reports";
+    if (location.pathname.includes("/dashboard/settings")) return "settings";
 
     return "dashboard";
   };
