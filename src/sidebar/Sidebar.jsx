@@ -172,6 +172,12 @@ const Sidebar = ({ section }) => {
           icon: <GroupIcon />,
           description: "All inventory items",
         },
+        {
+          text: "Asset modification",
+          path: "/dashboard/inventory/asset-modifications",
+          icon: <GroupIcon />,
+          description: "All inventory items",
+        },
       ];
       break;
 
@@ -211,12 +217,13 @@ const Sidebar = ({ section }) => {
           icon: <AssignmentIcon />,
           description: "Order Services",
         },
-         {
-          text: "Order Asset Modification",
-          path: "/dashboard/crm/asset_modification_tracker",
-          icon: <BuildCircleIcon />,
-          description: "Track asset changes",
-        },
+
+        //  {
+        //   text: "Order Asset Modification",
+        //   path: "/dashboard/crm/asset_modification_tracker",
+        //   icon: <BuildCircleIcon />,
+        //   description: "Track asset changes",
+        // },
       ];
       break;
 

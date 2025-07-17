@@ -119,6 +119,7 @@ import SalesPerformanceReport from "../pages/reports/SalesPerformanceReport/Sale
 import FeedBackFormLayoutfb from "../pages/operations/feedback/FeedBackFormLayoutfb.jsx";
 import DispatchOrdersAddForm from "../pages/crm/dispatch-orders/DispatchOrdersAddForm.jsx";
 import DispatchOrdersTable from "../pages/crm/dispatch-orders/DispatchOrdersTable.jsx";
+import DispatchOrdersEditForm from "../pages/crm/dispatch-orders/DispatchOrdersEditForm.jsx";
 const ProtectedRoute = ({ element }) => {
   const user = useSelector((state) => state.auth.user);
   return user ? element : <Navigate to="/signin" replace />;
@@ -303,7 +304,7 @@ const RoutesConfig = () => {
             />
             <Route path="procurement/asset" element={<AssetIdsTable />} />
             <Route
-              path="procurement/asset-modification/add"
+              path="procurement/asset-modification"
               element={<AssetIdsTable />}
             />
             <Route
@@ -344,7 +345,7 @@ const RoutesConfig = () => {
             />
             <Route path="crm/dispatch-orders" element={<DispatchOrdersTable />} />
             <Route path="crm/dispatch-orders/add" element={<DispatchOrdersAddForm />} />
-            <Route path="crm/dispatch-orders/edit/:id" element={<OrdersTable />} />
+            <Route path="crm/dispatch-orders/edit/:id" element={<DispatchOrdersEditForm />} />
 
             <Route path="operations" element={<DeliveryChallanTable />} />
             <Route path="operations/add" element={<DeliveryChallanAddPage />} />
@@ -365,11 +366,11 @@ const RoutesConfig = () => {
             <Route path="operations/grn/add" element={<GrnAddForm />} />
             <Route path="operations/grn/edit/:id" element={<GrnEditForm />} />
             <Route
-              path="operations/asset_modification_tracker"
+              path="inventory/asset-modifications"
               element={<AssetTrackerOp />}
             />
             <Route
-              path="operations/asset_modification_tracker/add"
+              path="inventory/asset-modifications/add"
               element={<AssetModificationTrackerAdd />}
             />
             <Route

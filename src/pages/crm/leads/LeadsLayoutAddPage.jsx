@@ -21,14 +21,14 @@ import {
 import { Add, Remove } from "@mui/icons-material";
 import API_URL, { IMAGE_API_URL } from "../../../api/Api_url";
 const generateLeadId = () => {
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-  let randomPart = '';
-  for (let i = 0; i < 6; i++) { // 6 characters for lead ID
+  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+  let randomPart = "";
+  for (let i = 0; i < 6; i++) {
+    // 6 characters for lead ID
     randomPart += chars.charAt(Math.floor(Math.random() * chars.length));
   }
   return `LD-${randomPart}`; // LD- prefix for Lead
 };
-
 
 const LeadsLayoutAddPage = () => {
   const { user } = useSelector((state) => state.auth);
@@ -87,12 +87,12 @@ const LeadsLayoutAddPage = () => {
     message: "",
     severity: "success",
   });
-useEffect(() => {
-  setFormData(prev => ({
-    ...prev,
-    leadId: generateLeadId() // Auto-generate on component mount
-  }));
-}, []);
+  useEffect(() => {
+    setFormData((prev) => ({
+      ...prev,
+      leadId: generateLeadId(), // Auto-generate on component mount
+    }));
+  }, []);
 
   useEffect(() => {
     if (LoginUserName) {
@@ -176,7 +176,7 @@ useEffect(() => {
         country: selectedCustomer.address?.country || "",
         gst: selectedCustomer.gst || "",
         panNo: selectedCustomer.pan_no || "",
-        paymentType: selectedCustomer.payment_type || "",
+        payment_type: selectedCustomer.payment_type || "",
         owner: selectedCustomer.owner || "",
       }));
     }
@@ -281,6 +281,7 @@ useEffect(() => {
         lead_id: formData.leadId,
         lead_title: formData.leadTitle,
         transaction_type: formData.transactionType,
+        payment_type: formData.paymentType,
         lead_source: formData.leadStatus,
         source_of_enquiry: formData.sourceOfEnquiry,
         rental_duration_months: formData.rentalDuration,
@@ -381,15 +382,15 @@ useEffect(() => {
               options={["Rent", "Buy"]}
             />
             {formData.transactionType === "Rent" && (
-  <Field
-    label="Payment Type"
-    type="select"
-    placeholder="Select Payment Type"
-    value={formData.paymentType}
-    onChange={(value) => handleInputChange("paymentType", value)}
-    options={["Prepaid", "Postpaid"]}
-  />
-)}
+              <Field
+                label="Payment Type"
+                type="select"
+                placeholder="Select Payment Type"
+                value={formData.paymentType}
+                onChange={(value) => handleInputChange("paymentType", value)}
+                options={["Prepaid", "Postpaid"]}
+              />
+            )}
 
             {/* <Field
               label="Lead Status"
@@ -602,7 +603,6 @@ useEffect(() => {
               value={formData.panNo}
               onChange={(value) => handleInputChange("panNo", value)}
             />
-            
           </div>
         </div>
 

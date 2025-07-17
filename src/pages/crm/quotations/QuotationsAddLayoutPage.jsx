@@ -28,8 +28,8 @@ const generateQuotationId = () => {
 };
 
 const QuotationsAddLayoutPage = () => {
-    const navigate = useNavigate();
-  
+  const navigate = useNavigate();
+
   const [leads, setLeads] = useState([]);
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState({
@@ -56,6 +56,7 @@ const QuotationsAddLayoutPage = () => {
     quotationTitle: "",
     leadId: "",
     transactionType: "",
+    payment_type: "",
     quotationStatus: "Pending",
     sourceOfEnquiry: "",
     owner: "",
@@ -148,6 +149,7 @@ const QuotationsAddLayoutPage = () => {
         leadId: selectedLead.lead_id,
         leadTitle: selectedLead.lead_title,
         transactionType: selectedLead.transaction_type,
+        payment_type: selectedLead.payment_type,
         sourceOfEnquiry: selectedLead.source_of_enquiry,
         owner: selectedLead.owner,
         remarks: selectedLead.remarks,
@@ -264,6 +266,7 @@ const QuotationsAddLayoutPage = () => {
         quotation_id: formData.quotationId,
         quotation_title: formData.quotationTitle,
         transaction_type: formData.transactionType,
+        payment_type: formData.payment_type,
         lead_id: selectedLeadId,
         rental_start_date: formData.rentalStartDate,
         rental_end_date: formData.rentalEndDate,

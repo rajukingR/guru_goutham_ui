@@ -120,10 +120,10 @@ const GrnAddForm = () => {
     vehicleNumber: "",
   });
 
-  const [deliveryChallans, setDeliveryChallans] = useState([]);
+  const [dispatchOrders, setDispatchOrders] = useState([]);
   const [products, setProducts] = useState([]);
-  const [selectedChallan, setSelectedChallan] = useState(null);
-  const [challanProducts, setChallanProducts] = useState([]);
+  const [selectedOrder, setSelectedOrder] = useState(null);
+  const [orderProducts, setOrderProducts] = useState([]);
   const [showProductTable, setShowProductTable] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedProductIds, setSelectedProductIds] = useState([]);
@@ -138,20 +138,15 @@ const GrnAddForm = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        // Fetch approved delivery challans
-        const challansResponse = await fetch(
-          `${API_URL}/delivery-challans/approved-delivery-challan`
+        // Fetch approved dispatch orders with delivery challans
+        const ordersResponse = await axios.get(
+          `${API_URL}/dispatch-orders/approved-dc`
         );
-        if (!challansResponse.ok)
-          throw new Error("Failed to fetch delivery challans");
-        const challansData = await challansResponse.json();
-        setDeliveryChallans(challansData);
+        setDispatchOrders(ordersResponse.data);
 
         // Fetch products
-        const prodResponse = await fetch(`${API_URL}/product-templete`);
-        if (!prodResponse.ok) throw new Error("Failed to fetch products");
-        const prodData = await prodResponse.json();
-        setProducts(prodData);
+        const prodResponse = await axios.get(`${API_URL}/product-templete`);
+        setProducts(prodResponse.data);
       } catch (error) {
         console.error("Error fetching data:", error);
         setSnackbar({
@@ -163,69 +158,72 @@ const GrnAddForm = () => {
     };
 
     fetchData();
-  }, [API_URL]);
+  }, []);
 
-  // When a delivery challan is selected, update the products and selected products
+  // When a dispatch order is selected, update the products and selected products
   useEffect(() => {
-    if (selectedChallan && selectedChallan.items) {
-      const challanProductIds = selectedChallan.items.map(
+    if (selectedOrder && selectedOrder.items) {
+      const orderProductIds = selectedOrder.items.map(
         (item) => item.product_id
       );
-      setChallanProducts(
-        products.filter((product) => challanProductIds.includes(product.id))
+      setOrderProducts(
+        products.filter((product) => orderProductIds.includes(product.id))
       );
 
-      // Pre-select the products from the delivery challan
+      // Pre-select the products from the dispatch order
       const initialQuantities = {};
-      selectedChallan.items.forEach((item) => {
+      selectedOrder.items.forEach((item) => {
         initialQuantities[item.product_id] = item.quantity;
       });
 
       setQuantities(initialQuantities);
-      setSelectedProductIds(challanProductIds);
+      setSelectedProductIds(orderProductIds);
     }
-  }, [selectedChallan, products]);
+  }, [selectedOrder, products]);
 
-  // Filter products based on search term and delivery challan products
-  const filteredProducts = challanProducts.filter((product) =>
+  // Filter products based on search term and dispatch order products
+  const filteredProducts = orderProducts.filter((product) =>
     product.product_name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const handleCustomerSelect = (challanId) => {
-    const selected = deliveryChallans.find(
-      (challan) => challan.id === challanId
-    );
+  const handleOrderSelect = (orderId) => {
+    const selected = dispatchOrders.find((order) => order.id === orderId);
     if (selected) {
-      setSelectedChallan(selected);
-      const clientDetails = selected.client_details || {};
+      setSelectedOrder(selected);
+      const contactDetails = selected.contact || {};
+      const deliveryChallan = selected.delivery_challans?.[0] || {};
 
       setFormData((prev) => ({
         ...prev,
-        customer: `${clientDetails.first_name} ${clientDetails.last_name}`,
-        email: selected.email || clientDetails.email,
-        customerId: clientDetails.id || "",
-        phone: selected.shipping_phone_number || clientDetails.phone_number,
-        gstNumber: selected.gst_number,
-        pan: selected.pan_number,
-        orderId: selected.order_id || "", // NEW
-
-        companyName: `${clientDetails.first_name} ${clientDetails.last_name}`,
-        pincode: selected.pincode || "",
-        country: selected.country || "",
-        state: selected.state || "",
-        city: selected.city || "",
-        street: selected.street || "",
+        customer: `${contactDetails.first_name} ${contactDetails.last_name}`,
+        email: selected.email || contactDetails.email,
+        customerId: contactDetails.id || "",
+        phone: selected.shipping_phone_number || contactDetails.phone_number,
+        gstNumber: selected.gst_number || contactDetails.gst,
+        pan: selected.pan_number || contactDetails.pan_no,
+        orderId: selected.order_id || "",
+        companyName:
+          contactDetails.company_name ||
+          `${contactDetails.first_name} ${contactDetails.last_name}`,
+        pincode: selected.pincode || contactDetails.address?.pincode || "",
+        country: selected.country || contactDetails.address?.country || "",
+        state: selected.state || contactDetails.address?.state || "",
+        city: selected.city || contactDetails.address?.city || "",
+        street: selected.street || contactDetails.address?.street || "",
         landmark: selected.landmark || "",
         informedPersonName:
           selected.shipping_name ||
-          `${clientDetails.first_name} ${clientDetails.last_name}`,
+          `${contactDetails.first_name} ${contactDetails.last_name}`,
         informedPersonPhone:
-          selected.shipping_phone_number || clientDetails.phone_number,
-        returnerName: selected.delivery_person_name || "",
-        returnerPhone: selected.delivery_person_phone_number || "",
-        receiverName: selected.receiver_name || "",
-        receiverPhone: selected.receiver_phone_number || "",
-        vehicleNumber: selected.vehicle_number || "",
+          selected.shipping_phone_number || contactDetails.phone_number,
+        // Updated delivery person details
+
+        receiverName:
+          deliveryChallan.receiver_name || selected.receiver_name || "",
+        receiverPhone:
+          deliveryChallan.receiver_phone_number ||
+          selected.receiver_phone_number ||
+          "",
       }));
     }
   };
@@ -290,7 +288,7 @@ const GrnAddForm = () => {
         quantity: quantities[product.id] || 1,
         price: product.purchase_price,
         device_ids:
-          selectedChallan.items.find((item) => item.product_id === product.id)
+          selectedOrder.items.find((item) => item.product_id === product.id)
             ?.device_ids || [],
       }));
 
@@ -301,7 +299,6 @@ const GrnAddForm = () => {
       customer_select: formData.customer,
       email_id: formData.email,
       order_id: formData.orderId || null,
-
       phone_no: formData.phone,
       grn_date: formData.grnDate,
       gst_number: formData.gstNumber,
@@ -325,7 +322,10 @@ const GrnAddForm = () => {
       vehicle_number: formData.vehicleNumber,
       description: formData.description,
       products: selectedProducts,
-      delivery_challan_id: selectedChallan?.id || null,
+      dispatch_order_id: selectedOrder?.id || null,
+            dispatch_order_number: selectedOrder?.dispatch_order_id || null,
+
+      delivery_challan_id: selectedOrder?.delivery_challans?.[0]?.id || null,
     };
 
     try {
@@ -374,20 +374,19 @@ const GrnAddForm = () => {
               placeholder="Enter GRN Title"
               value={formData.grnTitle}
               onChange={(name, value) => handleInputChange(name, value)}
-              required
             />
             <div style={fieldContainerStyle}>
-              <label style={labelStyle}>Select Delivery Challan</label>
+              <label style={labelStyle}>Select Dispatch Order</label>
               <FormControl fullWidth size="small">
                 <Select
-                  value={selectedChallan?.id || ""}
-                  onChange={(e) => handleCustomerSelect(e.target.value)}
+                  value={selectedOrder?.id || ""}
+                  onChange={(e) => handleOrderSelect(e.target.value)}
                   style={inputStyle}
                 >
-                  {deliveryChallans.map((challan) => (
-                    <MenuItem key={challan.id} value={challan.id}>
-                      {challan.dc_id} - {challan.client_details?.first_name}{" "}
-                      {challan.client_details?.last_name}
+                  {dispatchOrders.map((order) => (
+                    <MenuItem key={order.id} value={order.id}>
+                      {order.dispatch_order_id} - {order.contact?.first_name}{" "}
+                      {order.contact?.last_name}
                     </MenuItem>
                   ))}
                 </Select>
@@ -432,13 +431,13 @@ const GrnAddForm = () => {
             />
             <Field
               label="GRN Created By"
-              name="grnCreatedBy" // ✅ IMPORTANT
+              name="grnCreatedBy"
               value={formData.grnCreatedBy}
               onChange={(name, value) => handleInputChange(name, value)}
             />
             <Field
               label="Industry"
-              name="industry" // ✅ Add this
+              name="industry"
               value={formData.industry}
               onChange={(name, value) => handleInputChange(name, value)}
             />
@@ -463,10 +462,20 @@ const GrnAddForm = () => {
         {/* === To Address === */}
         <div style={cardStyle}>
           <div style={cardHeaderContainerStyle}>
-            <div style={iconStyle}>📍</div>
-            <h3 style={cardHeaderStyle}>To Address</h3>
+            <div style={iconStyle}>👤</div>
+            <h3 style={cardHeaderStyle}>Clinet Details</h3>
           </div>
           <div style={fieldsGridStyle}>
+            <Field
+              label="Informed Person Name"
+              value={formData.informedPersonName}
+              onChange={(v) => handleInputChange("informedPersonName", v)}
+            />
+            <Field
+              label="Informed Person Phone"
+              value={formData.informedPersonPhone}
+              onChange={(v) => handleInputChange("informedPersonPhone", v)}
+            />
             <Field
               label="Company Name"
               value={formData.companyName}
@@ -509,43 +518,26 @@ const GrnAddForm = () => {
         <div style={cardStyle}>
           <div style={cardHeaderContainerStyle}>
             <div style={iconStyle}>👤</div>
-            <h3 style={cardHeaderStyle}>Person Info</h3>
+            <h3 style={cardHeaderStyle}>Delivery Person Details</h3>
           </div>
           <div style={fieldsGridStyle}>
             <Field
-              label="Informed Person Name"
-              value={formData.informedPersonName}
-              onChange={(v) => handleInputChange("informedPersonName", v)}
-            />
-            <Field
-              label="Informed Person Phone"
-              value={formData.informedPersonPhone}
-              onChange={(v) => handleInputChange("informedPersonPhone", v)}
-            />
-            <Field
               label="Returner Name"
+              name="returnerName"
               value={formData.returnerName}
-              onChange={(v) => handleInputChange("returnerName", v)}
+              onChange={(name, value) => handleInputChange(name, value)}
             />
             <Field
               label="Returner Phone"
+              name="returnerPhone"
               value={formData.returnerPhone}
-              onChange={(v) => handleInputChange("returnerPhone", v)}
-            />
-            <Field
-              label="Receiver Name"
-              value={formData.receiverName}
-              onChange={(v) => handleInputChange("receiverName", v)}
-            />
-            <Field
-              label="Receiver Phone"
-              value={formData.receiverPhone}
-              onChange={(v) => handleInputChange("receiverPhone", v)}
+              onChange={(name, value) => handleInputChange(name, value)}
             />
             <Field
               label="Vehicle Number"
+              name="vehicleNumber"
               value={formData.vehicleNumber}
-              onChange={(v) => handleInputChange("vehicleNumber", v)}
+              onChange={(name, value) => handleInputChange(name, value)}
             />
           </div>
           <div style={textareaContainerStyle}>
@@ -647,7 +639,7 @@ const GrnAddForm = () => {
                   </TableHead>
                   <TableBody>
                     {filteredProducts.map((product) => {
-                      const challanItem = selectedChallan?.items?.find(
+                      const orderItem = selectedOrder?.items?.find(
                         (item) => item.product_id === product.id
                       );
                       return (

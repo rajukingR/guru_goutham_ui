@@ -22,7 +22,7 @@ import {
   InputLabel,
 } from "@mui/material";
 import { Add, CheckBox, Remove } from "@mui/icons-material";
-import API_URL, { IMAGE_API_URL } from "../../../api/Api_url";
+import API_URL from "../../../api/Api_url";
 
 const Alert = React.forwardRef(function Alert(props, ref) {
   return <MuiAlert elevation={6} ref={ref} variant="filled" {...props} />;
@@ -41,17 +41,16 @@ const CreaditNotesAddFormLayout = () => {
   const navigate = useNavigate();
 
   const [formData, setFormData] = useState({
-    creditNoteNumber: "",
+    creditNoteNumber: generateCreditNoteNumber(),
     creditNoteTitle: "",
     returnedDate: "",
     industry: "",
     transactionType: "Credit Note",
     paymentType: "",
     dcId: "",
+    dcNumber: "",
     customerId: "",
-    invoiceDate: "",
-    invoiceStartDate: "",
-    invoiceEndDate: "",
+    dcDate: "",
     customerName: "",
     createdBy: "",
     amount: "",
@@ -61,7 +60,7 @@ const CreaditNotesAddFormLayout = () => {
     email: "",
     shippingName: "",
     pincode: "",
-    status: "",
+    status: "Draft",
     printCreditNote: false,
   });
 
@@ -79,20 +78,13 @@ const CreaditNotesAddFormLayout = () => {
   const [snackbarMessage, setSnackbarMessage] = useState("");
   const [snackbarSeverity, setSnackbarSeverity] = useState("success");
 
-  useEffect(() => {
-    setFormData((prev) => ({
-      ...prev,
-      creditNoteNumber: generateCreditNoteNumber(),
-    }));
-  }, []);
-
-  // Fetch orders and products on component mount
+  // Fetch approved dispatch orders and products on component mount
   useEffect(() => {
     const fetchData = async () => {
       try {
-        // Fetch approved invoices
+        // Fetch approved dispatch orders (replacing delivery challans)
         const orderResponse = await axios.get(
-          `${API_URL}/invoices/approved-invoices`
+          `${API_URL}/dispatch-orders/approved-dc`
         );
         setOrders(orderResponse.data);
 
@@ -110,70 +102,48 @@ const CreaditNotesAddFormLayout = () => {
     fetchData();
   }, []);
 
-  // When an order is selected, populate form data and available assets
+  // When a dispatch order is selected, populate form data and available assets
   const handleOrderSelect = (orderId) => {
     const selected = orders.find((order) => order.id === orderId);
     if (!selected) return;
 
     setSelectedOrder(selected);
 
-    // Populate form fields from the selected invoice
+    // Populate form fields from the selected dispatch order
     setFormData((prev) => ({
       ...prev,
-      creditNoteTitle: `Credit Note for Invoice ${selected.invoice_number}`,
-      customerId: selected.customer_id,
-      customerName: selected.customer_name,
-      dcId: selected.dc_id,
-      invoiceDate: selected.invoice_date,
-      invoiceStartDate: selected.invoice_start_date,
-      invoiceEndDate: selected.invoice_end_date,
+      creditNoteTitle: `Credit Note for DC ${selected.dispatch_order_id}`,
+      customerId: selected.customer_code,
+      customerName: selected.shipping_name || `${selected.contact?.first_name || ""} ${selected.contact?.last_name || ""}`.trim(),
+      dcId: selected.id,
+      dcNumber: selected.dispatch_order_id,
+      dcDate: selected.dispatch_order_date,
       industry: selected.industry,
       email: selected.email,
-      pan: selected.pan_number,
-      amount: selected.amount,
-      shippingName: selected.shippingDetail?.consignee_name || "",
-      pincode: selected.shippingDetail?.pincode || "",
+      pan: selected.pan_number || selected.contact?.pan_no || "",
+      shippingName: selected.shipping_name,
+      pincode: selected.pincode,
+      amount: selected.items.reduce(
+        (sum, item) => sum + parseFloat(item.total_price || 0),
+        0
+      ),
     }));
 
-    // Process device IDs from the invoice items
+    // Process device IDs from the dispatch order items
     const newAvailableAssetIds = {};
     selected.items.forEach((item) => {
-      try {
-        const parsedDeviceIds = JSON.parse(item.device_ids || "[]");
-
-        // Use returned_device_ids as array
-        const returnedDevices = Array.isArray(item.returned_device_ids)
-          ? item.returned_device_ids
-          : typeof item.returned_device_ids === "string"
-          ? JSON.parse(item.returned_device_ids || "[]")
-          : [];
-
-        // Filter remaining devices
-        const remainingDevices = parsedDeviceIds.filter(
-          (dev) => !returnedDevices.includes(dev)
-        );
-
-        newAvailableAssetIds[item.product_id] = remainingDevices;
-
-        // Use net_quantity instead of quantity
-        const netQty =
-          typeof item.net_quantity === "number"
-            ? item.net_quantity
-            : (item.quantity || 0) - (item.return_quantity || 0);
-
-        setQuantities((prev) => ({
-          ...prev,
-          [item.product_id]: netQty,
-        }));
-      } catch (e) {
-        console.error("Error parsing or processing device IDs:", e);
-        newAvailableAssetIds[item.product_id] = [];
-      }
+      newAvailableAssetIds[item.product_id] = item.device_ids || [];
+      
+      setQuantities((prev) => ({
+        ...prev,
+        [item.product_id]: item.quantity || 1,
+      }));
     });
 
     setAvailableAssetIds(newAvailableAssetIds);
-    setSelectedProductIds([]); // Reset selected products when changing invoice
-    setDeviceIds({}); // Reset selected devices
+    setSelectedProductIds([]);
+    setDeviceIds({});
+    setDeviceIdErrors({});
   };
 
   const handleProductSelection = (productId) => {
@@ -206,7 +176,7 @@ const CreaditNotesAddFormLayout = () => {
     if (numValue > invoiceQty) {
       setDeviceIdErrors((prev) => ({
         ...prev,
-        [productId]: `Credit quantity cannot exceed invoice quantity (${invoiceQty})`,
+        [productId]: `Credit quantity cannot exceed DC quantity (${invoiceQty})`,
       }));
       return;
     }
@@ -230,7 +200,7 @@ const CreaditNotesAddFormLayout = () => {
     if (currentQty >= invoiceQty) {
       setDeviceIdErrors((prev) => ({
         ...prev,
-        [productId]: `Credit quantity cannot exceed invoice quantity (${invoiceQty})`,
+        [productId]: `Credit quantity cannot exceed DC quantity (${invoiceQty})`,
       }));
       return;
     }
@@ -304,9 +274,6 @@ const CreaditNotesAddFormLayout = () => {
     }
   };
 
-  const handleToggleChange = () =>
-    setFormData((p) => ({ ...p, printCreditNote: !p.printCreditNote }));
-
   const handleSubmit = async () => {
     // Validate device IDs match quantities
     let isValid = true;
@@ -333,7 +300,7 @@ const CreaditNotesAddFormLayout = () => {
     }
 
     if (!selectedOrder) {
-      setSnackbarMessage("Please select an invoice first");
+      setSnackbarMessage("Please select a dispatch order first");
       setSnackbarSeverity("error");
       setOpenSnackbar(true);
       return;
@@ -346,14 +313,10 @@ const CreaditNotesAddFormLayout = () => {
       transaction_type: formData.transactionType,
       payment_type: formData.paymentType,
       dc_id: formData.dcId,
+      dc_number: formData.dcNumber,
       customer_id: formData.customerId,
-      invoice_id: selectedOrder.id,
-      invoice_number: selectedOrder.invoice_number,
-      returned_date: formData.returnedDate, // Add this line
-
-      invoice_date: formData.invoiceDate,
-      invoice_start_date: formData.invoiceStartDate,
-      invoice_end_date: formData.invoiceEndDate,
+      dc_date: formData.dcDate,
+      returned_date: formData.returnedDate,
       customer_name: formData.customerName,
       created_by: formData.createdBy,
       amount: parseFloat(formData.amount) || 0,
@@ -365,22 +328,19 @@ const CreaditNotesAddFormLayout = () => {
       pincode: formData.pincode,
       status: formData.status,
       print_credit_note: formData.printCreditNote,
-      items: selectedProductIds.map((productId) => ({
-        product_id: productId,
-        product_name:
-          products.find((p) => p.id === productId)?.product_name || "",
-        quantity: quantities[productId] || 1,
-        device_ids: deviceIds[productId] || [],
-        unit_price:
-          selectedOrder.items.find((item) => item.product_id === productId)
-            ?.unit_price || "0.00",
-        total_price:
-          (quantities[productId] || 1) *
-          parseFloat(
-            selectedOrder.items.find((item) => item.product_id === productId)
-              ?.unit_price || 0
-          ),
-      })),
+      items: selectedProductIds.map((productId) => {
+        const item = selectedOrder.items.find((item) => item.product_id === productId);
+        return {
+          product_id: productId,
+          product_name: item?.product_name || "",
+          quantity: quantities[productId] || 1,
+          device_ids: deviceIds[productId] || [],
+          unit_price: item?.unit_price || "0.00",
+          total_price:
+            (quantities[productId] || 1) *
+            parseFloat(item?.unit_price || 0),
+        };
+      }),
     };
 
     try {
@@ -509,23 +469,23 @@ const CreaditNotesAddFormLayout = () => {
                 placeholder="e.g. DC102"
                 style={inputStyle}
                 name="dcId"
-                value={formData.dcId}
+                value={formData.dcNumber}
                 onChange={handleInputChange}
               />
             </div>
           </div>
         </div>
 
-        {/* Invoice / Customer Card */}
+        {/* Dispatch Order / Customer Card */}
         <div style={cardStyle}>
           <div style={cardHeaderContainerStyle}>
             <div style={iconStyle}>👤</div>
-            <h3 style={cardHeaderStyle}>Invoice / Customer:</h3>
+            <h3 style={cardHeaderStyle}>Dispatch Order / Customer:</h3>
           </div>
           <div style={fieldsGridStyle}>
             <div style={fieldContainerStyle}>
               <label style={labelStyle}>
-                Select Invoice
+                Select Dispatch Order
                 <span style={requiredStyle}>*</span>
               </label>
               <FormControl fullWidth size="small">
@@ -538,11 +498,11 @@ const CreaditNotesAddFormLayout = () => {
                   style={inputStyle}
                 >
                   <MenuItem value="" disabled>
-                    Select Invoice
+                    Select Dispatch Order
                   </MenuItem>
                   {orders.map((order) => (
                     <MenuItem key={order.id} value={order.id}>
-                      {`${order.invoice_number} | ${order.customer_name} | ${order.invoice_date}`}
+                      {`${order.dispatch_order_id} | ${order.shipping_name || ""} | ${order.dispatch_order_date}`}
                     </MenuItem>
                   ))}
                 </Select>
@@ -576,34 +536,12 @@ const CreaditNotesAddFormLayout = () => {
             </div>
 
             <div style={fieldContainerStyle}>
-              <label style={labelStyle}>Invoice Date</label>
+              <label style={labelStyle}>DC Date</label>
               <input
                 type="date"
                 style={inputStyle}
-                name="invoiceDate"
-                value={formData.invoiceDate}
-                onChange={handleInputChange}
-              />
-            </div>
-
-            <div style={fieldContainerStyle}>
-              <label style={labelStyle}>Start Date</label>
-              <input
-                type="date"
-                style={inputStyle}
-                name="invoiceStartDate"
-                value={formData.invoiceStartDate}
-                onChange={handleInputChange}
-              />
-            </div>
-
-            <div style={fieldContainerStyle}>
-              <label style={labelStyle}>End Date</label>
-              <input
-                type="date"
-                style={inputStyle}
-                name="invoiceEndDate"
-                value={formData.invoiceEndDate}
+                name="dcDate"
+                value={formData.dcDate}
                 onChange={handleInputChange}
               />
             </div>
@@ -629,18 +567,6 @@ const CreaditNotesAddFormLayout = () => {
             <h3 style={cardHeaderStyle}>Control:</h3>
           </div>
           <div style={fieldsGridStyle}>
-            {/* <div style={fieldContainerStyle}>
-              <label style={labelStyle}>Reference</label>
-              <input
-                type="text"
-                placeholder="Enter reference"
-                style={inputStyle}
-                name="reference"
-                value={formData.reference}
-                onChange={handleInputChange}
-              />
-            </div> */}
-
             <div style={fieldContainerStyle}>
               <label style={labelStyle}>PAN</label>
               <input
@@ -688,18 +614,6 @@ const CreaditNotesAddFormLayout = () => {
                 onChange={handleInputChange}
               />
             </div>
-
-            {/* <div style={fieldContainerStyle}>
-              <label style={labelStyle}>Status</label>
-              <input
-                type="text"
-                placeholder="Enter status"
-                style={inputStyle}
-                name="status"
-                value={formData.status}
-                onChange={handleInputChange}
-              />
-            </div> */}
           </div>
         </div>
       </div>
@@ -708,7 +622,7 @@ const CreaditNotesAddFormLayout = () => {
       {selectedOrder && (
         <div style={cardStyle}>
           <div style={cardHeaderContainerStyle}>
-            <h3 style={cardHeaderStyle}>Selected Products from Invoice</h3>
+            <h3 style={cardHeaderStyle}>Product Details</h3>
           </div>
 
           <div style={{ marginBottom: "1.5rem" }}>
@@ -795,7 +709,7 @@ const CreaditNotesAddFormLayout = () => {
                         <TableCell sx={{ color: "#fff" }}>Storage</TableCell>
                         <TableCell sx={{ color: "#fff" }}>Graphics</TableCell>
                         <TableCell sx={{ color: "#fff" }}>
-                          Invoice Qty
+                          DC Qty
                         </TableCell>
                         <TableCell sx={{ color: "#fff" }}>Credit Qty</TableCell>
                         <TableCell sx={{ color: "#fff" }}>Asset IDs</TableCell>
@@ -828,7 +742,7 @@ const CreaditNotesAddFormLayout = () => {
                             <TableCell>{product.storage}</TableCell>
                             <TableCell>{product.graphics}</TableCell>
                             <TableCell>
-                              {invoiceItem.net_quantity ?? invoiceItem.quantity}
+                              {invoiceItem.quantity}
                             </TableCell>
                             <TableCell>
                               <Box display="flex" alignItems="center">
@@ -872,9 +786,7 @@ const CreaditNotesAddFormLayout = () => {
                                   }
                                   inputProps={{
                                     min: 1,
-                                    max:
-                                      invoiceItem.net_quantity ??
-                                      invoiceItem.quantity,
+                                    max: invoiceItem.quantity,
                                     style: { width: 50, textAlign: "center" },
                                   }}
                                 />
@@ -884,8 +796,7 @@ const CreaditNotesAddFormLayout = () => {
                                   disabled={
                                     !selectedProductIds.includes(product.id) ||
                                     (quantities[product.id] || 1) >=
-                                      (invoiceItem.net_quantity ??
-                                        invoiceItem.quantity)
+                                      invoiceItem.quantity
                                   }
                                 >
                                   <Add fontSize="small" />

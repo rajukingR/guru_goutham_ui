@@ -283,7 +283,7 @@ const ContactsEditLayoutPage = () => {
                 onChange={handleInputChange}
               />
 
-              <Field
+              {/* <Field
                 label="Payment Type"
                 name="payment_type"
                 type="select"
@@ -294,7 +294,7 @@ const ContactsEditLayoutPage = () => {
                   { value: "Postpaid", label: "Postpaid" },
                   { value: "Credit", label: "Credit" },
                 ]}
-              />
+              /> */}
             </div>
           </div>
 

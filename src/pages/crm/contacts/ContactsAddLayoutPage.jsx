@@ -253,7 +253,7 @@ const ContactsAddLayoutPage = () => {
                 value={formData.industry}
                 onChange={handleInputChange}
               />
-              <Field
+              {/* <Field
                 label="Payment Type"
                 name="payment_type"
                 type="select"
@@ -263,7 +263,7 @@ const ContactsAddLayoutPage = () => {
                   { value: "Prepaid", label: "Prepaid" },
                   { value: "Postpaid", label: "Postpaid" },
                 ]}
-              />
+              /> */}
             </div>
           </div>
 

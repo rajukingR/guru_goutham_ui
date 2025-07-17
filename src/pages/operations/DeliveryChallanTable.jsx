@@ -21,8 +21,7 @@ const DeliveryChallanTable = () => {
   const columns = [
     { id: "s_id", label: "S.No." },
     { id: "dc_id", label: "Challan ID" },
-    { id: "dc_title", label: "Title" },
-    { id: "order_number", label: "Order Number" },
+    { id: "dc_id", label: "Order Number" },
     { id: "customer_code", label: "Customer Code" },
     { id: "dc_date", label: "Date" },
     { id: "shipping_name", label: "Shipped To" },

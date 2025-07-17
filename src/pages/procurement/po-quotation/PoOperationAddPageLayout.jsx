@@ -308,7 +308,7 @@ useEffect(() => {
 
             <Field
   label="Purchase Receipt ID"
-  value={formData.purchaseReceiptId}
+  value={formData.purchaseRequestId}
   InputProps={{ readOnly: true }}
 />
 

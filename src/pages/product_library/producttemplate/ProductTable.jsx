@@ -18,10 +18,10 @@ const ProductTable = () => {
     { id: "product_category", label: "Category" },
     { id: "stock_location", label: "Stock Location" },
     { id: "purchase_price", label: "Purchase Price (₹)" },
-    { id: "rent_price_per_day", label: "Rent/Day (₹)" },
+    // { id: "rent_price_per_day", label: "Rent/Day (₹)" },
     { id: "rent_price_per_month", label: "Rent/Month (₹)" },
-    { id: "rent_price_6_months", label: "Rent/6 Months (₹)" },
-    { id: "rent_price_1_year", label: "Rent/Year (₹)" },
+    // { id: "rent_price_6_months", label: "Rent/6 Months (₹)" },
+    // { id: "rent_price_1_year", label: "Rent/Year (₹)" },
   ];
 
   const formatCurrency = (value) => {

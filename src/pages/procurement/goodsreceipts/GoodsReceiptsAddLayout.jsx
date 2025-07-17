@@ -357,14 +357,14 @@ const GoodsReceiptsAddLayout = () => {
                 handleInputChange("goodsReceiptId", e.target.value)
               }
             />
-            <Field
+            {/* <Field
               label="Vendor Invoice Number"
               placeholder="Enter Vendor Invoice Number"
               value={formData.vendorInvoiceNumber}
               onChange={(e) =>
                 handleInputChange("vendorInvoiceNumber", e.target.value)
               }
-            />
+            /> */}
             <Field
               label="Purchase Order Details"
               type="select"

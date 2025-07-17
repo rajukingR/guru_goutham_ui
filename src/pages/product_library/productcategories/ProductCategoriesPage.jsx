@@ -11,7 +11,7 @@ const ProductCategoriesPage = () => {
     { id: "category_number", label: "Category Number" },
     { id: "category_name", label: "Category Name" },
     { id: "description", label: "Description" },
-    { id: "status", label: "Status" }, // Status column
+    // { id: "status", label: "Status" }, // Status column
   ];
 
   useEffect(() => {

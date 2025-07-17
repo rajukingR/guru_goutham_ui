@@ -9,15 +9,16 @@ const InvoicesTablePage = () => {
   const columns = [
     { id: "s_id", label: "S.No." },
     { id: "invoice_number", label: "Invoice Number" },
-    { id: "invoice_title", label: "Title" },
+    { id: "dispatch_order_number", label: "Order Number" },
+
     { id: "customer_name", label: "Customer Name" },
-    { id: "invoice_start_date", label: "Invoice Date" },
-    { id: "purchase_order_number", label: "PO Number" },
-    { id: "customer_gst_number", label: "GST No." },
+    { id: "invoice_date", label: "Invoice Date" },
     { id: "email", label: "Email" },
     { id: "phone_number", label: "Phone" },
-    { id: "pan_number", label: "PAN" },
-        { id: "transaction_type", label: "Transaction Type" },
+    { id: "customer_gst_number", label: "GST No." },
+
+    { id: "pan_number", label: "PAN No." },
+    { id: "transaction_type", label: "Transaction Type" },
     { id: "payment_mode", label: "Payment Mode" },
   ];
 
@@ -36,7 +37,7 @@ const InvoicesTablePage = () => {
           const formatted = response.data.map((item, index) => ({
             s_id: index + 1,
             ...item,
-           
+
             status: item.approval_status === "Approved" ? "Active" : "Inactive",
           }));
           setData(formatted);

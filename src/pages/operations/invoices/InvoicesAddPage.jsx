@@ -468,6 +468,8 @@ const InvoicesAddPage = () => {
     purchase_order_date: "",
     purchase_order_number: "",
     dc_id: "",
+    dispatch_order_number: "",
+    dc_date: "",
     customer_gst_number: "",
     duration: "",
     email: "",
@@ -514,6 +516,7 @@ const InvoicesAddPage = () => {
   const [selectedMonth, setSelectedMonth] = useState("current");
   const [productOrderMap, setProductOrderMap] = useState({});
   const [selectedReturnIds, setSelectedReturnIds] = useState({});
+  const [selectedOrderId, setSelectedOrderId] = useState("");
 
   const [dateRanges, setDateRanges] = useState({
     invoiceStartDate: "",
@@ -624,51 +627,78 @@ const InvoicesAddPage = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const approvedDeliveryChallansResponse = await fetch(
-          `${API_URL}/delivery-challans/approved-delivery-challan`
+        // Replace the delivery challans API with dispatch orders API
+        const approvedDispatchOrdersResponse = await fetch(
+          `${API_URL}/dispatch-orders/approved-dc`
         );
-        if (!approvedDeliveryChallansResponse.ok)
-          throw new Error("Failed to fetch approved Delivery Challans");
-        const approvedDeliveryChallansData =
-          await approvedDeliveryChallansResponse.json();
+        if (!approvedDispatchOrdersResponse.ok)
+          throw new Error("Failed to fetch approved Dispatch Orders");
+        const approvedDispatchOrdersData =
+          await approvedDispatchOrdersResponse.json();
 
-        const transformedOrders = approvedDeliveryChallansData.map((dc) => ({
-          id: dc.id,
-          order_id: dc.order_id,
-          dc_id: dc.id,
-          customer_code: dc.customer_code,
-          customer_id: dc.customer?.id,
-          personalDetails: {
-            first_name: dc.shipping_name || dc.customer?.first_name,
-            last_name: dc.customer?.last_name || "",
-            email: dc.email || dc.customer?.email,
-            phone_number: dc.shipping_phone_number || dc.customer?.phone_number,
-            gst_number: dc.gst_number || dc.customer?.gst,
-            pan_number: dc.pan_number || dc.customer?.pan_no,
-          },
-          address: {
-            country: dc.country || "India",
-            state: dc.state,
-            city: dc.city,
-            street: dc.street,
-            pincode: dc.pincode,
-            landmark: dc.landmark,
-          },
-          items: dc.items.map((item) => ({
-            product_id: item.product_id,
-            product_name: item.product_name,
-            quantity: item.quantity,
-            unit_price: item.unit_price,
-            total_price: item.total_price,
-            product: item.product,
-            device_ids: item.device_ids || [], // No JSON.parse needed if it's already an array
-          })),
-          rental_start_date: dc.order?.rental_start_date || null,
-          rental_end_date: dc.order?.rental_end_date || null,
-          rental_duration: dc.order?.rental_duration || null,
-          transaction_type: dc.type || "",
-          payment_type: dc.payment_type || "",
-        }));
+        // Transform the dispatch orders data to match your existing structure
+        const transformedOrders = approvedDispatchOrdersData.map(
+          (dispatchOrder) => {
+            // Use the first delivery challan if available, or fall back to dispatch order data
+            const dc = dispatchOrder.delivery_challans?.[0] || dispatchOrder;
+
+            return {
+              id: dispatchOrder.id,
+              order_id: dispatchOrder.order_id,
+              dc_id: dc.dc_id || dispatchOrder.dispatch_order_id,
+              dispatch_order_number: dc.dispatch_order_id,
+
+              dc_date: dc.dc_date || dispatchOrder.dispatch_order_date,
+              customer_code: dispatchOrder.customer_code,
+              order_number: dispatchOrder.order_number,
+              dispatch_order_id: dispatchOrder.dispatch_order_id, // Add this line
+              customer_id: dispatchOrder.contact?.id,
+              dispatch_order: dispatchOrder,
+
+              personalDetails: {
+                first_name:
+                  dispatchOrder.shipping_name ||
+                  dispatchOrder.contact?.first_name,
+                last_name: dispatchOrder.contact?.last_name || "",
+                email: dispatchOrder.email || dispatchOrder.contact?.email,
+                phone_number:
+                  dispatchOrder.shipping_phone_number ||
+                  dispatchOrder.contact?.phone_number,
+                gst_number:
+                  dispatchOrder.gst_number || dispatchOrder.contact?.gst,
+                pan_number:
+                  dispatchOrder.pan_number || dispatchOrder.contact?.pan_no,
+              },
+              address: {
+                country: dispatchOrder.country || "India",
+                state: dispatchOrder.state,
+                city: dispatchOrder.city,
+                street:
+                  dispatchOrder.street ||
+                  dispatchOrder.contact?.address?.street,
+                pincode: dispatchOrder.pincode,
+                landmark: dispatchOrder.landmark,
+              },
+              items: dispatchOrder.items.map((item) => ({
+                product_id: item.product_id,
+                product_name: item.product_name,
+                quantity: item.quantity,
+                unit_price: parseFloat(item.total_price) / item.quantity || 0,
+                total_price: item.total_price,
+                product: item.product,
+                device_ids: item.device_ids || [],
+                order_id: dispatchOrder.order_id, // Include order_id in each item
+              })),
+              rental_start_date: dispatchOrder.order?.rental_start_date || null,
+              rental_end_date: dispatchOrder.order?.rental_end_date || null,
+              rental_duration: dispatchOrder.order?.rental_duration || null,
+              transaction_type: dispatchOrder.type || "",
+              payment_type: dispatchOrder.payment_type || "",
+            };
+          }
+        );
+
+        console.log("Transformed orders:", transformedOrders);
 
         setOrders(transformedOrders);
 
@@ -779,22 +809,32 @@ const InvoicesAddPage = () => {
   };
 
   const handleCustomerSelect = useCallback(
-    (customerId) => {
+    (dispatchOrderId) => {
       const selectedOrder = orders.find(
-        (order) => order.id === parseInt(customerId)
+        (order) => order.id === parseInt(dispatchOrderId)
       );
       if (!selectedOrder) return;
 
-      // Initialize quantities from order items
+      setSelectedOrderId(dispatchOrderId); // <-- sets selected value in dropdown
+
+      // You already have the rest of this code:
+      const dispatchOrderDate =
+        selectedOrder.dispatch_order?.dispatch_order_date ||
+        selectedOrder.dc_date ||
+        (selectedOrder.created_at
+          ? new Date(selectedOrder.created_at).toISOString().split("T")[0]
+          : "");
+
+      const dispatchOrderNumber =
+        selectedOrder.dispatch_order_id || selectedOrder.dispatch_order_number;
+
       const initialQuantities = {};
       selectedOrder.items.forEach((item) => {
         initialQuantities[item.product_id] = item.quantity;
       });
-
       setQuantities(initialQuantities);
 
       const personal = selectedOrder.personalDetails;
-
       const address = selectedOrder.address;
       const orderItems = selectedOrder.items || [];
 
@@ -841,7 +881,6 @@ const InvoicesAddPage = () => {
         };
       });
 
-      // Tax Calculation
       const cgstRate =
         taxTypes.find((t) => t.tax_type_name === "CGST")?.percentage || 0;
       const sgstRate =
@@ -851,10 +890,9 @@ const InvoicesAddPage = () => {
       const totalTax = cgst + sgst;
       const totalAmount = amount + totalTax;
 
-      // Set Form Data
       setFormData({
         ...formData,
-        customer_id: selectedOrder.customer_id || "",
+        customer_id: selectedOrder.contact?.id || "", // ✅ sets customer_id
         customer_name: `${personal?.first_name || ""}`,
         email: personal?.email || "",
         phone_number: personal?.phone_number || "",
@@ -865,11 +903,12 @@ const InvoicesAddPage = () => {
         payment_type: selectedOrder.payment_type || "",
         rental_duration: selectedOrder.rental_duration || "",
         rental_duration_days: selectedOrder.rental_duration_days || 0,
-        purchase_order_date: selectedOrder.updated_at
-          ? new Date(selectedOrder.updated_at).toISOString().split("T")[0]
-          : "",
-        purchase_order_number: selectedOrder.order_id || "",
-        dc_id: selectedOrder.id,
+        purchase_order_date: dispatchOrderDate,
+        purchase_order_number: selectedOrder.order_number || "",
+        dc_id: selectedOrder.dc_id || selectedOrder.dispatch_order_id,
+        dispatch_order_number: dispatchOrderNumber,
+        dispatch_order_id: selectedOrder.id,
+        dc_date: dispatchOrderDate,
         duration: selectedOrder.rental_duration || 0,
         rental_start_date: selectedOrder.rental_start_date || "",
         rental_end_date: selectedOrder.rental_end_date || "",
@@ -1143,6 +1182,10 @@ const InvoicesAddPage = () => {
         ...formData,
         // Include date ranges in the submission
         dc_id: formData.dc_id,
+        dispatch_order_number:
+          formData.dispatch_order_number || formData.dispatch_order_id, // Use whichever is available
+
+        dc_date: formData.dc_date,
         invoice_start_date: dateRanges.invoiceStartDate,
         invoice_end_date: dateRanges.invoiceEndDate,
         previous_delivered_start_date: dateRanges.previousDeliveredStartDate,
@@ -1270,70 +1313,75 @@ const InvoicesAddPage = () => {
                 onChange={handleInputChange}
               />
 
-              <FormControl fullWidth>
-  <InputLabel>Select Customer</InputLabel>
-  <Select
-    value={formData.customer_id}
-    onChange={(e) => handleCustomerSelect(e.target.value)}
-    label="Select Customer"
-  >
-    {orders.map((order) => (
-      <MenuItem key={order.id} value={order.id}>
-        {order.order_id} - {order.personalDetails?.first_name || ""} {order.personalDetails?.last_name || ""}
-      </MenuItem>
-    ))}
-  </Select>
-</FormControl>
+              <FormControl fullWidth size="small">
+                <InputLabel>Select 
+                </InputLabel>
+                <Select
+                  value={selectedOrderId || ""}
+                  onChange={(e) => handleCustomerSelect(e.target.value)}
+                  label="Select Customer"
+                  displayEmpty
+                  inputProps={{ "aria-label": "Without label" }}
+                  style={inputStyle}
+                >
+                  {orders.map((order) => (
+                    <MenuItem key={order.id} value={order.id}>
+                      {order.dispatch_order_id} -{" "}
+                      {order.personalDetails?.first_name || ""}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
 
               <Field
-  label="Transaction Type"
-  name="transaction_type"
-  value={formData.transaction_type}
-  onChange={(e) => {
-    handleInputChange(e);
-    // Clear rental-specific fields when switching to Buy
-    if (e.target.value === "Buy") {
-      setFormData(prev => ({
-        ...prev,
-        payment_mode: "",
-        payment_type: "", // Clear payment type
-        rental_duration: "0",
-        rental_duration_days: 0,
-        rental_start_date: "",
-        rental_end_date: ""
-      }));
-    }
-  }}
-/>
+                label="Transaction Type"
+                name="transaction_type"
+                value={formData.transaction_type}
+                onChange={(e) => {
+                  handleInputChange(e);
+                  // Clear rental-specific fields when switching to Buy
+                  if (e.target.value === "Buy") {
+                    setFormData((prev) => ({
+                      ...prev,
+                      payment_mode: "",
+                      payment_type: "", // Clear payment type
+                      rental_duration: "0",
+                      rental_duration_days: 0,
+                      rental_start_date: "",
+                      rental_end_date: "",
+                    }));
+                  }
+                }}
+              />
 
-{formData.transaction_type === "Rent" && (
-  <>
-    <Field
-      label="Payment Mode"
-      name="payment_mode"
-      value={formData.payment_type}
-      onChange={handleInputChange}
-    />
+              {formData.transaction_type === "Rent" && (
+                <>
+                  <Field
+                    label="Payment Mode"
+                    name="payment_mode"
+                    value={formData.payment_type}
+                    onChange={handleInputChange}
+                  />
 
-    <div
-      style={{
-        gridColumn: "1 / -1",
-        margin: "1rem 0",
-        padding: "1rem",
-        backgroundColor: "#f8f9fa",
-        borderRadius: "8px",
-        border: "1px solid #e0e0e0",
-      }}
-    >
-      <DateRangeSelector
-        selectedMonth={selectedMonth}
-        setSelectedMonth={setSelectedMonth}
-        dateRanges={dateRanges}
-        setDateRanges={setDateRanges}
-      />
-    </div>
-  </>
-)}
+                  <div
+                    style={{
+                      gridColumn: "1 / -1",
+                      margin: "1rem 0",
+                      padding: "1rem",
+                      backgroundColor: "#f8f9fa",
+                      borderRadius: "8px",
+                      border: "1px solid #e0e0e0",
+                    }}
+                  >
+                    <DateRangeSelector
+                      selectedMonth={selectedMonth}
+                      setSelectedMonth={setSelectedMonth}
+                      dateRanges={dateRanges}
+                      setDateRanges={setDateRanges}
+                    />
+                  </div>
+                </>
+              )}
 
               <Field
                 label="Customer GST"
@@ -1365,7 +1413,7 @@ const InvoicesAddPage = () => {
                 onChange={handleInputChange}
                 placeholder="Enter PAN"
               />
-              
+
               <Field
                 label="Consultant"
                 name="invoice_consulting_by"

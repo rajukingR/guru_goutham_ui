@@ -236,7 +236,7 @@ const SalesOrdersAddLayoutPage = ({ product }) => {
         ...prev,
         quotation_id: selectedQuotation.id,
         customer_id: selectedQuotation.customer_id,
-        payment_type: prev.payment_type, // ✅ RETAIN this!
+        payment_type: selectedQuotation.payment_type, // ✅ RETAIN this!
 
         rental_duration: selectedQuotation.rental_duration,
         transaction_type: selectedQuotation.transaction_type,
@@ -579,30 +579,27 @@ const SalesOrdersAddLayoutPage = ({ product }) => {
                 readOnly
               />
               <Field
-  label="Transaction Type"
-  type="select"
-  placeholder="Select Type"
-  value={formData.transaction_type}
-  onChange={(e) => {
-    handleChange({
-      target: { name: "transaction_type", value: e.target.value },
-    });
-    // Clear rental fields when switching to Buy
-    if (e.target.value === "Buy") {
-      setFormData(prev => ({
-        ...prev,
-        rental_duration: null,
-        rental_duration_days: null,
-        rental_start_date: null,
-        rental_end_date: null
-      }));
-    }
-  }}
-  options={["Rent", "Buy"]}
-/>
-              
-
-              
+                label="Transaction Type"
+                type="select"
+                placeholder="Select Type"
+                value={formData.transaction_type}
+                onChange={(e) => {
+                  handleChange({
+                    target: { name: "transaction_type", value: e.target.value },
+                  });
+                  // Clear rental fields when switching to Buy
+                  if (e.target.value === "Buy") {
+                    setFormData((prev) => ({
+                      ...prev,
+                      rental_duration: null,
+                      rental_duration_days: null,
+                      rental_start_date: null,
+                      rental_end_date: null,
+                    }));
+                  }
+                }}
+                options={["Rent", "Buy"]}
+              />
 
               <Field
                 label="Order Status"
@@ -657,58 +654,64 @@ const SalesOrdersAddLayoutPage = ({ product }) => {
               />
 
               {formData.transaction_type === "Rent" && (
-  <>
-    <Field
-      label="Payment Type"
-      type="select"
-      placeholder="Select Payment Type"
-      value={formData.payment_type}
-      onChange={(e) =>
-        handleChange({
-          target: { name: "payment_type", value: e.target.value },
-        })
-      }
-      options={["Prepaid", "Postpaid"]}
-    />
+                <>
+                  {/* <Field
+                    label="Payment Type"
+                    type="select"
+                    placeholder="Select Payment Type"
+                    value={formData.payment_type}
+                    onChange={(e) =>
+                      handleChange({
+                        target: { name: "payment_type", value: e.target.value },
+                      })
+                    }
+                    options={["Prepaid", "Postpaid"]}
+                  /> */}
 
-    <Field
-      label="Rental Duration (months)"
-      placeholder="Enter Duration in Months"
-      type="number"
-      value={formData.rental_duration || ""}
-      onChange={(e) =>
-        handleRentalDurationChange("rental_duration", e.target.value)
-      }
-    />
+                  <Field
+                    label="Rental Duration (months)"
+                    placeholder="Enter Duration in Months"
+                    type="number"
+                    value={formData.rental_duration || ""}
+                    onChange={(e) =>
+                      handleRentalDurationChange(
+                        "rental_duration",
+                        e.target.value
+                      )
+                    }
+                  />
 
-    <Field
-      label="Rental Start Date"
-      type="date"
-      placeholder="Select Date"
-      value={formData.rental_start_date || ""}
-      onChange={(e) =>
-        handleChange({
-          target: {
-            name: "rental_start_date",
-            value: e.target.value,
-          },
-        })
-      }
-    />
+                  <Field
+                    label="Rental Start Date"
+                    type="date"
+                    placeholder="Select Date"
+                    value={formData.rental_start_date || ""}
+                    onChange={(e) =>
+                      handleChange({
+                        target: {
+                          name: "rental_start_date",
+                          value: e.target.value,
+                        },
+                      })
+                    }
+                  />
 
-    <Field
-      label="Rental End Date"
-      type="date"
-      placeholder="Select Date"
-      value={formData.rental_end_date || ""}
-      onChange={(e) =>
-        handleChange({
-          target: { name: "rental_end_date", value: e.target.value },
-        })
-      }
-    />
-  </>
-)}
+                  <Field
+                    label="Rental End Date"
+                    type="date"
+                    placeholder="Select Date"
+                    value={formData.rental_end_date || ""}
+                    onChange={(e) =>
+                      handleChange({
+                        target: {
+                          name: "rental_end_date",
+                          value: e.target.value,
+                        },
+                      })
+                    }
+                  />
+                </>
+              )}
 
               <Field
                 label="Order Date"
@@ -961,9 +964,7 @@ const SalesOrdersAddLayoutPage = ({ product }) => {
                         <TableCell sx={{ color: "#fff" }}>
                           Specifications
                         </TableCell>
-                        <TableCell sx={{ color: "#fff" }}>
-                          Available Qty
-                        </TableCell>
+
                         <TableCell sx={{ color: "#fff" }}>
                           Price per Piece
                         </TableCell>
@@ -1013,12 +1014,16 @@ const SalesOrdersAddLayoutPage = ({ product }) => {
                                 <strong>Graphics:</strong> {product.graphics}
                               </div>
                             </TableCell>
-                            <TableCell>{getAvailableQty(product.id)}</TableCell>
                             <TableCell>
-                              <div>
-                                <strong>Month:</strong> ₹
-                                {product.rent_price_per_month}
-                              </div>
+                              {formData.transaction_type === "Rent" ? (
+                                <>
+                                  <div>
+                                    Month: {product.rent_price_per_month}
+                                  </div>
+                                </>
+                              ) : (
+                                product.purchase_price
+                              )}
                             </TableCell>
 
                             <TableCell>

@@ -1,30 +1,27 @@
 import React, { useEffect, useState } from "react";
 import DynamicTable from "../../../components/table-format/DynamicTable";
 import axios from "axios";
-import API_URL, { IMAGE_API_URL } from "../../../api/Api_url";
+import API_URL from "../../../api/Api_url";
 
-const AssetModificationTrackerTable = () => {
+const AssetTrackerOp = () => {
   const [data, setData] = useState([]);
 
   const columns = [
     { id: "s_id", label: "S.No." },
-
     { id: "asset_id", label: "Asset ID" },
     { id: "product_name", label: "Product Name" },
     { id: "ram", label: "Old RAM" },
     { id: "new_ram", label: "New RAM" },
+    { id: "new_ram_cost", label: "New RAM Cost", format: formatINR },
     { id: "storage", label: "Old Storage" },
     { id: "new_storage", label: "New Storage" },
-    { id: "modification_type", label: "Modification Type" },
-    { id: "new_ram_cost", label: "RAM Cost" },
-    { id: "new_storage", label: "Storage Cost" },
-    { id: "request_date", label: "Requested Date" },
-    { id: "approval_date", label: "Approved Date" },
-    { id: "invoice_number", label: "Invoice No." },
-    { id: "invoice_date", label: "Invoice Date" },
-    { id: "customer_name", label: "Customer Name" },
-    { id: "approved_by", label: "Approved By" },
-    { id: "remarks", label: "Remarks" },
+    { id: "new_storage_cost", label: "New Storage Cost", format: formatINR },
+    { id: "processor", label: "Processor" },
+    { id: "os", label: "Operating System" },
+    { id: "graphics", label: "Graphics" },
+    { id: "brand", label: "Brand" },
+    { id: "model", label: "Model" },
+   
   ];
 
   useEffect(() => {
@@ -32,23 +29,25 @@ const AssetModificationTrackerTable = () => {
       try {
         const token = localStorage.getItem("token");
 
-        const response = await axios.get(`${API_URL}/asset-modifications`, {
+        const response = await axios.get(`${API_URL}/asset-modification/asset-ids`, {
           headers: {
             Authorization: `Bearer ${token}`,
           },
         });
 
-        if (response.status === 200) {
-          const formatted = response.data.data.map((item, index) => ({
-            s_id: index + 1,
-            ...item,
-            invoice_date: formatDate(item.invoice_date),
-            request_date: formatDate(item.request_date),
-            approval_date: formatDate(item.approval_date),
-            estimated_cost: formatINR(item.estimated_cost),
-          }));
-          setData(formatted);
-        }
+        console.log("API response:", response.data);
+
+        // Handle both response.data or response.data.data
+        const rawData = Array.isArray(response.data)
+          ? response.data
+          : response.data?.data || [];
+
+        const formatted = rawData.map((item, index) => ({
+          s_id: index + 1,
+          ...item,
+        }));
+
+        setData(formatted);
       } catch (error) {
         console.error("Error fetching asset modifications:", error);
       }
@@ -57,19 +56,20 @@ const AssetModificationTrackerTable = () => {
     fetchModifications();
   }, []);
 
-  const formatDate = (dateStr) => {
+  function formatDate(dateStr) {
     if (!dateStr) return "-";
     const date = new Date(dateStr);
     return date.toLocaleDateString("en-IN");
-  };
+  }
 
-  const formatINR = (value) => {
+  function formatINR(value) {
+    if (!value || isNaN(value)) return "-";
     return new Intl.NumberFormat("en-IN", {
       style: "currency",
       currency: "INR",
       maximumFractionDigits: 2,
-    }).format(parseFloat(value || 0));
-  };
+    }).format(parseFloat(value));
+  }
 
   return (
     <div>
@@ -78,4 +78,4 @@ const AssetModificationTrackerTable = () => {
   );
 };
 
-export default AssetModificationTrackerTable;
+export default AssetTrackerOp;

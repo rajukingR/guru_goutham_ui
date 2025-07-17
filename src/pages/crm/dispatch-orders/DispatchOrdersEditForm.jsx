@@ -16,7 +16,7 @@ import {
   Typography,
 } from "@mui/material";
 import { Add, Remove } from "@mui/icons-material";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import API_URL from "../../../api/Api_url";
 import { useInventory } from "../../../contexts/InventoryContext";
 
@@ -241,7 +241,7 @@ const cancelBtnStyle = {
   outline: "none",
 };
 
-const createBtnStyle = {
+const updateBtnStyle = {
   padding: "0.75rem 1.5rem",
   backgroundColor: "#2563eb",
   color: "white",
@@ -377,21 +377,19 @@ const Field = memo(
   )
 );
 
-const generateDispatchOrderId = () => {
-  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-  let randomPart = "";
-  for (let i = 0; i < 6; i++) {
-    randomPart += chars.charAt(Math.floor(Math.random() * chars.length));
-  }
-  return `DC-${randomPart}`;
-};
-
-const DispatchOrdersAddForm = ({ product }) => {
+const DispatchOrdersEditForm = () => {
   const navigate = useNavigate();
-
-  // State for form data
+  const { id } = useParams();
   const { inventoryData } = useInventory();
+  const [newQuantities, setNewQuantities] = useState({});
+  const [selectedNewAssetIds, setSelectedNewAssetIds] = useState({});
   const [assetSearchTerms, setAssetSearchTerms] = useState({});
+  const [addedDates, setAddedDates] = useState({});
+
+
+  const [showAssetSelection, setShowAssetSelection] = useState({});
+
+  
 
   const getAvailableQty = (productId) => {
     const entry = inventoryData.find((item) => item.id === productId);
@@ -413,7 +411,7 @@ const DispatchOrdersAddForm = ({ product }) => {
     gst_number: "",
     pan_number: "",
     remarks: "",
-    transaction_type: "",
+    type: "",
     regular_dispatch_order: true,
     industry: "",
     shipping_ordered_by: "",
@@ -438,6 +436,15 @@ const DispatchOrdersAddForm = ({ product }) => {
   const [availableAssetIds, setAvailableAssetIds] = useState({});
   const [deviceIds, setDeviceIds] = useState({});
   const [deviceIdErrors, setDeviceIdErrors] = useState({});
+  const [originalDeviceIds, setOriginalDeviceIds] = useState({});
+  const [isLoading, setIsLoading] = useState(true);
+
+
+  const [returnedQuantities, setReturnedQuantities] = useState({});
+const [selectedReturnedAssetIds, setSelectedReturnedAssetIds] = useState({});
+const [returnAssetSearchTerms, setReturnAssetSearchTerms] = useState({});
+const [returnedDates, setReturnedDates] = useState({});
+
 
   const [snackbar, setSnackbar] = useState({
     open: false,
@@ -445,18 +452,21 @@ const DispatchOrdersAddForm = ({ product }) => {
     severity: "success",
   });
 
-  useEffect(() => {
-    setFormData((prev) => ({
-      ...prev,
-      dispatch_order_id: generateDispatchOrderId(),
-    }));
-  }, []);
-
-  // Fetch orders and products on component mount
+  // Fetch dispatch order data on component mount
   useEffect(() => {
     const fetchData = async () => {
       try {
-        // Fetch approved orders
+        setIsLoading(true);
+
+        // Fetch dispatch order data
+        const dispatchOrderResponse = await fetch(
+          `${API_URL}/dispatch-orders/${id}`
+        );
+        if (!dispatchOrderResponse.ok)
+          throw new Error("Failed to fetch dispatch order");
+        const dispatchOrderData = await dispatchOrderResponse.json();
+
+        // Fetch orders
         const orderResponse = await fetch(`${API_URL}/orders/order-approved`);
         if (!orderResponse.ok) throw new Error("Failed to fetch orders");
         const orderData = await orderResponse.json();
@@ -467,6 +477,52 @@ const DispatchOrdersAddForm = ({ product }) => {
         if (!prodResponse.ok) throw new Error("Failed to fetch products");
         const prodData = await prodResponse.json();
         setProducts(prodData);
+
+        // Process dispatch order data
+        const { items, ...orderDetails } = dispatchOrderData;
+
+        // Set available asset IDs for each product
+        const newAvailableAssetIds = {};
+        const newDeviceIds = {};
+        const newOriginalDeviceIds = {};
+
+        items.forEach((item) => {
+  const matchedOrder = orderData.find(o => o.id === parseInt(dispatchOrderData.order_id));
+  const matchedItem = matchedOrder?.items.find(i => i.product_id === item.product_id);
+
+  newAvailableAssetIds[item.product_id] = matchedItem?.available_asset_ids || [];
+  newDeviceIds[item.product_id] = item.device_ids || [];
+  newOriginalDeviceIds[item.product_id] = [...(item.device_ids || [])];
+});
+
+
+        setAvailableAssetIds(newAvailableAssetIds);
+        setDeviceIds(newDeviceIds);
+        setOriginalDeviceIds(newOriginalDeviceIds);
+
+        // Set selected products and quantities
+        const productIds = items.map((item) => item.product_id);
+        setSelectedProductIds(productIds);
+
+        const newQuantities = {};
+        items.forEach((item) => {
+          newQuantities[item.product_id] = item.quantity;
+        });
+        setQuantities(newQuantities);
+
+        // Set form data
+        setFormData({
+          ...orderDetails,
+          items: items.map((item) => ({
+            product_id: item.product_id,
+            product_name: item.product_name,
+            quantity: item.quantity,
+            item_total_value: item.item_total_value,
+            device_ids: item.device_ids || [],
+          })),
+        });
+
+        setIsLoading(false);
       } catch (error) {
         console.error("Error fetching data:", error);
         setSnackbar({
@@ -474,11 +530,12 @@ const DispatchOrdersAddForm = ({ product }) => {
           message: "Error fetching data: " + error.message,
           severity: "error",
         });
+        setIsLoading(false);
       }
     };
 
     fetchData();
-  }, []);
+  }, [id]);
 
   // Handle order selection
   const handleOrderSelect = (orderId) => {
@@ -501,8 +558,8 @@ const DispatchOrdersAddForm = ({ product }) => {
     setAvailableAssetIds(newAvailableAssetIds);
     setDeviceIds(newDeviceIds);
 
-    setFormData({
-      ...formData,
+    setFormData((prev) => ({
+      ...prev,
       order_id: selectedOrder.id,
       customer_code: selectedOrder.customer_id,
       order_number: selectedOrder.order_id,
@@ -518,7 +575,7 @@ const DispatchOrdersAddForm = ({ product }) => {
       city: address.city,
       state: address.state,
       country: address.country,
-      transaction_type: selectedOrder.transaction_type,
+      type: selectedOrder.type,
       items: items.map((item) => ({
         product_id: item.product_id,
         product_name: item.product_name,
@@ -526,7 +583,7 @@ const DispatchOrdersAddForm = ({ product }) => {
         item_total_value: item.item_total_value,
         device_ids: item.device_ids || [],
       })),
-    });
+    }));
 
     // Auto-select products from the order
     const productIds = items.map((item) => item.product_id);
@@ -708,26 +765,26 @@ const DispatchOrdersAddForm = ({ product }) => {
 
       const payload = {
         ...formData,
-        type: formData.transaction_type,
+        type: formData.type,
         items,
       };
 
-      console.log("Submitting payload:", payload);
+      console.log("Updating payload:", payload);
 
-      const response = await fetch(`${API_URL}/dispatch-orders/create`, {
-        method: "POST",
+      const response = await fetch(`${API_URL}/dispatch-orders/update/${id}`, {
+        method: "PUT",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify(payload),
       });
 
-      if (!response.ok) throw new Error("Failed to create dispatch order");
+      if (!response.ok) throw new Error("Failed to update dispatch order");
 
       const result = await response.json();
       setSnackbar({
         open: true,
-        message: "Dispatch Order created successfully!",
+        message: "Dispatch Order updated successfully!",
         severity: "success",
       });
 
@@ -735,14 +792,22 @@ const DispatchOrdersAddForm = ({ product }) => {
         navigate("/dashboard/crm/dispatch-orders");
       }, 1500);
     } catch (error) {
-      console.error("Error creating dispatch order:", error);
+      console.error("Error updating dispatch order:", error);
       setSnackbar({
         open: true,
-        message: "Error creating dispatch order: " + error.message,
+        message: "Error updating dispatch order: " + error.message,
         severity: "error",
       });
     }
   };
+
+  if (isLoading) {
+    return (
+      <div style={containerStyle}>
+        <Typography variant="h6">Loading dispatch order data...</Typography>
+      </div>
+    );
+  }
 
   return (
     <div style={containerStyle}>
@@ -762,7 +827,7 @@ const DispatchOrdersAddForm = ({ product }) => {
       </Snackbar>
 
       <div style={headerStyle}>
-        <h1 style={titleStyle}>Create Dispatch Order</h1>
+        <h1 style={titleStyle}>Edit Dispatch Order</h1>
       </div>
 
       <form onSubmit={handleSubmit}>
@@ -780,6 +845,7 @@ const DispatchOrdersAddForm = ({ product }) => {
                 placeholder="Enter Dispatch Order ID"
                 value={formData.dispatch_order_id}
                 onChange={handleInputChange}
+                readOnly
               />
               <Field
                 label="Dispatch Order Title"
@@ -816,39 +882,38 @@ const DispatchOrdersAddForm = ({ product }) => {
                 required
               />
               <Field
-  label="Transaction Type"
-  name="transaction_type"
-  type="select"
-  placeholder="Select Type"
-  value={formData.transaction_type}
-  onChange={(e) => {
-    handleInputChange(e);
-    // Clear payment type when switching to Buy
-    if (e.target.value === "Buy") {
-      setFormData(prev => ({
-        ...prev,
-        payment_type: "" // Clear payment type for Buy transactions
-      }));
-    }
-  }}
-  options={[
-    { value: "Rent", label: "Rent" },
-    { value: "Buy", label: "Buy" },
-  ]}
-/>
-
-{formData.transaction_type === "Rent" && (
-  <Field
-                label="Payment type"
-                name="payment_type"
-                placeholder="Payment Type"
-                value={formData.payment_type}
-                onChange={handleInputChange}
-                disabled
+                label="Transaction Type"
+                name="type"
+                type="select"
+                placeholder="Select Type"
+                value={formData.type}
+                onChange={(e) => {
+                  handleInputChange(e);
+                  // Clear payment type when switching to Buy
+                  if (e.target.value === "Buy") {
+                    setFormData((prev) => ({
+                      ...prev,
+                      payment_type: "", // Clear payment type for Buy transactions
+                    }));
+                  }
+                }}
+                options={[
+                  { value: "Rent", label: "Rent" },
+                  { value: "Buy", label: "Buy" },
+                ]}
               />
-)}
 
-              
+              {formData.type === "Rent" && (
+                <Field
+                  label="Payment type"
+                  name="payment_type"
+                  placeholder="Payment Type"
+                  value={formData.payment_type}
+                  onChange={handleInputChange}
+                  disabled
+                />
+              )}
+
               <Field
                 label="Dispatch Order Status"
                 name="dispatch_order_status"
@@ -859,6 +924,9 @@ const DispatchOrdersAddForm = ({ product }) => {
                 options={[
                   { value: "Pending", label: "Pending" },
                   { value: "Approved", label: "Approved" },
+                  { value: "Dispatched", label: "Dispatched" },
+                  { value: "Delivered", label: "Delivered" },
+                  { value: "Cancelled", label: "Cancelled" },
                 ]}
                 required
               />
@@ -885,7 +953,7 @@ const DispatchOrdersAddForm = ({ product }) => {
                 onChange={handleInputChange}
                 required
               />
-             
+
               <Field
                 label="Remarks"
                 name="remarks"
@@ -894,8 +962,7 @@ const DispatchOrdersAddForm = ({ product }) => {
                 value={formData.remarks}
                 onChange={handleInputChange}
               />
-              
-              
+
               <Field
                 label="Industry"
                 name="industry"
@@ -1009,7 +1076,7 @@ const DispatchOrdersAddForm = ({ product }) => {
                 marginBottom: "1rem",
               }}
             >
-              {showProductTable ? "Hide Product List" : "Add Products"}
+              {showProductTable ? "Hide Product List" : "Edit Products"}
             </button>
 
             {showProductTable && (
@@ -1078,9 +1145,21 @@ const DispatchOrdersAddForm = ({ product }) => {
                         <TableCell sx={{ color: "#fff" }}>
                           Selected Asset IDs
                         </TableCell>
-                        <TableCell sx={{ color: "#fff" }}>Choose Asset IDs</TableCell>
-                        <TableCell sx={{ color: "#fff" }}>Price</TableCell>
 
+                        {/* <TableCell sx={{ color: "#fff" }}>
+                          New Quantity
+                        </TableCell>
+                        <TableCell sx={{ color: "#fff" }}>
+                          Selected New Asset Ids
+                        </TableCell>
+                        <TableCell sx={{ color: "#fff" }}>
+                          Choose New Asset Ids
+                        </TableCell>
+                        <TableCell sx={{ color: "#fff" }}>
+                          Select Added date
+                        </TableCell> */}
+
+                        <TableCell sx={{ color: "#fff" }}>Price</TableCell>
                       </TableRow>
                     </TableHead>
                     <TableBody>
@@ -1124,124 +1203,65 @@ const DispatchOrdersAddForm = ({ product }) => {
                             <TableCell>
                               {(deviceIds[product.id] || []).join(", ")}
                             </TableCell>
+                            {/* <TableCell>
+                              <TextField
+                                type="number"
+                                size="small"
+                                value={newQuantities[product.id] || ""}
+                                onChange={(e) =>
+                                  setNewQuantities({
+                                    ...newQuantities,
+                                    [product.id]: e.target.value,
+                                  })
+                                }
+                                inputProps={{
+                                  min: 0,
+                                  style: { width: 60, textAlign: "center" },
+                                }}
+                              />
+                            </TableCell>
+
                             <TableCell>
-                              {availableAssetIds[product.id]?.length > 0 && (
-                                <Box
-                                  display="flex"
-                                  flexDirection="column"
-                                  gap={1}
-                                >
-                                  <TextField
-                                    size="small"
-                                    placeholder="Search Asset ID"
-                                    value={assetSearchTerms[product.id] || ""}
-                                    onChange={(e) => {
-                                      const value = e.target.value;
-                                      setAssetSearchTerms((prev) => ({
-                                        ...prev,
-                                        [product.id]: value,
-                                      }));
-                                    }}
-                                  />
-
-                                  {(
-                                    assetSearchTerms[product.id] || ""
-                                  ).trim() !== "" && (
-                                    <Box
-                                      sx={{
-                                        maxHeight: 150,
-                                        overflowY: "auto",
-                                        border: "1px solid #e0e0e0",
-                                        borderRadius: 1,
-                                        p: 1,
-                                      }}
-                                    >
-                                      {availableAssetIds[product.id]
-                                        .filter((assetId) =>
-                                          assetId
-                                            .toLowerCase()
-                                            .includes(
-                                              (
-                                                assetSearchTerms[product.id] ||
-                                                ""
-                                              ).toLowerCase()
-                                            )
-                                        )
-                                        .map((assetId) => (
-                                          <Box
-                                            key={assetId}
-                                            onClick={() => {
-                                              const currentDeviceIds =
-                                                deviceIds[product.id] || [];
-                                              const maxQty =
-                                                quantities[product.id] || 0;
-
-                                              if (
-                                                currentDeviceIds.includes(
-                                                  assetId
-                                                )
-                                              ) {
-                                                setDeviceIdErrors((prev) => ({
-                                                  ...prev,
-                                                  [product.id]: `Asset ID "${assetId}" is already selected.`,
-                                                }));
-                                                return;
-                                              }
-
-                                              if (
-                                                currentDeviceIds.length >=
-                                                maxQty
-                                              ) {
-                                                setDeviceIdErrors((prev) => ({
-                                                  ...prev,
-                                                  [product.id]: `Only ${maxQty} asset ID(s) allowed.`,
-                                                }));
-                                                return;
-                                              }
-
-                                              setDeviceIdErrors((prev) => {
-                                                const newErrors = { ...prev };
-                                                delete newErrors[product.id];
-                                                return newErrors;
-                                              });
-
-                                              setDeviceIds((prev) => ({
-                                                ...prev,
-                                                [product.id]: [
-                                                  ...currentDeviceIds,
-                                                  assetId,
-                                                ],
-                                              }));
-                                            }}
-                                            sx={{
-                                              p: 0.5,
-                                              cursor: "pointer",
-                                              backgroundColor: (
-                                                deviceIds[product.id] || []
-                                              ).includes(assetId)
-                                                ? "#e3f2fd"
-                                                : "transparent",
-                                              "&:hover": {
-                                                backgroundColor: "#f5f5f5",
-                                              },
-                                            }}
-                                          >
-                                            {assetId}
-                                          </Box>
-                                        ))}
-                                    </Box>
-                                  )}
-
-                                  {deviceIdErrors[product.id] && (
-                                    <Typography color="error" variant="caption">
-                                      {deviceIdErrors[product.id]}
-                                    </Typography>
-                                  )}
-                                </Box>
+                              {(selectedNewAssetIds[product.id] || []).join(
+                                ", "
                               )}
                             </TableCell>
+
                             <TableCell>
-                              {formData.transaction_type === "Rent" ? (
+                              <TextField
+                                placeholder="Search New Asset ID"
+                                size="small"
+                                value={assetSearchTerms[product.id] || ""}
+                                onChange={(e) =>
+                                  setAssetSearchTerms({
+                                    ...assetSearchTerms,
+                                    [product.id]: e.target.value,
+                                  })
+                                }
+                                inputProps={{ style: { width: 150 } }}
+                              />
+                            </TableCell>
+
+                            <TableCell>
+                              <TextField
+                                type="date"
+                                size="small"
+                                value={addedDates[product.id] || ""}
+                                onChange={(e) =>
+                                  setAddedDates({
+                                    ...addedDates,
+                                    [product.id]: e.target.value,
+                                  })
+                                }
+                                InputLabelProps={{
+                                  shrink: true,
+                                }}
+                                inputProps={{ style: { width: 140 } }}
+                              />
+                            </TableCell> */}
+
+                            <TableCell>
+                              {formData.type === "Rent" ? (
                                 <>
                                   <div>
                                     Month: {product.rent_price_per_month}
@@ -1256,6 +1276,372 @@ const DispatchOrdersAddForm = ({ product }) => {
                     </TableBody>
                   </Table>
                 </TableContainer>
+
+{/* new table */}
+
+                 {/* <TableContainer component={Paper}>
+                  <Table size="small">
+                    <TableHead>
+                      <TableRow sx={{ backgroundColor: "#0d47a1" }}>
+                        <TableCell padding="checkbox" sx={{ color: "#fff" }}>
+                          <Checkbox
+                            sx={{ color: "#fff" }}
+                            checked={
+                              selectedProductIds.length ===
+                                filteredProducts.length &&
+                              filteredProducts.length > 0
+                            }
+                            indeterminate={
+                              selectedProductIds.length > 0 &&
+                              selectedProductIds.length <
+                                filteredProducts.length
+                            }
+                            onChange={() => {
+                              if (
+                                selectedProductIds.length ===
+                                filteredProducts.length
+                              ) {
+                                setSelectedProductIds([]);
+                              } else {
+                                const newQuantities = {};
+                                filteredProducts.forEach((product) => {
+                                  newQuantities[product.id] =
+                                    quantities[product.id] || 1;
+                                });
+                                setQuantities(newQuantities);
+                                setSelectedProductIds(
+                                  filteredProducts.map((product) => product.id)
+                                );
+                              }
+                            }}
+                          />
+                        </TableCell>
+                        <TableCell sx={{ color: "#fff" }}>
+                          Product Name
+                        </TableCell>
+                        <TableCell sx={{ color: "#fff" }}>Brand</TableCell>
+                        <TableCell sx={{ color: "#fff" }}>Model</TableCell>
+                        <TableCell sx={{ color: "#fff" }}>Processor</TableCell>
+                        <TableCell sx={{ color: "#fff" }}>RAM</TableCell>
+                        <TableCell sx={{ color: "#fff" }}>Storage</TableCell>
+                        <TableCell sx={{ color: "#fff" }}>Graphics</TableCell>
+                        <TableCell sx={{ color: "#fff" }}>
+                          Available Quantity
+                        </TableCell>
+
+                        <TableCell sx={{ color: "#fff" }}>Original Quantity</TableCell>
+                        <TableCell sx={{ color: "#fff" }}>
+                          Original Selected Asset IDs
+                        </TableCell>
+
+                        <TableCell sx={{ color: "#fff" }}>
+                          New Quantity
+                        </TableCell>
+                        <TableCell sx={{ color: "#fff" }}>
+                          Selected New Asset Ids
+                        </TableCell>
+                        <TableCell sx={{ color: "#fff" }}>
+                          Choose New Asset Ids
+                        </TableCell>
+                        <TableCell sx={{ color: "#fff" }}>
+                          Select Added date
+                        </TableCell>
+
+                        <TableCell sx={{ color: "#fff" }}>Price</TableCell>
+                        <TableCell sx={{ color: "#fff" }}>
+                          Return Quantity 
+                        </TableCell>
+                        <TableCell sx={{ color: "#fff" }}>
+                          Selected Return Asset Ids
+                        </TableCell>
+                        <TableCell sx={{ color: "#fff" }}>
+                          Choose Return Asset Ids
+                        </TableCell>
+                        <TableCell sx={{ color: "#fff" }}>
+                          Select Return date
+                        </TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+  {filteredProducts
+    .filter((product) => selectedProductIds.includes(product.id))
+    .map((product) => (
+      <TableRow key={product.id}>
+        <TableCell padding="checkbox">
+          <Checkbox
+            checked={selectedProductIds.includes(product.id)}
+            onChange={() => handleProductSelection(product.id)}
+          />
+        </TableCell>
+        <TableCell>{product.product_name}</TableCell>
+        <TableCell>{product.brand}</TableCell>
+        <TableCell>{product.model}</TableCell>
+        <TableCell>{product.processor}</TableCell>
+        <TableCell>{product.ram}</TableCell>
+        <TableCell>{product.storage}</TableCell>
+        <TableCell>{product.graphics}</TableCell>
+        <TableCell>{getAvailableQty(product.id)}</TableCell>
+
+        <TableCell>
+          <TextField
+            type="number"
+            size="small"
+            value={quantities[product.id] || ""}
+            disabled
+            inputProps={{
+              min: 0,
+              style: { width: 50, textAlign: "center" },
+            }}
+          />
+        </TableCell>
+
+        <TableCell>
+          {(deviceIds[product.id] || []).join(", ")}
+        </TableCell>
+
+        <TableCell>
+          <TextField
+            type="number"
+            size="small"
+            value={newQuantities[product.id] || ""}
+            onChange={(e) =>
+              setNewQuantities((prev) => ({
+                ...prev,
+                [product.id]: parseInt(e.target.value) || 0,
+              }))
+            }
+            inputProps={{
+              min: 0,
+              style: { width: 60, textAlign: "center" },
+            }}
+          />
+        </TableCell>
+
+        <TableCell>
+          {(selectedNewAssetIds[product.id] || []).join(", ")}
+        </TableCell>
+
+        <TableCell>
+          <Box display="flex" flexDirection="column" gap={1}>
+            <TextField
+              placeholder="Search New Asset ID"
+              size="small"
+              value={assetSearchTerms[product.id] || ""}
+              onChange={(e) =>
+                setAssetSearchTerms((prev) => ({
+                  ...prev,
+                  [product.id]: e.target.value,
+                }))
+              }
+              inputProps={{ style: { width: 150 } }}
+            />
+
+            {(assetSearchTerms[product.id] || "").trim() !== "" && (
+              <Box
+                sx={{
+                  maxHeight: 150,
+                  overflowY: "auto",
+                  border: "1px solid #e0e0e0",
+                  borderRadius: 1,
+                  p: 1,
+                }}
+              >
+                {(availableAssetIds[product.id] || [])
+                  .filter((id) =>
+                    id
+                      .toLowerCase()
+                      .includes((assetSearchTerms[product.id] || "").toLowerCase())
+                  )
+                  .map((assetId) => {
+                    const selected = selectedNewAssetIds[product.id] || [];
+                    const maxAllowed = newQuantities[product.id] || 0;
+                    const isSelected = selected.includes(assetId);
+
+                    return (
+                      <Box
+                        key={assetId}
+                        onClick={() => {
+                          const updated = [...selected];
+
+                          if (isSelected) {
+                            const index = updated.indexOf(assetId);
+                            if (index !== -1) updated.splice(index, 1);
+                          } else {
+                            if (updated.length >= maxAllowed) return; // Don't allow more
+                            updated.push(assetId);
+                          }
+
+                          setSelectedNewAssetIds((prev) => ({
+                            ...prev,
+                            [product.id]: updated,
+                          }));
+                        }}
+                        sx={{
+                          p: 0.5,
+                          cursor: "pointer",
+                          backgroundColor: isSelected ? "#e3f2fd" : "transparent",
+                          "&:hover": {
+                            backgroundColor: "#f5f5f5",
+                          },
+                        }}
+                      >
+                        {assetId}
+                      </Box>
+                    );
+                  })}
+              </Box>
+            )}
+
+            {selectedNewAssetIds[product.id]?.length > (newQuantities[product.id] || 0) && (
+              <Typography color="error" variant="caption">
+                Only {newQuantities[product.id]} asset ID(s) allowed.
+              </Typography>
+            )}
+          </Box>
+        </TableCell>
+
+        <TableCell>
+          <TextField
+            type="date"
+            size="small"
+            value={addedDates[product.id] || ""}
+            onChange={(e) =>
+              setAddedDates({
+                ...addedDates,
+                [product.id]: e.target.value,
+              })
+            }
+            InputLabelProps={{
+              shrink: true,
+            }}
+            inputProps={{ style: { width: 140 } }}
+          />
+        </TableCell>
+
+        <TableCell>
+          {formData.type === "Rent" ? (
+            <div>Month: {product.rent_price_per_month}</div>
+          ) : (
+            product.purchase_price
+          )}
+        </TableCell>
+      <TableCell>
+  <TextField
+    type="number"
+    size="small"
+    value={returnedQuantities[product.id] || ""}
+    onChange={(e) => {
+      const originalQty = quantities[product.id] || 0;
+      const newValue = Math.min(parseInt(e.target.value) || 0, originalQty);
+
+      setReturnedQuantities((prev) => ({
+        ...prev,
+        [product.id]: newValue,
+      }));
+    }}
+    inputProps={{
+      min: 0,
+      max: quantities[product.id] || 0, // ⛔ Prevent more than original
+      style: { width: 60, textAlign: "center" },
+    }}
+  />
+</TableCell>
+
+
+        <TableCell>
+          {(selectedReturnedAssetIds[product.id] || []).join(", ")}
+        </TableCell>
+
+        <TableCell>
+          <Box display="flex" flexDirection="column" gap={1}>
+            <TextField
+              placeholder="Search Returned Asset ID"
+              size="small"
+              value={returnAssetSearchTerms[product.id] || ""}
+              onChange={(e) =>
+                setReturnAssetSearchTerms((prev) => ({
+                  ...prev,
+                  [product.id]: e.target.value,
+                }))
+              }
+              inputProps={{ style: { width: 150 } }}
+            />
+
+            {(returnAssetSearchTerms[product.id] || "").trim() !== "" && (
+              <Box
+                sx={{
+                  maxHeight: 150,
+                  overflowY: "auto",
+                  border: "1px solid #e0e0e0",
+                  borderRadius: 1,
+                  p: 1,
+                }}
+              >
+                {(deviceIds[product.id] || [])
+                  .filter((id) =>
+                    id.toLowerCase().includes((returnAssetSearchTerms[product.id] || "").toLowerCase())
+                  )
+                  .map((assetId) => {
+                    const selected = selectedReturnedAssetIds[product.id] || [];
+                    const maxAllowed = returnedQuantities[product.id] || 0;
+                    const isSelected = selected.includes(assetId);
+
+                    return (
+                      <Box
+                        key={assetId}
+                        onClick={() => {
+                          const updated = [...selected];
+                          if (isSelected) {
+                            const index = updated.indexOf(assetId);
+                            if (index !== -1) updated.splice(index, 1);
+                          } else {
+                            if (updated.length >= maxAllowed) return;
+                            updated.push(assetId);
+                          }
+
+                          setSelectedReturnedAssetIds((prev) => ({
+                            ...prev,
+                            [product.id]: updated,
+                          }));
+                        }}
+                        sx={{
+                          p: 0.5,
+                          cursor: "pointer",
+                          backgroundColor: isSelected ? "#e3f2fd" : "transparent",
+                          "&:hover": { backgroundColor: "#f5f5f5" },
+                        }}
+                      >
+                        {assetId}
+                      </Box>
+                    );
+                  })}
+              </Box>
+            )}
+          </Box>
+        </TableCell>
+
+        <TableCell>
+          <TextField
+            type="date"
+            size="small"
+            value={returnedDates[product.id] || ""}
+            onChange={(e) =>
+              setReturnedDates((prev) => ({
+                ...prev,
+                [product.id]: e.target.value,
+              }))
+            }
+            InputLabelProps={{ shrink: true }}
+            inputProps={{ style: { width: 140 } }}
+          />
+        </TableCell>
+      </TableRow>
+    ))}
+</TableBody>
+
+                  </Table>
+                </TableContainer> */}
+
               </Box>
             )}
           </div>
@@ -1266,6 +1652,7 @@ const DispatchOrdersAddForm = ({ product }) => {
           <button
             type="button"
             style={cancelBtnStyle}
+            onClick={() => navigate("/dashboard/crm/dispatch-orders")}
             onMouseEnter={(e) => (e.target.style.backgroundColor = "#e5e7eb")}
             onMouseLeave={(e) => (e.target.style.backgroundColor = "#f3f4f6")}
           >
@@ -1284,7 +1671,7 @@ const DispatchOrdersAddForm = ({ product }) => {
                 fontSize: "1rem",
               }}
             >
-              Create Dispatch Order
+              Update Dispatch Order
             </button>
           </Box>
         </div>
@@ -1293,4 +1680,4 @@ const DispatchOrdersAddForm = ({ product }) => {
   );
 };
 
-export default DispatchOrdersAddForm;
+export default DispatchOrdersEditForm;

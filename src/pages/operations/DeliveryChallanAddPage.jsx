@@ -405,6 +405,7 @@ const DeliveryChallanAddPage = ({ product }) => {
     order_id: "",
     customer_code: "",
     order_number: "",
+    dispatch_order_number: "",
     payment_type: "",
     dc_date: new Date().toISOString().split("T")[0],
     dc_status: "Dispatched",
@@ -462,8 +463,11 @@ const DeliveryChallanAddPage = ({ product }) => {
     const fetchData = async () => {
       try {
         // Fetch approved dispatch orders
-        const dispatchOrderResponse = await fetch(`${API_URL}/dispatch-orders/approved`);
-        if (!dispatchOrderResponse.ok) throw new Error("Failed to fetch dispatch orders");
+        const dispatchOrderResponse = await fetch(
+          `${API_URL}/dispatch-orders/approved`
+        );
+        if (!dispatchOrderResponse.ok)
+          throw new Error("Failed to fetch dispatch orders");
         const dispatchOrderData = await dispatchOrderResponse.json();
         setDispatchOrders(dispatchOrderData);
 
@@ -506,6 +510,7 @@ const DeliveryChallanAddPage = ({ product }) => {
       order_id: selectedOrder.id,
       customer_code: selectedOrder.customer_code,
       order_number: selectedOrder.order_number,
+      dispatch_order_number: selectedOrder.dispatch_order_id,
       payment_type: selectedOrder.payment_type,
       email: selectedOrder.email,
       gst_number: selectedOrder.gst_number,
@@ -768,7 +773,9 @@ const DeliveryChallanAddPage = ({ product }) => {
                 onChange={(e) => handleOrderSelect(e.target.value)}
                 options={dispatchOrders.map((order) => ({
                   value: order.id,
-                  label: `${order.dispatch_order_id} - ${order.shipping_name || ""}`,
+                  label: `${order.dispatch_order_id} - ${
+                    order.shipping_name || ""
+                  }`,
                 }))}
               />
 
@@ -781,37 +788,37 @@ const DeliveryChallanAddPage = ({ product }) => {
                 required
               />
               <Field
-  label="Transaction Type"
-  name="type"
-  type="select"
-  placeholder="Select Type"
-  value={formData.type}
-  onChange={(e) => {
-    handleInputChange(e);
-    // Clear rental-specific fields when switching to Buy
-    if (e.target.value === "Buy") {
-      setFormData(prev => ({
-        ...prev,
-        payment_type: "" // Set default payment type for Buy
-      }));
-    }
-  }}
-  options={[
-    { value: "Rent", label: "Rent" },
-    { value: "Buy", label: "Buy" },
-  ]}
-/>
-
-{formData.type === "Rent" && (
-  <Field
-                label="Payment type"
-                name="payment_type"
-                placeholder="Payment Type"
-                value={formData.payment_type}
-                onChange={handleInputChange}
-                disabled
+                label="Transaction Type"
+                name="type"
+                type="select"
+                placeholder="Select Type"
+                value={formData.type}
+                onChange={(e) => {
+                  handleInputChange(e);
+                  // Clear rental-specific fields when switching to Buy
+                  if (e.target.value === "Buy") {
+                    setFormData((prev) => ({
+                      ...prev,
+                      payment_type: "", // Set default payment type for Buy
+                    }));
+                  }
+                }}
+                options={[
+                  { value: "Rent", label: "Rent" },
+                  { value: "Buy", label: "Buy" },
+                ]}
               />
-)}
+
+              {formData.type === "Rent" && (
+                <Field
+                  label="Payment type"
+                  name="payment_type"
+                  placeholder="Payment Type"
+                  value={formData.payment_type}
+                  onChange={handleInputChange}
+                  disabled
+                />
+              )}
               <Field
                 label="DC Status"
                 name="dc_status"
@@ -848,7 +855,7 @@ const DeliveryChallanAddPage = ({ product }) => {
                 onChange={handleInputChange}
                 required
               />
-              
+
               {/* <div style={fileUploadContainer}>
                 <label style={fileUploadLabel}>
                   <input type="file" style={{ display: "none" }} />
@@ -862,7 +869,7 @@ const DeliveryChallanAddPage = ({ product }) => {
                 checked={formData.regular_dc}
                 onChange={handleInputChange}
               /> */}
-              
+
               <Field
                 label="Industry"
                 name="industry"
