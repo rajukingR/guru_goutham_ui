@@ -212,10 +212,16 @@ const Sidebar = ({ section }) => {
         },
        
         {
-          text: "Dispatch Orders",
+          text: "Order Preparations",
           path: "/dashboard/crm/dispatch-orders",
           icon: <AssignmentIcon />,
-          description: "Order Services",
+          description: "Order Preparations",
+        },
+         {
+          text: "Return Orders",
+          path: "/dashboard/crm/credit_notes",
+          icon: <MoneyOffIcon />,
+          description: "Return Orders",
         },
 
         //  {
@@ -246,7 +252,7 @@ const Sidebar = ({ section }) => {
         
         {
           text: "Credit Notes",
-          path: "/dashboard/operations/credit_notes",
+          path: "/dashboard/operations/credit-notes",
           icon: <MoneyOffIcon />,
           description: "Credit note management",
         },

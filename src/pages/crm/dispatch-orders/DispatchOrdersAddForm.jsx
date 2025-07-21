@@ -642,107 +642,118 @@ const DispatchOrdersAddForm = ({ product }) => {
       product.description?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+const handleSubmit = async (e) => {
+  e.preventDefault();
 
-    // Validate Asset IDs
-    let hasErrors = false;
-    const newDeviceIdErrors = {};
+  // Validate Asset IDs
+  let hasErrors = false;
+  const newDeviceIdErrors = {};
 
-    selectedProductIds.forEach((productId) => {
-      const qty = quantities[productId] || 0;
-      const ids = deviceIds[productId] || [];
+  selectedProductIds.forEach((productId) => {
+    const qty = quantities[productId] || 0;
+    const ids = deviceIds[productId] || [];
 
-      if (ids.length !== qty) {
-        newDeviceIdErrors[productId] = `Please select exactly ${qty} Asset IDs`;
+    if (ids.length !== qty) {
+      newDeviceIdErrors[productId] = `Please select exactly ${qty} Asset IDs`;
+      hasErrors = true;
+    } else {
+      const emptyIds = ids.filter((id) => !id.trim());
+      if (emptyIds.length > 0) {
+        newDeviceIdErrors[productId] = `All Asset IDs are required`;
         hasErrors = true;
-      } else {
-        const emptyIds = ids.filter((id) => !id.trim());
-        if (emptyIds.length > 0) {
-          newDeviceIdErrors[productId] = `All Asset IDs are required`;
-          hasErrors = true;
-        }
       }
+    }
+  });
+
+  setDeviceIdErrors(newDeviceIdErrors);
+
+  if (hasErrors) {
+    setSnackbar({
+      open: true,
+      message: "Please provide all required Asset IDs",
+      severity: "error",
+    });
+    return;
+  }
+
+  try {
+    // Find the selected order to get rental dates
+    const selectedOrder = orders.find(order => order.id === parseInt(formData.order_id));
+    
+    // Prepare rental period data if it's a rental order
+    const rentalPeriod = formData.transaction_type === "Rent" && selectedOrder ? {
+      rental_start_date: selectedOrder.rental_start_date,
+      rental_end_date: selectedOrder.rental_end_date,
+      rental_duration: selectedOrder.rental_duration
+    } : null;
+
+    // Prepare items data
+    const items = selectedProductIds.map((productId) => {
+      const product = products.find((p) => p.id === productId);
+      const quantity = quantities[productId] || 1;
+      const selectedDeviceIds = deviceIds[productId] || [];
+
+      let total_price = 0;
+      if (formData.transaction_type === "Rent") {
+        const rentalDuration = selectedOrder?.rental_duration || 1;
+        if (rentalDuration === 12) {
+          total_price = product.rent_price_1_year * quantity;
+        } else if (rentalDuration === 6) {
+          total_price = product.rent_price_6_months * quantity;
+        } else {
+          total_price = product.rent_price_per_month * quantity * rentalDuration;
+        }
+      } else {
+        total_price = product.purchase_price * quantity;
+      }
+
+      return {
+        product_id: productId,
+        product_name: product.product_name,
+        quantity,
+        total_price,
+        device_ids: selectedDeviceIds,
+      };
     });
 
-    setDeviceIdErrors(newDeviceIdErrors);
+    const payload = {
+      ...formData,
+      type: formData.transaction_type,
+      items,
+      ...(rentalPeriod && rentalPeriod) // Spread rental period data if it exists
+    };
 
-    if (hasErrors) {
-      setSnackbar({
-        open: true,
-        message: "Please provide all required Asset IDs",
-        severity: "error",
-      });
-      return;
-    }
+    console.log("Submitting payload:", payload);
 
-    try {
-      // Prepare items data
-      const items = selectedProductIds.map((productId) => {
-        const product = products.find((p) => p.id === productId);
-        const quantity = quantities[productId] || 1;
-        const selectedDeviceIds = deviceIds[productId] || [];
+    const response = await fetch(`${API_URL}/dispatch-orders/create`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    });
 
-        let total_price = 0;
-        if (formData.type === "Rent") {
-          const rentalDuration = 1;
-          if (rentalDuration === 12) {
-            total_price = product.rent_price_1_year * quantity;
-          } else if (rentalDuration === 6) {
-            total_price = product.rent_price_6_months * quantity;
-          } else {
-            total_price = product.rent_price_per_month * quantity;
-          }
-        } else {
-          total_price = product.purchase_price * quantity;
-        }
+    if (!response.ok) throw new Error("Failed to create dispatch order");
 
-        return {
-          product_id: productId,
-          product_name: product.product_name,
-          quantity,
-          total_price,
-          device_ids: selectedDeviceIds,
-        };
-      });
+    const result = await response.json();
+    setSnackbar({
+      open: true,
+      message: "Dispatch Order created successfully!",
+      severity: "success",
+    });
 
-      const payload = {
-        ...formData,
-        type: formData.transaction_type,
-        items,
-      };
-
-      console.log("Submitting payload:", payload);
-
-      const response = await fetch(`${API_URL}/dispatch-orders/create`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(payload),
-      });
-
-      if (!response.ok) throw new Error("Failed to create dispatch order");
-
-      const result = await response.json();
-      setSnackbar({
-        open: true,
-        message: "Dispatch Order created successfully!",
-        severity: "success",
-      });
-
-      setTimeout(() => {
-        navigate("/dashboard/crm/dispatch-orders");
-      }, 1500);
-    } catch (error) {
-      console.error("Error creating dispatch order:", error);
-      setSnackbar({
-        open: true,
-        message: "Error creating dispatch order: " + error.message,
-        severity: "error",
-      });
-    }
-  };
+    setTimeout(() => {
+      navigate("/dashboard/crm/dispatch-orders");
+    }, 1500);
+  } catch (error) {
+    console.error("Error creating dispatch order:", error);
+    setSnackbar({
+      open: true,
+      message: "Error creating dispatch order: " + error.message,
+      severity: "error",
+    });
+  }
+};
 
   return (
     <div style={containerStyle}>

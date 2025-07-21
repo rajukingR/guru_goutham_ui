@@ -7,7 +7,7 @@ const QuotationsTable = () => {
   const [data, setData] = useState([]);
 
   const columns = [
-    { id: "id", label: "S.No." },
+    { id: "s_id", label: "S.No." },
     { id: "quotation_id", label: "Quotation ID" },
     { id: "full_name", label: "Client Name" },
     { id: "lead_id", label: "Lead ID" },
@@ -31,7 +31,7 @@ const QuotationsTable = () => {
 
         if (response.status === 200) {
           const dataWithSno = response.data.map((item, index) => ({
-            id: index + 1,
+            s_id: index + 1,
             ...item,
             full_name: `${item.customer_first_name} ${item.customer_last_name}`
           }));
@@ -47,6 +47,8 @@ const QuotationsTable = () => {
 
   return (
     <div>
+                  <h2 style={{ marginBottom: "10px" }}>Quotations List</h2>
+
       <DynamicTable columns={columns} data={data} />
     </div>
   );

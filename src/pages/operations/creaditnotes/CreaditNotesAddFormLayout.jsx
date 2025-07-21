@@ -123,10 +123,12 @@ const CreaditNotesAddFormLayout = () => {
       pan: selected.pan_number || selected.contact?.pan_no || "",
       shippingName: selected.shipping_name,
       pincode: selected.pincode,
-      amount: selected.items.reduce(
-        (sum, item) => sum + parseFloat(item.total_price || 0),
-        0
-      ),
+      // Calculate amount based on rent_price_per_month
+      amount: selected.items.reduce((sum, item) => {
+        const product = products.find(p => p.id === item.product_id);
+        const unitPrice = product ? parseFloat(product.rent_price_per_month) : 0;
+        return sum + (unitPrice * (item.quantity || 1));
+      }, 0),
     }));
 
     // Process device IDs from the dispatch order items
@@ -274,7 +276,7 @@ const CreaditNotesAddFormLayout = () => {
     }
   };
 
-  const handleSubmit = async () => {
+const handleSubmit = async () => {
     // Validate device IDs match quantities
     let isValid = true;
     const newErrors = {};
@@ -306,6 +308,14 @@ const CreaditNotesAddFormLayout = () => {
       return;
     }
 
+    // Calculate total amount based on selected products and quantities
+    const totalAmount = selectedProductIds.reduce((sum, productId) => {
+      const product = products.find(p => p.id === productId);
+      const unitPrice = product ? parseFloat(product.rent_price_per_month) : 0;
+      const qty = quantities[productId] || 0;
+      return sum + (unitPrice * qty);
+    }, 0);
+
     const payload = {
       credit_note_number: formData.creditNoteNumber,
       credit_note_title: formData.creditNoteTitle,
@@ -317,9 +327,10 @@ const CreaditNotesAddFormLayout = () => {
       customer_id: formData.customerId,
       dc_date: formData.dcDate,
       returned_date: formData.returnedDate,
+      rental_end_date: selectedOrder.rental_end_date, // Added rental_end_date from selectedOrder
       customer_name: formData.customerName,
       created_by: formData.createdBy,
-      amount: parseFloat(formData.amount) || 0,
+      amount: totalAmount,
       reference: formData.reference,
       tin: formData.tin,
       pan: formData.pan,
@@ -330,15 +341,16 @@ const CreaditNotesAddFormLayout = () => {
       print_credit_note: formData.printCreditNote,
       items: selectedProductIds.map((productId) => {
         const item = selectedOrder.items.find((item) => item.product_id === productId);
+        const product = products.find(p => p.id === productId);
+        const unitPrice = product ? product.rent_price_per_month : "0.00";
+        
         return {
           product_id: productId,
-          product_name: item?.product_name || "",
+          product_name: item?.product_name || product?.product_name || "",
           quantity: quantities[productId] || 1,
           device_ids: deviceIds[productId] || [],
-          unit_price: item?.unit_price || "0.00",
-          total_price:
-            (quantities[productId] || 1) *
-            parseFloat(item?.unit_price || 0),
+          unit_price: unitPrice,
+          total_price: (quantities[productId] || 1) * parseFloat(unitPrice),
         };
       }),
     };
@@ -348,7 +360,7 @@ const CreaditNotesAddFormLayout = () => {
       setSnackbarMessage("Credit Note created successfully!");
       setSnackbarSeverity("success");
       setOpenSnackbar(true);
-      setTimeout(() => navigate("/dashboard/operations/credit_notes"), 3000);
+      setTimeout(() => navigate("/dashboard/crm/credit_notes"), 3000);
     } catch (error) {
       console.error("Error creating credit note:", error);
       setSnackbarMessage(
@@ -367,9 +379,7 @@ const CreaditNotesAddFormLayout = () => {
 
   return (
     <div style={containerStyle}>
-      <div style={breadcrumbStyle}>
-        Operations / Credit Notes / Add Credit Note
-      </div>
+      
 
       <div style={formContainerStyle}>
         {/* Credit Note Details Card */}

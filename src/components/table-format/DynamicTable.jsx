@@ -913,6 +913,368 @@ const GoodsReturnNoteDialog = ({ open, onClose, grnData }) => {
   );
 };
 
+const CreditNoteDialog = ({ open, onClose, creditNoteData }) => {
+  if (!creditNoteData) return null;
+
+  // Calculate days between returned_date and rental_end_date
+  const calculateDaysDifference = (returnedDate, rentalEndDate) => {
+    if (!returnedDate || !rentalEndDate) return 0;
+    const returned = new Date(returnedDate);
+    const rentalEnd = new Date(rentalEndDate);
+    const diffTime = Math.abs(rentalEnd - returned);
+    return Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1; // Inclusive of both dates
+  };
+
+  // Calculate item prices based on days difference
+  const calculateItemPrices = (items) => {
+    const daysDifference = calculateDaysDifference(
+      creditNoteData.returned_date,
+      creditNoteData.rental_end_date
+    );
+
+    return items.map((item) => {
+      const unitPrice = parseFloat(item.unit_price || 0);
+      const dailyRate = unitPrice / 30;
+      const totalPrice = daysDifference * item.quantity * dailyRate;
+
+      return {
+        ...item,
+        days: daysDifference,
+        daily_rate: dailyRate,
+        total_price: totalPrice,
+      };
+    });
+  };
+
+  const itemsWithCalculatedPrices = calculateItemPrices(
+    creditNoteData.items || []
+  );
+
+  // Calculate tax values (assuming 9% GST split into CGST and SGST)
+  const subtotal = itemsWithCalculatedPrices.reduce(
+    (sum, item) => sum + (item.total_price || 0),
+    0
+  );
+
+  const cgstRate = 0.09; // 9%
+  const sgstRate = 0.09; // 9%
+  const cgst = subtotal * cgstRate;
+  const sgst = subtotal * sgstRate;
+  const totalTax = cgst + sgst;
+  const grandTotal = subtotal + totalTax;
+
+  // Format currency for Indian Rupees
+  const formatINRCurrency = (amount) => {
+    return new Intl.NumberFormat("en-IN", {
+      style: "currency",
+      currency: "INR",
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    })
+      .format(amount)
+      .replace("₹", "₹ ");
+  };
+
+  // Format currency without symbol
+  const formatINRCurrency1 = (amount) => {
+    return new Intl.NumberFormat("en-IN", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(amount);
+  };
+
+  const handleDownloadPDF = () => {
+    const input = document.getElementById("credit-note-container");
+
+    html2canvas(input, {
+      scale: 2,
+      logging: false,
+      useCORS: true,
+      allowTaint: true,
+    }).then((canvas) => {
+      const imgData = canvas.toDataURL("image/png");
+      const pdf = new jsPDF("p", "mm", "a4");
+      const imgWidth = 210;
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+
+      pdf.addImage(imgData, "PNG", 0, 0, imgWidth, imgHeight);
+      pdf.save(`credit-note-${creditNoteData.credit_note_number}.pdf`);
+    });
+  };
+
+  return (
+    <Dialog open={open} onClose={onClose} maxWidth="lg" fullWidth>
+      <DialogTitle>Credit Note Details</DialogTitle>
+      <DialogContent>
+        <div style={containerStyle}>
+          <div id="credit-note-container" style={receiptContainerStyle}>
+            {/* Header Color Bar */}
+            <div style={headerBarStyle}></div>
+
+            {/* Company Header */}
+            <div style={companyHeaderStyle}>
+              <div style={companyInfoContainerStyle}>
+                <div style={logoStyle}>
+                  <img
+                    src="/SORT-ICON.png"
+                    alt="Company Logo"
+                    style={{
+                      width: "100%",
+                      height: "100%",
+                      objectFit: "contain",
+                    }}
+                  />
+                </div>
+                <div>
+                  <div style={companyNameStyle}>
+                    Guru Goutam Infotech Pvt. Ltd.
+                  </div>
+                  <div style={companyDetailsStyle}>
+                    CIN: U72200KA2008PTC047679
+                    <br />
+                    GST: {creditNoteData.customer?.gst || "29AADCG2608Q1Z6"}
+                  </div>
+                </div>
+              </div>
+              <div style={challanHeaderStyle}>
+                <div style={challanTitleStyle}>CREDIT NOTE</div>
+                <div style={challanDetailsStyle}>
+                  Credit Note No: {creditNoteData.credit_note_number}
+                  <br />
+                  Return Date:{" "}
+                  {new Date(creditNoteData.returned_date).toLocaleDateString(
+                    "en-GB"
+                  )}
+                  <br />
+                  Rental End Date:{" "}
+                  {new Date(creditNoteData.rental_end_date).toLocaleDateString(
+                    "en-GB"
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Recipient Section */}
+            <div style={recipientSectionStyle}>
+              <div style={recipientContainerStyle}>
+                <div style={recipientAddressStyle}>
+                  <div style={recipientLabelStyle}>To</div>
+                  {creditNoteData.customer_name}
+                  <br />
+                  {creditNoteData.customer?.company_name &&
+                    `${creditNoteData.customer.company_name}, `}
+                  {creditNoteData.customer?.address?.street &&
+                    `${creditNoteData.customer.address.street}, `}
+                  {creditNoteData.customer?.address?.city},{" "}
+                  {creditNoteData.customer?.address?.state},
+                  <br />
+                  {creditNoteData.customer?.address?.country} -{" "}
+                  {creditNoteData.customer?.address?.pincode}
+                  <br />
+                  <br />
+                </div>
+                <div style={recipientDetailsGridStyle}>
+                  <div>
+                    <div style={detailLabelStyle}>Contact No:</div>
+                    {creditNoteData.customer?.phone_number}
+                  </div>
+                  <div>
+                    <div style={detailLabelStyle}>PAN:</div>
+                    {creditNoteData.pan ||
+                      creditNoteData.customer?.pan_no ||
+                      "N/A"}
+                  </div>
+
+                  <div>
+                    <div style={detailLabelStyle}>Payment Type:</div>
+                    {creditNoteData.payment_type}
+                  </div>
+                  <div>
+                    <div style={detailLabelStyle}>Industry:</div>
+                    {creditNoteData.industry}
+                  </div>
+                  <div>
+                    <div style={detailLabelStyle}>Email:</div>
+                    {creditNoteData.email}
+                  </div>
+                  <div>
+                    <div style={detailLabelStyle}>Created By:</div>
+                    {creditNoteData.created_by}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <table style={tableStyle}>
+              <thead>
+                <tr>
+                  <th style={tableHeaderNoStyle}>NO.</th>
+                  <th style={tableHeaderParticularsStyle}>Product Details</th>
+                  <th style={tableHeaderQtyStyle}>QTY</th>
+                  <th style={tableHeaderQtyStyle}>Days</th>
+                  <th style={tableHeaderQtyStyle}>Daily Rate</th>
+                  {/* <th style={tableHeaderQtyStyle}>Unit Price</th> */}
+                  <th style={tableHeaderQtyStyle}>Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                {itemsWithCalculatedPrices.map((item, index) => (
+                  <tr
+                    key={item.id}
+                    style={
+                      index % 2 === 0 ? tableRowOddStyle : tableRowEvenStyle
+                    }
+                  >
+                    <td style={tableCellCenterStyle}>{index + 1}</td>
+                    <td style={tableCellStyle}>
+                      <div style={productNameStyle}>{item.product_name}</div>
+                      {item.device_ids?.length > 0 && (
+                        <div style={assetIdsStyle}>
+                          <strong>Asset IDs:</strong>{" "}
+                          {item.device_ids.join(", ")}
+                        </div>
+                      )}
+                    </td>
+                    <td style={tableCellCenterStyle}>{item.quantity}</td>
+                    <td style={tableCellCenterStyle}>{item.days}</td>
+                    <td style={tableCellRightStyle}>
+                      {formatINRCurrency1(item.daily_rate || 0)}
+                    </td>
+                    {/* <td style={tableCellRightStyle}>
+                      {formatINRCurrency1(item.unit_price || 0)}
+                    </td> */}
+                    <td style={tableCellRightStyle}>
+                      {formatINRCurrency1(item.total_price || 0)}
+                    </td>
+                  </tr>
+                ))}
+
+                {/* Total Row */}
+                <tr style={totalsRowStyle}>
+                  <td colSpan={5} style={tableCellRightStyle}>
+                    <strong>TOTAL</strong>
+                  </td>
+                  <td style={tableCellRightStyle}>
+                    {formatINRCurrency1(subtotal)}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+
+            {/* Tax and Total Section */}
+            <div style={taxTotalContainerStyle}>
+              <div style={taxDetailsStyle}>
+                <div style={taxRowStyle}>
+                  <span>Subtotal:</span>
+                  <span>{formatINRCurrency1(subtotal)}</span>
+                </div>
+
+                <div style={taxRowStyle}>
+                  <span>CGST @9%:</span>
+                  <span>{formatINRCurrency1(cgst)}</span>
+                </div>
+                <div style={taxRowStyle}>
+                  <span>SGST @9%:</span>
+                  <span>{formatINRCurrency1(sgst)}</span>
+                </div>
+                <div style={taxRowTotalStyle}>
+                  <span>Total Tax:</span>
+                  <span>₹ {formatINRCurrency1(totalTax)}</span>
+                </div>
+
+                <div style={grandTotalStyle}>
+                  <span>Grand Total:</span>
+                  <span>₹ {formatINRCurrency1(grandTotal)}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Bank Details Section */}
+            <div style={bankDetailsContainerStyle}>
+              <div style={bankDetailsTitleStyle}>Bank Details:</div>
+              <div style={bankLineStyle}>
+                Guru Goutham Infotech Pvt. Ltd., HDFC Bank Ltd, Jayanagar Branch
+              </div>
+              <div style={bankLineStyle}>
+                Current A/c No: 50200066787843. &nbsp;&nbsp; IFSC Code:
+                HDFC0000261
+              </div>
+
+              <div style={amountWordsStyle}>
+                Amt. in Words: <span>{numberToWords(grandTotal)}</span>
+              </div>
+
+              <div style={jurisdictionNoteStyle}>
+                Note:{" "}
+                <span style={highlightTextStyle}>
+                  Subject to Bengaluru Jurisdiction
+                </span>
+              </div>
+            </div>
+
+            {/* Signature Section */}
+            <div style={signatureSectionStyle}>
+              {/* Left: Receiver Signature */}
+              <div style={leftSignatureAreaStyle}>
+                <div style={companySignatureLabelStyle}></div>
+                <div style={signatureBoxStyle}></div>
+                <div style={signatureDesignationStyle}>
+                  {" "}
+                  Receiver Signature with Seal
+                </div>
+              </div>
+
+              {/* Right: Authorised Signatory */}
+              <div style={rightSignatureAreaStyle}>
+                <div style={companySignatureLabelStyle}>
+                  For Guru Goutham Infotech Private Limited
+                </div>
+                <div style={signatureBoxStyle}>SD/-</div>
+                <div style={signatureDesignationStyle}>
+                  Authorised Signatory
+                </div>
+              </div>
+            </div>
+
+            {/* Company Footer */}
+            <div style={companyFooterStyle}>
+              <div style={footerAddressStyle}>
+                <span>📍</span>
+                <span>
+                  No. 8, 2nd Cross, Diagonal Road, 3rd Block,
+                  <br />
+                  Jayanagar Bengaluru-560011.
+                </span>
+              </div>
+              <div style={footerContactStyle}>
+                <div style={footerContactItemStyle}>
+                  <span>🌐</span>
+                  <span>gurugoutam.com</span>
+                </div>
+                <div style={footerContactItemStyle}>
+                  <span>📞</span>
+                  <span>080-2242 9955, +91 9449 0789 55</span>
+                </div>
+                <div style={footerContactItemStyle}>
+                  <span>✉️</span>
+                  <span>info@gurugoutam.com</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={onClose}>Close</Button>
+        <Button onClick={handleDownloadPDF} variant="contained" color="primary">
+          Download PDF
+        </Button>
+        <Button onClick={() => window.print()}>Print</Button>
+      </DialogActions>
+    </Dialog>
+  );
+};
+
 const formatINRCurrency = (value) => {
   return new Intl.NumberFormat("en-IN", {
     currency: "INR",
@@ -1964,232 +2326,168 @@ const capitalize = (text) =>
 // };
 
 // Invoices Dialog Component
+
 const InvoiceDialog = ({ open, onClose, invoiceData }) => {
-  if (!invoiceData) return null;
+ if (!invoiceData) return null;
 
-  const invoiceType = invoiceData.type;
+const invoiceType = invoiceData.type;
+const isBuyTransaction = invoiceData.transaction_type === "Buy";
+const invoiceDate = new Date(invoiceData.invoice_date);
 
-  const isBuyTransaction = invoiceData.transaction_type === "Buy";
+// Date calculations
+const invoiceStartDate = new Date(invoiceData.invoice_start_date);
+const dcDate = new Date(invoiceData.dc_date);
+const invoiceEndDate = new Date(invoiceData.invoice_end_date);
+const dcPeriodEnd = new Date(dcDate.getFullYear(), dcDate.getMonth() + 1, 0);
 
-  // Date calculations
-  const invoiceStartDate = new Date(invoiceData.invoice_start_date);
-  const invoiceDate = new Date(invoiceData.invoice_date);
-  const dcDate = new Date(invoiceData.dc_date);
-  const showDcPeriod = dcDate.getDate() !== 1;
-  const invoiceEndDate = new Date(invoiceData.invoice_end_date);
-  const dcPeriodEnd = new Date(dcDate.getFullYear(), dcDate.getMonth() + 1, 0);
+// Calculate month difference between invoice start date and DC date
+const monthDiff = (invoiceStartDate.getFullYear() - dcDate.getFullYear()) * 12 + 
+                 (invoiceStartDate.getMonth() - dcDate.getMonth());
 
-  // Helper functions
-  const formatDate = (dateStr) => {
-    if (!dateStr) return "-";
-    const date = new Date(dateStr);
-    const day = String(date.getDate()).padStart(2, "0");
-    const month = String(date.getMonth() + 1).padStart(2, "0");
-    const year = date.getFullYear();
-    return `${day}/${month}/${year}`;
-  };
+// Only show DC period if exactly 1 month difference and not starting on 1st
+const showDcPeriod = monthDiff === 1 && dcDate.getDate() !== 1;
 
-  const calculateDays = (startDate, endDate) => {
-    if (!startDate || !endDate) return 0;
-    const start = new Date(startDate);
-    const end = new Date(endDate);
+// Helper functions
+const formatDate = (dateStr) => {
+  if (!dateStr) return "-";
+  const date = new Date(dateStr);
+  const day = String(date.getDate()).padStart(2, "0");
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const year = date.getFullYear();
+  return `${day}/${month}/${year}`;
+};
 
-    const startDay = start.getDate();
-    const endDay = end.getDate();
+const calculateDays = (startDate, endDate) => {
+  const start = new Date(startDate);
+  const end = new Date(endDate);
+  const diffTime = end - start;
+  return Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1; // +1 to include both dates
+};
 
-    const days = endDay - startDay + 1;
+const calculateReturnDays = (returnDate) => {
+  const returnDateObj = new Date(returnDate);
+  if (monthDiff > 1) {
+    // If more than 1 month difference, calculate from start of month to return date
+    const startOfMonth = new Date(returnDateObj.getFullYear(), returnDateObj.getMonth(), 1);
+    return calculateDays(startOfMonth, returnDateObj);
+  } else {
+    // Otherwise calculate from dc date to return date
+    return calculateDays(dcDate, returnDateObj);
+  }
+};
 
-    // Always base on 30-day logic
-    return Math.min(Math.max(days, 0), 30);
-  };
+const calculateInvoiceItems = () => {
+  switch (invoiceType) {
+    case "current":
+    default:
+      return invoiceData.items?.map((item) => {
+        const rate = Number(item.unit_price) || 0;
+        const dailyRate = rate / 30;
+        const quantity = Number(item.quantity) || 0;
+        const originalDeviceIds = item.device_ids || [];
 
-  const calculateInvoiceItems = () => {
-    switch (invoiceType) {
-      case "credit":
-        return invoiceData.items?.map((item) => {
-          const rate = Number(item.unit_price) || 0;
-          const dailyRate = rate / 30;
+        const returnedItems = invoiceData.credit_notes?.flatMap((cn) =>
+          cn.items
+            .filter((ri) => ri.product_id === item.product_id)
+            .map((ri) => ({
+              ...ri,
+              returned_date: cn.returned_date,
+            }))
+        ) || [];
 
-          const returnedItems =
-            invoiceData.credit_notes?.flatMap((cn) =>
-              cn.items
-                .filter((ri) => ri.product_id === item.product_id)
-                .map((ri) => ({
-                  ...ri,
-                  returned_date: cn.returned_date,
-                }))
-            ) || [];
+        const preInvoiceReturnedDeviceIds = returnedItems.flatMap((ri) =>
+          new Date(ri.returned_date) < invoiceStartDate ? ri.device_ids : []
+        );
 
-          const dcDays = calculateDays(dcDate, dcPeriodEnd);
+        const effectiveDeviceIds = originalDeviceIds.filter(
+          (id) => !preInvoiceReturnedDeviceIds.includes(id)
+        );
 
-          // Grouping by returned_date
-          const grouped = {};
+        const effectiveQty = effectiveDeviceIds.length;
+        const dcDays = calculateDays(dcDate, dcPeriodEnd);
 
-          returnedItems.forEach((ri) => {
-            const returnedDate = new Date(ri.returned_date);
-            if (returnedDate >= dcDate && returnedDate <= dcPeriodEnd) {
-              const daysUsed = calculateDays(dcDate, returnedDate);
-              const key = returnedDate.toISOString().split("T")[0];
-              if (!grouped[key]) {
-                grouped[key] = {
-                  returnedDate,
-                  daysUsed,
-                  deviceIds: [],
-                  unusedDays: dcDays - daysUsed,
-                };
-              }
-              grouped[key].deviceIds.push(...ri.device_ids);
+        // Group returned devices by return date
+        const grouped = {};
+
+        returnedItems.forEach((ri) => {
+          const returnedDate = new Date(ri.returned_date);
+          if (returnedDate <= invoiceEndDate) { // Include returns before and during invoice period
+            const daysUsed = calculateReturnDays(ri.returned_date);
+            const key = returnedDate.toISOString().split("T")[0];
+            if (!grouped[key]) {
+              grouped[key] = {
+                returnedDate,
+                daysUsed,
+                deviceIds: [],
+                unusedDays: dcDays - daysUsed,
+              };
             }
-          });
-
-          const returnedDevices = Object.values(grouped).map((rd) => ({
-            ...rd,
-            amount: rd.unusedDays * dailyRate * rd.deviceIds.length,
-          }));
-
-          const totalAmount = returnedDevices.reduce(
-            (sum, rd) => sum + rd.amount,
-            0
-          );
-
-          return {
-            ...item,
-            rate,
-            dailyRate,
-            returnedDevices,
-            quantity: returnedDevices.reduce(
-              (sum, rd) => sum + rd.deviceIds.length,
-              0
-            ),
-            dcDays,
-            amount: 0,
-            dcAmountBeforeReturns: 0,
-            dcAmount: totalAmount,
-            totalReturnedQtyAmount: totalAmount,
-            device_ids: returnedDevices.flatMap((rd) => rd.deviceIds),
-            description: `Unused refund from ${formatDate(
-              dcDate
-            )} to ${formatDate(dcPeriodEnd)}`,
-          };
+            grouped[key].deviceIds.push(...ri.device_ids);
+          }
         });
 
-      case "current":
-      default:
-        return invoiceData.items?.map((item) => {
-          const rate = Number(item.unit_price) || 0;
-          const dailyRate = rate / 30;
-          const quantity = Number(item.quantity) || 0;
-          const originalDeviceIds = item.device_ids || [];
+        const returnedDevices = Object.values(grouped).map((rd) => ({
+          ...rd,
+          amount: rd.daysUsed * dailyRate * rd.deviceIds.length,
+        }));
 
-          const returnedItems =
-            invoiceData.credit_notes?.flatMap((cn) =>
-              cn.items
-                .filter((ri) => ri.product_id === item.product_id)
-                .map((ri) => ({
-                  ...ri,
-                  returned_date: cn.returned_date,
-                }))
-            ) || [];
+        const returnedQty = returnedDevices.reduce(
+          (sum, rd) => sum + rd.deviceIds.length,
+          0
+        );
+        const usedQty = effectiveQty - returnedQty;
 
-          const preInvoiceReturnedDeviceIds = returnedItems.flatMap((ri) =>
-            new Date(ri.returned_date) < invoiceStartDate ? ri.device_ids : []
-          );
+        const fullMonthAmount = effectiveQty * rate;
+        const returnedDevicesAmount = returnedDevices.reduce(
+          (sum, rd) => sum + rd.amount,
+          0
+        );
 
-          const effectiveDeviceIds = originalDeviceIds.filter(
-            (id) => !preInvoiceReturnedDeviceIds.includes(id)
-          );
+        // Calculate DC period amount only if showing DC period
+        const dcAmountBeforeReturns = showDcPeriod 
+          ? effectiveQty * dailyRate * dcDays
+          : 0;
 
-          const effectiveQty = effectiveDeviceIds.length;
+        return {
+          ...item,
+          originalDeviceIds,
+          device_ids: effectiveDeviceIds,
+          quantity: effectiveQty,
+          usedQty,
+          returnedQty,
+          rate,
+          dailyRate,
+          days: 30,
+          dcDays,
+          amount: fullMonthAmount,
+          dcAmountBeforeReturns,
+          returnedDevices,
+          totalReturnedQtyAmount: returnedDevicesAmount,
+          description: `Billing Start Date: ${formatDate(
+            invoiceStartDate
+          )} - Billing End Date: ${formatDate(invoiceEndDate)}`,
+        };
+      });
+  }
+};
 
-          const dcDays = calculateDays(dcDate, dcPeriodEnd);
+const items = calculateInvoiceItems();
 
-          const grouped = {};
+// Calculate totals
+const totalAmount = items?.reduce((sum, item) => {
+  const itemTotal = item.amount + (showDcPeriod ? item.dcAmountBeforeReturns : 0) + item.totalReturnedQtyAmount;
+  return sum + itemTotal;
+}, 0) || 0;
 
-          returnedItems.forEach((ri) => {
-            const returnedDate = new Date(ri.returned_date);
-            if (returnedDate >= dcDate && returnedDate <= dcPeriodEnd) {
-              const daysUsed = calculateDays(dcDate, returnedDate);
-              const key = returnedDate.toISOString().split("T")[0];
-              if (!grouped[key]) {
-                grouped[key] = {
-                  returnedDate,
-                  daysUsed,
-                  deviceIds: [],
-                  unusedDays: dcDays - daysUsed,
-                };
-              }
-              grouped[key].deviceIds.push(...ri.device_ids);
-            }
-          });
+const returnsTotal = items?.reduce((sum, item) => sum + item.totalReturnedQtyAmount, 0) || 0;
+const netAmount = totalAmount;
 
-          const returnedDevices = Object.values(grouped).map((rd) => ({
-            ...rd,
-            amount: rd.daysUsed * dailyRate * rd.deviceIds.length,
-          }));
+const cgst = netAmount * 0.09;
+const sgst = netAmount * 0.09;
+const totalTax  = cgst + sgst;
+const grandTotal = netAmount + cgst + sgst;
 
-          const returnedQty = returnedDevices.reduce(
-            (sum, rd) => sum + rd.deviceIds.length,
-            0
-          );
-          const usedQty = effectiveQty - returnedQty;
 
-          const fullMonthAmount = effectiveQty * rate;
-          const usedQtyAmount = usedQty * dailyRate * dcDays;
-          const returnedDevicesAmount = returnedDevices.reduce(
-            (sum, rd) => sum + rd.amount,
-            0
-          );
-          const returnedUnusedAmount = returnedDevices.reduce(
-            (sum, rd) => sum + rd.unusedDays * dailyRate * rd.deviceIds.length,
-            0
-          );
-
-          const dcAmountBeforeReturns = effectiveQty * dailyRate * dcDays;
-          const netDcAmount = dcAmountBeforeReturns + returnedDevicesAmount;
-
-          return {
-            ...item,
-            originalDeviceIds,
-            device_ids: effectiveDeviceIds,
-            quantity: effectiveQty,
-            usedQty,
-            returnedQty,
-            rate,
-            dailyRate,
-            days: 30,
-            dcDays,
-            amount: fullMonthAmount,
-            dcAmountBeforeReturns,
-            dcAmount: netDcAmount,
-            returnedDevices,
-            totalReturnedQtyAmount: returnedDevicesAmount,
-            description: `Billing Start Date: ${formatDate(
-              invoiceStartDate
-            )} - Billing End Date: ${formatDate(invoiceEndDate)}`,
-          };
-        });
-    }
-  };
-
-  const items = calculateInvoiceItems();
-
-  const returnDate =
-    invoiceType === "credit"
-      ? invoiceData.credit_notes?.reduce((latest, cn) => {
-          const cnDate = new Date(cn.returned_date);
-          return cnDate > latest ? cnDate : latest;
-        }, new Date("1900-01-01"))
-      : null;
-
-  const totalAmount = items.reduce(
-    (sum, item) => sum + item.amount + item.dcAmount,
-    0
-  );
-
-  const cgst = totalAmount * 0.09;
-  const sgst = totalAmount * 0.09;
-  const totalTax = cgst + sgst;
-  const grandTotal = totalAmount + totalTax;
 
   const renderInvoice = () => {
     return (
@@ -2219,20 +2517,12 @@ const InvoiceDialog = ({ open, onClose, invoiceData }) => {
             </div>
           </div>
           <div style={challanHeaderStyle}>
-            <div style={challanTitleStyle}>
-              {invoiceData.type === "credit"
-                ? "CREDIT RETURN NOTE"
-                : "TAX INVOICE"}
-            </div>
+            <div style={challanTitleStyle}>TAX INVOICE</div>
 
             <div style={challanDetailsStyle}>
               Invoice No: {invoiceData.invoice_number}
               <br />
-              {invoiceData.type === "credit" ? (
-                <>Return Date: {formatDate(returnDate)}</>
-              ) : (
-                <>Invoice Date: {formatDate(invoiceDate)}</>
-              )}
+              Invoice Date: {formatDate(invoiceDate)}
             </div>
           </div>
         </div>
@@ -2284,7 +2574,7 @@ const InvoiceDialog = ({ open, onClose, invoiceData }) => {
         </div>
 
         {/* Invoice Period */}
-        {!isBuyTransaction && invoiceData.type !== "credit" && (
+        {!isBuyTransaction && (
           <div style={invoicePeriodStyle}>
             <div>
               <strong>Invoice Period:</strong> {formatDate(invoiceDate)} to{" "}
@@ -2294,278 +2584,164 @@ const InvoiceDialog = ({ open, onClose, invoiceData }) => {
         )}
 
         <table style={tableStyle}>
-          <thead>
-            <tr>
-              <th style={tableHeaderNoStyle}>NO.</th>
-              <th style={tableHeaderParticularsStyle}>Product Details</th>
-              <th style={tableHeaderQtyStyle}>Qty</th>
-              <th style={tableHeaderDaysStyle}>Days</th>
-              <th style={tableHeaderDaysStyle}>Per Day</th>
-              <th style={tableHeaderRateStyle}>Per Month</th>
-              <th style={tableHeaderRateStyle}>TOTAL</th>
-            </tr>
-          </thead>
+    <thead>
+      <tr>
+        <th style={tableHeaderNoStyle}>NO.</th>
+        <th style={tableHeaderParticularsStyle}>Product Details</th>
+        <th style={tableHeaderQtyStyle}>Qty</th>
+        <th style={tableHeaderDaysStyle}>Days</th>
+        <th style={tableHeaderDaysStyle}>Per Day</th>
+        <th style={tableHeaderRateStyle}>Per Month</th>
+        <th style={tableHeaderRateStyle}>TOTAL</th>
+      </tr>
+    </thead>
 
-          <tbody>
-            {items.map((item, index) => {
-              const dailyRate = item.dailyRate || item.rate / 30;
+    <tbody>
+      {items.map((item, index) => {
+        const dailyRate = item.dailyRate || item.rate / 30;
 
-              // Credit Invoice Mode (Only Unused)
-              if (invoiceData.type === "credit") {
-                return (
-                  <React.Fragment key={item.id}>
-                    {item.returnedDevices?.map((rd, rdIndex) => (
-                      <tr
-                        key={`credit-${index}-${rdIndex}`}
-                        style={
-                          index % 2 === 0 ? tableRowOddStyle : tableRowEvenStyle
-                        }
-                      >
-                        <td style={tableCellCenterStyle}>{index + 1}</td>
-                        <td style={tableCellStyle}>
-                          <div style={itemTitleStyle}>{item.product_name}</div>
-                          <div>
-                            {item.productDetails?.brand && (
-                              <>
-                                <strong>Brand:</strong>{" "}
-                                {item.productDetails.brand}
-                                {", "}
-                              </>
-                            )}
-                            {item.productDetails?.model && (
-                              <>
-                                <strong>Model:</strong>{" "}
-                                {item.productDetails.model}
-                                {", "}
-                              </>
-                            )}
-                            {item.productDetails?.processor && (
-                              <>
-                                <strong>Processor:</strong>{" "}
-                                {item.productDetails.processor}
-                                {", "}
-                              </>
-                            )}
-                            {item.productDetails?.ram && (
-                              <>
-                                <strong>RAM:</strong> {item.productDetails.ram}
-                                {", "}
-                              </>
-                            )}
-                            <br />
-                            {item.productDetails?.storage && (
-                              <>
-                                <strong>Storage:</strong>{" "}
-                                {item.productDetails.storage}.{" "}
-                              </>
-                            )}
-                          </div>
-                          <br />
-                          <div style={itemTitleStyle}>
-                            Returned Asset IDs: {rd.deviceIds?.join(", ")}
-                          </div>
-                          <br />
-                          <div>
-                            Refundable Period: {formatDate(rd.returnedDate)} to{" "}
-                            {formatDate(dcPeriodEnd)}
-                          </div>
-                        </td>
-                        <td style={tableCellCenterStyle}>
-                          {rd.deviceIds.length}
-                        </td>
-                        <td style={tableCellCenterStyle}>{rd.unusedDays}</td>
-                        <td style={tableCellCenterStyle}>
-                          {formatINRCurrency(dailyRate)}
-                        </td>
-                        <td style={tableCellRightStyle}></td>
-                        <td style={tableCellRightStyle}>
-                          {formatINRCurrency(rd.amount)}
-                        </td>
-                      </tr>
-                    ))}
-                  </React.Fragment>
-                );
-              }
-
-              // Normal (Current) Invoice
-              return (
-                <React.Fragment key={item.id}>
-                  {/* Main Product Row */}
-                  <tr
-                    style={
-                      index % 2 === 0 ? tableRowOddStyle : tableRowEvenStyle
-                    }
-                  >
-                    <td style={tableCellCenterStyle}>{index + 1}</td>
-                    <td style={tableCellStyle}>
-                      <div style={itemTitleStyle}>{item.product_name}</div>
-                      <br />
-
-                      <div style={{ fontSize: "12px", marginTop: 4 }}>
-                        {item.productDetails?.brand && (
-                          <>
-                            <strong>Brand:</strong> {item.productDetails.brand}.{" "}
-                          </>
-                        )}
-                        {item.productDetails?.model && (
-                          <>
-                            <strong>Model:</strong> {item.productDetails.model}.{" "}
-                          </>
-                        )}
-                        {item.productDetails?.processor && (
-                          <>
-                            <strong>Processor:</strong>{" "}
-                            {item.productDetails.processor}.{" "}
-                          </>
-                        )}
-                        {item.productDetails?.ram && (
-                          <>
-                            <strong>RAM:</strong> {item.productDetails.ram}.{" "}
-                          </>
-                        )}
-                        <br />
-                        {item.productDetails?.storage && (
-                          <>
-                            <strong>Storage:</strong>{" "}
-                            {item.productDetails.storage}.{" "}
-                          </>
-                        )}
-                      </div>
-                      <br />
-
-                      {/* Only show these details if amount > 0 */}
-                      {item.amount > 0 && (
-                        <>
-                          <div style={itemTitleStyle}>
-                            Asset IDs: {item.device_ids?.join(", ")}
-                          </div>
-                          <br />
-                          <div style={itemTitleStyle}>
-                            Billing Start Date: {formatDate(invoiceStartDate)} -
-                            Billing End Date: {formatDate(invoiceEndDate)}
-                          </div>
-                        </>
-                      )}
-                    </td>
-
-                    {/* If amount is 0, render empty cells in all other columns */}
-                    {item.amount > 0 ? (
-                      <>
-                        <td style={tableCellCenterStyle}>{item.quantity}</td>
-                        <td style={tableCellCenterStyle}>30</td>
-                        <td style={tableCellCenterStyle}>
-                          {formatINRCurrency(dailyRate)}
-                        </td>
-                        <td style={tableCellRightStyle}>
-                          {formatINRCurrency(item.rate)}
-                        </td>
-                        <td style={tableCellRightStyle}>
-                          {formatINRCurrency(item.amount)}
-                        </td>
-                      </>
-                    ) : (
-                      <>
-                        <td></td>
-                        <td></td>
-                        <td></td>
-                        <td></td>
-                        <td></td>
-                      </>
-                    )}
-                  </tr>
-
-                  {/* Mid-Month Usage */}
-                  {showDcPeriod && (
-                    <>
-                      {item.dcAmountBeforeReturns > 0 && (
-                        <tr
-                          style={
-                            index % 2 === 0
-                              ? tableRowOddStyle
-                              : tableRowEvenStyle
-                          }
-                        >
-                          <td style={tableCellCenterStyle}></td>
-                          <td style={tableCellStyle}>
-                            <strong>Mid-Month Usage:</strong>
-                            <br />
-                            <br />
-
-                            <div>Asset IDs: {item.device_ids?.join(", ")}</div>
-                            <br />
-
-                            <div>
-                              Billing Start Date: {formatDate(dcDate)} to{" "}
-                              {formatDate(dcPeriodEnd)}
-                            </div>
-                          </td>
-                          <td style={tableCellCenterStyle}>{item.quantity}</td>
-                          <td style={tableCellCenterStyle}>{item.dcDays}</td>
-                          <td style={tableCellCenterStyle}>
-                            {formatINRCurrency(dailyRate)}
-                          </td>
-                          <td style={tableCellRightStyle}></td>
-                          <td style={tableCellRightStyle}>
-                            {formatINRCurrency(item.dcAmountBeforeReturns)}
-                          </td>
-                        </tr>
-                      )}
-
-                      {/* Returned Devices (Grouped) */}
-                      {item.returnedDevices?.map((rd, rdIndex) => (
-                        <tr
-                          key={`ret-${index}-${rdIndex}`}
-                          style={
-                            index % 2 === 0
-                              ? tableRowOddStyle
-                              : tableRowEvenStyle
-                          }
-                        >
-                          <td style={tableCellCenterStyle}></td>
-                          <td style={tableCellStyle}>
-                            <strong>Returned Asset IDs:</strong>{" "}
-                            {rd.deviceIds.join(", ")}
-                            <br />
-                            <br />
-                            Used for {rd.daysUsed} days: {formatDate(dcDate)} to{" "}
-                            {formatDate(rd.returnedDate)}
-                          </td>
-                          <td style={tableCellCenterStyle}>
-                            {rd.deviceIds.length}
-                          </td>
-                          <td style={tableCellCenterStyle}>{rd.daysUsed}</td>
-                          <td style={tableCellCenterStyle}>
-                            {formatINRCurrency(dailyRate)}
-                          </td>
-                          <td style={tableCellRightStyle}></td>
-                          <td style={tableCellRightStyle}>
-                            {formatINRCurrency(rd.amount)}
-                          </td>
-                        </tr>
-                      ))}
-                    </>
+        return (
+          <React.Fragment key={item.id}>
+            {/* Main Product Row */}
+            <tr style={index % 2 === 0 ? tableRowOddStyle : tableRowEvenStyle}>
+              <td style={tableCellCenterStyle}>{index + 1}</td>
+              <td style={tableCellStyle}>
+                <div style={itemTitleStyle}>{item.product_name}</div>
+                <br />
+                <div style={{ fontSize: "12px", marginTop: 4 }}>
+                  {item.productDetails?.brand && (
+                    <><strong>Brand:</strong> {item.productDetails.brand}. </>
                   )}
-                </React.Fragment>
+                  {item.productDetails?.model && (
+                    <><strong>Model:</strong> {item.productDetails.model}. </>
+                  )}
+                  {item.productDetails?.processor && (
+                    <><strong>Processor:</strong> {item.productDetails.processor}. </>
+                  )}
+                  {item.productDetails?.ram && (
+                    <><strong>RAM:</strong> {item.productDetails.ram}. </>
+                  )}
+                  <br />
+                  {item.productDetails?.storage && (
+                    <><strong>Storage:</strong> {item.productDetails.storage}. </>
+                  )}
+                </div>
+                <br />
+                {item.amount > 0 && (
+                  <>
+                    <div style={itemTitleStyle}>
+                      Asset IDs: {item.device_ids?.join(", ")}
+                    </div>
+                    <br />
+                    <div style={itemTitleStyle}>
+                      Billing Start Date: {formatDate(invoiceStartDate)} -
+                      Billing End Date: {formatDate(invoiceEndDate)}
+                    </div>
+                  </>
+                )}
+              </td>
+              {item.amount > 0 ? (
+                <>
+                  <td style={tableCellCenterStyle}>{item.quantity}</td>
+                  <td style={tableCellCenterStyle}>30</td>
+                  <td style={tableCellCenterStyle}>
+                    {formatINRCurrency(dailyRate)}
+                  </td>
+                  <td style={tableCellRightStyle}>
+                    {formatINRCurrency(item.rate)}
+                  </td>
+                  <td style={tableCellRightStyle}>
+                    {formatINRCurrency(item.amount)}
+                  </td>
+                </>
+              ) : (
+                <>
+                  <td></td>
+                  <td></td>
+                  <td></td>
+                  <td></td>
+                  <td></td>
+                  
+                </>
+              )}
+            </tr>
+
+            {/* Mid-Month Usage Section (only shown for August invoice) */}
+            {showDcPeriod && item.dcAmountBeforeReturns > 0 && (
+              <tr style={index % 2 === 0 ? tableRowOddStyle : tableRowEvenStyle}>
+                <td style={tableCellCenterStyle}></td>
+                <td style={tableCellStyle}>
+                  <strong>Mid-Month Usage:</strong>
+                  <br /><br />
+                  <div>Asset IDs: {item.device_ids?.join(", ")}</div>
+                  <br />
+                  <div>
+                    Billing Start Date: {formatDate(dcDate)} to {formatDate(dcPeriodEnd)}
+                  </div>
+                </td>
+                <td style={tableCellCenterStyle}>{item.quantity}</td>
+                <td style={tableCellCenterStyle}>{item.dcDays}</td>
+                <td style={tableCellCenterStyle}>
+                  {formatINRCurrency(dailyRate)}
+                </td>
+                <td style={tableCellRightStyle}></td>
+                <td style={tableCellRightStyle}>
+                  {formatINRCurrency(item.dcAmountBeforeReturns)}
+                </td>
+              </tr>
+            )}
+
+            {/* Returned Devices Section (shown for both August and September) */}
+            {item.returnedDevices?.map((rd, rdIndex) => {
+              const returnDate = new Date(rd.returnedDate);
+              const startDate = monthDiff > 1
+                ? new Date(returnDate.getFullYear(), returnDate.getMonth(), 1)
+                : dcDate;
+              
+              return (
+                <tr
+                  key={`ret-${index}-${rdIndex}`}
+                  style={index % 2 === 0 ? tableRowOddStyle : tableRowEvenStyle}
+                >
+                  <td style={tableCellCenterStyle}></td>
+                  <td style={tableCellStyle}>
+                    <strong>Returned Asset IDs:</strong> {rd.deviceIds.join(", ")}
+                    <br /><br />
+                    Used for {rd.daysUsed} days: {formatDate(startDate)} to {formatDate(rd.returnedDate)}
+                  </td>
+                  <td style={tableCellCenterStyle}>{rd.deviceIds.length}</td>
+                  <td style={tableCellCenterStyle}>{rd.daysUsed}</td>
+                  <td style={tableCellCenterStyle}>
+                    {formatINRCurrency(dailyRate)}
+                  </td>
+                  <td style={tableCellRightStyle}></td>
+                  <td style={tableCellRightStyle}>
+                    {formatINRCurrency(rd.amount)}
+                  </td>
+                </tr>
               );
             })}
+          </React.Fragment>
+        );
+      })}
+              
 
-            {/* Totals Row */}
+     {/* Totals Row */}
             <tr style={totalsRowStyle}>
-              <td style={tableCellCenterStyle} colSpan={2}>
+              
+              <td style={tableCellCenterStyle} colSpan={6}>
                 <strong>TOTAL</strong>
               </td>
-              <td></td>
-              <td></td>
-              <td></td>
-              <td></td>
+              
               <td style={tableCellRightStyle}>
                 {formatINRCurrency1(totalAmount)}
               </td>
             </tr>
-          </tbody>
-        </table>
+    </tbody>
+  </table>
 
-        {/* Tax and Total Section */}
+
+{/* Tax and Total Section */}
         <div style={taxTotalContainerStyle}>
           <div style={taxDetailsStyle}>
             <div style={taxRowStyle}>
@@ -2592,6 +2768,10 @@ const InvoiceDialog = ({ open, onClose, invoiceData }) => {
             </div>
           </div>
         </div>
+
+
+        {/* Tax and Total Section */}
+       
 
         {/* Bank Details Section */}
         <div style={bankDetailsContainerStyle}>
@@ -2894,6 +3074,8 @@ const DynamicTable = ({
   // Add this to your component where you manage the dialog state
   const [openGrnDialog, setOpenGrnDialog] = useState(false);
   const [selectedGrnRow, setSelectedGrnRow] = useState(null);
+  const [selectedCreditNoteRow, setSelectedCreditNoteRow] = useState(null);
+  const [openCreditNoteDialog, setOpenCreditNoteDialog] = useState(false);
 
   const handleViewGRN = async (row) => {
     try {
@@ -2905,6 +3087,24 @@ const DynamicTable = ({
       console.error("Error fetching GRN details:", error);
     }
   };
+
+  const handleViewCreditNote = async (row, type = "credit") => {
+    try {
+      const response = await axios.get(`${API_URL}/credit-notes/${row.id}`);
+      const creditNoteWithType = {
+        ...response.data,
+        type,
+        returned_date:
+          response.data.returned_date || new Date().toISOString().split("T")[0],
+      };
+
+      setSelectedCreditNoteRow(creditNoteWithType);
+      setOpenCreditNoteDialog(true);
+    } catch (error) {
+      console.error("Error fetching credit note details:", error);
+    }
+  };
+
   // Fetch invoice data
   const handleViewInvoice = async (row, type = "current") => {
     try {
@@ -2928,6 +3128,40 @@ const DynamicTable = ({
       console.error("Error fetching invoice details:", error);
     }
   };
+
+  //   const handleViewInvoice = async (row, type = "current") => {
+  //   try {
+  //     const customerId = row.customer_id;
+  //     const invoiceDate = row.invoice_date;
+
+  //     if (!customerId || !invoiceDate) {
+  //       console.error("Missing customer_id or invoice_date");
+  //       return;
+  //     }
+
+  //     const response = await axios.get(
+  //       `${API_URL}/invoices/customer/${customerId}/${invoiceDate}`
+  //     );
+
+  //     const invoiceWithType = {
+  //       ...response.data,
+  //       type,
+  //       rental_start_date:
+  //         response.data.rental_start_date ||
+  //         new Date().toISOString().split("T")[0],
+  //       rental_end_date:
+  //         response.data.rental_end_date ||
+  //         new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0)
+  //           .toISOString()
+  //           .split("T")[0],
+  //     };
+
+  //     setSelectedInvoiceRow(invoiceWithType);
+  //     setOpenInvoiceDialog(true);
+  //   } catch (error) {
+  //     console.error("Error fetching invoice details:", error);
+  //   }
+  // };
 
   // Handle Confirm Delete API Call
   const handleConfirmDelete = async () => {
@@ -2971,23 +3205,29 @@ const DynamicTable = ({
           size="small"
           onChange={(e) => setSearchTerm(e.target.value)}
         />
-        {tableType !== "inventory" && tableType !== "asset" && (
-          <Button
-            variant="contained"
-            color="primary"
-            onClick={() => navigate(`${location.pathname}/add`)}
-          >
-            {tableType === "settings"
-              ? "Add User"
-              : tableType === "crm"
-              ? "Add Client"
-              : tableType === "operations"
-              ? "Add DC"
-              : tableType === "job_description"
-              ? "Add Job Description"
-              : `Add ${tableType.charAt(0).toUpperCase() + tableType.slice(1)}`}
-          </Button>
-        )}
+        {tableType !== "inventory" &&
+          tableType !== "asset" &&
+          tableType !== "credit-notes" && (
+            <Button
+              variant="contained"
+              color="primary"
+              onClick={() => navigate(`${location.pathname}/add`)}
+            >
+              {tableType === "settings"
+                ? "Add User"
+                : tableType === "crm"
+                ? "Add Client"
+                : tableType === "operations"
+                ? "Add DC"
+                : tableType === "credit_notes"
+                ? "Add Return Order"
+                : tableType === "job_description"
+                ? "Add Job Description"
+                : `Add ${
+                    tableType.charAt(0).toUpperCase() + tableType.slice(1)
+                  }`}
+            </Button>
+          )}
       </Box>
 
       {/* Table */}
@@ -3016,6 +3256,8 @@ const DynamicTable = ({
                 tableType !== "grn" &&
                 tableType !== "credit_notes" &&
                 tableType !== "asset" &&
+                tableType !== "invoices" &&
+                tableType !== "credit-notes" &&
                 tableType !== "asset-modifications" && (
                   <TableCell align="center" sx={{ fontWeight: "bold" }}>
                     Active Status
@@ -3032,17 +3274,21 @@ const DynamicTable = ({
                   {/* <TableCell align="center" sx={{ fontWeight: "bold" }}>
                     Next Month Invoice
                   </TableCell> */}
-                  <TableCell align="center" sx={{ fontWeight: "bold" }}>
-                    Credit Note Invoice
-                  </TableCell>
                 </>
               )}
-
-              {tableType !== "inventory" && tableType !== "asset" && (
+              {tableType === "credit-notes" && (
                 <TableCell align="center" sx={{ fontWeight: "bold" }}>
-                  Action
+                  Credit Note Invoice
                 </TableCell>
               )}
+
+              {tableType !== "inventory" &&
+                tableType !== "asset" &&
+                tableType !== "credit-notes" && (
+                  <TableCell align="center" sx={{ fontWeight: "bold" }}>
+                    Action
+                  </TableCell>
+                )}
             </TableRow>
           </TableHead>
           <TableBody>
@@ -3122,7 +3368,9 @@ const DynamicTable = ({
                     tableType !== "grn" &&
                     tableType !== "credit_notes" &&
                     tableType !== "asset" &&
-                    tableType !== "asset-modifications" && (
+                    tableType !== "asset-modifications" &&
+                    tableType !== "credit-notes" &&
+                    tableType !== "invoices" && (
                       <TableCell align="center">
                         <Button onClick={() => toggleStatus(rowIndex)}>
                           <img
@@ -3183,27 +3431,28 @@ const DynamicTable = ({
                           />
                         </Button>
                       </TableCell> */}
-                      {row.transaction_type !== "Buy" &&
-                      row.credit_note_returned_dates ? (
-                        <TableCell align="center">
-                          <Button
-                            onClick={() => handleViewInvoice(row, "credit")}
-                            sx={{ minWidth: "30px", p: 0 }}
-                            title="View Credit Note"
-                          >
-                            <img
-                              src={ViewDC}
-                              alt="View Credit"
-                              width="45"
-                              height="35"
-                            />
-                          </Button>
-                        </TableCell>
-                      ) : (
-                        <TableCell />
-                      )}
                     </>
                   )}
+
+                  {tableType === "credit-notes" &&
+                    (row.transaction_type !== "Buy" && row.returned_date ? (
+                      <TableCell align="center">
+                        <Button
+                          onClick={() => handleViewCreditNote(row, "credit")}
+                          sx={{ minWidth: "30px", p: 0 }}
+                          title="View Credit Note"
+                        >
+                          <img
+                            src={ViewDC}
+                            alt="View Credit"
+                            width="45"
+                            height="35"
+                          />
+                        </Button>
+                      </TableCell>
+                    ) : (
+                      <TableCell />
+                    ))}
 
                   {tableType !== "inventory" && (
                     <TableCell align="center">
@@ -3236,32 +3485,33 @@ const DynamicTable = ({
                           </Button>
                         )}
 
-                        {tableType !== "asset" && (
-                          <>
-                            <Button
-                              onClick={() => handleEdit(row)}
-                              sx={{ minWidth: "30px", p: 0 }}
-                            >
-                              <img
-                                src={EditIcon}
-                                alt="Edit"
-                                width="45"
-                                height="35"
-                              />
-                            </Button>
-                            <Button
-                              onClick={() => handleDeleteClick(row)}
-                              sx={{ minWidth: "30px", p: 0 }}
-                            >
-                              <img
-                                src={DeleteIcon}
-                                alt="Delete"
-                                width="45"
-                                height="35"
-                              />
-                            </Button>
-                          </>
-                        )}
+                        {tableType !== "asset" &&
+                          tableType !== "credit-notes" && (
+                            <>
+                              <Button
+                                onClick={() => handleEdit(row)}
+                                sx={{ minWidth: "30px", p: 0 }}
+                              >
+                                <img
+                                  src={EditIcon}
+                                  alt="Edit"
+                                  width="45"
+                                  height="35"
+                                />
+                              </Button>
+                              <Button
+                                onClick={() => handleDeleteClick(row)}
+                                sx={{ minWidth: "30px", p: 0 }}
+                              >
+                                <img
+                                  src={DeleteIcon}
+                                  alt="Delete"
+                                  width="45"
+                                  height="35"
+                                />
+                              </Button>
+                            </>
+                          )}
                       </Box>
                     </TableCell>
                   )}
@@ -3327,6 +3577,12 @@ const DynamicTable = ({
         onClose={() => setOpenInvoiceDialog(false)}
         invoiceData={selectedInvoiceRow}
       />
+      <CreditNoteDialog
+        open={openCreditNoteDialog}
+        onClose={() => setOpenCreditNoteDialog(false)}
+        creditNoteData={selectedCreditNoteRow}
+      />
+
       <GoodsReturnNoteDialog
         open={openGrnDialog}
         onClose={() => setOpenGrnDialog(false)}
@@ -3541,6 +3797,11 @@ const taxRowTotalStyle = {
   fontWeight: "bold",
 };
 
+const contactInfoStyle = {
+  marginTop: "10px",
+  fontSize: "13px",
+};
+
 const grandTotalStyle = {
   display: "flex",
   justifyContent: "space-between",
@@ -3656,6 +3917,35 @@ const tableCellCenterStyle = {
   fontSize: "0.75rem",
 };
 
+const productNameStyle = {
+  fontWeight: "bold",
+  fontSize: "14px",
+  color: "#000",
+  marginBottom: "5px",
+};
+
+const assetIdsStyle = {
+  fontSize: "12px",
+  color: "#555",
+  marginTop: "5px",
+};
+
+const receiverSignatureStyle = {
+  marginTop: "40px",
+};
+
+const signatureLabelStyle = {
+  fontSize: "14px",
+  marginBottom: "5px",
+};
+
+const signatureLineStyle = {
+  height: "1px",
+  width: "250px",
+  backgroundColor: "#000",
+  marginTop: "30px",
+};
+
 const itemTitleStyle = {
   fontWeight: "bold",
   marginBottom: "0.25rem",
@@ -3671,6 +3961,21 @@ const footerInfoStyle = {
 const taxDetailsStyle = {
   fontSize: "0.75rem",
   color: "#4b5563",
+};
+
+const notesSectionStyle = {
+  marginBottom: "30px",
+};
+
+const notesTitleStyle = {
+  fontWeight: "bold",
+  marginBottom: "5px",
+};
+
+const notesContentStyle = {
+  border: "1px solid #ddd",
+  padding: "10px",
+  minHeight: "50px",
 };
 
 const totalContainerStyle = {

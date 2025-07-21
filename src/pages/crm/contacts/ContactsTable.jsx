@@ -7,7 +7,7 @@ const ContactsTable = () => {
   const [data, setData] = useState([]);
 
   const columns = [
-    { id: "id", label: "S.No." },
+    { id: "s_id", label: "S.No." },
     { id: "full_name", label: "Full Name" },
     { id: "email", label: "Email" },
     { id: "phone_number", label: "Phone" },
@@ -30,7 +30,7 @@ const ContactsTable = () => {
 
         if (response.status === 200) {
           const dataWithSno = response.data.map((item, index) => ({
-            id: index + 1,
+            s_id: index + 1,
             full_name: `${item.first_name} ${item.last_name || ""}`.trim(),
             ...item,
           }));
@@ -46,6 +46,7 @@ const ContactsTable = () => {
 
   return (
     <div>
+      <h2 style={{ marginBottom: "10px" }}>Clients List</h2>
       <DynamicTable columns={columns} data={data} />
     </div>
   );

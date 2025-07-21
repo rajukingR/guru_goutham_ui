@@ -12,14 +12,16 @@ const InvoicesTablePage = () => {
     { id: "dispatch_order_number", label: "Order Number" },
 
     { id: "customer_name", label: "Customer Name" },
+        // { id: "customer_id", label: "Customer ID" },
+
     { id: "invoice_date", label: "Invoice Date" },
     { id: "email", label: "Email" },
     { id: "phone_number", label: "Phone" },
     { id: "customer_gst_number", label: "GST No." },
 
     { id: "pan_number", label: "PAN No." },
-    { id: "transaction_type", label: "Transaction Type" },
-    { id: "payment_mode", label: "Payment Mode" },
+    // { id: "transaction_type", label: "Transaction Type" },
+    // { id: "payment_mode", label: "Payment Mode" },
   ];
 
   useEffect(() => {
@@ -60,6 +62,7 @@ const InvoicesTablePage = () => {
 
   return (
     <div>
+      <h2 style={{ marginBottom: "10px" }}>Invoices List</h2>
       <DynamicTable columns={columns} data={data} />
     </div>
   );

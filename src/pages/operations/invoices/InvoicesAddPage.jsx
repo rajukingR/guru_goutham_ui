@@ -817,6 +817,10 @@ const InvoicesAddPage = () => {
 
       setSelectedOrderId(dispatchOrderId); // <-- sets selected value in dropdown
 
+      const customerId = selectedOrder.contact?.id || 
+                      selectedOrder.customer_code || 
+                      selectedOrder.dispatch_order?.customer_code;
+
       // You already have the rest of this code:
       const dispatchOrderDate =
         selectedOrder.dispatch_order?.dispatch_order_date ||
@@ -892,7 +896,7 @@ const InvoicesAddPage = () => {
 
       setFormData({
         ...formData,
-        customer_id: selectedOrder.contact?.id || "", // ✅ sets customer_id
+      customer_id: customerId || "", // ✅ Ensure customer_id is set
         customer_name: `${personal?.first_name || ""}`,
         email: personal?.email || "",
         phone_number: personal?.phone_number || "",
@@ -1178,8 +1182,12 @@ const InvoicesAddPage = () => {
 
     try {
       // Prepare the data to be sent
+      const selectedOrder = orders.find(order => order.id === parseInt(selectedOrderId));
+
       const submissionData = {
         ...formData,
+          customer_id: formData.customer_id || (selectedOrder?.contact?.id || ""),
+
         // Include date ranges in the submission
         dc_id: formData.dc_id,
         dispatch_order_number:

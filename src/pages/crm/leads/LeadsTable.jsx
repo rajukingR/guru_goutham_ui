@@ -7,7 +7,7 @@ const LeadsTable = () => {
   const [data, setData] = useState([]);
 
   const columns = [
-    { id: "id", label: "S.No." },
+    { id: "s_id", label: "S.No." },
     { id: "lead_id", label: "Lead ID" },
     { id: "lead_title", label: "Title" },
     { id: "transaction_type", label: "Transaction Type" },
@@ -32,7 +32,7 @@ const LeadsTable = () => {
 
         if (response.status === 200) {
           const formattedData = response.data.map((item, index) => ({
-            id: index + 1,
+            s_id: index + 1,
             contact_name: item.contact ? `${item.contact.first_name} ${item.contact.last_name}` : "",
             contact_phone: item.contact?.phone_number || "",
             contact_company: item.contact?.company_name || "",
@@ -51,6 +51,8 @@ const LeadsTable = () => {
 
   return (
     <div>
+                  <h2 style={{ marginBottom: "10px" }}>Leads List</h2>
+
       <DynamicTable columns={columns} data={data} />
     </div>
   );

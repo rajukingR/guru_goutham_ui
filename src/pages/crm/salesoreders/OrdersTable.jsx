@@ -9,6 +9,8 @@ const OrdersTable = () => {
   const columns = [
     { id: "id", label: "S.No." },
     { id: "order_id", label: "Order ID" },
+    { id: "customer_name", label: "Customer Name" },
+
     { id: "transaction_type", label: "Purchase Type" },
     { id: "payment_type", label: "Payment Type" },
 
@@ -44,10 +46,18 @@ const OrdersTable = () => {
               minimumFractionDigits: 2,
             }).format(item.total_order_value || 0);
 
+            // Combine first and last name from personalDetails
+            const customerName =
+              item.personalDetails?.first_name &&
+              item.personalDetails?.last_name
+                ? `${item.personalDetails.first_name} ${item.personalDetails.last_name}`
+                : "N/A";
+
             return {
               id: index + 1,
               ...item,
-              total_order_value: formattedOrderValue, // replace value with formatted ₹ value
+              customer_name: customerName, // ✅ added
+              total_order_value: formattedOrderValue,
             };
           });
 
@@ -63,6 +73,8 @@ const OrdersTable = () => {
 
   return (
     <div>
+            <h2 style={{ marginBottom: "10px" }}>Orders List</h2>
+
       <DynamicTable columns={columns} data={data} />
     </div>
   );

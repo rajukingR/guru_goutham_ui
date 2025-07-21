@@ -49,6 +49,7 @@ const DispatchOrdersTable = () => {
 
   return (
     <div>
+      <h2 style={{ marginBottom: "10px" }}>Dispatch Orders List</h2>
       <DynamicTable columns={columns} data={data} />
     </div>
   );

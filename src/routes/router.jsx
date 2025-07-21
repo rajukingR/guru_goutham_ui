@@ -120,6 +120,7 @@ import FeedBackFormLayoutfb from "../pages/operations/feedback/FeedBackFormLayou
 import DispatchOrdersAddForm from "../pages/crm/dispatch-orders/DispatchOrdersAddForm.jsx";
 import DispatchOrdersTable from "../pages/crm/dispatch-orders/DispatchOrdersTable.jsx";
 import DispatchOrdersEditForm from "../pages/crm/dispatch-orders/DispatchOrdersEditForm.jsx";
+import CreditNoteInvoice from "../pages/operations/credit-note-invoice/CreditNoteInvoice.jsx";
 const ProtectedRoute = ({ element }) => {
   const user = useSelector((state) => state.auth.user);
   return user ? element : <Navigate to="/signin" replace />;
@@ -388,15 +389,19 @@ const RoutesConfig = () => {
               element={<ClientJourneyOp />}
             />
             <Route
-              path="operations/credit_notes"
+              path="operations/credit-notes"
+              element={<CreditNoteInvoice />}
+            />
+            <Route
+              path="crm/credit_notes"
               element={<CreaditNotesTableLayout />}
             />
             <Route
-              path="operations/credit_notes/add"
+              path="crm/credit_notes/add"
               element={<CreaditNotesAddFormLayout />}
             />
             <Route
-              path="operations/credit_notes/edit/:id"
+              path="crm/credit_notes/edit/:id"
               element={<CreaditNotesEditFormLayout />}
             />
 
