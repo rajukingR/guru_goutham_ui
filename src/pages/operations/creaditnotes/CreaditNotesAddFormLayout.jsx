@@ -20,6 +20,10 @@ import {
   MenuItem,
   FormControl,
   InputLabel,
+  Button,
+  List,
+  ListItem,
+  ListItemText,
 } from "@mui/material";
 import { Add, CheckBox, Remove } from "@mui/icons-material";
 import API_URL from "../../../api/Api_url";
@@ -65,28 +69,32 @@ const CreaditNotesAddFormLayout = () => {
   });
 
   const [orders, setOrders] = useState([]);
-  const [products, setProducts] = useState([]);
+  const [deliveryChallans, setDeliveryChallans] = useState([]);
+  const [filteredDeliveryChallans, setFilteredDeliveryChallans] = useState([]);
+  const [dcSearchTerm, setDcSearchTerm] = useState("");
   const [selectedOrder, setSelectedOrder] = useState(null);
+  const [products, setProducts] = useState([]);
+  const [searchTerm, setSearchTerm] = useState("");
   const [selectedProductIds, setSelectedProductIds] = useState([]);
   const [quantities, setQuantities] = useState({});
   const [deviceIds, setDeviceIds] = useState({});
   const [availableAssetIds, setAvailableAssetIds] = useState({});
   const [deviceIdErrors, setDeviceIdErrors] = useState({});
   const [showProductTable, setShowProductTable] = useState(false);
-  const [searchTerm, setSearchTerm] = useState("");
   const [openSnackbar, setOpenSnackbar] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState("");
   const [snackbarSeverity, setSnackbarSeverity] = useState("success");
+  const [searchMode, setSearchMode] = useState(false);
 
-  // Fetch approved dispatch orders and products on component mount
+  // Fetch contacts and products on component mount
   useEffect(() => {
     const fetchData = async () => {
       try {
-        // Fetch approved dispatch orders (replacing delivery challans)
-        const orderResponse = await axios.get(
-          `${API_URL}/dispatch-orders/approved-dc`
+        // Fetch contacts
+        const contactResponse = await axios.get(
+          `${API_URL}/contacts/delivered-contacts`
         );
-        setOrders(orderResponse.data);
+        setOrders(contactResponse.data);
 
         // Fetch products
         const prodResponse = await axios.get(`${API_URL}/product-templete`);
@@ -102,52 +110,69 @@ const CreaditNotesAddFormLayout = () => {
     fetchData();
   }, []);
 
-  // When a dispatch order is selected, populate form data and available assets
-  const handleOrderSelect = (orderId) => {
-    const selected = orders.find((order) => order.id === orderId);
-    if (!selected) return;
+  // Fetch delivery challans when customer is selected
+  useEffect(() => {
+    if (formData.customerId) {
+      const fetchDeliveryChallans = async () => {
+        try {
+          const response = await axios.get(
+            `${API_URL}/delivery-challans/customer/${formData.customerId}`
+          );
+          setDeliveryChallans(response.data);
+        } catch (error) {
+          console.error("Error fetching delivery challans:", error);
+          setSnackbarMessage(
+            "Error fetching delivery challans: " + error.message
+          );
+          setSnackbarSeverity("error");
+          setOpenSnackbar(true);
+        }
+      };
+      fetchDeliveryChallans();
+    }
+  }, [formData.customerId]);
 
-    setSelectedOrder(selected);
-
-    // Populate form fields from the selected dispatch order
-    setFormData((prev) => ({
-      ...prev,
-      creditNoteTitle: `Credit Note for DC ${selected.dispatch_order_id}`,
-      customerId: selected.customer_code,
-      customerName: selected.shipping_name || `${selected.contact?.first_name || ""} ${selected.contact?.last_name || ""}`.trim(),
-      dcId: selected.id,
-      dcNumber: selected.dispatch_order_id,
-      dcDate: selected.dispatch_order_date,
-      industry: selected.industry,
-      email: selected.email,
-      pan: selected.pan_number || selected.contact?.pan_no || "",
-      shippingName: selected.shipping_name,
-      pincode: selected.pincode,
-      // Calculate amount based on rent_price_per_month
-      amount: selected.items.reduce((sum, item) => {
-        const product = products.find(p => p.id === item.product_id);
-        const unitPrice = product ? parseFloat(product.rent_price_per_month) : 0;
-        return sum + (unitPrice * (item.quantity || 1));
-      }, 0),
-    }));
-
-    // Process device IDs from the dispatch order items
-    const newAvailableAssetIds = {};
-    selected.items.forEach((item) => {
-      newAvailableAssetIds[item.product_id] = item.device_ids || [];
-      
-      setQuantities((prev) => ({
+  const handleOrderSelect = (customerId) => {
+    const selectedCustomer = orders.find((order) => order.id === customerId);
+    if (selectedCustomer) {
+      setFormData((prev) => ({
         ...prev,
-        [item.product_id]: item.quantity || 1,
+        customerId: selectedCustomer.id,
+        customerName: `${selectedCustomer.first_name} ${selectedCustomer.last_name}`,
+        email: selectedCustomer.email,
+        pan: selectedCustomer.pan_no,
+        industry: selectedCustomer.industry,
+        paymentType: selectedCustomer.payment_type,
       }));
-    });
-
-    setAvailableAssetIds(newAvailableAssetIds);
-    setSelectedProductIds([]);
-    setDeviceIds({});
-    setDeviceIdErrors({});
+    }
   };
 
+  const handleDeliveryChallanSelect = (dcId) => {
+    const selectedDC = deliveryChallans.find((dc) => dc.id === dcId);
+    if (selectedDC) {
+      setSelectedOrder(selectedDC);
+      setFormData((prev) => ({
+        ...prev,
+        dcId: selectedDC.id,
+        dcNumber: selectedDC.dispatch_order_number || selectedDC.dc_id,
+        dcDate: selectedDC.dc_date,
+        shippingName: selectedDC.shipping_name,
+        pincode: selectedDC.pincode,
+        customerName: selectedDC.customer_name || prev.customerName,
+      }));
+
+      setSearchMode(false);
+      setFilteredDeliveryChallans([]);
+      setDcSearchTerm("");
+
+      // Prepare available asset IDs
+      const assetMap = {};
+      selectedDC.items.forEach((item) => {
+        assetMap[item.product_id] = item.device_ids;
+      });
+      setAvailableAssetIds(assetMap);
+    }
+  };
   const handleProductSelection = (productId) => {
     setSelectedProductIds((prev) => {
       if (prev.includes(productId)) {
@@ -163,6 +188,16 @@ const CreaditNotesAddFormLayout = () => {
         return prev.filter((id) => id !== productId);
       } else {
         // Add product
+        const invoiceItem = selectedOrder.items.find(
+          (item) => item.product_id === productId
+        );
+        const defaultQty = invoiceItem ? invoiceItem.quantity : 1;
+
+        setQuantities((prev) => ({
+          ...prev,
+          [productId]: defaultQty,
+        }));
+
         return [...prev, productId];
       }
     });
@@ -266,7 +301,7 @@ const CreaditNotesAddFormLayout = () => {
 
   const handleSelectChange = (e) => {
     const { name, value } = e.target;
-    if (name === "selectedOrder") {
+    if (name === "selectedCustomer") {
       handleOrderSelect(parseInt(value));
     } else {
       setFormData((prev) => ({
@@ -276,7 +311,14 @@ const CreaditNotesAddFormLayout = () => {
     }
   };
 
-const handleSubmit = async () => {
+  // Add a reset function
+  const resetDcSearch = () => {
+    setFilteredDeliveryChallans([]);
+    setDcSearchTerm("");
+    setSearchMode(true);
+  };
+
+  const handleSubmit = async () => {
     // Validate device IDs match quantities
     let isValid = true;
     const newErrors = {};
@@ -310,10 +352,10 @@ const handleSubmit = async () => {
 
     // Calculate total amount based on selected products and quantities
     const totalAmount = selectedProductIds.reduce((sum, productId) => {
-      const product = products.find(p => p.id === productId);
+      const product = products.find((p) => p.id === productId);
       const unitPrice = product ? parseFloat(product.rent_price_per_month) : 0;
       const qty = quantities[productId] || 0;
-      return sum + (unitPrice * qty);
+      return sum + unitPrice * qty;
     }, 0);
 
     const payload = {
@@ -327,7 +369,6 @@ const handleSubmit = async () => {
       customer_id: formData.customerId,
       dc_date: formData.dcDate,
       returned_date: formData.returnedDate,
-      rental_end_date: selectedOrder.rental_end_date, // Added rental_end_date from selectedOrder
       customer_name: formData.customerName,
       created_by: formData.createdBy,
       amount: totalAmount,
@@ -340,10 +381,12 @@ const handleSubmit = async () => {
       status: formData.status,
       print_credit_note: formData.printCreditNote,
       items: selectedProductIds.map((productId) => {
-        const item = selectedOrder.items.find((item) => item.product_id === productId);
-        const product = products.find(p => p.id === productId);
+        const item = selectedOrder.items.find(
+          (item) => item.product_id === productId
+        );
+        const product = products.find((p) => p.id === productId);
         const unitPrice = product ? product.rent_price_per_month : "0.00";
-        
+
         return {
           product_id: productId,
           product_name: item?.product_name || product?.product_name || "",
@@ -357,10 +400,10 @@ const handleSubmit = async () => {
 
     try {
       await axios.post(`${API_URL}/credit-notes/create`, payload);
-      setSnackbarMessage("Credit Note created successfully!");
+      setSnackbarMessage("GRN created successfully!");
       setSnackbarSeverity("success");
       setOpenSnackbar(true);
-      setTimeout(() => navigate("/dashboard/crm/credit_notes"), 3000);
+      setTimeout(() => navigate("/dashboard/operations/credit_notes"), 3000);
     } catch (error) {
       console.error("Error creating credit note:", error);
       setSnackbarMessage(
@@ -377,21 +420,34 @@ const handleSubmit = async () => {
     setOpenSnackbar(false);
   };
 
+  const handleDcSearch = () => {
+    if (!dcSearchTerm.trim()) {
+      setFilteredDeliveryChallans([]);
+      return;
+    }
+
+    const filtered = deliveryChallans.filter(
+      (dc) =>
+        dc.dc_id.toLowerCase().includes(dcSearchTerm.toLowerCase()) ||
+        dc.dc_date.includes(dcSearchTerm)
+    );
+    setFilteredDeliveryChallans(filtered);
+    setSearchMode(true);
+  };
+
   return (
     <div style={containerStyle}>
-      
-
       <div style={formContainerStyle}>
         {/* Credit Note Details Card */}
         <div style={cardStyle}>
           <div style={cardHeaderContainerStyle}>
             <div style={iconStyle}>📄</div>
-            <h3 style={cardHeaderStyle}>Credit Note Details:</h3>
+            <h3 style={cardHeaderStyle}>Goods return notes Details:</h3>
           </div>
           <div style={fieldsGridStyle}>
             <div style={fieldContainerStyle}>
               <label style={labelStyle}>
-                Credit Note No.
+                GRN No.
                 <span style={requiredStyle}>*</span>
               </label>
               <input
@@ -481,6 +537,7 @@ const handleSubmit = async () => {
                 name="dcId"
                 value={formData.dcNumber}
                 onChange={handleInputChange}
+                disabled
               />
             </div>
           </div>
@@ -495,28 +552,118 @@ const handleSubmit = async () => {
           <div style={fieldsGridStyle}>
             <div style={fieldContainerStyle}>
               <label style={labelStyle}>
-                Select Dispatch Order
+                Select Customer
                 <span style={requiredStyle}>*</span>
               </label>
               <FormControl fullWidth size="small">
                 <Select
-                  name="selectedOrder"
-                  value={selectedOrder?.id || ""}
+                  name="selectedCustomer"
+                  value={formData.customerId || ""}
                   onChange={handleSelectChange}
                   displayEmpty
                   inputProps={{ "aria-label": "Without label" }}
                   style={inputStyle}
                 >
                   <MenuItem value="" disabled>
-                    Select Dispatch Order
+                    Select Customer
                   </MenuItem>
                   {orders.map((order) => (
                     <MenuItem key={order.id} value={order.id}>
-                      {`${order.dispatch_order_id} | ${order.shipping_name || ""} | ${order.dispatch_order_date}`}
+                      {order.first_name} {order.last_name} ({order.customer_id})
                     </MenuItem>
                   ))}
                 </Select>
               </FormControl>
+            </div>
+
+            <div style={fieldContainerStyle}>
+              <label style={labelStyle}>Delivery Challan</label>
+              <div
+                style={{ display: "flex", gap: "8px", flexDirection: "column" }}
+              >
+                <div style={{ display: "flex", gap: "8px" }}>
+                  <TextField
+                    size="small"
+                    placeholder="Search by DC ID or Date"
+                    value={dcSearchTerm}
+                    onChange={(e) => {
+                      setDcSearchTerm(e.target.value);
+                      if (formData.dcId) {
+                        // Clear current selection if user starts typing
+                        setFormData((prev) => ({
+                          ...prev,
+                          dcId: "",
+                          dcNumber: "",
+                          dcDate: "",
+                        }));
+                        setSelectedOrder(null);
+                      }
+                    }}
+                    fullWidth
+                    onKeyPress={(e) => e.key === "Enter" && handleDcSearch()}
+                  />
+                  <Button
+                    variant="contained"
+                    size="small"
+                    onClick={formData.dcId ? resetDcSearch : handleDcSearch}
+                    disabled={!formData.customerId}
+                  >
+                    {formData.dcId ? "CLEAR" : "SEARCH"}
+                  </Button>
+                </div>
+
+                {/* Selected DC Info */}
+                {formData.dcId && (
+                  <div
+                    style={{
+                      padding: "8px",
+                      border: "1px solid #e0e0e0",
+                      borderRadius: "4px",
+                    }}
+                  >
+                    <Typography variant="body2">
+                      <strong>Selected:</strong> {formData.dcNumber} (
+                      {formData.dcDate})
+                    </Typography>
+                  </div>
+                )}
+
+                {/* Search Results */}
+                {searchMode && filteredDeliveryChallans.length > 0 && (
+                  <Paper
+                    style={{
+                      maxHeight: "200px",
+                      overflow: "auto",
+                      marginTop: "8px",
+                    }}
+                  >
+                    <List>
+                      {filteredDeliveryChallans.map((dc) => (
+                        <ListItem
+                          key={dc.id}
+                          button
+                          onClick={() => handleDeliveryChallanSelect(dc.id)}
+                        >
+                          <ListItemText
+                            primary={`${dc.dc_id} (${dc.dc_date})`}
+                          />
+                        </ListItem>
+                      ))}
+                    </List>
+                  </Paper>
+                )}
+
+                {searchMode &&
+                  filteredDeliveryChallans.length === 0 &&
+                  dcSearchTerm && (
+                    <Typography
+                      variant="body2"
+                      style={{ padding: "8px", color: "#666" }}
+                    >
+                      No matching Delivery Challans found
+                    </Typography>
+                  )}
+              </div>
             </div>
 
             <div style={fieldContainerStyle}>
@@ -553,6 +700,7 @@ const handleSubmit = async () => {
                 name="dcDate"
                 value={formData.dcDate}
                 onChange={handleInputChange}
+                disabled
               />
             </div>
 
@@ -718,9 +866,7 @@ const handleSubmit = async () => {
                         <TableCell sx={{ color: "#fff" }}>RAM</TableCell>
                         <TableCell sx={{ color: "#fff" }}>Storage</TableCell>
                         <TableCell sx={{ color: "#fff" }}>Graphics</TableCell>
-                        <TableCell sx={{ color: "#fff" }}>
-                          DC Qty
-                        </TableCell>
+                        <TableCell sx={{ color: "#fff" }}>DC Qty</TableCell>
                         <TableCell sx={{ color: "#fff" }}>Credit Qty</TableCell>
                         <TableCell sx={{ color: "#fff" }}>Asset IDs</TableCell>
                       </TableRow>
@@ -751,9 +897,7 @@ const handleSubmit = async () => {
                             <TableCell>{product.ram}</TableCell>
                             <TableCell>{product.storage}</TableCell>
                             <TableCell>{product.graphics}</TableCell>
-                            <TableCell>
-                              {invoiceItem.quantity}
-                            </TableCell>
+                            <TableCell>{invoiceItem.quantity}</TableCell>
                             <TableCell>
                               <Box display="flex" alignItems="center">
                                 <IconButton

@@ -20,9 +20,13 @@ import {
   MenuItem,
   FormControl,
   InputLabel,
+  Button,
+  List,
+  ListItem,
+  ListItemText,
 } from "@mui/material";
 import { Add, CheckBox, Remove } from "@mui/icons-material";
-import API_URL, { IMAGE_API_URL } from "../../../api/Api_url";
+import API_URL from "../../../api/Api_url";
 
 const Alert = React.forwardRef(function Alert(props, ref) {
   return <MuiAlert elevation={6} ref={ref} variant="filled" {...props} />;
@@ -40,10 +44,9 @@ const CreaditNotesEditFormLayout = () => {
     transactionType: "Credit Note",
     paymentType: "",
     dcId: "",
+    dcNumber: "",
     customerId: "",
-    invoiceDate: "",
-    invoiceStartDate: "",
-    invoiceEndDate: "",
+    dcDate: "",
     customerName: "",
     createdBy: "",
     amount: "",
@@ -53,183 +56,188 @@ const CreaditNotesEditFormLayout = () => {
     email: "",
     shippingName: "",
     pincode: "",
-    status: "",
+    status: "Draft",
     printCreditNote: false,
   });
 
   const [orders, setOrders] = useState([]);
-  const [products, setProducts] = useState([]);
+  const [deliveryChallans, setDeliveryChallans] = useState([]);
+  const [filteredDeliveryChallans, setFilteredDeliveryChallans] = useState([]);
+  const [dcSearchTerm, setDcSearchTerm] = useState("");
   const [selectedOrder, setSelectedOrder] = useState(null);
+  const [products, setProducts] = useState([]);
+  const [searchTerm, setSearchTerm] = useState("");
   const [selectedProductIds, setSelectedProductIds] = useState([]);
   const [quantities, setQuantities] = useState({});
   const [deviceIds, setDeviceIds] = useState({});
   const [availableAssetIds, setAvailableAssetIds] = useState({});
   const [deviceIdErrors, setDeviceIdErrors] = useState({});
   const [showProductTable, setShowProductTable] = useState(false);
-  const [searchTerm, setSearchTerm] = useState("");
   const [openSnackbar, setOpenSnackbar] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState("");
   const [snackbarSeverity, setSnackbarSeverity] = useState("success");
-  const [originalCreditNote, setOriginalCreditNote] = useState(null);
+  const [searchMode, setSearchMode] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Fetch credit note data and related data on component mount
+  // Fetch credit note data on component mount
   useEffect(() => {
     const fetchData = async () => {
       try {
-        // Fetch the credit note to edit
+        setIsLoading(true);
+        
+        // Fetch credit note details
         const creditNoteResponse = await axios.get(`${API_URL}/credit-notes/${id}`);
-        const creditNote = creditNoteResponse.data;
-        setOriginalCreditNote(creditNote);
-
-        // Populate form data from the credit note
+        const creditNoteData = creditNoteResponse.data;
+        
+        // Set form data
         setFormData({
-          creditNoteNumber: creditNote.credit_note_number,
-          creditNoteTitle: creditNote.credit_note_title,
-          returnedDate: creditNote.returned_date,
-          industry: creditNote.industry,
-          transactionType: creditNote.transaction_type,
-          paymentType: creditNote.payment_type,
-          dcId: creditNote.dc_id,
-          customerId: creditNote.customer_id,
-          invoiceDate: creditNote.invoice_date,
-          invoiceStartDate: creditNote.invoice_start_date,
-          invoiceEndDate: creditNote.invoice_end_date,
-          customerName: creditNote.customer_name,
-          createdBy: creditNote.created_by,
-          amount: creditNote.amount,
-          reference: creditNote.reference,
-          tin: creditNote.tin,
-          pan: creditNote.pan,
-          email: creditNote.email,
-          shippingName: creditNote.shipping_name,
-          pincode: creditNote.pincode,
-          status: creditNote.status,
-          printCreditNote: creditNote.print_credit_note,
+          creditNoteNumber: creditNoteData.credit_note_number,
+          creditNoteTitle: creditNoteData.credit_note_title,
+          returnedDate: creditNoteData.returned_date,
+          industry: creditNoteData.industry,
+          transactionType: creditNoteData.transaction_type,
+          paymentType: creditNoteData.payment_type,
+          dcId: creditNoteData.dc_id,
+          dcNumber: creditNoteData.dc_number,
+          customerId: creditNoteData.customer_id,
+          dcDate: creditNoteData.dc_date,
+          customerName: creditNoteData.customer_name,
+          createdBy: creditNoteData.created_by,
+          amount: creditNoteData.amount,
+          reference: creditNoteData.reference,
+          tin: creditNoteData.tin,
+          pan: creditNoteData.pan,
+          email: creditNoteData.email,
+          shippingName: creditNoteData.shipping_name,
+          pincode: creditNoteData.pincode,
+          status: creditNoteData.status,
+          printCreditNote: creditNoteData.print_credit_note,
         });
 
-        // Fetch the associated invoice
-        const invoiceResponse = await axios.get(`${API_URL}/invoices/${creditNote.invoice_id}`);
-        const invoice = invoiceResponse.data;
-        setSelectedOrder(invoice);
-
-        // Process selected products and quantities from the credit note
-        const newSelectedProductIds = [];
-        const newQuantities = {};
-        const newDeviceIds = {};
-
-        creditNote.items.forEach(item => {
-          newSelectedProductIds.push(item.product_id);
-          newQuantities[item.product_id] = item.quantity;
-          newDeviceIds[item.product_id] = item.device_ids || [];
-        });
-
-        setSelectedProductIds(newSelectedProductIds);
-        setQuantities(newQuantities);
-        setDeviceIds(newDeviceIds);
-
-        // Process available asset IDs from the invoice
-        const newAvailableAssetIds = {};
-        invoice.items.forEach((item) => {
-          try {
-            const parsedDeviceIds = JSON.parse(item.device_ids || "[]");
-            const returnedDevices = Array.isArray(item.returned_device_ids)
-              ? item.returned_device_ids
-              : typeof item.returned_device_ids === "string"
-              ? JSON.parse(item.returned_device_ids || "[]")
-              : [];
-
-            const remainingDevices = parsedDeviceIds.filter(
-              (dev) => !returnedDevices.includes(dev)
-            );
-
-            newAvailableAssetIds[item.product_id] = remainingDevices;
-          } catch (e) {
-            console.error("Error parsing or processing device IDs:", e);
-            newAvailableAssetIds[item.product_id] = [];
+        // Prepare selected products and quantities
+        const selectedIds = [];
+        const qtyMap = {};
+        const deviceIdMap = {};
+        const assetMap = {};
+        
+        creditNoteData.items.forEach(item => {
+          selectedIds.push(item.product_id);
+          qtyMap[item.product_id] = item.quantity;
+          deviceIdMap[item.product_id] = item.device_ids || [];
+          
+          // Create asset map from the credit note items
+          if (item.device_ids && item.device_ids.length > 0) {
+            assetMap[item.product_id] = item.device_ids;
           }
         });
+        
+        setSelectedProductIds(selectedIds);
+        setQuantities(qtyMap);
+        setDeviceIds(deviceIdMap);
+        setAvailableAssetIds(assetMap);
 
-        setAvailableAssetIds(newAvailableAssetIds);
+        // Set the selected order data from credit note
+        setSelectedOrder({
+          id: creditNoteData.dc_id,
+          dc_id: creditNoteData.dc_number,
+          dc_date: creditNoteData.dc_date,
+          customer_name: creditNoteData.customer_name,
+          shipping_name: creditNoteData.shipping_name,
+          pincode: creditNoteData.pincode,
+          items: creditNoteData.items.map(item => ({
+            product_id: item.product_id,
+            product_name: item.product_name,
+            quantity: item.quantity,
+            device_ids: item.device_ids || []
+          }))
+        });
 
-        // Fetch approved invoices for the dropdown
-        const orderResponse = await axios.get(`${API_URL}/invoices/approved-invoices`);
-        setOrders(orderResponse.data);
-
-        // Fetch products
-        const prodResponse = await axios.get(`${API_URL}/product-templete`);
+        // Fetch contacts and products
+        const [contactResponse, prodResponse] = await Promise.all([
+          axios.get(`${API_URL}/contacts/delivered-contacts`),
+          axios.get(`${API_URL}/product-templete`)
+        ]);
+        
+        setOrders(contactResponse.data);
         setProducts(prodResponse.data);
+        
+        // Fetch delivery challans for the customer if needed
+        if (creditNoteData.customer_id && !creditNoteData.dc_id) {
+          const dcListResponse = await axios.get(
+            `${API_URL}/delivery-challans/customer/${creditNoteData.customer_id}`
+          );
+          setDeliveryChallans(dcListResponse.data);
+        }
+        
+        setIsLoading(false);
       } catch (error) {
         console.error("Error fetching data:", error);
         setSnackbarMessage("Error fetching data: " + error.message);
         setSnackbarSeverity("error");
         setOpenSnackbar(true);
+        setIsLoading(false);
       }
     };
 
     fetchData();
   }, [id]);
+  // Fetch delivery challans when customer is selected
+  useEffect(() => {
+    if (formData.customerId && !formData.dcId) {
+      const fetchDeliveryChallans = async () => {
+        try {
+          const response = await axios.get(
+            `${API_URL}/delivery-challans/customer/${formData.customerId}`
+          );
+          setDeliveryChallans(response.data);
+        } catch (error) {
+          console.error("Error fetching delivery challans:", error);
+          setSnackbarMessage(
+            "Error fetching delivery challans: " + error.message
+          );
+          setSnackbarSeverity("error");
+          setOpenSnackbar(true);
+        }
+      };
+      fetchDeliveryChallans();
+    }
+  }, [formData.customerId, formData.dcId]);
 
-  // When an order is selected, populate form data and available assets
-  const handleOrderSelect = (orderId) => {
-    const selected = orders.find((order) => order.id === orderId);
-    if (!selected) return;
+  const handleOrderSelect = (customerId) => {
+    const selectedCustomer = orders.find((order) => order.id === customerId);
+    if (selectedCustomer) {
+      setFormData((prev) => ({
+        ...prev,
+        customerId: selectedCustomer.id,
+        customerName: `${selectedCustomer.first_name} ${selectedCustomer.last_name}`,
+        email: selectedCustomer.email,
+        pan: selectedCustomer.pan_no,
+        industry: selectedCustomer.industry,
+        paymentType: selectedCustomer.payment_type,
+      }));
+    }
+  };
 
-    setSelectedOrder(selected);
-
-    // Populate form fields from the selected invoice
+const handleDeliveryChallanSelect = (dcId) => {
+  const selectedDC = deliveryChallans.find((dc) => dc.id === dcId);
+  if (selectedDC) {
+    setSelectedOrder(selectedDC);
     setFormData((prev) => ({
       ...prev,
-      creditNoteTitle: `Credit Note for Invoice ${selected.invoice_number}`,
-      customerId: selected.customer_id,
-      customerName: selected.customer_name,
-      dcId: selected.dc_id,
-      invoiceDate: selected.invoice_date,
-      invoiceStartDate: selected.invoice_start_date,
-      invoiceEndDate: selected.invoice_end_date,
-      industry: selected.industry,
-      email: selected.email,
-      pan: selected.pan_number,
-      amount: selected.amount,
-      shippingName: selected.shippingDetail?.consignee_name || "",
-      pincode: selected.shippingDetail?.pincode || "",
+      dcId: selectedDC.id,
+      dcNumber: selectedDC.dispatch_order_number || selectedDC.dc_id,
+      dcDate: selectedDC.dc_date,
+      shippingName: selectedDC.shipping_name,
+      pincode: selectedDC.pincode,
+      customerName: selectedDC.customer_name || prev.customerName,
     }));
 
-    // Process device IDs from the invoice items
-    const newAvailableAssetIds = {};
-    selected.items.forEach((item) => {
-      try {
-        const parsedDeviceIds = JSON.parse(item.device_ids || "[]");
-        const returnedDevices = Array.isArray(item.returned_device_ids)
-          ? item.returned_device_ids
-          : typeof item.returned_device_ids === "string"
-          ? JSON.parse(item.returned_device_ids || "[]")
-          : [];
-
-        const remainingDevices = parsedDeviceIds.filter(
-          (dev) => !returnedDevices.includes(dev)
-        );
-
-        newAvailableAssetIds[item.product_id] = remainingDevices;
-
-        const netQty =
-          typeof item.net_quantity === "number"
-            ? item.net_quantity
-            : (item.quantity || 0) - (item.return_quantity || 0);
-
-        setQuantities((prev) => ({
-          ...prev,
-          [item.product_id]: netQty,
-        }));
-      } catch (e) {
-        console.error("Error parsing or processing device IDs:", e);
-        newAvailableAssetIds[item.product_id] = [];
-      }
-    });
-
-    setAvailableAssetIds(newAvailableAssetIds);
-    setSelectedProductIds([]); // Reset selected products when changing invoice
-    setDeviceIds({}); // Reset selected devices
-  };
+    // Reset search state completely
+    setFilteredDeliveryChallans([]);
+    setDcSearchTerm("");
+    setSearchMode(false);
+  }
+};
 
   const handleProductSelection = (productId) => {
     setSelectedProductIds((prev) => {
@@ -246,6 +254,16 @@ const CreaditNotesEditFormLayout = () => {
         return prev.filter((id) => id !== productId);
       } else {
         // Add product
+        const invoiceItem = selectedOrder.items.find(
+          (item) => item.product_id === productId
+        );
+        const defaultQty = invoiceItem ? invoiceItem.quantity : 1;
+
+        setQuantities((prev) => ({
+          ...prev,
+          [productId]: defaultQty,
+        }));
+
         return [...prev, productId];
       }
     });
@@ -261,7 +279,7 @@ const CreaditNotesEditFormLayout = () => {
     if (numValue > invoiceQty) {
       setDeviceIdErrors((prev) => ({
         ...prev,
-        [productId]: `Credit quantity cannot exceed invoice quantity (${invoiceQty})`,
+        [productId]: `Credit quantity cannot exceed DC quantity (${invoiceQty})`,
       }));
       return;
     }
@@ -285,7 +303,7 @@ const CreaditNotesEditFormLayout = () => {
     if (currentQty >= invoiceQty) {
       setDeviceIdErrors((prev) => ({
         ...prev,
-        [productId]: `Credit quantity cannot exceed invoice quantity (${invoiceQty})`,
+        [productId]: `Credit quantity cannot exceed DC quantity (${invoiceQty})`,
       }));
       return;
     }
@@ -349,7 +367,7 @@ const CreaditNotesEditFormLayout = () => {
 
   const handleSelectChange = (e) => {
     const { name, value } = e.target;
-    if (name === "selectedOrder") {
+    if (name === "selectedCustomer") {
       handleOrderSelect(parseInt(value));
     } else {
       setFormData((prev) => ({
@@ -359,10 +377,13 @@ const CreaditNotesEditFormLayout = () => {
     }
   };
 
-  const handleToggleChange = () =>
-    setFormData((p) => ({ ...p, printCreditNote: !p.printCreditNote }));
+  const resetDcSearch = () => {
+  setFilteredDeliveryChallans([]);
+  setDcSearchTerm("");
+  setSearchMode(false); // Changed to false to fully reset
+};
 
-  const handleSubmit = async () => {
+  const handleUpdate = async () => {
     // Validate device IDs match quantities
     let isValid = true;
     const newErrors = {};
@@ -388,11 +409,19 @@ const CreaditNotesEditFormLayout = () => {
     }
 
     if (!selectedOrder) {
-      setSnackbarMessage("Please select an invoice first");
+      setSnackbarMessage("Please select a dispatch order first");
       setSnackbarSeverity("error");
       setOpenSnackbar(true);
       return;
     }
+
+    // Calculate total amount based on selected products and quantities
+    const totalAmount = selectedProductIds.reduce((sum, productId) => {
+      const product = products.find((p) => p.id === productId);
+      const unitPrice = product ? parseFloat(product.rent_price_per_month) : 0;
+      const qty = quantities[productId] || 0;
+      return sum + unitPrice * qty;
+    }, 0);
 
     const payload = {
       credit_note_number: formData.creditNoteNumber,
@@ -401,16 +430,13 @@ const CreaditNotesEditFormLayout = () => {
       transaction_type: formData.transactionType,
       payment_type: formData.paymentType,
       dc_id: formData.dcId,
+      dc_number: formData.dcNumber,
       customer_id: formData.customerId,
-      invoice_id: selectedOrder.id,
-      invoice_number: selectedOrder.invoice_number,
+      dc_date: formData.dcDate,
       returned_date: formData.returnedDate,
-      invoice_date: formData.invoiceDate,
-      invoice_start_date: formData.invoiceStartDate,
-      invoice_end_date: formData.invoiceEndDate,
       customer_name: formData.customerName,
       created_by: formData.createdBy,
-      amount: parseFloat(formData.amount) || 0,
+      amount: totalAmount,
       reference: formData.reference,
       tin: formData.tin,
       pan: formData.pan,
@@ -419,27 +445,27 @@ const CreaditNotesEditFormLayout = () => {
       pincode: formData.pincode,
       status: formData.status,
       print_credit_note: formData.printCreditNote,
-      items: selectedProductIds.map((productId) => ({
-        product_id: productId,
-        product_name:
-          products.find((p) => p.id === productId)?.product_name || "",
-        quantity: quantities[productId] || 1,
-        device_ids: deviceIds[productId] || [],
-        unit_price:
-          selectedOrder.items.find((item) => item.product_id === productId)
-            ?.unit_price || "0.00",
-        total_price:
-          (quantities[productId] || 1) *
-          parseFloat(
-            selectedOrder.items.find((item) => item.product_id === productId)
-              ?.unit_price || 0
-          ),
-      })),
+      items: selectedProductIds.map((productId) => {
+        const item = selectedOrder.items.find(
+          (item) => item.product_id === productId
+        );
+        const product = products.find((p) => p.id === productId);
+        const unitPrice = product ? product.rent_price_per_month : "0.00";
+
+        return {
+          product_id: productId,
+          product_name: item?.product_name || product?.product_name || "",
+          quantity: quantities[productId] || 1,
+          device_ids: deviceIds[productId] || [],
+          unit_price: unitPrice,
+          total_price: (quantities[productId] || 1) * parseFloat(unitPrice),
+        };
+      }),
     };
 
     try {
       await axios.put(`${API_URL}/credit-notes/${id}`, payload);
-      setSnackbarMessage("Credit Note updated successfully!");
+      setSnackbarMessage("Credit note updated successfully!");
       setSnackbarSeverity("success");
       setOpenSnackbar(true);
       setTimeout(() => navigate("/dashboard/operations/credit_notes"), 3000);
@@ -459,23 +485,46 @@ const CreaditNotesEditFormLayout = () => {
     setOpenSnackbar(false);
   };
 
+  const handleDcSearch = () => {
+  if (!dcSearchTerm.trim()) {
+    setFilteredDeliveryChallans([]);
+    return;
+  }
+
+  // Always search through the latest deliveryChallans state
+  const filtered = deliveryChallans.filter(
+    (dc) =>
+      dc.dc_id.toLowerCase().includes(dcSearchTerm.toLowerCase()) ||
+      dc.dc_date.includes(dcSearchTerm)
+  );
+  
+  setFilteredDeliveryChallans(filtered);
+  setSearchMode(true);
+};
+
+  if (isLoading) {
+    return (
+      <div style={containerStyle}>
+        <div style={{ textAlign: "center", padding: "2rem" }}>
+          <Typography variant="h6">Loading credit note data...</Typography>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div style={containerStyle}>
-      <div style={breadcrumbStyle}>
-        Operations / Credit Notes / Edit Credit Note
-      </div>
-
       <div style={formContainerStyle}>
         {/* Credit Note Details Card */}
         <div style={cardStyle}>
           <div style={cardHeaderContainerStyle}>
             <div style={iconStyle}>📄</div>
-            <h3 style={cardHeaderStyle}>Credit Note Details:</h3>
+            <h3 style={cardHeaderStyle}>Goods return notes Details:</h3>
           </div>
           <div style={fieldsGridStyle}>
             <div style={fieldContainerStyle}>
               <label style={labelStyle}>
-                Credit Note No.
+                GRN No.
                 <span style={requiredStyle}>*</span>
               </label>
               <input
@@ -486,6 +535,7 @@ const CreaditNotesEditFormLayout = () => {
                 value={formData.creditNoteNumber}
                 onChange={handleInputChange}
                 required
+                disabled // Typically don't allow editing the credit note number
               />
             </div>
 
@@ -563,45 +613,145 @@ const CreaditNotesEditFormLayout = () => {
                 placeholder="e.g. DC102"
                 style={inputStyle}
                 name="dcId"
-                value={formData.dcId}
+                value={formData.dcNumber}
                 onChange={handleInputChange}
+                disabled
               />
             </div>
           </div>
         </div>
 
-        {/* Invoice / Customer Card */}
+        {/* Dispatch Order / Customer Card */}
         <div style={cardStyle}>
           <div style={cardHeaderContainerStyle}>
             <div style={iconStyle}>👤</div>
-            <h3 style={cardHeaderStyle}>Invoice / Customer:</h3>
+            <h3 style={cardHeaderStyle}>Dispatch Order / Customer:</h3>
           </div>
           <div style={fieldsGridStyle}>
             <div style={fieldContainerStyle}>
               <label style={labelStyle}>
-                Select Invoice
+                Select Customer
                 <span style={requiredStyle}>*</span>
               </label>
               <FormControl fullWidth size="small">
                 <Select
-                  name="selectedOrder"
-                  value={selectedOrder?.id || ""}
+                  name="selectedCustomer"
+                  value={formData.customerId || ""}
                   onChange={handleSelectChange}
                   displayEmpty
                   inputProps={{ "aria-label": "Without label" }}
                   style={inputStyle}
+                  disabled={!!formData.dcId} // Disable if DC is already selected
                 >
                   <MenuItem value="" disabled>
-                    Select Invoice
+                    Select Customer
                   </MenuItem>
                   {orders.map((order) => (
                     <MenuItem key={order.id} value={order.id}>
-                      {`${order.invoice_number} | ${order.customer_name} | ${order.invoice_date}`}
+                      {order.first_name} {order.last_name} ({order.customer_id})
                     </MenuItem>
                   ))}
                 </Select>
               </FormControl>
             </div>
+
+            <div style={fieldContainerStyle}>
+  <label style={labelStyle}>Delivery Challan</label>
+  <div style={{ display: "flex", gap: "8px", flexDirection: "column" }}>
+    <div style={{ display: "flex", gap: "8px" }}>
+      <TextField
+        size="small"
+        placeholder="Search by DC ID or Date"
+        value={dcSearchTerm}
+        onChange={(e) => {
+          setDcSearchTerm(e.target.value);
+          if (formData.dcId) {
+            // Clear current selection if user starts typing
+            setFormData((prev) => ({
+              ...prev,
+              dcId: "",
+              dcNumber: "",
+              dcDate: "",
+            }));
+            setSelectedOrder(null);
+          }
+        }}
+        fullWidth
+        onKeyPress={(e) => e.key === "Enter" && handleDcSearch()}
+        disabled={!!formData.dcId} // Disable if DC is already selected
+      />
+      <Button
+  variant="contained"
+  size="small"
+  onClick={formData.dcId ? resetDcSearch : handleDcSearch}
+  disabled={!formData.customerId}
+>
+  {formData.dcId ? "CLEAR" : "SEARCH"}
+</Button>
+    </div>
+
+    {/* Selected DC Info */}
+    {formData.dcId && (
+      <div
+        style={{
+          padding: "8px",
+          border: "1px solid #e0e0e0",
+          borderRadius: "4px",
+          backgroundColor: "#f8f9fa",
+        }}
+      >
+        <Typography variant="body2">
+          <strong>Selected:</strong> {formData.dcNumber} (
+          {new Date(formData.dcDate).toLocaleDateString('en-US', {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric'
+          })})
+        </Typography>
+      </div>
+    )}
+
+    {/* Search Results */}
+    {searchMode && filteredDeliveryChallans.length > 0 && (
+      <Paper
+        style={{
+          maxHeight: "200px",
+          overflow: "auto",
+          marginTop: "8px",
+        }}
+      >
+        <List>
+          {filteredDeliveryChallans.map((dc) => (
+            <ListItem
+              key={dc.id}
+              button
+              onClick={() => handleDeliveryChallanSelect(dc.id)}
+            >
+              <ListItemText
+                primary={`${dc.dc_id} (${new Date(dc.dc_date).toLocaleDateString('en-US', {
+                  year: 'numeric',
+                  month: 'short',
+                  day: 'numeric'
+                })})`}
+              />
+            </ListItem>
+          ))}
+        </List>
+      </Paper>
+    )}
+
+    {searchMode &&
+      filteredDeliveryChallans.length === 0 &&
+      dcSearchTerm && (
+        <Typography
+          variant="body2"
+          style={{ padding: "8px", color: "#666" }}
+        >
+          No matching Delivery Challans found
+        </Typography>
+      )}
+  </div>
+</div>
 
             <div style={fieldContainerStyle}>
               <label style={labelStyle}>Customer ID</label>
@@ -630,35 +780,14 @@ const CreaditNotesEditFormLayout = () => {
             </div>
 
             <div style={fieldContainerStyle}>
-              <label style={labelStyle}>Invoice Date</label>
+              <label style={labelStyle}>DC Date</label>
               <input
                 type="date"
                 style={inputStyle}
-                name="invoiceDate"
-                value={formData.invoiceDate}
+                name="dcDate"
+                value={formData.dcDate}
                 onChange={handleInputChange}
-              />
-            </div>
-
-            <div style={fieldContainerStyle}>
-              <label style={labelStyle}>Start Date</label>
-              <input
-                type="date"
-                style={inputStyle}
-                name="invoiceStartDate"
-                value={formData.invoiceStartDate}
-                onChange={handleInputChange}
-              />
-            </div>
-
-            <div style={fieldContainerStyle}>
-              <label style={labelStyle}>End Date</label>
-              <input
-                type="date"
-                style={inputStyle}
-                name="invoiceEndDate"
-                value={formData.invoiceEndDate}
-                onChange={handleInputChange}
+                disabled
               />
             </div>
 
@@ -738,7 +867,7 @@ const CreaditNotesEditFormLayout = () => {
       {selectedOrder && (
         <div style={cardStyle}>
           <div style={cardHeaderContainerStyle}>
-            <h3 style={cardHeaderStyle}>Selected Products from Invoice</h3>
+            <h3 style={cardHeaderStyle}>Product Details</h3>
           </div>
 
           <div style={{ marginBottom: "1.5rem" }}>
@@ -824,9 +953,7 @@ const CreaditNotesEditFormLayout = () => {
                         <TableCell sx={{ color: "#fff" }}>RAM</TableCell>
                         <TableCell sx={{ color: "#fff" }}>Storage</TableCell>
                         <TableCell sx={{ color: "#fff" }}>Graphics</TableCell>
-                        <TableCell sx={{ color: "#fff" }}>
-                          Invoice Qty
-                        </TableCell>
+                        <TableCell sx={{ color: "#fff" }}>DC Qty</TableCell>
                         <TableCell sx={{ color: "#fff" }}>Credit Qty</TableCell>
                         <TableCell sx={{ color: "#fff" }}>Asset IDs</TableCell>
                       </TableRow>
@@ -857,9 +984,7 @@ const CreaditNotesEditFormLayout = () => {
                             <TableCell>{product.ram}</TableCell>
                             <TableCell>{product.storage}</TableCell>
                             <TableCell>{product.graphics}</TableCell>
-                            <TableCell>
-                              {invoiceItem.net_quantity ?? invoiceItem.quantity}
-                            </TableCell>
+                            <TableCell>{invoiceItem.quantity}</TableCell>
                             <TableCell>
                               <Box display="flex" alignItems="center">
                                 <IconButton
@@ -902,9 +1027,7 @@ const CreaditNotesEditFormLayout = () => {
                                   }
                                   inputProps={{
                                     min: 1,
-                                    max:
-                                      invoiceItem.net_quantity ??
-                                      invoiceItem.quantity,
+                                    max: invoiceItem.quantity,
                                     style: { width: 50, textAlign: "center" },
                                   }}
                                 />
@@ -914,8 +1037,7 @@ const CreaditNotesEditFormLayout = () => {
                                   disabled={
                                     !selectedProductIds.includes(product.id) ||
                                     (quantities[product.id] || 1) >=
-                                      (invoiceItem.net_quantity ??
-                                        invoiceItem.quantity)
+                                      invoiceItem.quantity
                                   }
                                 >
                                   <Add fontSize="small" />
@@ -1005,7 +1127,7 @@ const CreaditNotesEditFormLayout = () => {
           style={createBtnStyle}
           onMouseEnter={(e) => (e.target.style.backgroundColor = "#1d4ed8")}
           onMouseLeave={(e) => (e.target.style.backgroundColor = "#2563eb")}
-          onClick={handleSubmit}
+          onClick={handleUpdate}
           disabled={!selectedOrder}
         >
           Update Credit Note
@@ -1030,7 +1152,7 @@ const CreaditNotesEditFormLayout = () => {
   );
 };
 
-// Modern Styles (same as in AddFormLayout)
+// Modern Styles
 const containerStyle = {
   padding: "2rem",
   fontFamily:

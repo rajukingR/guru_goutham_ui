@@ -671,7 +671,7 @@ const SalesOrdersEditLayoutPage = ({ product }) => {
                   "Cancelled",
                 ]}
               />
-              <Field
+              {/* <Field
                 label="Source of Entry"
                 type="select"
                 placeholder="Select Source"
@@ -682,7 +682,7 @@ const SalesOrdersEditLayoutPage = ({ product }) => {
                   })
                 }
                 options={["Online", "Offline", "Referral"]}
-              />
+              /> */}
               <Field
                 label="Owner"
                 placeholder="Enter Owner Name"

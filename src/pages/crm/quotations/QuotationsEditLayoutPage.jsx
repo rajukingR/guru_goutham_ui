@@ -388,7 +388,7 @@ const QuotationsEditLayoutPage = () => {
             product_id: productId,
             requested_quantity: product?.LeadProduct?.quantity || 1,
             quotation_quantity: quantities[productId] || 0,
-            product_name: product?.name || "",
+            product_name: product?.product_name || "",
           };
         }),
       };
@@ -416,7 +416,7 @@ const QuotationsEditLayoutPage = () => {
 
       // Redirect to view page after successful update
       setTimeout(() => {
-        navigate(`/quotations/view/${id}`);
+        navigate("/dashboard/crm/quotations");
       }, 1500);
     } catch (error) {
       console.error("Update error:", error);

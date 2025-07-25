@@ -7,7 +7,7 @@ const PurchaseOrderTable = () => {
   const [data, setData] = useState([]);
 
   const columns = [
-    { id: "id", label: "S.No." },
+    { id: "s_id", label: "S.No." },
     { id: "purchase_order_id", label: "Order ID" },
     { id: "purchase_quotation_id", label: "Quotation ID" },
     { id: "purchase_order_date", label: "Date" },
@@ -31,7 +31,7 @@ const PurchaseOrderTable = () => {
 
         if (response.status === 200) {
           const ordersWithSno = response.data.map((item, index) => ({
-            id: index + 1,
+            s_id: index + 1,
             ...item,
             supplier_name: item.supplier?.supplier_name || "N/A",
           }));

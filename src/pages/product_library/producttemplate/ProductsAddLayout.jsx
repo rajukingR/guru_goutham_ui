@@ -24,17 +24,11 @@ const ProductsAddLayout = () => {
 
   // State for form data
   const [formData, setFormData] = useState({
-    generation: "",
-    maxSpeed: "",
-    speed: "",
-    ramType: "",
-    sizeGb: "",
-    frequencyMhz: "",
-    manufacturer: "",
+    // Common product fields
     product_category: "",
-    product_id: "",
+    product_id: generateProductId(),
     product_name: "",
-    product_image: null, // ← initially null or empty
+    product_image: null,
     brand: "",
     grade: "",
     model: "",
@@ -42,38 +36,60 @@ const ProductsAddLayout = () => {
     st_number: "",
     stock_location: "",
     description: "",
-    // Common specifications
+    hsn_code: "",
+
+    // Specifications - common
     ram: "",
+    ram_speed: "",
     disk_type: "",
     processor: "",
+    processor_model: "",
+    processor_speed: "",
+    generation: "",
     storage: "",
     graphics: "",
     os: "",
+    display_size: "",
+
     // Laptop specific
     mouse: false,
     keyboard: false,
     dvd: false,
     speaker: false,
     webcam: false,
+
+    // Desktop specific
+    motherboard: "",
+    cabinet: "",
+    smps: "",
+    ram_slots: "",
+    power: "",
+
     // Monitor specific
-    display_device: "",
-    power_consumption: "",
-    resolution: "",
-    brightness: "",
     screen_size: "",
-    color: "",
-    audio_output: "",
-    weight: "",
-    // Price
-    purchase_price: 0,
+
+    // HDD specific
+    capacity: "",
+    speed: "",
+
+    // RAM specific
+    ramType: "",
+    sizeGb: "",
+    frequencyMhz: "",
+    manufacturer: "",
+
+    // Price fields
+    purchase_price: "",
     rent_percent_per_day: 0,
-    rent_price_per_day: 0,
+    rent_price_per_day: "",
     rent_percent_per_month: 0,
-    rent_price_per_month: 0,
+    rent_price_per_month: "",
     rent_percent_6_months: 0,
-    rent_price_6_months: 0,
+    rent_price_6_months: "",
     rent_percent_1_year: 0,
-    rent_price_1_year: 0,
+    rent_price_1_year: "",
+
+    // Status
     is_active: true,
   });
 
@@ -216,38 +232,55 @@ const ProductsAddLayout = () => {
   // Handle form submission
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    if (parseFloat(formData.purchase_price) <= 0) {
+      showSnackbar("Please enter a valid purchase price", "error");
+      return;
+    }
+
     setLoading(true);
     setError(null);
 
     try {
       const formDataToSend = new FormData();
 
-      // Append all fields to FormData
-      for (const key in formData) {
-        if (formData[key] !== null && formData[key] !== undefined) {
-          formDataToSend.append(key, formData[key]);
-        }
-      }
+      // Append all fields to FormData with proper value handling
+      Object.entries(formData).forEach(([key, value]) => {
+        // Skip null/undefined values
+        if (value === null || value === undefined) return;
 
-      // Submit the multipart/form-data request
-      await axios.post(`${API_URL}/product-templete/create`, formDataToSend, {
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
+        // Handle different value types appropriately
+        if (typeof value === "boolean") {
+          formDataToSend.append(key, value ? "1" : "0");
+        } else if (value instanceof File) {
+          formDataToSend.append(key, value, value.name);
+        } else {
+          formDataToSend.append(key, value.toString());
+        }
       });
 
-      setSuccess(true);
+      // Submit the multipart/form-data request
+      const response = await axios.post(
+        `${API_URL}/product-templete/create`,
+        formDataToSend,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+        }
+      );
 
-      showSnackbar("Product added successfully!", "success");
-
-      setTimeout(() => {
-        navigate("/dashboard/product_library");
-      }, 1500);
+      // Show success message
+      showSnackbar(
+        response.data.message || "Product added successfully!",
+        "success"
+      );
 
       // Reset form after success
       setFormData({
+        // Common fields
         product_category: "",
-        product_id: "",
+        product_id: generateProductId(), // Generate new ID for next product
         product_name: "",
         product_image: null,
         brand: "",
@@ -257,25 +290,49 @@ const ProductsAddLayout = () => {
         st_number: "",
         stock_location: "",
         description: "",
+        hsn_code: "",
+
+        // Specifications
         ram: "",
+        ram_speed: "",
         disk_type: "",
         processor: "",
+        processor_model: "",
+        processor_speed: "",
+        generation: "",
         storage: "",
         graphics: "",
         os: "",
+        display_size: "",
+
+        // Accessories
         mouse: true,
         keyboard: true,
         dvd: false,
         speaker: true,
         webcam: true,
-        display_device: "",
-        power_consumption: "",
-        resolution: "",
-        brightness: "",
+
+        // Desktop components
+        motherboard: "",
+        cabinet: "",
+        smps: "",
+        ram_slots: "",
+        power: "",
+
+        // Monitor
         screen_size: "",
-        color: "",
-        audio_output: "",
-        weight: "",
+
+        // Storage
+        capacity: "",
+        speed: "",
+
+        // RAM
+        ramType: "",
+        sizeGb: "",
+        frequencyMhz: "",
+        manufacturer: "",
+
+        // Price fields
         purchase_price: 0,
         rent_percent_per_day: 0,
         rent_price_per_day: 0,
@@ -285,13 +342,32 @@ const ProductsAddLayout = () => {
         rent_price_6_months: 0,
         rent_percent_1_year: 0,
         rent_price_1_year: 0,
+
+        // Status
         is_active: true,
       });
+
+      // Navigate after delay
+      setTimeout(() => {
+        navigate("/dashboard/product_library");
+      }, 1500);
     } catch (err) {
-      showSnackbar(
-        err.response?.data?.message || err.message || "An error occurred",
-        "error"
-      );
+      // Enhanced error handling
+      let errorMessage = "An error occurred while saving the product";
+
+      if (err.response) {
+        // Server responded with error status
+        errorMessage =
+          err.response.data.message ||
+          err.response.data.error ||
+          `Server error: ${err.response.status}`;
+      } else if (err.request) {
+        // Request was made but no response
+        errorMessage = "No response from server. Please check your connection.";
+      }
+
+      showSnackbar(errorMessage, "error");
+      console.error("Submission error:", err);
     } finally {
       setLoading(false);
     }
@@ -303,17 +379,85 @@ const ProductsAddLayout = () => {
       case "Laptops":
         return (
           <>
-            <Field
-              label="RAM"
-              name="ram"
-              placeholder="Enter RAM"
-              value={formData.ram}
-              onChange={handleChange}
-              required
-            />
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "1fr 1fr",
+                gap: "16px",
+              }}
+            >
+              {/* <Field
+    label="Model"
+    name="model"
+    placeholder="Enter Model"
+    value={formData.model}
+    onChange={handleChange}
+    required
+  /> */}
+              <Field
+                label="Display Size"
+                name="display_size"
+                placeholder="Enter Display Size (inches)"
+                value={formData.display_size}
+                onChange={handleChange}
+                required
+              />
+
+              <Field
+                label="Processor Model"
+                name="processor_model"
+                placeholder="Enter Processor Model"
+                value={formData.processor_model}
+                onChange={handleChange}
+                required
+              />
+
+              <Field
+                label="Processor Speed"
+                name="processor_speed"
+                placeholder="Enter Processor Speed (GHz)"
+                value={formData.processor_speed}
+                onChange={handleChange}
+                required
+              />
+
+              <Field
+                label="Generation"
+                name="generation"
+                placeholder="Enter Generation"
+                value={formData.generation}
+                onChange={handleChange}
+                required
+              />
+            </div>
+
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "1fr 1fr",
+                gap: "16px",
+              }}
+            >
+              <Field
+                label="RAM"
+                name="ram"
+                placeholder="Enter RAM (GB)"
+                value={formData.ram}
+                onChange={handleChange}
+                required
+              />
+
+              <Field
+                label="RAM Speed (optional)"
+                name="ram_speed"
+                placeholder="Enter RAM Speed (MHz)"
+                value={formData.ram_speed}
+                onChange={handleChange}
+              />
+            </div>
 
             <Field
-              label="Disk type"
+              label="Hard Drive"
               type="select"
               name="disk_type"
               value={formData.disk_type}
@@ -328,79 +472,147 @@ const ProductsAddLayout = () => {
             </Field>
 
             <Field
-              label="Processor"
-              name="processor"
-              placeholder="Enter Processor"
-              value={formData.processor}
-              onChange={handleChange}
-              required
-            />
-
-            <Field
-              label="Storage"
+              label="Storage Capacity"
               name="storage"
-              placeholder="Enter Storage"
+              placeholder="Enter Storage (GB/TB)"
               value={formData.storage}
               onChange={handleChange}
               required
             />
 
-            <Field
-              label="Graphics"
-              name="graphics"
-              placeholder="Enter Graphics"
-              value={formData.graphics}
-              onChange={handleChange}
-              required
-            />
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "1fr 1fr",
+                gap: "16px",
+              }}
+            >
+              <Field
+                label="GPU"
+                name="graphics"
+                placeholder="Enter Graphics Card"
+                value={formData.graphics}
+                onChange={handleChange}
+                required
+              />
+
+              <Field
+                label="Operating System"
+                name="os"
+                placeholder="Enter OS"
+                value={formData.os}
+                onChange={handleChange}
+                required
+              />
+            </div>
 
             <Field
-              label="OS"
-              name="os"
-              placeholder="Enter OS"
-              value={formData.os}
+              label="HSN Code"
+              name="hsn_code"
+              placeholder="Enter HSN Code"
+              value={formData.hsn_code}
               onChange={handleChange}
               required
             />
 
             <div style={{ gridColumn: "1 / -1" }}>
-              <div style={checkboxGroupStyle}>
-                {["mouse", "keyboard", "dvd", "speaker", "webcam"].map(
-                  (field) => (
-                    <label
-                      key={field}
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        marginRight: "15px",
-                      }}
-                    >
-                      <input
-                        type="checkbox"
-                        name={field}
-                        checked={formData[field]}
-                        onChange={handleChange}
-                        style={{ marginRight: "5px" }}
-                      />
-                      {field.charAt(0).toUpperCase() + field.slice(1)}
-                    </label>
-                  )
-                )}
-              </div>
-            </div>
+        <label style={{ display: "block", marginBottom: "8px" }}>
+          Included Accessories:
+        </label>
+        <div style={checkboxGroupStyle}>
+          {["mouse", "keyboard", "dvd", "speaker", "webcam"].map((field) => (
+            <label
+              key={field}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                marginRight: "15px",
+              }}
+            >
+              <input
+                type="checkbox"
+                name={field}
+                checked={formData[field]}
+                onChange={handleChange}
+                style={{ marginRight: "5px" }}
+              />
+              {field.charAt(0).toUpperCase() + field.slice(1)}
+            </label>
+          ))}
+        </div>
+      </div>
           </>
         );
 
-      case "Branded Systems":
+      case "Branded Desktops":
         return (
           <>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "1fr 1fr",
+                gap: "16px",
+              }}
+            >
+              <Field
+                label="Processor Model"
+                name="processor"
+                placeholder="Enter Processor Model"
+                value={formData.processor}
+                onChange={handleChange}
+                required
+              />
+
+              <Field
+                label="Processor Speed"
+                name="processor_speed"
+                placeholder="Enter Processor Speed (e.g., 3.4 GHz)"
+                value={formData.processor_speed}
+                onChange={handleChange}
+              />
+
+              <Field
+                label="Generation"
+                name="generation"
+                placeholder="Enter Generation (e.g., 12th Gen)"
+                value={formData.generation}
+                onChange={handleChange}
+                required
+              />
+
+              <Field
+                label="Mother Board"
+                name="motherboard"
+                placeholder="Enter Motherboard"
+                value={formData.motherboard}
+                onChange={handleChange}
+                required
+              />
+
+              <Field
+                label="RAM"
+                name="ram"
+                placeholder="Enter RAM (e.g., 8GB)"
+                value={formData.ram}
+                onChange={handleChange}
+                required
+              />
+              <Field
+                label="Hard Drive"
+                name="storage"
+                placeholder="Enter Hard Drive (e.g., 512GB)"
+                value={formData.storage}
+                onChange={handleChange}
+                required
+              />
+            </div>
+
             <Field
-              label="RAM"
-              name="ram"
-              placeholder="Enter RAM"
-              value={formData.ram}
+              label="RAM Speed (optional)"
+              name="ram_speed"
+              placeholder="Enter RAM Speed (MHz)"
+              value={formData.ram_speed}
               onChange={handleChange}
-              required
             />
 
             <Field
@@ -417,52 +629,82 @@ const ProductsAddLayout = () => {
               <option value="NVMe SSD">NVMe SSD</option>
             </Field>
 
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "1fr 1fr",
+                gap: "16px",
+              }}
+            >
+              <Field
+                label="GPU"
+                name="graphics"
+                placeholder="Enter GPU"
+                value={formData.graphics}
+                onChange={handleChange}
+                required
+              />
+
+              <Field
+                label="Cabinet"
+                name="cabinet"
+                placeholder="Enter Cabinet"
+                value={formData.cabinet}
+                onChange={handleChange}
+                required
+              />
+
+              <Field
+                label="SMPS"
+                name="smps"
+                placeholder="Enter SMPS"
+                value={formData.smps}
+                onChange={handleChange}
+                required
+              />
+
+              <Field
+                label="Operating System"
+                name="os"
+                placeholder="Enter Operating System"
+                value={formData.os}
+                onChange={handleChange}
+                required
+              />
+            </div>
+
             <Field
-              label="Processor"
-              name="processor"
-              placeholder="Enter Processor"
-              value={formData.processor}
+              label="HSN Code"
+              name="hsn_code"
+              placeholder="Enter HSN Code"
+              value={formData.hsn_code}
               onChange={handleChange}
               required
             />
-
-            <Field
-              label="Storage"
-              name="storage"
-              placeholder="Enter Storage"
-              value={formData.storage}
-              onChange={handleChange}
-              required
-            />
-
-            <Field
-              label="Graphics"
-              name="graphics"
-              placeholder="Enter Graphics"
-              value={formData.graphics}
-              onChange={handleChange}
-              required
-            />
-
-            <Field
-              label="OS"
-              name="os"
-              placeholder="Enter OS"
-              value={formData.os}
-              onChange={handleChange}
-              required
-            />
-
-            {/* <Field
-              label="ST. Number"
-              name="st_number"
-              placeholder="Enter ST. Number"
-              value={formData.st_number}
-              onChange={handleChange}
-              required
-            /> */}
           </>
         );
+      case "HDD":
+        return (
+          <>
+            <Field
+              label="Storage Capacity"
+              name="capacity"
+              placeholder="Enter Storage Capacity (e.g., 1TB)"
+              value={formData.capacity}
+              onChange={handleChange}
+              required
+            />
+
+            <Field
+              label="Speed"
+              name="speed"
+              placeholder="Enter Speed (e.g., 7200 RPM)"
+              value={formData.speed}
+              onChange={handleChange}
+            />
+          </>
+        );
+
       case "Processor":
         return (
           <div style={formContainerStyle}>
@@ -478,7 +720,7 @@ const ProductsAddLayout = () => {
                   required
                 />
 
-                <Field
+                {/* <Field
                   label="Max Speed (GHz)"
                   name="maxSpeed"
                   type="number"
@@ -487,7 +729,7 @@ const ProductsAddLayout = () => {
                   onChange={handleChange}
                   required
                   step="0.1"
-                />
+                /> */}
 
                 <Field
                   label="Speed (GHz)"
@@ -501,96 +743,173 @@ const ProductsAddLayout = () => {
                 />
               </div>
             </div>
-
-            {/* Control Card */}
-            <div style={cardStyle}>
-              <div style={cardHeaderContainerStyle}>
-                <div style={iconStyle}>⚙️</div>
-                <h3 style={cardHeaderStyle}>Control</h3>
-              </div>
-              <div style={controlSectionStyle}>
-                <CheckboxField
-                  label="Active Status"
-                  name="is_active"
-                  checked={formData.is_active}
-                  onChange={handleChange}
-                  required
-                />
-              </div>
-            </div>
           </div>
         );
 
       case "Assembled Desktop":
         return (
           <>
-            <Field
-              label="RAM"
-              name="ram"
-              placeholder="Enter RAM"
-              value={formData.ram}
-              onChange={handleChange}
-              required
-            />
-
-            <Field
-              label="Disk type"
-              type="select"
-              name="disk_type"
-              value={formData.disk_type}
-              onChange={handleChange}
-              required
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "1fr 1fr",
+                gap: "16px",
+              }}
             >
-              <option value="">Select Disk Type</option>
-              <option value="HDD">HDD</option>
-              <option value="SSD">SSD</option>
-              <option value="NVMe SSD">NVMe SSD</option>
-            </Field>
+              <Field
+                label="Processor Model"
+                name="processor"
+                placeholder="Enter Processor Model"
+                value={formData.processor}
+                onChange={handleChange}
+                required
+              />
 
-            <Field
-              label="Processor"
-              name="processor"
-              placeholder="Enter Processor"
-              value={formData.processor}
-              onChange={handleChange}
-              required
-            />
+              <Field
+                label="Processor Speed (optional)"
+                name="processor_speed"
+                placeholder="Enter Processor Speed (e.g., 3.5 GHz)"
+                value={formData.processor_speed}
+                onChange={handleChange}
+              />
 
-            <Field
-              label="Storage"
-              name="storage"
-              placeholder="Enter Storage"
-              value={formData.storage}
-              onChange={handleChange}
-              required
-            />
+              <Field
+                label="Generation"
+                name="generation"
+                placeholder="Enter Generation"
+                value={formData.generation}
+                onChange={handleChange}
+                required
+              />
 
-            <Field
-              label="Graphics"
-              name="graphics"
-              placeholder="Enter Graphics"
-              value={formData.graphics}
-              onChange={handleChange}
-              required
-            />
+              <Field
+                label="Mother Board"
+                name="motherboard"
+                placeholder="Enter Mother Board"
+                value={formData.motherboard}
+                onChange={handleChange}
+                required
+              />
 
-            <Field
-              label="OS"
-              name="os"
-              placeholder="Enter OS"
-              value={formData.os}
-              onChange={handleChange}
-              required
-            />
+              <Field
+                label="RAM"
+                name="ram"
+                placeholder="Enter RAM (e.g., 16GB)"
+                value={formData.ram}
+                onChange={handleChange}
+                required
+              />
 
-            {/* <Field
-              label="Pro Model"
-              name="pro_model"
-              placeholder="Enter Pro Model"
-              value={formData.pro_model}
-              onChange={handleChange}
-              required
-            /> */}
+              <Field
+                label="RAM Speed (optional)"
+                name="ram_speed"
+                placeholder="Enter RAM Speed (MHz)"
+                value={formData.ram_speed}
+                onChange={handleChange}
+              />
+
+              <Field
+                label="RAM Slots"
+                name="ram_slots"
+                placeholder="Enter Number of RAM Slots"
+                value={formData.ram_slots}
+                onChange={handleChange}
+              />
+
+              <Field
+                label="Hard Drive"
+                name="storage"
+                placeholder="Enter Hard Drive (e.g., 512GB)"
+                value={formData.storage}
+                onChange={handleChange}
+                required
+              />
+
+              <Field
+                label="Disk type"
+                type="select"
+                name="disk_type"
+                value={formData.disk_type}
+                onChange={handleChange}
+                required
+              >
+                <option value="">Select Disk Type</option>
+                <option value="HDD">HDD</option>
+                <option value="SSD">SSD</option>
+                <option value="SSD / HDD / Hybrid / NVMe">SSD / HDD / Hybrid / NVMe</option>
+              </Field>
+
+              <Field
+                label="GPU"
+                name="graphics"
+                placeholder="Enter GPU"
+                value={formData.graphics}
+                onChange={handleChange}
+                required
+              />
+
+              <Field
+                label="Cabinet"
+                name="cabinet"
+                placeholder="Enter Cabinet"
+                value={formData.cabinet}
+                onChange={handleChange}
+                required
+              />
+
+              <Field
+                label="SMPS"
+                name="smps"
+                placeholder="Enter SMPS"
+                value={formData.smps}
+                onChange={handleChange}
+                required
+              />
+
+              <Field
+                label="Operating System"
+                name="os"
+                placeholder="Enter Operating System"
+                value={formData.os}
+                onChange={handleChange}
+                required
+              />
+
+              <Field
+                label="HSN Code"
+                name="hsn_code"
+                placeholder="Enter HSN Code"
+                value={formData.hsn_code}
+                onChange={handleChange}
+                required
+              />
+            </div>
+             <div style={{ gridColumn: "1 / -1" }}>
+        <label style={{ display: "block", marginBottom: "8px" }}>
+          Included Accessories:
+        </label>
+        <div style={checkboxGroupStyle}>
+          {["mouse", "keyboard", "dvd", "speaker", "webcam"].map((field) => (
+            <label
+              key={field}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                marginRight: "15px",
+              }}
+            >
+              <input
+                type="checkbox"
+                name={field}
+                checked={formData[field]}
+                onChange={handleChange}
+                style={{ marginRight: "5px" }}
+              />
+              {field.charAt(0).toUpperCase() + field.slice(1)}
+            </label>
+          ))}
+        </div>
+      </div>
           </>
         );
 
@@ -632,6 +951,15 @@ const ProductsAddLayout = () => {
                 </Field>
 
                 <Field
+                  label="Speed"
+                  name="speed"
+                  placeholder="Enter Speed"
+                  value={formData.speed}
+                  onChange={handleChange}
+                  required
+                />
+
+                {/* <Field
                   label="Frequency (MHz)"
                   name="frequencyMhz"
                   type="number"
@@ -649,31 +977,56 @@ const ProductsAddLayout = () => {
                   value={formData.manufacturer}
                   onChange={handleChange}
                   required
-                />
-              </div>
-            </div>
-
-            <div style={cardStyle}>
-              <div style={cardHeaderContainerStyle}>
-                <div style={iconStyle}>⚙️</div>
-                <h3 style={cardHeaderStyle}>Control:</h3>
-              </div>
-              <div style={controlSectionStyle}>
-                <CheckboxField
-                  label="Active Status"
-                  name="is_active"
-                  checked={formData.is_active}
-                  onChange={handleChange}
-                  required
-                />
+                /> */}
               </div>
             </div>
           </div>
         );
-      case "Monitors":
+
+      case "GPU":
         return (
           <>
             <Field
+              label="Speed"
+              name="speed"
+              placeholder="Enter Speed (e.g., 6Gbps)"
+              value={formData.speed}
+              onChange={handleChange}
+              required
+            />
+          </>
+        );
+      case "SMPS":
+        return (
+          <>
+            <Field
+              label="Power in Watts"
+              name="power"
+              placeholder="Enter Power (e.g., 450W)"
+              value={formData.power}
+              onChange={handleChange}
+              required
+            />
+          </>
+        );
+      case "Cabinet":
+        return (
+          <>
+            <Field
+              label="Brand Name"
+              name="brand"
+              placeholder="Enter Brand Name"
+              value={formData.brand}
+              onChange={handleChange}
+              required
+            />
+          </>
+        );
+
+      case "Monitors":
+        return (
+          <>
+            {/* <Field
               label="Display Device"
               name="display_device"
               placeholder="Enter Display Device"
@@ -707,7 +1060,7 @@ const ProductsAddLayout = () => {
               value={formData.brightness}
               onChange={handleChange}
               required
-            />
+            /> */}
 
             <Field
               label="Screen Size"
@@ -718,7 +1071,7 @@ const ProductsAddLayout = () => {
               required
             />
 
-            <Field
+            {/* <Field
               label="Color"
               name="color"
               placeholder="Enter Color"
@@ -741,7 +1094,7 @@ const ProductsAddLayout = () => {
               placeholder="Enter Weight"
               value={formData.weight}
               onChange={handleChange}
-            />
+            /> */}
           </>
         );
       default:
@@ -845,14 +1198,14 @@ const ProductsAddLayout = () => {
               )}
             </div>
 
-            <Field
+            {/* <Field
               label="Product ID"
               name="product_id"
               placeholder="Enter Product ID"
               value={formData.product_id}
               onChange={handleChange}
               required
-            />
+            /> */}
             <Field
               label="Product Name"
               name="product_name"
@@ -880,7 +1233,7 @@ const ProductsAddLayout = () => {
               </Field>
             )}
 
-            <Field
+            {/* <Field
               label="Grade"
               type="select"
               name="grade"
@@ -894,7 +1247,7 @@ const ProductsAddLayout = () => {
               <option value="B">B</option>
               <option value="C">C</option>
               <option value="Refurbished">Refurbished</option>
-            </Field>
+            </Field> */}
 
             <Field
               label="Model"
@@ -905,7 +1258,7 @@ const ProductsAddLayout = () => {
               required
             />
 
-            <Field
+            {/* <Field
               label="Stock Location"
               type="select"
               name="stock_location"
@@ -919,18 +1272,7 @@ const ProductsAddLayout = () => {
                   {loc.stockName}
                 </option>
               ))}
-            </Field>
-
-            <div style={{ gridColumn: "1 / -1" }}>
-              <Field
-                label="Description"
-                type="textarea"
-                name="description"
-                placeholder="Enter Description"
-                value={formData.description}
-                onChange={handleChange}
-              />
-            </div>
+            </Field> */}
           </div>
         </div>
 
@@ -965,6 +1307,7 @@ const ProductsAddLayout = () => {
               placeholder="Enter Purchase Price"
               value={formData.purchase_price}
               onChange={handlePriceChange}
+              required
             />
 
             {[
@@ -1035,6 +1378,17 @@ const ProductsAddLayout = () => {
                 </div>
               </div>
             ))}
+
+            <div style={{ gridColumn: "1 / -1" }}>
+              <Field
+                label="Description"
+                type="textarea"
+                name="description"
+                placeholder="Enter Description"
+                value={formData.description}
+                onChange={handleChange}
+              />
+            </div>
 
             <div style={{ marginTop: "2rem" }}>
               <div style={cardHeaderContainerStyle}>

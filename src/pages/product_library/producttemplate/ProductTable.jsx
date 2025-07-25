@@ -16,7 +16,7 @@ const ProductTable = () => {
     { id: "specifications", label: "Specifications" },
     { id: "model", label: "Model" },
     { id: "product_category", label: "Category" },
-    { id: "stock_location", label: "Stock Location" },
+    // { id: "stock_location", label: "Stock Location" },
     { id: "purchase_price", label: "Purchase Price (₹)" },
     // { id: "rent_price_per_day", label: "Rent/Day (₹)" },
     { id: "rent_price_per_month", label: "Rent/Month (₹)" },

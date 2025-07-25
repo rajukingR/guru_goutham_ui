@@ -9,7 +9,7 @@ const POQuotationTable = () => {
   const { user, token } = useSelector((state) => state.auth);
 
   const columns = [
-    { id: "id", label: "S.No." },
+    { id: "s_id", label: "S.No." },
     { id: "purchase_quotation_id", label: "Quotation ID" },
     { id: "purchase_request_id", label: "Purchase Request ID" },
     { id: "purchase_quotation_date", label: "Quotation Date" },
@@ -30,7 +30,7 @@ const POQuotationTable = () => {
 
         if (response.status === 200) {
           const formattedData = response.data.map((item, index) => ({
-            id: index + 1,
+            s_id: index + 1,
             ...item,
             supplier_name: item.supplier?.supplier_name || "N/A",
           }));

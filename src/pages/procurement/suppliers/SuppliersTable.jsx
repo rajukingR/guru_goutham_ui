@@ -7,7 +7,7 @@ const SuppliersTable = () => {
   const [data, setData] = useState([]);
 
   const columns = [
-    { id: "id", label: "S.No." },
+    { id: "s_id", label: "S.No." },
     { id: "supplier_code", label: "Supplier Code" },
     { id: "supplier_name", label: "Name" },
     { id: "supplier_owner", label: "Owner" },
@@ -38,7 +38,7 @@ const SuppliersTable = () => {
               : "N/A";
 
             return {
-              id: index + 1,
+              s_id: index + 1,
               ...supplier,
               address_summary: address,
               bank_summary: bank,

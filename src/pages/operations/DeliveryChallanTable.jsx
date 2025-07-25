@@ -21,14 +21,18 @@ const DeliveryChallanTable = () => {
   const columns = [
     { id: "s_id", label: "S.No." },
     { id: "dc_id", label: "Challan ID" },
-    { id: "dc_id", label: "Order Number" },
-    { id: "customer_code", label: "Customer Code" },
-    { id: "dc_date", label: "Date" },
-    { id: "shipping_name", label: "Shipped To" },
+    { id: "dispatch_order_number", label: "Order Number" },
+    // { id: "customer_code", label: "Customer Code" },
+    { id: "dc_date", label: "Delivery Date" },
+        { id: "payment_type", label: "Pyament Type" },
+
+    { id: "shipping_name", label: "Customer Name" },
     { id: "city", label: "City" },
     { id: "vehicle_number", label: "Vehicle No." },
     { id: "delivery_person_name", label: "Delivery Person" },
-    { id: "receiver_name", label: "Receiver" },
+        { id: "delivery_person_phone_number", label: "Delivery Person No." },
+
+    // { id: "receiver_name", label: "Receiver" },
         { id: "dc_status", label: "Status" },
 
   ];

@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 import { DatePicker } from "@mui/x-date-pickers/DatePicker";
@@ -20,13 +19,14 @@ import {
   Alert,
 } from "@mui/material";
 import { Add, Remove } from "@mui/icons-material";
-import API_URL, { IMAGE_API_URL } from "../../../api/Api_url";
+import API_URL from "../../../api/Api_url";
+import { useNavigate, useParams } from "react-router-dom";
 
 const LeadsLayoutEditPage = () => {
-  const { id } = useParams();
-  const navigate = useNavigate();
   const { user } = useSelector((state) => state.auth);
   const LoginUserName = user.full_name;
+  const navigate = useNavigate();
+  const { id } = useParams();
 
   const [formData, setFormData] = useState({
     leadId: "",
@@ -35,8 +35,9 @@ const LeadsLayoutEditPage = () => {
     leadStatus: "",
     sourceOfEnquiry: "",
     rentalDuration: "",
-    rentalStartDate: new Date(),
-    rentalEndDate: new Date(),
+    rentalDurationDays: "",
+    rentalStartDate: null,
+    rentalEndDate: null,
     leadDate: new Date(),
     owner: "",
     remarks: "",
@@ -83,109 +84,85 @@ const LeadsLayoutEditPage = () => {
     severity: "success",
   });
 
- useEffect(() => {
-  const fetchLead = async () => {
-    try {
-      const response = await fetch(`${API_URL}/leads/${id}`);
-      if (!response.ok) {
-        throw new Error("Failed to fetch lead");
-      }
-      const data = await response.json();
 
-      // Format dates
-      const rentalStartDate = data.rental_start_date
-        ? new Date(data.rental_start_date)
-        : new Date();
-      const rentalEndDate = data.rental_end_date
-        ? new Date(data.rental_end_date)
-        : new Date();
-      const leadDate = data.lead_date ? new Date(data.lead_date) : new Date();
+  const formatDate = (date) => {
+  return date ? date.toISOString().split('T')[0] : null;
+};
 
-      // Set form data
-      setFormData({
-        leadId: data.lead_id || "",
-        leadTitle: data.lead_title || "",
-        transactionType: data.transaction_type || "",
-        leadStatus: data.lead_source || "",
-        sourceOfEnquiry: data.source_of_enquiry || "",
-        rentalDuration: data.rental_duration_months || "",
-        rentalStartDate,
-        rentalEndDate,
-        leadDate,
-        owner: data.owner || "",
-        remarks: data.remarks || "",
-        leadGeneratedBy: data.lead_generated_by || LoginUserName,
-        activeStatus: !!data.is_active,
-        selectedCustomer: data.contact_id ? data.contact_id.toString() : "",
-        customerId: data.contact?.customer_id || "",
-        firstName: data.contact?.first_name || "",
-        lastName: data.contact?.last_name || "",
-        email: data.contact?.email || "",
-        phoneNumber: data.contact?.phone_number || "",
-        companyName: data.contact?.company_name || "",
-        industry: data.contact?.industry || "",
-        street: data.contact?.address?.street || "",
-        landmark: data.contact?.address?.landmark || "",
-        pincode: data.contact?.address?.zip || "",
-        city: data.contact?.address?.city || "",
-        state: data.contact?.address?.state || "",
-        country: data.contact?.address?.country || "",
-        gst: data.contact?.gst || "",
-        panNo: data.contact?.pan_no || "",
-        paymentType: data.contact?.payment_type || "",
-      });
-
-      // Fixed product selection part
-      if (data.lead_products && data.lead_products.length > 0) {
-        const productIds = data.lead_products.map((lp) => lp.product_id);
-        const productQuantities = data.lead_products.reduce((acc, lp) => {
-          acc[lp.product_id] = lp.quantity;
-          return acc;
-        }, {});
-
-        setSelectedProductIds(productIds);
-        setQuantities(productQuantities);
-      }
-
-      setLoading((prev) => ({ ...prev, lead: false }));
-    } catch (err) {
-      setError((prev) => ({ ...prev, lead: err.message }));
-      setLoading((prev) => ({ ...prev, lead: false }));
-      setSnackbar({
-        open: true,
-        message: "Failed to load lead data",
-        severity: "error",
-      });
-    }
-  };
-
-  fetchLead();
-}, [id, LoginUserName]);
-
-  // Fetch active contacts
+  // Fetch lead data
   useEffect(() => {
-    const fetchCustomers = async () => {
+    const fetchLeadData = async () => {
       try {
-        const response = await fetch(`${API_URL}/contacts/active-contacts`);
-        if (!response.ok) {
-          throw new Error("Failed to fetch customers");
-        }
+        const response = await fetch(`${API_URL}/leads/${id}`);
+        if (!response.ok) throw new Error("Failed to fetch lead data");
         const data = await response.json();
-        setCustomers(data);
-        setLoading((prev) => ({ ...prev, customers: false }));
+        
+        // Format dates properly
+        const rentalStartDate = data.rental_start_date ? new Date(data.rental_start_date) : null;
+        const rentalEndDate = data.rental_end_date ? new Date(data.rental_end_date) : null;
+        const leadDate = data.lead_date ? new Date(data.lead_date) : new Date();
+
+        setFormData({
+          leadId: data.lead_id || "",
+          leadTitle: data.lead_title || "",
+          transactionType: data.transaction_type || "",
+          paymentType: data.payment_type || "",
+          leadStatus: data.lead_source || "",
+          sourceOfEnquiry: data.source_of_enquiry || "",
+          rentalDuration: data.rental_duration_months || "",
+          rentalDurationDays: data.rental_duration_days || "",
+          rentalStartDate,
+          rentalEndDate,
+          leadDate,
+          owner: data.owner || "",
+          remarks: data.remarks || "",
+          leadGeneratedBy: data.lead_generated_by || "",
+          activeStatus: data.is_active || true,
+          selectedCustomer: data.contact_id?.toString() || "",
+          customerId: data.contact?.customer_id || "",
+          firstName: data.contact?.first_name || "",
+          lastName: data.contact?.last_name || "",
+          email: data.contact?.email || "",
+          phoneNumber: data.contact?.phone_number || "",
+          companyName: data.contact?.company_name || "",
+          industry: data.contact?.industry || "",
+          street: data.contact?.address?.street || "",
+          landmark: "", // Not in API response
+          pincode: data.contact?.address?.pincode || "",
+          city: data.contact?.address?.city || "",
+          state: data.contact?.address?.state || "",
+          country: data.contact?.address?.country || "",
+          gst: data.contact?.gst || "",
+          panNo: data.contact?.pan_no || "",
+        });
+
+        // Set selected products
+        if (data.lead_products && data.lead_products.length > 0) {
+          const productIds = data.lead_products.map(p => p.product_id);
+          const productQuantities = {};
+          data.lead_products.forEach(p => {
+            productQuantities[p.product_id] = p.quantity;
+          });
+          setSelectedProductIds(productIds);
+          setQuantities(productQuantities);
+          setShowProductTable(true);
+        }
+
+        setLoading(prev => ({ ...prev, lead: false }));
       } catch (err) {
-        setError((prev) => ({ ...prev, customers: err.message }));
-        setLoading((prev) => ({ ...prev, customers: false }));
+        setError(prev => ({ ...prev, lead: err.message }));
+        setLoading(prev => ({ ...prev, lead: false }));
         setSnackbar({
           open: true,
-          message: "Failed to load customers",
+          message: "Failed to load lead data",
           severity: "error",
         });
       }
     };
 
-    fetchCustomers();
-  }, []);
+    fetchLeadData();
+  }, [id]);
+
 
   // Fetch products
   useEffect(() => {
@@ -212,27 +189,49 @@ const LeadsLayoutEditPage = () => {
     fetchProducts();
   }, []);
 
-  // Handle customer selection change
+  // Fetch customers
+  useEffect(() => {
+    const fetchCustomers = async () => {
+      try {
+        const response = await fetch(`${API_URL}/contacts/active-contacts`);
+        if (!response.ok) throw new Error("Failed to fetch customers");
+        const data = await response.json();
+        setCustomers(data);
+        setLoading(prev => ({ ...prev, customers: false }));
+      } catch (err) {
+        setError(prev => ({ ...prev, customers: err.message }));
+        setLoading(prev => ({ ...prev, customers: false }));
+        setSnackbar({
+          open: true,
+          message: "Failed to load customers",
+          severity: "error",
+        });
+      }
+    };
+
+    fetchCustomers();
+  }, []);
+
+  // Handle customer selection
   const handleCustomerChange = (customerId) => {
-    const selectedCustomer = customers.find(
-      (c) => c.id.toString() === customerId
-    );
+    const selectedCustomer = customers.find(c => c.id.toString() === customerId);
     if (selectedCustomer) {
-      setFormData((prev) => ({
+      setFormData(prev => ({
         ...prev,
         selectedCustomer: customerId,
-        customerId: selectedCustomer.customer_id,
-        firstName: selectedCustomer.first_name,
-        lastName: selectedCustomer.last_name,
-        email: selectedCustomer.email,
-        phoneNumber: selectedCustomer.phone_number,
-        companyName: selectedCustomer.company_name,
-        industry: selectedCustomer.industry,
+        customerId: selectedCustomer.customer_id || "",
+        firstName: selectedCustomer.first_name || "",
+        lastName: selectedCustomer.last_name || "",
+        email: selectedCustomer.email || "",
+        phoneNumber: selectedCustomer.phone_number || "",
+        companyName: selectedCustomer.company_name || "",
+        industry: selectedCustomer.industry || "",
         street: selectedCustomer.address?.street || "",
-        pincode: selectedCustomer.address?.zip || "",
+        landmark: "", // Not in API response
+        pincode: selectedCustomer.address?.pincode || "",
         city: selectedCustomer.address?.city || "",
         state: selectedCustomer.address?.state || "",
-        country: selectedCustomer.address?.country || "",
+        country: selectedCustomer.address?.country || "India",
         gst: selectedCustomer.gst || "",
         panNo: selectedCustomer.pan_no || "",
         paymentType: selectedCustomer.payment_type || "",
@@ -241,8 +240,17 @@ const LeadsLayoutEditPage = () => {
     }
   };
 
+
   const handleInputChange = (field, value) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
+    if (field === "rentalDuration") {
+      const months = Math.max(0, parseInt(value) || 0);
+      setFormData((prev) => ({ ...prev, rentalDuration: months }));
+    } else if (field === "rentalDurationDays") {
+      const days = Math.max(0, parseInt(value) || 0);
+      setFormData((prev) => ({ ...prev, rentalDurationDays: days }));
+    } else {
+      setFormData((prev) => ({ ...prev, [field]: value }));
+    }
   };
 
   // Fetch location data when pincode changes
@@ -308,61 +316,85 @@ const LeadsLayoutEditPage = () => {
     }));
   };
 
-  const handleSubmit = async () => {
-    try {
-      const selectedProducts = selectedProductIds.map((id) => ({
-      product_id: id,
-      product_name: products.find((p) => p.id === id)?.name || "",
-      quantity: quantities[id] || 1,
-    }));
+const handleSubmit = async () => {
+  if (
+    parseInt(formData.rentalDuration) === 0 &&
+    parseInt(formData.rentalDurationDays) < 1
+  ) {
+    setSnackbar({
+      open: true,
+      message: "Please enter at least 1 rental day if months is 0.",
+      severity: "error",
+    });
+    return;
+  }
 
-      const payload = {
-        lead_id: formData.leadId,
-        lead_title: formData.leadTitle,
-        transaction_type: formData.transactionType,
-        lead_source: formData.leadStatus,
-        source_of_enquiry: formData.sourceOfEnquiry,
-        rental_duration_months: formData.rentalDuration,
-        rental_start_date: formData.rentalStartDate.toISOString().split("T")[0],
-        rental_end_date: formData.rentalEndDate.toISOString().split("T")[0],
-        lead_date: formData.leadDate.toISOString().split("T")[0],
-        owner: formData.owner,
-        remarks: formData.remarks,
-        lead_generated_by: formData.leadGeneratedBy,
-        is_active: formData.activeStatus,
-        contact_id: parseInt(formData.selectedCustomer),
-      lead_products: selectedProducts,  // Changed from selected_products to lead_products
+  try {
+    const selectedProducts = selectedProductIds.map((id) => {
+      const product = products.find((p) => p.id === id);
+      return {
+        product_id: id,
+        product_name: product?.product_name || "",
+        quantity: quantities[id] || 1,
       };
+    });
 
-      const response = await fetch(`${API_URL}/leads/${id}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(payload),
-      });
+    // Safely format dates that might be null
+    const formatDate = (date) => {
+      return date ? date.toISOString().split('T')[0] : null;
+    };
 
-      if (!response.ok) {
-        throw new Error("Failed to update lead");
-      }
+    const payload = {
+      lead_id: formData.leadId,
+      lead_title: formData.leadTitle,
+      transaction_type: formData.transactionType,
+      payment_type: formData.paymentType,
+      lead_source: formData.leadStatus,
+      source_of_enquiry: formData.sourceOfEnquiry,
+      rental_duration_months: formData.rentalDuration || null,
+      rental_duration_days: formData.rentalDurationDays || null,
+      rental_start_date: formatDate(formData.rentalStartDate),
+      rental_end_date: formatDate(formData.rentalEndDate),
+      lead_date: formatDate(formData.leadDate),
+      owner: formData.owner,
+      remarks: formData.remarks,
+      lead_generated_by: formData.leadGeneratedBy,
+      is_active: formData.activeStatus,
+      contact_id: parseInt(formData.selectedCustomer),
+      selected_products: selectedProducts,
+    };
 
-      setSnackbar({
-        open: true,
-        message: "Lead updated successfully!",
-        severity: "success",
-      });
+    const response = await fetch(`${API_URL}/leads/${id}`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    });
 
-      setTimeout(() => {
-        navigate("/dashboard/crm/lead");
-      }, 1500);
-    } catch (err) {
-      setSnackbar({
-        open: true,
-        message: "Failed to update lead: " + err.message,
-        severity: "error",
-      });
+    const responseData = await response.json();
+
+    if (!response.ok) {
+      throw new Error(responseData.message || "Failed to update lead");
     }
-  };
+
+    setSnackbar({
+      open: true,
+      message: responseData.message || "Lead updated successfully!",
+      severity: "success",
+    });
+
+    setTimeout(() => {
+      navigate("/dashboard/crm/lead");
+    }, 1500);
+  } catch (err) {
+    setSnackbar({
+      open: true,
+      message: err.message || "Failed to update lead",
+      severity: "error",
+    });
+  }
+};
 
   if (loading.lead) {
     return <div style={containerStyle}>Loading lead data...</div>;
@@ -387,7 +419,9 @@ const LeadsLayoutEditPage = () => {
 
       <div style={headerStyle}>
         <h1 style={titleStyle}>Edit Lead</h1>
-        <p style={subtitleStyle}>Edit the details below to update this lead</p>
+        <p style={subtitleStyle}>
+          Update the details below for lead {formData.leadId}
+        </p>
       </div>
 
       <div style={formContainerStyle}>
@@ -403,6 +437,7 @@ const LeadsLayoutEditPage = () => {
               placeholder="Enter Lead ID"
               value={formData.leadId}
               onChange={(value) => handleInputChange("leadId", value)}
+              disabled
             />
             <Field
               label="Lead Title"
@@ -418,90 +453,17 @@ const LeadsLayoutEditPage = () => {
               onChange={(value) => handleInputChange("transactionType", value)}
               options={["Rent", "Buy"]}
             />
-            <Field
-              label="Lead Status"
-              type="select"
-              placeholder="Select Lead Status"
-              value={formData.leadStatus}
-              onChange={(value) => handleInputChange("leadStatus", value)}
-              options={[
-                "New",
-                "Contacted",
-                "Qualified",
-                "Proposal Sent",
-                "Negotiation",
-                "Closed Won",
-                "Closed Lost",
-              ]}
-            />
-            <Field
-              label="Source of Enquiry"
-              type="select"
-              placeholder="Select Source of Enquiry"
-              value={formData.sourceOfEnquiry}
-              onChange={(value) => handleInputChange("sourceOfEnquiry", value)}
-              options={[
-                "Search Engine",
-                "Referral",
-                "Social Media",
-                "Email",
-                "Cold Call",
-                "Existing Customer",
-              ]}
-            />
-            <Field
-              label="Rental Duration (Months)"
-              placeholder="Enter Rental Duration"
-              value={formData.rentalDuration}
-              onChange={(value) => handleInputChange("rentalDuration", value)}
-              type="number"
-            />
-            <div style={{ gridColumn: "1 / -1" }}>
-              <LocalizationProvider dateAdapter={AdapterDateFns}>
-                <div style={dateFieldContainer}>
-                  <label style={labelStyle}>Rental Start Date</label>
-                  <DatePicker
-                    value={formData.rentalStartDate}
-                    onChange={(date) =>
-                      handleInputChange("rentalStartDate", date)
-                    }
-                    renderInput={({ inputRef, inputProps, InputProps }) => (
-                      <div style={dateInputWrapper}>
-                        <input
-                          ref={inputRef}
-                          {...inputProps}
-                          style={dateInputStyle}
-                        />
-                        {InputProps?.endAdornment}
-                      </div>
-                    )}
-                  />
-                </div>
-              </LocalizationProvider>
-            </div>
-            <div style={{ gridColumn: "1 / -1" }}>
-              <LocalizationProvider dateAdapter={AdapterDateFns}>
-                <div style={dateFieldContainer}>
-                  <label style={labelStyle}>Rental End Date</label>
-                  <DatePicker
-                    value={formData.rentalEndDate}
-                    onChange={(date) =>
-                      handleInputChange("rentalEndDate", date)
-                    }
-                    renderInput={({ inputRef, inputProps, InputProps }) => (
-                      <div style={dateInputWrapper}>
-                        <input
-                          ref={inputRef}
-                          {...inputProps}
-                          style={dateInputStyle}
-                        />
-                        {InputProps?.endAdornment}
-                      </div>
-                    )}
-                  />
-                </div>
-              </LocalizationProvider>
-            </div>
+            {formData.transactionType === "Rent" && (
+              <Field
+                label="Payment Type"
+                type="select"
+                placeholder="Select Payment Type"
+                value={formData.paymentType}
+                onChange={(value) => handleInputChange("paymentType", value)}
+                options={["Prepaid", "Postpaid"]}
+              />
+            )}
+
             <div style={{ gridColumn: "1 / -1" }}>
               <LocalizationProvider dateAdapter={AdapterDateFns}>
                 <div style={dateFieldContainer}>
@@ -546,135 +508,128 @@ const LeadsLayoutEditPage = () => {
         </div>
 
         {/* Personal Details Section */}
-        <div style={cardStyle}>
-          <div style={cardHeaderContainerStyle}>
-            <div style={iconStyle}>👤</div>
-            <h3 style={cardHeaderStyle}>Personal Details</h3>
-          </div>
-          <div style={fieldsGridStyle}>
-            <Field
-              label="Customer"
-              type="select"
-              placeholder="Select Customer"
-              value={formData.selectedCustomer}
-              onChange={handleCustomerChange}
-              options={customers.map((customer) => ({
-                value: customer.id.toString(),
-                label: `${customer.first_name} ${customer.last_name} (${customer.company_name})`,
-              }))}
-            />
-            <Field
-              label="Customer ID"
-              placeholder="Enter Customer ID"
-              value={formData.customerId}
-              onChange={(value) => handleInputChange("customerId", value)}
-              disabled
-            />
-            <Field
-              label="First Name"
-              placeholder="Enter First Name"
-              value={formData.firstName}
-              onChange={(value) => handleInputChange("firstName", value)}
-            />
-            <Field
-              label="Last Name"
-              placeholder="Enter Last Name"
-              value={formData.lastName}
-              onChange={(value) => handleInputChange("lastName", value)}
-            />
-            <Field
-              label="Email"
-              placeholder="Enter Email"
-              type="email"
-              value={formData.email}
-              onChange={(value) => handleInputChange("email", value)}
-            />
-            <Field
-              label="Phone Number"
-              placeholder="Enter Phone Number"
-              value={formData.phoneNumber}
-              onChange={(value) => handleInputChange("phoneNumber", value)}
-            />
-            <Field
-              label="Company Name"
-              placeholder="Enter Company Name"
-              value={formData.companyName}
-              onChange={(value) => handleInputChange("companyName", value)}
-            />
-            <Field
-              label="Industry"
-              placeholder="Enter Industry"
-              value={formData.industry}
-              onChange={(value) => handleInputChange("industry", value)}
-            />
-            <Field
-              label="GST Number"
-              placeholder="Enter GST Number"
-              value={formData.gst}
-              onChange={(value) => handleInputChange("gst", value)}
-            />
-            <Field
-              label="PAN Number"
-              placeholder="Enter PAN Number"
-              value={formData.panNo}
-              onChange={(value) => handleInputChange("panNo", value)}
-            />
-            <Field
-              label="Payment Type"
-              type="select"
-              placeholder="Select Payment Type"
-              value={formData.paymentType}
-              onChange={(value) => handleInputChange("paymentType", value)}
-              options={["Prepaid", "Postpaid", "COD", "Net 30", "Net 60"]}
-            />
-          </div>
+      <div style={cardStyle}>
+        <div style={cardHeaderContainerStyle}>
+          <div style={iconStyle}>👤</div>
+          <h3 style={cardHeaderStyle}>Personal Details</h3>
         </div>
+        <div style={fieldsGridStyle}>
+          <Field
+            label="Customer"
+            type="select"
+            placeholder="Select Customer"
+            value={formData.selectedCustomer}
+            onChange={handleCustomerChange}
+            options={customers.map((customer) => ({
+              value: customer.id.toString(),
+              label: `${customer.first_name} ${customer.last_name} (${customer.company_name})`,
+            }))}
+          />
+          <Field
+            label="Customer ID"
+            placeholder="Customer ID"
+            value={formData.customerId}
+            onChange={(value) => handleInputChange("customerId", value)}
+            disabled
+          />
+          <Field
+            label="First Name"
+            placeholder="First Name"
+            value={formData.firstName}
+            onChange={(value) => handleInputChange("firstName", value)}
+          />
+          <Field
+            label="Last Name"
+            placeholder="Last Name"
+            value={formData.lastName}
+            onChange={(value) => handleInputChange("lastName", value)}
+          />
+          <Field
+            label="Email"
+            placeholder="Email"
+            type="email"
+            value={formData.email}
+            onChange={(value) => handleInputChange("email", value)}
+          />
+          <Field
+            label="Phone Number"
+            placeholder="Phone Number"
+            value={formData.phoneNumber}
+            onChange={(value) => handleInputChange("phoneNumber", value)}
+          />
+          <Field
+            label="Company Name"
+            placeholder="Company Name"
+            value={formData.companyName}
+            onChange={(value) => handleInputChange("companyName", value)}
+          />
+          <Field
+            label="Industry"
+            placeholder="Industry"
+            value={formData.industry}
+            onChange={(value) => handleInputChange("industry", value)}
+          />
+          <Field
+            label="GST Number"
+            placeholder="GST Number"
+            value={formData.gst}
+            onChange={(value) => handleInputChange("gst", value)}
+          />
+          <Field
+            label="PAN Number"
+            placeholder="PAN Number"
+            value={formData.panNo}
+            onChange={(value) => handleInputChange("panNo", value)}
+          />
+        </div>
+      </div>
 
-        {/* Address Section */}
-        <div style={cardStyle}>
-          <div style={cardHeaderContainerStyle}>
-            <div style={iconStyle}>🏠</div>
-            <h3 style={cardHeaderStyle}>Address</h3>
-          </div>
-          <div style={fieldsGridStyle}>
-            <Field
-              label="Street"
-              placeholder="Enter Street"
-              value={formData.street}
-              onChange={(value) => handleInputChange("street", value)}
-            />
-            <Field
-              label="Landmark"
-              placeholder="Enter Landmark"
-              value={formData.landmark}
-              onChange={(value) => handleInputChange("landmark", value)}
-            />
-            <Field
-              label="Pincode"
-              placeholder="Enter Pincode"
-              value={formData.pincode}
-              onChange={(value) => handleInputChange("pincode", value)}
-            />
-            <Field
-              label="City"
-              placeholder="Enter City"
-              value={formData.city}
-              onChange={(value) => handleInputChange("city", value)}
-            />
-            <Field
-              label="State"
-              placeholder="Enter State"
-              value={formData.state}
-              onChange={(value) => handleInputChange("state", value)}
-            />
-            <Field
-              label="Country"
-              placeholder="Enter Country"
-              value={formData.country}
-              onChange={(value) => handleInputChange("country", value)}
-            />
-          </div>
+      {/* Address Section */}
+      <div style={cardStyle}>
+        <div style={cardHeaderContainerStyle}>
+          <div style={iconStyle}>🏠</div>
+          <h3 style={cardHeaderStyle}>Address</h3>
         </div>
+        <div style={fieldsGridStyle}>
+          <Field
+            label="Street"
+            placeholder="Street"
+            value={formData.street}
+            onChange={(value) => handleInputChange("street", value)}
+          />
+          <Field
+            label="Landmark"
+            placeholder="Landmark"
+            value={formData.landmark}
+            onChange={(value) => handleInputChange("landmark", value)}
+          />
+          <Field
+            label="Pincode"
+            placeholder="Pincode"
+            value={formData.pincode}
+            onChange={(value) => handleInputChange("pincode", value)}
+          />
+          <Field
+            label="City"
+            placeholder="City"
+            value={formData.city}
+            onChange={(value) => handleInputChange("city", value)}
+          />
+          <Field
+            label="State"
+            placeholder="State"
+            value={formData.state}
+            onChange={(value) => handleInputChange("state", value)}
+          />
+          <Field
+            label="Country"
+            placeholder="Country"
+            value={formData.country}
+            onChange={(value) => handleInputChange("country", value)}
+          />
+        </div>
+      </div>
+
 
         {/* Control Section */}
         <div style={cardStyle}>
@@ -686,7 +641,12 @@ const LeadsLayoutEditPage = () => {
             <label style={checkboxLabelStyle}>
               <input
                 type="checkbox"
-                style={checkboxStyle}
+                style={{
+                  ...checkboxStyle,
+                  position: "absolute",
+                  opacity: 0,
+                  cursor: "pointer",
+                }}
                 checked={formData.activeStatus}
                 onChange={(e) =>
                   handleInputChange("activeStatus", e.target.checked)
@@ -695,10 +655,7 @@ const LeadsLayoutEditPage = () => {
               <div style={checkboxCustomStyle}>
                 {formData.activeStatus && <span style={checkmarkStyle}>✓</span>}
               </div>
-
-              <div>
-                <span style={checkboxTextStyle}>Active Status</span>
-              </div>
+              <span style={checkboxTextStyle}>Active Status</span>
             </label>
           </div>
         </div>
@@ -726,7 +683,7 @@ const LeadsLayoutEditPage = () => {
               marginBottom: "1rem",
             }}
           >
-            {showProductTable ? "Hide Product List" : "Edit Products"}
+            {showProductTable ? "Hide Product List" : "Select Products"}
           </button>
 
           {showProductTable && (
@@ -749,68 +706,68 @@ const LeadsLayoutEditPage = () => {
                         <Checkbox sx={{ color: "#fff" }} />
                       </TableCell>
                       <TableCell sx={{ color: "#fff" }}>Product Name</TableCell>
-                                            <TableCell sx={{ color: "#fff" }}>Brand</TableCell>
-                                            <TableCell sx={{ color: "#fff" }}>Model</TableCell>
-                                            <TableCell sx={{ color: "#fff" }}>Processor</TableCell>
-                                            <TableCell sx={{ color: "#fff" }}>RAM</TableCell>
-                                            <TableCell sx={{ color: "#fff" }}>Storage</TableCell>
-                                            <TableCell sx={{ color: "#fff" }}>Graphics</TableCell>
-                                            <TableCell sx={{ color: "#fff" }}>Quantity</TableCell>
-                                          </TableRow>
-                                        </TableHead>
-                                        <TableBody>
-                                          {filteredProducts.map((product) => (
-                                            <TableRow key={product.id}>
-                                              <TableCell padding="checkbox">
-                                                <Checkbox
-                                                  checked={selectedProductIds.includes(product.id)}
-                                                  onChange={() => {
-                                                    setSelectedProductIds((prev) =>
-                                                      prev.includes(product.id)
-                                                        ? prev.filter((id) => id !== product.id)
-                                                        : [...prev, product.id]
-                                                    );
-                                                  }}
-                                                />
-                                              </TableCell>
-                                              <TableCell>{product.product_name}</TableCell>
-                                              <TableCell>{product.brand}</TableCell>
-                                              <TableCell>{product.model}</TableCell>
-                                              <TableCell>{product.processor}</TableCell>
-                                              <TableCell>{product.ram}</TableCell>
-                                              <TableCell>{product.storage}</TableCell>
-                                              <TableCell>{product.graphics}</TableCell>
-      <TableCell>
-        <Box display="flex" alignItems="center">
-          <IconButton
-            size="small"
-            onClick={() => decrementQty(product.id)}
-          >
-            <Remove fontSize="small" />
-          </IconButton>
-          <TextField
-            type="number"
-            size="small"
-            value={quantities[product.id] || 0}
-            onChange={(e) =>
-              handleQtyChange(product.id, e.target.value)
-            }
-            inputProps={{
-              min: 0,
-              style: { width: 50, textAlign: "center" },
-            }}
-          />
-          <IconButton
-            size="small"
-            onClick={() => incrementQty(product.id)}
-          >
-            <Add fontSize="small" />
-          </IconButton>
-        </Box>
-      </TableCell>
-    </TableRow>
-  ))}
-</TableBody>
+                      <TableCell sx={{ color: "#fff" }}>Brand</TableCell>
+                      <TableCell sx={{ color: "#fff" }}>Model</TableCell>
+                      <TableCell sx={{ color: "#fff" }}>Processor</TableCell>
+                      <TableCell sx={{ color: "#fff" }}>RAM</TableCell>
+                      <TableCell sx={{ color: "#fff" }}>Storage</TableCell>
+                      <TableCell sx={{ color: "#fff" }}>Graphics</TableCell>
+                      <TableCell sx={{ color: "#fff" }}>Quantity</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {filteredProducts.map((product) => (
+                      <TableRow key={product.id}>
+                        <TableCell padding="checkbox">
+                          <Checkbox
+                            checked={selectedProductIds.includes(product.id)}
+                            onChange={() => {
+                              setSelectedProductIds((prev) =>
+                                prev.includes(product.id)
+                                  ? prev.filter((id) => id !== product.id)
+                                  : [...prev, product.id]
+                              );
+                            }}
+                          />
+                        </TableCell>
+                        <TableCell>{product.product_name}</TableCell>
+                        <TableCell>{product.brand}</TableCell>
+                        <TableCell>{product.model}</TableCell>
+                        <TableCell>{product.processor}</TableCell>
+                        <TableCell>{product.ram}</TableCell>
+                        <TableCell>{product.storage}</TableCell>
+                        <TableCell>{product.graphics}</TableCell>
+                        <TableCell>
+                          <Box display="flex" alignItems="center">
+                            <IconButton
+                              size="small"
+                              onClick={() => decrementQty(product.id)}
+                            >
+                              <Remove fontSize="small" />
+                            </IconButton>
+                            <TextField
+                              type="number"
+                              size="small"
+                              value={quantities[product.id] || ""}
+                              onChange={(e) =>
+                                handleQtyChange(product.id, e.target.value)
+                              }
+                              inputProps={{
+                                min: 0,
+                                style: { width: 50, textAlign: "center" },
+                              }}
+                            />
+                            <IconButton
+                              size="small"
+                              onClick={() => incrementQty(product.id)}
+                            >
+                              <Add fontSize="small" />
+                            </IconButton>
+                          </Box>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
                 </Table>
               </TableContainer>
             </Box>
@@ -841,72 +798,7 @@ const LeadsLayoutEditPage = () => {
   );
 };
 
-const Field = ({
-  label,
-  placeholder,
-  type = "text",
-  value,
-  onChange,
-  options = [],
-  disabled = false,
-}) => (
-  <div style={fieldContainerStyle}>
-    <label style={labelStyle}>{label}</label>
-    {type === "select" ? (
-      <div style={selectWrapperStyle}>
-        <select
-          style={{ ...selectStyle, opacity: disabled ? 0.7 : 1 }}
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          disabled={disabled}
-        >
-          <option value="">{placeholder}</option>
-          {options.map((option) =>
-            typeof option === "object" ? (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ) : (
-              <option key={option} value={option}>
-                {option}
-              </option>
-            )
-          )}
-        </select>
-        <div style={selectArrowStyle}>▼</div>
-      </div>
-    ) : type === "textarea" ? (
-      <textarea
-        placeholder={placeholder}
-        style={textareaStyle}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        rows={3}
-        disabled={disabled}
-      />
-    ) : type === "date" ? (
-      <input
-        type="date"
-        placeholder={placeholder}
-        style={inputStyle}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        disabled={disabled}
-      />
-    ) : (
-      <input
-        type={type}
-        placeholder={placeholder}
-        style={inputStyle}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        disabled={disabled}
-      />
-    )}
-  </div>
-);
-
-// Styles (same as in your original code)
+// Reuse all the same styles from LeadsLayoutAddPage
 const containerStyle = {
   padding: "2rem",
   fontFamily:
@@ -1048,6 +940,7 @@ const textareaStyle = {
   fontFamily: "inherit",
   boxSizing: "border-box",
 };
+
 const checkboxContainerStyle = {
   marginTop: "0.5rem",
 };
@@ -1086,6 +979,7 @@ const checkmarkStyle = {
 const checkboxTextStyle = {
   fontSize: "14px",
 };
+
 const checkboxDescStyle = {
   fontSize: "0.75rem",
   color: "#6b7280",
@@ -1176,5 +1070,70 @@ const dateInputStyle = {
   outline: "none",
   boxSizing: "border-box",
 };
+
+const Field = ({
+  label,
+  placeholder,
+  type = "text",
+  value,
+  onChange,
+  options = [],
+  disabled = false,
+}) => (
+  <div style={fieldContainerStyle}>
+    <label style={labelStyle}>{label}</label>
+    {type === "select" ? (
+      <div style={selectWrapperStyle}>
+        <select
+          style={{ ...selectStyle, opacity: disabled ? 0.7 : 1 }}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          disabled={disabled}
+        >
+          <option value="">{placeholder}</option>
+          {options.map((option) =>
+            typeof option === "object" ? (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ) : (
+              <option key={option} value={option}>
+                {option}
+              </option>
+            )
+          )}
+        </select>
+        <div style={selectArrowStyle}>▼</div>
+      </div>
+    ) : type === "textarea" ? (
+      <textarea
+        placeholder={placeholder}
+        style={textareaStyle}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        rows={3}
+        disabled={disabled}
+      />
+    ) : type === "date" ? (
+      <input
+        type="date"
+        placeholder={placeholder}
+        style={inputStyle}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        disabled={disabled}
+      />
+    ) : (
+      <input
+        type={type}
+        placeholder={placeholder}
+        style={inputStyle}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        disabled={disabled}
+      />
+    )}
+  </div>
+);
 
 export default LeadsLayoutEditPage;

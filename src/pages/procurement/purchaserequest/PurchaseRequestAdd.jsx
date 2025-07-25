@@ -244,7 +244,7 @@ const PurchaseRequestAdd = () => {
               value={formData.supplier}
               onChange={(value) => handleInputChange('supplier', value)}
               options={suppliers.map(supplier => ({
-                value: supplier.supplier_id,
+                value: supplier.id,
                 label: supplier.supplier_name
               }))}
             />

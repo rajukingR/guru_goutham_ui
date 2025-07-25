@@ -108,12 +108,12 @@ const Sidebar = ({ section }) => {
           icon: <GroupIcon />,
           description: "Category organization",
         },
-        {
-          text: "Stock Locations",
-          path: "/dashboard/product_library/stock_locations",
-          icon: <ApartmentIcon />,
-          description: "Warehouse locations",
-        },
+        // {
+        //   text: "Stock Locations",
+        //   path: "/dashboard/product_library/stock_locations",
+        //   icon: <ApartmentIcon />,
+        //   description: "Warehouse locations",
+        // },
       ];
       break;
 
@@ -217,12 +217,12 @@ const Sidebar = ({ section }) => {
           icon: <AssignmentIcon />,
           description: "Order Preparations",
         },
-         {
-          text: "Return Orders",
-          path: "/dashboard/crm/credit_notes",
-          icon: <MoneyOffIcon />,
-          description: "Return Orders",
-        },
+        //  {
+        //   text: "Return Orders",
+        //   path: "/dashboard/crm/credit_notes",
+        //   icon: <MoneyOffIcon />,
+        //   description: "Return Orders",
+        // },
 
         //  {
         //   text: "Order Asset Modification",
@@ -268,6 +268,8 @@ const Sidebar = ({ section }) => {
           icon: <ReceiptLongIcon />,
           description: "Goods return notes",
         },
+
+        
         {
           text: "Client Journey",
           path: "/dashboard/operations/client_journey",

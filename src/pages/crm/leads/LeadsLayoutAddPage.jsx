@@ -20,6 +20,9 @@ import {
 } from "@mui/material";
 import { Add, Remove } from "@mui/icons-material";
 import API_URL, { IMAGE_API_URL } from "../../../api/Api_url";
+
+import { useNavigate } from "react-router-dom";
+
 const generateLeadId = () => {
   const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
   let randomPart = "";
@@ -33,6 +36,7 @@ const generateLeadId = () => {
 const LeadsLayoutAddPage = () => {
   const { user } = useSelector((state) => state.auth);
   const LoginUserName = user.full_name;
+  const navigate = useNavigate();
 
   const [formData, setFormData] = useState({
     leadId: "",
@@ -408,7 +412,7 @@ const LeadsLayoutAddPage = () => {
                 "Closed Lost",
               ]}
             /> */}
-            <Field
+            {/* <Field
               label="Source of Enquiry"
               type="select"
               placeholder="Select Source of Enquiry"
@@ -422,7 +426,7 @@ const LeadsLayoutAddPage = () => {
                 "Cold Call",
                 "Existing Customer",
               ]}
-            />
+            /> */}
             {/* <Field
               label="Rental Duration (Months)"
               placeholder="Enter Rental Duration"

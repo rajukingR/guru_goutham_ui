@@ -10,7 +10,7 @@ const PurchaseRequestTable = () => {
 
   // Change column from supplier_id to supplier_name
   const columns = [
-    { id: "id", label: "S.No." },
+    { id: "s_id", label: "S.No." },
     { id: "purchase_request_id", label: "Request ID" },
     { id: "purchase_request_date", label: "Date" },
     { id: "purchase_type", label: "Purchase Type" },
@@ -32,7 +32,7 @@ const PurchaseRequestTable = () => {
 
         if (response.status === 200) {
           const dataWithSno = response.data.map((item, index) => ({
-            id: index + 1,
+            s_id: index + 1,
             ...item,
             supplier_name: item.supplier?.supplier_name || "N/A",
           }));

@@ -51,7 +51,6 @@ const PurchaseOrderAddLayout = () => {
     isSupplierLocked: false,
   });
 
-  console.log(formData,"kkkkkkkkkkkkkkkkkk");
   
 
   const [selectedProductIds, setSelectedProductIds] = useState([]);
@@ -289,19 +288,26 @@ const PurchaseOrderAddLayout = () => {
               value={formData.purchaseOrderId}
               onChange={(value) => handleInputChange("purchaseOrderId", value)}
             />
-            <Field
-              label="Purchase Quotation"
-              type="select"
-              placeholder="Select Purchase Quotation"
-              value={selectedPurchaseQuotation?.id || ""}
-              onChange={(value) =>
-                handlePurchaseQuotationChange({ target: { value } })
-              }
-              options={purchaseQuotations.map((q) => ({
-                value: q.id,
-                label: `${q.purchase_quotation_id} - ${q.supplier?.supplier_name}`,
-              }))}
-            />
+           <Field
+  label="Purchase Quotation"
+  type="select"
+  placeholder="Select Purchase Quotation"
+  value={selectedPurchaseQuotation?.id || ""}
+  onChange={(value) =>
+    handlePurchaseQuotationChange({ target: { value } })
+  }
+  options={purchaseQuotations.map((q) => {
+    const supplier = suppliers.find(s => s.id === q.supplier_id);
+    const supplierName = supplier?.supplier_name || "Unknown Supplier";
+
+    return {
+      value: q.id,
+      label: `${q.purchase_quotation_id} - ${supplierName}`
+    };
+  })}
+/>
+
+
             <Field
               label="Purchase Quotation ID"
               placeholder="Purchase Quotation ID"
@@ -349,11 +355,19 @@ const PurchaseOrderAddLayout = () => {
               value={formData.owner}
               onChange={(value) => handleInputChange("owner", value)}
             />
+            <Field
+              label="Description"
+              placeholder="Enter Description"
+              value={formData.description}
+              onChange={(value) => handleInputChange("description", value)}
+              multiline
+              rows={3}
+            />
           </div>
         </div>
 
         {/* Supplier Details Section */}
-        <div style={cardStyle}>
+        {/* <div style={cardStyle}>
           <div style={cardHeaderContainerStyle}>
             <div style={iconStyle}>📞</div>
             <h3 style={cardHeaderStyle}>Supplier Details</h3>
@@ -369,25 +383,9 @@ const PurchaseOrderAddLayout = () => {
               disabled
             />
           </div>
-        </div>
+        </div> */}
 
-        {/* Additional Information Section */}
-        <div style={cardStyle}>
-          <div style={cardHeaderContainerStyle}>
-            <div style={iconStyle}>ℹ️</div>
-            <h3 style={cardHeaderStyle}>Additional Information</h3>
-          </div>
-          <div style={fieldsGridStyle}>
-            <Field
-              label="Description"
-              placeholder="Enter Description"
-              value={formData.description}
-              onChange={(value) => handleInputChange("description", value)}
-              multiline
-              rows={3}
-            />
-          </div>
-        </div>
+       
       </div>
 
       {/* Select Products Section */}

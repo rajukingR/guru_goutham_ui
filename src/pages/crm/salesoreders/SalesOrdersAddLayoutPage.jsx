@@ -613,7 +613,7 @@ const SalesOrdersAddLayoutPage = ({ product }) => {
                 }
                 options={["Pending", "Approved", "Rejected"]}
               />
-              <Field
+              {/* <Field
                 label="Source of Entry"
                 type="select"
                 placeholder="Select Source"
@@ -624,7 +624,7 @@ const SalesOrdersAddLayoutPage = ({ product }) => {
                   })
                 }
                 options={["Online", "Offline", "Referral"]}
-              />
+              /> */}
               <Field
                 label="Owner"
                 placeholder="Enter Owner Name"

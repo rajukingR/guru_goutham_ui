@@ -19,14 +19,12 @@ import {
   FormControl,
   Button,
   Typography,
-  FormControlLabel,
-  FormHelperText,
 } from "@mui/material";
 import { Add, Remove } from "@mui/icons-material";
-import API_URL, { IMAGE_API_URL } from "../../../api/Api_url";
 import { useNavigate, useParams } from "react-router-dom";
+import API_URL, { IMAGE_API_URL } from "../../../api/Api_url";
 
-// Reuse the same styles from InvoicesAddPage
+// Styles (same as in your original code)
 const containerStyle = {
   padding: "2rem",
   fontFamily:
@@ -222,45 +220,33 @@ const Field = memo(
     onChange,
     placeholder,
     type = "text",
-    options = [],
     readOnly = false,
-    required = false,
-    ...props
   }) => (
     <div style={fieldContainerStyle}>
-      <label style={labelStyle}>
-        {label}
-        {required && <span style={requiredStyle}>*</span>}
-      </label>
-
+      <label style={labelStyle}>{label}</label>
       {type === "select" ? (
         <div style={selectWrapperStyle}>
           <select
+            style={selectStyle}
             name={name}
             value={value}
             onChange={onChange}
             disabled={readOnly}
-            style={selectStyle}
-            {...props}
           >
-            <option value="">{placeholder}</option>
-            {options.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
+            <option value="" disabled>
+              {placeholder}
+            </option>
           </select>
           <div style={selectArrowStyle}>▼</div>
         </div>
       ) : type === "date" ? (
         <input
           type="date"
+          style={inputStyle}
           name={name}
           value={value}
           onChange={onChange}
-          style={inputStyle}
-          readOnly={readOnly}
-          {...props}
+          disabled={readOnly}
         />
       ) : (
         <input
@@ -274,7 +260,6 @@ const Field = memo(
             backgroundColor: readOnly ? "#f3f4f6" : "#ffffff",
           }}
           readOnly={readOnly}
-          {...props}
         />
       )}
     </div>
@@ -283,19 +268,30 @@ const Field = memo(
 
 // DateRangeSelector component moved outside and memoized
 const DateRangeSelector = memo(
-  ({ selectedMonth, setSelectedMonth, dateRanges, setDateRanges }) => {
+  ({ selectedMonth, setSelectedMonth, dateRanges, setDateRanges, initialDates }) => {
     const [monthOffset, setMonthOffset] = useState(0);
 
+    // Format date to YYYY-MM-DD for input fields
     const formatDate = (date) => {
-      const day = String(date.getDate()).padStart(2, "0");
-      const month = String(date.getMonth() + 1).padStart(2, "0");
-      const year = date.getFullYear();
+      if (!date) return "";
+      const d = new Date(date);
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, "0");
+      const day = String(d.getDate()).padStart(2, "0");
       return `${year}-${month}-${day}`;
     };
 
+    // Format date to DD-MM-YYYY for display
+    const formatDisplayDate = (dateString) => {
+      if (!dateString) return "";
+      const [year, month, day] = dateString.split('-');
+      return `${day}-${month}-${year}`;
+    };
+
+    // Calculate dates based on month offset
     const calculateDates = useCallback(
       (offset) => {
-        const baseDate = new Date();
+        const baseDate = initialDates?.invoiceStartDate ? new Date(initialDates.invoiceStartDate) : new Date();
         const currentMonth = new Date(
           baseDate.getFullYear(),
           baseDate.getMonth() + offset,
@@ -332,15 +328,31 @@ const DateRangeSelector = memo(
           creditNoteEndDate: formatDate(prevEndDate),
         });
       },
-      [setDateRanges]
+      [setDateRanges, initialDates]
     );
 
+    // Initialize dates based on invoice data
     useEffect(() => {
-      calculateDates(monthOffset);
-      if (monthOffset === 0) {
-        setSelectedMonth("current");
+      if (initialDates?.invoiceStartDate) {
+        const invoiceDate = new Date(initialDates.invoiceStartDate);
+        const currentDate = new Date();
+        const monthDiff = invoiceDate.getMonth() - currentDate.getMonth() + 
+                         (12 * (invoiceDate.getFullYear() - currentDate.getFullYear()));
+        setMonthOffset(monthDiff);
+        setSelectedMonth(monthDiff === 0 ? "current" : 
+                        monthDiff < 0 ? "previous" : "next");
+        setDateRanges({
+          invoiceStartDate: initialDates.invoiceStartDate,
+          invoiceEndDate: initialDates.invoiceEndDate,
+          previousDeliveredStartDate: initialDates.previousDeliveredStartDate,
+          previousDeliveredEndDate: initialDates.previousDeliveredEndDate,
+          creditNoteStartDate: initialDates.creditNoteStartDate,
+          creditNoteEndDate: initialDates.creditNoteEndDate,
+        });
+      } else {
+        calculateDates(monthOffset);
       }
-    }, [monthOffset, calculateDates, setSelectedMonth]);
+    }, [initialDates, calculateDates, monthOffset, setSelectedMonth, setDateRanges]);
 
     const handleMonthChange = (type) => {
       if (type === "previous") {
@@ -407,92 +419,18 @@ const DateRangeSelector = memo(
               setDateRanges({ ...dateRanges, invoiceEndDate: e.target.value })
             }
           />
-          <Field
-            label="Previous Delivered Start Date"
-            type="date"
-            name="previousDeliveredStartDate"
-            value={dateRanges.previousDeliveredStartDate}
-            onChange={(e) =>
-              setDateRanges({
-                ...dateRanges,
-                previousDeliveredStartDate: e.target.value,
-              })
-            }
-          />
-          <Field
-            label="Previous Delivered End Date"
-            type="date"
-            name="previousDeliveredEndDate"
-            value={dateRanges.previousDeliveredEndDate}
-            onChange={(e) =>
-              setDateRanges({
-                ...dateRanges,
-                previousDeliveredEndDate: e.target.value,
-              })
-            }
-          />
-          <Field
-            label="Credit Note Start Date"
-            type="date"
-            name="creditNoteStartDate"
-            value={dateRanges.creditNoteStartDate}
-            onChange={(e) =>
-              setDateRanges({
-                ...dateRanges,
-                creditNoteStartDate: e.target.value,
-              })
-            }
-          />
-          <Field
-            label="Credit Note End Date"
-            type="date"
-            name="creditNoteEndDate"
-            value={dateRanges.creditNoteEndDate}
-            onChange={(e) =>
-              setDateRanges({
-                ...dateRanges,
-                creditNoteEndDate: e.target.value,
-              })
-            }
-          />
         </Box>
       </Box>
     );
   }
 );
 
-const calculateRentalPrice = (product, months = 0, days = 0) => {
-  const perDay = product.rent_price_per_day || 0;
-  const perMonth = product.rent_price_per_month || 0;
-  const rent6Months = product.rent_price_6_months || perMonth * 6;
-  const rent1Year = product.rent_price_1_year || perMonth * 12;
-
-  let price = 0;
-
-  if (months === 0 && days > 0) {
-    const dayCost = perDay * days;
-    price = days >= 30 && dayCost > perMonth ? perMonth : dayCost;
-  } else if (days === 0 && months > 0) {
-    if (months === 6) price = rent6Months;
-    else if (months === 12) price = rent1Year;
-    else price = perMonth * months;
-  } else if (months > 0 && days > 0) {
-    let monthPrice = 0;
-
-    if (months === 6) monthPrice = rent6Months;
-    else if (months === 12) monthPrice = rent1Year;
-    else monthPrice = perMonth * months;
-
-    price = monthPrice + perDay * days;
-  }
-
-  return price;
-};
 
 const InvoicesEditPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
 
+  // Initialize form data with proper date handling
   const [formData, setFormData] = useState({
     invoice_number: "",
     invoice_title: "",
@@ -502,26 +440,21 @@ const InvoicesEditPage = () => {
     invoice_due_date: new Date().toISOString().split("T")[0],
     purchase_order_date: "",
     purchase_order_number: "",
+    dc_id: "",
+    dispatch_order_number: "",
+    dc_date: "",
     customer_gst_number: "",
     duration: "",
     email: "",
     phone_number: "",
     pan_number: "",
-    payment_terms: "",
+    transaction_type: "",
     payment_mode: "",
-    approval_status: "",
-    approval_date: "",
+    approval_status: "Approved",
+    approval_date: new Date().toISOString().slice(0, 19).replace("T", " "),
     invoice_consulting_by: "",
     industry: "",
     remarks: "",
-    // Add rental fields
-    rental_duration: "1", // Default to 1 month
-    rental_duration_days: 0,
-    rental_duration_months: 1,
-    rental_start_date: new Date().toISOString().split("T")[0],
-    rental_end_date: new Date(new Date().setMonth(new Date().getMonth() + 1))
-      .toISOString()
-      .split("T")[0],
     items: [],
     shippingDetails: {
       consignee_name: "",
@@ -548,6 +481,7 @@ const InvoicesEditPage = () => {
     message: "",
     severity: "info",
   });
+  const [isLoading, setIsLoading] = useState(true);
 
   const [returnQuantities, setReturnQuantities] = useState({});
   const [newQuantities, setNewQuantities] = useState({});
@@ -556,14 +490,9 @@ const InvoicesEditPage = () => {
   const [selectedMonth, setSelectedMonth] = useState("current");
   const [productOrderMap, setProductOrderMap] = useState({});
   const [selectedReturnIds, setSelectedReturnIds] = useState({});
-  const [isLoading, setIsLoading] = useState(true);
-  const [returnedDates, setReturnedDates] = useState({});
-  const [upgradedRams, setUpgradedRams] = useState({});
-  const [upgradeDates, setUpgradeDates] = useState({});
+  const [selectedOrderId, setSelectedOrderId] = useState("");
 
-  const [deviceIds, setDeviceIds] = useState({});
-  const [selectedReturnDeviceIds, setSelectedReturnDeviceIds] = useState({});
-
+  // Initialize date ranges with proper structure
   const [dateRanges, setDateRanges] = useState({
     invoiceStartDate: "",
     invoiceEndDate: "",
@@ -573,79 +502,167 @@ const InvoicesEditPage = () => {
     creditNoteEndDate: "",
   });
 
+  const [initialDates, setInitialDates] = useState(null);
+
+  const calculateRentalPrice = useCallback((product, months = 0, days = 0) => {
+    const perDay = product.rent_price_per_day || 0;
+    const perMonth = product.rent_price_per_month || 0;
+    const rent6Months = product.rent_price_6_months || perMonth * 6;
+    const rent1Year = product.rent_price_1_year || perMonth * 12;
+
+    let price = 0;
+
+    if (months === 0 && days > 0) {
+      const dayCost = perDay * days;
+      price = days >= 30 && dayCost > perMonth ? perMonth : dayCost;
+    } else if (days === 0 && months > 0) {
+      if (months === 6) price = rent6Months;
+      else if (months === 12) price = rent1Year;
+      else price = perMonth * months;
+    } else if (months > 0 && days > 0) {
+      let monthPrice = 0;
+
+      if (months === 6) monthPrice = rent6Months;
+      else if (months === 12) monthPrice = rent1Year;
+      else monthPrice = perMonth * months;
+
+      price = monthPrice + perDay * days;
+    }
+
+    return price;
+  }, []);
+
+  // Fetch initial data
   useEffect(() => {
-    const fetchInvoiceData = async () => {
+    const fetchData = async () => {
       try {
-        const response = await fetch(`${API_URL}/invoices/${id}`);
-        if (!response.ok) throw new Error("Failed to fetch invoice");
+        setIsLoading(true);
+        
+        // Fetch the invoice to edit
+        const invoiceResponse = await fetch(`${API_URL}/invoices/${id}`);
+        if (!invoiceResponse.ok) throw new Error("Failed to fetch invoice");
+        const invoiceData = await invoiceResponse.json();
 
-        const invoiceData = await response.json();
+        // Fetch dispatch orders
+        const dispatchOrderResponse = await fetch(
+          `${API_URL}/dispatch-orders/approved-dc`
+        );
+        if (!dispatchOrderResponse.ok)
+          throw new Error("Failed to fetch dispatch orders");
+        const dispatchOrderData = await dispatchOrderResponse.json();
 
-        // Safely parse returned_device_ids
-        const itemsWithParsedIds = invoiceData.items.map((item) => ({
-          ...item,
-          device_ids: item.device_ids || [],
-          unit_price: item.unit_price,
-          returned_device_ids: (() => {
-            const ids = item.returned_device_ids;
-            if (typeof ids === "string" && ids.trim().startsWith("[")) {
-              try {
-                return JSON.parse(ids);
-              } catch (e) {
-                console.warn("Failed to parse returned_device_ids:", ids);
-                return [];
-              }
-            }
-            return Array.isArray(ids) ? ids : [];
-          })(),
-        }));
+        // Transform the dispatch orders data
+        const transformedOrders = dispatchOrderData.map((dispatchOrder) => {
+          const dc = dispatchOrder.delivery_challans?.[0] || dispatchOrder;
 
-        // Initialize device IDs state
-        const initialDeviceIds = {};
-        const initialSelectedReturns = {};
-
-        itemsWithParsedIds.forEach((item) => {
-          initialDeviceIds[item.product_id] = item.device_ids;
-          if (item.returned_device_ids && item.returned_device_ids.length > 0) {
-            initialSelectedReturns[item.product_id] = item.returned_device_ids;
-          }
+          return {
+            id: dispatchOrder.id,
+            order_id: dispatchOrder.order_id,
+            dc_id: dc.dc_id || dispatchOrder.dispatch_order_id,
+            dispatch_order_number: dc.dispatch_order_id,
+            dc_date: dc.dc_date || dispatchOrder.dispatch_order_date,
+            customer_code: dispatchOrder.customer_code,
+            order_number: dispatchOrder.order_number,
+            dispatch_order_id: dispatchOrder.dispatch_order_id,
+            customer_id: dispatchOrder.contact?.id,
+            dispatch_order: dispatchOrder,
+            personalDetails: {
+              first_name:
+                dispatchOrder.shipping_name ||
+                dispatchOrder.contact?.first_name,
+              last_name: dispatchOrder.contact?.last_name || "",
+              email: dispatchOrder.email || dispatchOrder.contact?.email,
+              phone_number:
+                dispatchOrder.shipping_phone_number ||
+                dispatchOrder.contact?.phone_number,
+              gst_number:
+                dispatchOrder.gst_number || dispatchOrder.contact?.gst,
+              pan_number:
+                dispatchOrder.pan_number || dispatchOrder.contact?.pan_no,
+            },
+            address: {
+              country: dispatchOrder.country || "India",
+              state: dispatchOrder.state,
+              city: dispatchOrder.city,
+              street:
+                dispatchOrder.street || dispatchOrder.contact?.address?.street,
+              pincode: dispatchOrder.pincode,
+              landmark: dispatchOrder.landmark,
+            },
+            items: dispatchOrder.items.map((item) => ({
+              product_id: item.product_id,
+              product_name: item.product_name,
+              quantity: item.quantity,
+              unit_price: parseFloat(item.total_price) / item.quantity || 0,
+              total_price: item.total_price,
+              product: item.product,
+              device_ids: item.device_ids || [],
+              order_id: dispatchOrder.order_id,
+            })),
+            rental_start_date: dispatchOrder.order?.rental_start_date || null,
+            rental_end_date: dispatchOrder.order?.rental_end_date || null,
+            rental_duration: dispatchOrder.order?.rental_duration || null,
+            transaction_type: dispatchOrder.type || "",
+            payment_type: dispatchOrder.payment_type || "",
+          };
         });
 
-        setDeviceIds(initialDeviceIds);
-        setSelectedReturnDeviceIds(initialSelectedReturns);
+        setOrders(transformedOrders);
+
+        // Fetch products
+        const prodResponse = await fetch(`${API_URL}/product-templete`);
+        if (!prodResponse.ok) throw new Error("Failed to fetch products");
+        const prodData = await prodResponse.json();
+        setProducts(prodData);
+
+        // Fetch tax types
+        const taxResponse = await fetch(`${API_URL}/tax-types`);
+        if (!taxResponse.ok) throw new Error("Failed to fetch tax types");
+        const taxData = await taxResponse.json();
+        setTaxTypes(taxData);
+
+        // Set initial dates from the invoice data
+        setInitialDates({
+          invoiceStartDate: invoiceData.invoice_start_date || "",
+          invoiceEndDate: invoiceData.invoice_end_date || "",
+          previousDeliveredStartDate: invoiceData.previous_delivered_start_date || "",
+          previousDeliveredEndDate: invoiceData.previous_delivered_end_date || "",
+          creditNoteStartDate: invoiceData.credit_note_start_date || "",
+          creditNoteEndDate: invoiceData.credit_note_end_date || "",
+        });
+
+        // Set date ranges from the invoice data
+        setDateRanges({
+          invoiceStartDate: invoiceData.invoice_start_date || "",
+          invoiceEndDate: invoiceData.invoice_end_date || "",
+          previousDeliveredStartDate: invoiceData.previous_delivered_start_date || "",
+          previousDeliveredEndDate: invoiceData.previous_delivered_end_date || "",
+          creditNoteStartDate: invoiceData.credit_note_start_date || "",
+          creditNoteEndDate: invoiceData.credit_note_end_date || "",
+        });
 
         // Set form data from the fetched invoice
         setFormData({
           ...invoiceData,
-          items: itemsWithParsedIds,
-          customer_id: invoiceData.customer_id,
-          shippingDetails: {
-            consignee_name: invoiceData.shippingDetail?.consignee_name || "",
-            country: invoiceData.shippingDetail?.country || "India",
-            state: invoiceData.shippingDetail?.state || "",
-            city: invoiceData.shippingDetail?.city || "",
-            street: invoiceData.shippingDetail?.street || "",
-            landmark: invoiceData.shippingDetail?.landmark || "",
-            pincode: invoiceData.shippingDetail?.pincode || "",
-            phone_number: invoiceData.shippingDetail?.phone_number || "",
-            email: invoiceData.shippingDetail?.email || "",
-          },
-        });
-
-        if (invoiceData.invoice_start_date) {
-          setDateRanges({
-            invoiceStartDate: invoiceData.invoice_start_date,
-            invoiceEndDate: invoiceData.invoice_end_date,
-            previousDeliveredStartDate:
-              invoiceData.previous_delivered_start_date,
-            previousDeliveredEndDate: invoiceData.previous_delivered_end_date,
-            creditNoteStartDate: invoiceData.credit_note_start_date,
-            creditNoteEndDate: invoiceData.credit_note_end_date,
-          });
-        }
+          invoice_date: invoiceData.invoice_date?.split("T")[0] || "",
+          invoice_due_date: invoiceData.invoice_due_date?.split("T")[0] || "",
+          dc_date: invoiceData.dc_date?.split("T")[0] || "",
+          purchase_order_date: invoiceData.purchase_order_date?.split("T")[0] || "",
+          shippingDetails: invoiceData.shippingDetail || {  // Note the change here
+    consignee_name: "",
+    country: "India",
+    state: "",
+    city: "",
+    street: "",
+    landmark: "",
+    pincode: "",
+    phone_number: "",
+    email: "",
+  },
+});
 
         // Set selected products and quantities
-        const productIds = itemsWithParsedIds.map((item) => item.product_id);
+        const productIds = invoiceData.items?.map((item) => item.product_id) || [];
         setSelectedProductIds(productIds);
 
         const initialQuantities = {};
@@ -654,25 +671,14 @@ const InvoicesEditPage = () => {
         const initialNewDeviceIds = {};
         const initialReturnedDeviceIds = {};
         const initialSelectedReturnIds = {};
-        const initialReturnedDates = {};
-        const initialUpgradedRams = {};
-        const initialUpgradeDates = {};
 
-        itemsWithParsedIds.forEach((item) => {
-          initialQuantities[item.product_id] = item.quantity || 0;
+        invoiceData.items?.forEach((item) => {
+          initialQuantities[item.product_id] = item.quantity;
           initialReturnQuantities[item.product_id] = item.return_quantity || 0;
           initialNewQuantities[item.product_id] = item.new_quantity || 0;
           initialNewDeviceIds[item.product_id] = item.new_device_ids || [];
-          initialReturnedDeviceIds[item.product_id] =
-            item.returned_device_ids || [];
-          initialReturnedDates[item.product_id] = item.returned_date || "";
-          initialUpgradedRams[item.product_id] = item.upgraded_ram || "";
-          initialUpgradeDates[item.product_id] = item.upgrade_date || "";
-
-          if (item.returned_device_ids && item.returned_device_ids.length > 0) {
-            initialSelectedReturnIds[item.product_id] =
-              item.returned_device_ids;
-          }
+          initialReturnedDeviceIds[item.product_id] = item.returned_device_ids || [];
+          initialSelectedReturnIds[item.product_id] = item.selected_return_id || "";
         });
 
         setQuantities(initialQuantities);
@@ -681,130 +687,33 @@ const InvoicesEditPage = () => {
         setNewDeviceIds(initialNewDeviceIds);
         setReturnedDeviceIds(initialReturnedDeviceIds);
         setSelectedReturnIds(initialSelectedReturnIds);
-        setReturnedDates(initialReturnedDates);
-        setUpgradedRams(initialUpgradedRams);
-        setUpgradeDates(initialUpgradeDates);
+
+        // Set selected order ID if available
+        if (invoiceData.dispatch_order_id) {
+          setSelectedOrderId(invoiceData.dispatch_order_id);
+        }
 
         setIsLoading(false);
       } catch (error) {
-        console.error("Error fetching invoice:", error);
+        console.error("Error fetching data:", error);
         setSnackbar({
           open: true,
-          message: "Error fetching invoice: " + error.message,
+          message: "Error fetching data: " + error.message,
           severity: "error",
         });
         setIsLoading(false);
       }
     };
 
-    fetchInvoiceData();
+    fetchData();
   }, [id]);
 
-  const handleReturnDeviceCheckboxChange = (productId, deviceId) => (event) => {
-    const isChecked = event.target.checked;
-    setSelectedReturnDeviceIds((prev) => {
-      const currentSelected = prev[productId] || [];
-      return {
-        ...prev,
-        [productId]: isChecked
-          ? [...currentSelected, deviceId]
-          : currentSelected.filter((id) => id !== deviceId),
-      };
-    });
-  };
-
-  // Fetch other necessary data (products, orders, tax types)
-  useEffect(() => {
-    const fetchInitialData = async () => {
-      try {
-        const [prodResponse, taxResponse, ordersResponse] = await Promise.all([
-          fetch(`${API_URL}/product-templete`),
-          fetch(`${API_URL}/tax-types`),
-          fetch(`${API_URL}/delivery-challans/approved-delivery-challan`),
-        ]);
-
-        if (!prodResponse.ok) throw new Error("Failed to fetch products");
-        if (!taxResponse.ok) throw new Error("Failed to fetch tax types");
-        if (!ordersResponse.ok) throw new Error("Failed to fetch orders");
-
-        const [prodData, taxData, ordersData] = await Promise.all([
-          prodResponse.json(),
-          taxResponse.json(),
-          ordersResponse.json(),
-        ]);
-
-        setProducts(prodData);
-        setTaxTypes(taxData);
-
-        // Transform orders data
-        const transformedOrders = ordersData.map((dc) => ({
-          id: dc.id,
-          order_id: dc.order_id,
-          personalDetails: {
-            first_name: dc.shipping_name || dc.customer?.first_name,
-            last_name: dc.customer?.last_name || "",
-            email: dc.email || dc.customer?.email,
-            phone_number: dc.shipping_phone_number || dc.customer?.phone_number,
-            gst_number: dc.gst_number || dc.customer?.gst,
-            pan_number: dc.pan_number || dc.customer?.pan_number,
-          },
-          address: {
-            country: dc.country || "India",
-            state: dc.state,
-            city: dc.city,
-            street: dc.street,
-            pincode: dc.pincode,
-            landmark: dc.landmark,
-          },
-          items: dc.items.map((item) => ({
-            product_id: item.product_id,
-            product_name: item.product_name,
-            quantity: item.quantity,
-            unit_price: item.unit_price,
-            total_price: item.total_price,
-            product: item.product,
-          })),
-          rental_start_date: dc.rental_start_date,
-          rental_end_date: dc.rental_end_date,
-          rental_duration: dc.duration,
-          transaction_type: dc.type || "Rent",
-          payment_type: dc.payment_type || "Postpaid",
-        }));
-
-        setOrders(transformedOrders);
-      } catch (error) {
-        console.error("Error fetching initial data:", error);
-        setSnackbar({
-          open: true,
-          message: "Error fetching initial data: " + error.message,
-          severity: "error",
-        });
-      }
-    };
-
-    fetchInitialData();
-  }, []);
-
-  const [errors, setErrors] = useState({});
-
-  const handleReturnQtyChange = (productId, value) => {
-    const qty = parseInt(value, 10) || 0;
-    const issuedQty = quantities[productId] || 0;
-
-    if (qty > issuedQty) {
-      setErrors((prev) => ({
-        ...prev,
-        [productId]: `Cannot return more than ${issuedQty} item(s).`,
-      }));
-    } else {
-      setErrors((prev) => ({ ...prev, [productId]: "" }));
-    }
-
+  const handleReturnQtyChange = useCallback((productId, value) => {
     setReturnQuantities((prev) => ({
       ...prev,
-      [productId]: qty,
+      [productId]: parseInt(value) || 0,
     }));
-  };
+  }, []);
 
   const incrementReturnQty = useCallback((productId) => {
     setReturnQuantities((prev) => ({
@@ -820,26 +729,49 @@ const InvoicesEditPage = () => {
     }));
   }, []);
 
-  const handleReturnedDateChange = useCallback((productId, date) => {
-    setReturnedDates((prev) => ({
-      ...prev,
-      [productId]: date,
-    }));
-  }, []);
+  const handleNewDeviceCheckboxChange = (productId, deviceId, isChecked) => {
+    setNewDeviceIds((prev) => {
+      const currentSelected = prev[productId] || [];
+      let updatedSelected;
 
-  const handleUpgradedRamChange = useCallback((productId, ram) => {
-    setUpgradedRams((prev) => ({
-      ...prev,
-      [productId]: ram,
-    }));
-  }, []);
+      if (isChecked) {
+        if (currentSelected.length < (newQuantities[productId] || 0)) {
+          updatedSelected = [...currentSelected, deviceId];
+        } else {
+          return prev;
+        }
+      } else {
+        updatedSelected = currentSelected.filter((id) => id !== deviceId);
+      }
 
-  const handleUpgradeDateChange = useCallback((productId, date) => {
-    setUpgradeDates((prev) => ({
-      ...prev,
-      [productId]: date,
-    }));
-  }, []);
+      return {
+        ...prev,
+        [productId]: updatedSelected,
+      };
+    });
+  };
+
+  const handleReturnDeviceCheckboxChange = (productId, deviceId, isChecked) => {
+    setReturnedDeviceIds((prev) => {
+      const currentSelected = prev[productId] || [];
+      let updatedSelected;
+
+      if (isChecked) {
+        if (currentSelected.length < (returnQuantities[productId] || 0)) {
+          updatedSelected = [...currentSelected, deviceId];
+        } else {
+          return prev;
+        }
+      } else {
+        updatedSelected = currentSelected.filter((id) => id !== deviceId);
+      }
+
+      return {
+        ...prev,
+        [productId]: updatedSelected,
+      };
+    });
+  };
 
   const handleNewQtyChange = useCallback((productId, value) => {
     const updated = { ...newQuantities, [productId]: parseInt(value) || 0 };
@@ -868,18 +800,32 @@ const InvoicesEditPage = () => {
   };
 
   const handleCustomerSelect = useCallback(
-    (customerId) => {
+    (dispatchOrderId) => {
       const selectedOrder = orders.find(
-        (order) => order.id === parseInt(customerId)
+        (order) => order.id === parseInt(dispatchOrderId)
       );
       if (!selectedOrder) return;
 
-      // Initialize quantities from order items
+      setSelectedOrderId(dispatchOrderId);
+
+      const customerId = selectedOrder.contact?.id || 
+                      selectedOrder.customer_code || 
+                      selectedOrder.dispatch_order?.customer_code;
+
+      const dispatchOrderDate =
+        selectedOrder.dispatch_order?.dispatch_order_date ||
+        selectedOrder.dc_date ||
+        (selectedOrder.created_at
+          ? new Date(selectedOrder.created_at).toISOString().split("T")[0]
+          : "");
+
+      const dispatchOrderNumber =
+        selectedOrder.dispatch_order_id || selectedOrder.dispatch_order_number;
+
       const initialQuantities = {};
       selectedOrder.items.forEach((item) => {
         initialQuantities[item.product_id] = item.quantity;
       });
-
       setQuantities(initialQuantities);
 
       const personal = selectedOrder.personalDetails;
@@ -925,11 +871,11 @@ const InvoicesEditPage = () => {
         return {
           product_id: product.id,
           product_name: product.product_name,
+          previous_quantity: quantity,
           quantity: quantity,
         };
       });
 
-      // Tax Calculation
       const cgstRate =
         taxTypes.find((t) => t.tax_type_name === "CGST")?.percentage || 0;
       const sgstRate =
@@ -939,24 +885,25 @@ const InvoicesEditPage = () => {
       const totalTax = cgst + sgst;
       const totalAmount = amount + totalTax;
 
-      // Set Form Data
       setFormData({
         ...formData,
-        customer_id: selectedOrder.id,
+        customer_id: customerId || "",
         customer_name: `${personal?.first_name || ""}`,
         email: personal?.email || "",
         phone_number: personal?.phone_number || "",
         customer_gst_number: personal?.gst_number || "",
         pan_number: selectedOrder.pan_number || personal?.pan_number || "",
         order_id: selectedOrder.order_id,
-        transaction_type: selectedOrder.transaction_type || "Sale",
-        payment_type: selectedOrder.payment_type || "Postpaid",
+        transaction_type: selectedOrder.transaction_type || "",
+        payment_type: selectedOrder.payment_type || "",
         rental_duration: selectedOrder.rental_duration || "",
         rental_duration_days: selectedOrder.rental_duration_days || 0,
-        purchase_order_date: selectedOrder.updated_at
-          ? new Date(selectedOrder.updated_at).toISOString().split("T")[0]
-          : "",
-        purchase_order_number: selectedOrder.order_id || "",
+        purchase_order_date: dispatchOrderDate,
+        purchase_order_number: selectedOrder.order_number || "",
+        dc_id: selectedOrder.dc_id || selectedOrder.dispatch_order_id,
+        dispatch_order_number: dispatchOrderNumber,
+        dispatch_order_id: selectedOrder.id,
+        dc_date: dispatchOrderDate,
         duration: selectedOrder.rental_duration || 0,
         rental_start_date: selectedOrder.rental_start_date || "",
         rental_end_date: selectedOrder.rental_end_date || "",
@@ -979,10 +926,77 @@ const InvoicesEditPage = () => {
         },
       });
     },
-    [orders, products, taxTypes, formData]
+    [orders, products, taxTypes, formData, calculateRentalPrice]
   );
 
-  // Handle form field changes
+  const getRentalPrice = useCallback((product, months = 0, days = 0) => {
+    switch (months) {
+      case 1:
+        return product.rent_price_per_month;
+      case 6:
+        return product.rent_price_6_months;
+      case 12:
+        return product.rent_price_1_year;
+      default:
+        return product.rent_price_per_day * days;
+    }
+  }, []);
+
+  useEffect(() => {
+    if (selectedProductIds.length > 0) {
+      setShowProductTable(true);
+    }
+  }, [selectedProductIds]);
+
+  useEffect(() => {
+    const fetchLocationFromPincode = async () => {
+      const pincode = formData.shippingDetails.pincode;
+
+      if (pincode && pincode.length === 6) {
+        try {
+          const response = await fetch(
+            `https://api.postalpincode.in/pincode/${pincode}`
+          );
+          const data = await response.json();
+
+          if (data && data[0]?.Status === "Success") {
+            const postOffice = data[0].PostOffice[0];
+
+            setFormData((prev) => ({
+              ...prev,
+              shippingDetails: {
+                ...prev.shippingDetails,
+                city: postOffice.District,
+                state: postOffice.State,
+                country: "India",
+              },
+            }));
+          } else {
+            setSnackbar({
+              open: true,
+              message: "Could not find location for this pincode",
+              severity: "warning",
+            });
+          }
+        } catch (error) {
+          console.error("Error fetching location data:", error);
+          setSnackbar({
+            open: true,
+            message:
+              "Error fetching location data. Please check the pincode and try again.",
+            severity: "error",
+          });
+        }
+      }
+    };
+
+    const debounceTimer = setTimeout(() => {
+      fetchLocationFromPincode();
+    }, 500);
+
+    return () => clearTimeout(debounceTimer);
+  }, [formData.shippingDetails.pincode]);
+
   const handleInputChange = useCallback((e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({
@@ -991,7 +1005,6 @@ const InvoicesEditPage = () => {
     }));
   }, []);
 
-  // Handle shipping details changes
   const handleShippingChange = useCallback((e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({
@@ -1003,7 +1016,6 @@ const InvoicesEditPage = () => {
     }));
   }, []);
 
-  // Handle product selection
   const handleProductSelection = useCallback((productId) => {
     setSelectedProductIds((prev) => {
       if (prev.includes(productId)) {
@@ -1018,7 +1030,6 @@ const InvoicesEditPage = () => {
     }));
   }, []);
 
-  // Handle quantity changes
   const handleQtyChange = useCallback((productId, value) => {
     const qty = Math.max(0, parseInt(value) || 0);
     setQuantities((prev) => ({ ...prev, [productId]: qty }));
@@ -1038,7 +1049,6 @@ const InvoicesEditPage = () => {
     }));
   }, []);
 
-  // Filter products based on search term
   const filteredProducts = products.filter(
     (product) =>
       product.product_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -1046,83 +1056,72 @@ const InvoicesEditPage = () => {
       product.description?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  // Calculate totals whenever relevant data changes
   useEffect(() => {
     const calculateTotals = () => {
-  const selectedProducts = products.filter((product) =>
-    selectedProductIds.includes(product.id)
-  );
+      const selectedProducts = products.filter((product) =>
+        selectedProductIds.includes(product.id)
+      );
 
-  let amount = 0;
+      let amount = 0;
 
-  const items = selectedProducts.map((product) => {
-    // Find existing item to preserve its unit_price
-    const existingItem = formData.items.find(i => i.product_id === product.id);
-    const unit_price = existingItem?.unit_price || product.purchase_price;
+      const items = selectedProducts.map((product) => {
+        const previous_quantity = quantities[product.id] || 0;
+        const quantity = quantities[product.id] || 0;
 
-    const previous_quantity = quantities[product.id] || 0;
-    const quantity = quantities[product.id] || 0;
-    const return_quantity = returnQuantities?.[product.id] || 0;
-    const new_quantity = newQuantities?.[product.id] || 0;
-    const new_device_ids = newDeviceIds?.[product.id] || [];
-    const returned_device_ids = returnedDeviceIds?.[product.id] || [];
-    const returned_date = returnedDates?.[product.id] || "";
-    const upgraded_ram = upgradedRams?.[product.id] || "";
-    const upgrade_date = upgradeDates?.[product.id] || "";
+        const return_quantity = returnQuantities?.[product.id] || 0;
+        const new_quantity = newQuantities?.[product.id] || 0;
+        const new_device_ids = newDeviceIds?.[product.id] || [];
+        const returned_device_ids = returnedDeviceIds?.[product.id] || [];
 
-    let price = unit_price; // Use the preserved unit_price
+        let price = product.purchase_price;
 
-    if (formData.transaction_type === "Rent") {
-      const months = parseInt(formData.rental_duration) || 0;
-      const days = parseInt(formData.rental_duration_days) || 0;
+        if (formData.transaction_type === "Rent") {
+          const months = parseInt(formData.rental_duration) || 0;
+          const days = parseInt(formData.rental_duration_days) || 0;
 
-      if (months === 0 && days > 0) {
-        price = (product.rent_price_per_day || 0) * days;
-      } else if (days === 0 && months > 0) {
-        if (months === 6) {
-          price =
-            product.rent_price_6_months ||
-            (product.rent_price_per_month || 0) * 6;
-        } else if (months === 12) {
-          price =
-            product.rent_price_1_year ||
-            (product.rent_price_per_month || 0) * 12;
-        } else {
-          price = (product.rent_price_per_month || 0) * months;
+          if (months === 0 && days > 0) {
+            price = (product.rent_price_per_day || 0) * days;
+          } else if (days === 0 && months > 0) {
+            if (months === 6) {
+              price =
+                product.rent_price_6_months ||
+                (product.rent_price_per_month || 0) * 6;
+            } else if (months === 12) {
+              price =
+                product.rent_price_1_year ||
+                (product.rent_price_per_month || 0) * 12;
+            } else {
+              price = (product.rent_price_per_month || 0) * months;
+            }
+          } else if (months > 0 && days > 0) {
+            const monthPrice =
+              months === 6
+                ? product.rent_price_6_months ||
+                  (product.rent_price_per_month || 0) * 6
+                : months === 12
+                ? product.rent_price_1_year ||
+                  (product.rent_price_per_month || 0) * 12
+                : (product.rent_price_per_month || 0) * months;
+
+            const dayPrice = (product.rent_price_per_day || 0) * days;
+            price = monthPrice + dayPrice;
+          }
         }
-      } else if (months > 0 && days > 0) {
-        const monthPrice =
-          months === 6
-            ? product.rent_price_6_months ||
-              (product.rent_price_per_month || 0) * 6
-            : months === 12
-            ? product.rent_price_1_year ||
-              (product.rent_price_per_month || 0) * 12
-            : (product.rent_price_per_month || 0) * months;
 
-        const dayPrice = (product.rent_price_per_day || 0) * days;
-        price = monthPrice + dayPrice;
-      }
-    }
+        const totalPrice = new_quantity * price;
+        amount += totalPrice;
 
-    const totalPrice = new_quantity * price;
-    amount += totalPrice;
-
-    return {
-      product_id: product.id,
-      product_name: product.product_name,
-      previous_quantity,
-      quantity,
-      return_quantity,
-      new_quantity,
-      new_device_ids,
-      returned_device_ids,
-      returned_date,
-      upgraded_ram,
-      upgrade_date,
-      unit_price: price.toString(), // Preserve the calculated price
-    };
-  });
+        return {
+          product_id: product.id,
+          product_name: product.product_name,
+          previous_quantity,
+          quantity,
+          return_quantity,
+          new_quantity,
+          new_device_ids,
+          returned_device_ids,
+        };
+      });
 
       const cgstRate =
         taxTypes.find((t) => t.tax_type_name === "CGST")?.percentage || 0;
@@ -1156,88 +1155,78 @@ const InvoicesEditPage = () => {
     formData.transaction_type,
     formData.rental_duration,
     formData.rental_duration_days,
-    returnedDates,
-    upgradedRams,
-    upgradeDates,
   ]);
 
 const handleSubmit = async (e) => {
-  e.preventDefault();
+    e.preventDefault();
 
-  try {
-    const submissionData = {
-      ...formData,
-      invoice_start_date: dateRanges.invoiceStartDate,
-      invoice_end_date: dateRanges.invoiceEndDate,
-      previous_delivered_start_date: dateRanges.previousDeliveredStartDate,
-      previous_delivered_end_date: dateRanges.previousDeliveredEndDate,
-      credit_note_start_date: dateRanges.creditNoteStartDate,
-      credit_note_end_date: dateRanges.creditNoteEndDate,
+    try {
+      const selectedOrder = orders.find(order => order.id === parseInt(selectedOrderId));
 
-      rental_duration: formData.rental_duration || "0",
-      rental_duration_days: formData.rental_duration_days || 0,
-      rental_duration_months: formData.rental_duration
-        ? parseInt(formData.rental_duration)
-        : 0,
-      rental_start_date: formData.rental_start_date || dateRanges.invoiceStartDate,
-      rental_end_date: formData.rental_end_date || dateRanges.invoiceEndDate,
-
-      purchase_order_number: formData.purchase_order_number || "",
-      purchase_order_date: formData.purchase_order_date || "",
-
-      payment_mode: formData.payment_type || "Postpaid",
-
-      items: formData.items.map((item) => ({
-        ...item,
-        order_id: productOrderMap[item.product_id] || "",
-        device_ids: deviceIds[item.product_id] || [],
-        new_device_ids: newDeviceIds[item.product_id] || [],
-        returned_device_ids: selectedReturnDeviceIds[item.product_id] || [],
-        returned_date: returnedDates[item.product_id] || "",
-        upgraded_ram: upgradedRams[item.product_id] || "",
-        upgrade_date: upgradeDates[item.product_id] || "",
+      const submissionData = {
+        ...formData,
+        customer_id: formData.customer_id || (selectedOrder?.contact?.id || ""),
+        dc_id: formData.dc_id,
+        dispatch_order_number: formData.dispatch_order_number || formData.dispatch_order_id,
+        dc_date: formData.dc_date,
+        invoice_start_date: dateRanges.invoiceStartDate,
+        invoice_end_date: dateRanges.invoiceEndDate,
+        previous_delivered_start_date: dateRanges.previousDeliveredStartDate,
+        previous_delivered_end_date: dateRanges.previousDeliveredEndDate,
+        credit_note_start_date: dateRanges.creditNoteStartDate,
+        credit_note_end_date: dateRanges.creditNoteEndDate,
         rental_duration: formData.rental_duration || "0",
         rental_duration_days: formData.rental_duration_days || 0,
-        rental_duration_months: formData.rental_duration
-          ? parseInt(formData.rental_duration)
-          : 0,
-      })),
-    };
+        payment_mode: formData.payment_type || "",
+        items: formData.items.map((item) => ({
+          ...item,
+          order_id: productOrderMap[item.product_id] || "",
+          device_ids: returnedDeviceIds[item.product_id] || [],
+          new_device_ids: newDeviceIds[item.product_id] || [],
+          returned_device_ids: selectedReturnIds[item.product_id]
+            ? [selectedReturnIds[item.product_id]]
+            : [],
+          rental_duration: formData.rental_duration || "0",
+          rental_duration_days: formData.rental_duration_days || 0,
+          rental_duration_months: formData.rental_duration
+            ? parseInt(formData.rental_duration)
+            : 0,
+        })),
+      };
 
-    console.log("Submitting data:", submissionData); // For debugging
+      const response = await fetch(`${API_URL}/invoices/${id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(submissionData),
+      });
 
-    const response = await fetch(`${API_URL}/invoices/${id}`, {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(submissionData),
-    });
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Failed to update invoice");
+      }
 
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.message || "Failed to update invoice");
+      const result = await response.json();
+      setSnackbar({
+        open: true,
+        message: "Invoice updated successfully!",
+        severity: "success",
+      });
+
+      setTimeout(() => {
+        navigate("/dashboard/operations/invoices");
+      }, 1500);
+    } catch (error) {
+      console.error("Error updating invoice:", error);
+      setSnackbar({
+        open: true,
+        message: "Error updating invoice: " + error.message,
+        severity: "error",
+      });
     }
+  };
 
-    const result = await response.json();
-    setSnackbar({
-      open: true,
-      message: "Invoice updated successfully!",
-      severity: "success",
-    });
-
-    setTimeout(() => {
-      navigate("/dashboard/operations/invoices");
-    }, 1500);
-  } catch (error) {
-    console.error("Error updating invoice:", error);
-    setSnackbar({
-      open: true,
-      message: "Error updating invoice: " + error.message,
-      severity: "error",
-    });
-  }
-};
 
   const formatINR = (number) =>
     new Intl.NumberFormat("en-IN", {
@@ -1249,9 +1238,7 @@ const handleSubmit = async (e) => {
   if (isLoading) {
     return (
       <div style={containerStyle}>
-        <div style={headerStyle}>
-          <h1 style={titleStyle}>Loading Invoice...</h1>
-        </div>
+        <Typography variant="h6">Loading invoice data...</Typography>
       </div>
     );
   }
@@ -1276,7 +1263,7 @@ const handleSubmit = async (e) => {
       <div style={headerStyle}>
         <h1 style={titleStyle}>Edit Invoice</h1>
         <p style={subtitleStyle}>
-          Edit the details below for invoice {formData.invoice_number}
+          Edit the details below for invoice: {formData.invoice_number}
         </p>
       </div>
 
@@ -1313,39 +1300,73 @@ const handleSubmit = async (e) => {
                 onChange={handleInputChange}
               />
 
+              <FormControl fullWidth size="small">
+                <InputLabel>Select Customer</InputLabel>
+                <Select
+                  value={selectedOrderId || ""}
+                  onChange={(e) => handleCustomerSelect(e.target.value)}
+                  label="Select Customer"
+                  displayEmpty
+                  inputProps={{ "aria-label": "Without label" }}
+                  style={inputStyle}
+                >
+                  {orders.map((order) => (
+                    <MenuItem key={order.id} value={order.id}>
+                      {order.dispatch_order_id} -{" "}
+                      {order.personalDetails?.first_name || ""}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+
               <Field
-                label="Select Customer"
-                name="customer_id"
-                type="select"
-                placeholder="Choose customer"
-                value={formData.customer_id}
-                onChange={(e) => handleCustomerSelect(e.target.value)}
-                options={orders.map((order) => ({
-                  value: order.id,
-                  label: `${order.order_id} || ${
-                    order.personalDetails?.first_name || ""
-                  }`,
-                }))}
+                label="Transaction Type"
+                name="transaction_type"
+                value={formData.transaction_type}
+                onChange={(e) => {
+                  handleInputChange(e);
+                  if (e.target.value === "Buy") {
+                    setFormData((prev) => ({
+                      ...prev,
+                      payment_mode: "",
+                      payment_type: "",
+                      rental_duration: "0",
+                      rental_duration_days: 0,
+                      rental_start_date: "",
+                      rental_end_date: "",
+                    }));
+                  }
+                }}
               />
 
-              {/* Date Range Selector - spans full width */}
-              <div
-                style={{
-                  gridColumn: "1 / -1",
-                  margin: "1rem 0",
-                  padding: "1rem",
-                  backgroundColor: "#f8f9fa",
-                  borderRadius: "8px",
-                  border: "1px solid #e0e0e0",
-                }}
-              >
-                <DateRangeSelector
-                  selectedMonth={selectedMonth}
-                  setSelectedMonth={setSelectedMonth}
-                  dateRanges={dateRanges}
-                  setDateRanges={setDateRanges}
-                />
-              </div>
+              {formData.transaction_type === "Rent" && (
+                <>
+                  <Field
+                    label="Payment Mode"
+                    name="payment_mode"
+                    value={formData.payment_type}
+                    onChange={handleInputChange}
+                  />
+
+                  <div
+                    style={{
+                      gridColumn: "1 / -1",
+                      margin: "1rem 0",
+                      padding: "1rem",
+                      backgroundColor: "#f8f9fa",
+                      borderRadius: "8px",
+                      border: "1px solid #e0e0e0",
+                    }}
+                  >
+                    <DateRangeSelector
+                      selectedMonth={selectedMonth}
+                      setSelectedMonth={setSelectedMonth}
+                      dateRanges={dateRanges}
+                      setDateRanges={setDateRanges}
+                    />
+                  </div>
+                </>
+              )}
 
               <Field
                 label="Customer GST"
@@ -1377,20 +1398,7 @@ const handleSubmit = async (e) => {
                 onChange={handleInputChange}
                 placeholder="Enter PAN"
               />
-              <Field
-                label="Payment Terms"
-                name="payment_terms"
-                value={formData.payment_terms}
-                onChange={handleInputChange}
-                placeholder="Enter Payment Terms"
-              />
-              <Field
-                label="Payment Mode"
-                name="payment_mode"
-                value={formData.payment_type}
-                onChange={handleInputChange}
-                placeholder="Enter Payment Mode"
-              />
+
               <Field
                 label="Consultant"
                 name="invoice_consulting_by"
@@ -1576,21 +1584,7 @@ const handleSubmit = async (e) => {
                           Specifications
                         </TableCell>
                         <TableCell sx={{ color: "#fff" }}>Quantity</TableCell>
-                        {/* <TableCell sx={{ color: "#fff" }}>
-                          Return Quantity
-                        </TableCell>
-                        <TableCell sx={{ color: "#fff", minWidth: "250px" }}>
-                          Returned Device IDs
-                        </TableCell>
-                        <TableCell sx={{ color: "#fff" }}>
-                          Returned Date
-                        </TableCell>
-                        <TableCell sx={{ color: "#fff" }}>
-                          Upgraded RAM
-                        </TableCell>
-                        <TableCell sx={{ color: "#fff" }}>
-                          Upgrade Date
-                        </TableCell> */}
+
                         <TableCell sx={{ color: "#fff" }}>
                           Price for Durations
                         </TableCell>
@@ -1601,225 +1595,75 @@ const handleSubmit = async (e) => {
                         .filter((product) =>
                           selectedProductIds.includes(product.id)
                         )
-                        .map((product) => {
-                          const productDeviceIds = deviceIds[product.id] || [];
-                          const selectedDevices =
-                            selectedReturnDeviceIds[product.id] || [];
-
-                          return (
-                            <TableRow key={product.id}>
-                              <TableCell padding="checkbox">
-                                <Checkbox
-                                  checked={selectedProductIds.includes(
-                                    product.id
-                                  )}
-                                  onChange={() =>
-                                    handleProductSelection(product.id)
-                                  }
-                                />
-                              </TableCell>
-                              <TableCell>{product.product_name}</TableCell>
-                              <TableCell>{product.brand}</TableCell>
-                              <TableCell>
-                                {[
-                                  product.model,
-                                  product.processor,
-                                  product.ram,
-                                  product.storage,
-                                  product.graphics,
-                                ]
-                                  .filter(Boolean)
-                                  .join(" | ")}
-                              </TableCell>
-                              <TableCell>
-                                <Box display="flex" alignItems="center">
-                                  <IconButton
-                                    size="small"
-                                    onClick={() => decrementQty(product.id)}
-                                    disabled={
-                                      !selectedProductIds.includes(product.id)
-                                    }
-                                  >
-                                    <Remove fontSize="small" />
-                                  </IconButton>
-                                  <TextField
-                                    type="number"
-                                    size="small"
-                                    value={
-                                      selectedProductIds.includes(product.id)
-                                        ? quantities[product.id] || ""
-                                        : ""
-                                    }
-                                    onChange={(e) =>
-                                      handleQtyChange(
-                                        product.id,
-                                        e.target.value
-                                      )
-                                    }
-                                    disabled={
-                                      !selectedProductIds.includes(product.id)
-                                    }
-                                    inputProps={{
-                                      min: 0,
-                                      style: {
-                                        width: "50px",
-                                        textAlign: "center",
-                                      },
-                                    }}
-                                  />
-                                  <IconButton
-                                    size="small"
-                                    onClick={() => incrementQty(product.id)}
-                                    disabled={
-                                      !selectedProductIds.includes(product.id)
-                                    }
-                                  >
-                                    <Add fontSize="small" />
-                                  </IconButton>
-                                </Box>
-                              </TableCell>
-                              {/* <TableCell>
-                                <FormControl error={!!errors[product.id]}>
-                                  <Box display="flex" alignItems="center">
-                                    <IconButton
-                                      size="small"
-                                      onClick={() =>
-                                        decrementReturnQty(product.id)
-                                      }
-                                      disabled={
-                                        !selectedProductIds.includes(product.id)
-                                      }
-                                    >
-                                      <Remove fontSize="small" />
-                                    </IconButton>
-                                    <TextField
-                                      type="number"
-                                      size="small"
-                                      value={
-                                        selectedProductIds.includes(product.id)
-                                          ? returnQuantities[product.id] || ""
-                                          : ""
-                                      }
-                                      onChange={(e) =>
-                                        handleReturnQtyChange(
-                                          product.id,
-                                          e.target.value
-                                        )
-                                      }
-                                      disabled={
-                                        !selectedProductIds.includes(product.id)
-                                      }
-                                      inputProps={{
-                                        min: 0,
-                                        style: {
-                                          width: "50px",
-                                          textAlign: "center",
-                                        },
-                                      }}
-                                    />
-                                    <IconButton
-                                      size="small"
-                                      onClick={() =>
-                                        incrementReturnQty(product.id)
-                                      }
-                                      disabled={
-                                        !selectedProductIds.includes(product.id)
-                                      }
-                                    >
-                                      <Add fontSize="small" />
-                                    </IconButton>
-                                  </Box>
-                                  {errors[product.id] && (
-                                    <FormHelperText>
-                                      {errors[product.id]}
-                                    </FormHelperText>
-                                  )}
-                                </FormControl>
-                              </TableCell>
-
-                              <TableCell>
-                                {returnQuantities[product.id] > 0 &&
-                                  productDeviceIds.length > 0 &&
-                                  !errors[product.id] && ( // ✅ Check for no error
-                                    <Box display="flex" flexDirection="column">
-                                      {productDeviceIds.map((deviceId) => (
-                                        <FormControlLabel
-                                          key={deviceId}
-                                          control={
-                                            <Checkbox
-                                              checked={selectedDevices.includes(
-                                                deviceId
-                                              )}
-                                              onChange={handleReturnDeviceCheckboxChange(
-                                                product.id,
-                                                deviceId
-                                              )}
-                                            />
-                                          }
-                                          label={deviceId}
-                                        />
-                                      ))}
-                                    </Box>
-                                  )}
-                              </TableCell>
-
-                              <TableCell>
-                                <TextField
-                                  type="date"
+                        .map((product) => (
+                          <TableRow key={product.id}>
+                            <TableCell padding="checkbox">
+                              <Checkbox
+                                checked={selectedProductIds.includes(
+                                  product.id
+                                )}
+                                onChange={() =>
+                                  handleProductSelection(product.id)
+                                }
+                              />
+                            </TableCell>
+                            <TableCell>{product.product_name}</TableCell>
+                            <TableCell>{product.brand}</TableCell>
+                            <TableCell>
+                              {[
+                                product.model,
+                                product.processor,
+                                product.ram,
+                                product.storage,
+                                product.graphics,
+                              ]
+                                .filter(Boolean)
+                                .join(" | ")}
+                            </TableCell>
+                            <TableCell>
+                              <Box display="flex" alignItems="center">
+                                <IconButton
                                   size="small"
-                                  value={returnedDates[product.id] || ""}
-                                  onChange={(e) =>
-                                    handleReturnedDateChange(
-                                      product.id,
-                                      e.target.value
-                                    )
-                                  }
-                                  InputLabelProps={{ shrink: true }}
-                                />
-                              </TableCell>
-                              <TableCell>
+                                  onClick={() => decrementQty(product.id)}
+                                  disabled
+                                >
+                                  <Remove fontSize="small" />
+                                </IconButton>
                                 <TextField
+                                  type="number"
                                   size="small"
-                                  value={upgradedRams[product.id] || ""}
-                                  onChange={(e) =>
-                                    handleUpgradedRamChange(
-                                      product.id,
-                                      e.target.value
-                                    )
+                                  value={
+                                    selectedProductIds.includes(product.id)
+                                      ? quantities[product.id] || ""
+                                      : ""
                                   }
-                                  placeholder="RAM upgrade"
+                                  onChange={(e) =>
+                                    handleQtyChange(product.id, e.target.value)
+                                  }
+                                  disabled
+                                  inputProps={{
+                                    min: 0,
+                                    style: { width: 50, textAlign: "center" },
+                                  }}
                                 />
-                              </TableCell>
-                              <TableCell>
-                                <TextField
-                                  type="date"
+                                <IconButton
                                   size="small"
-                                  value={upgradeDates[product.id] || ""}
-                                  onChange={(e) =>
-                                    handleUpgradeDateChange(
-                                      product.id,
-                                      e.target.value
-                                    )
-                                  }
-                                  InputLabelProps={{ shrink: true }}
-                                />
-                              </TableCell> */}
-                              <TableCell>
-                                <Box display="flex" flexDirection="column">
-                                  <Typography variant="body2">
-                                    Month: {product.rent_price_per_month}
-                                  </Typography>
-                                  {/* <Typography variant="body2">
-                                    6 Months: {product.rent_price_6_months}
-                                  </Typography>
-                                  <Typography variant="body2">
-                                    Year: {product.rent_price_1_year}
-                                  </Typography> */}
-                                </Box>
-                              </TableCell>
-                            </TableRow>
-                          );
-                        })}
+                                  onClick={() => incrementQty(product.id)}
+                                  disabled
+                                >
+                                  <Add fontSize="small" />
+                                  
+                                </IconButton>
+                              </Box>
+                            </TableCell>
+
+                            <TableCell>
+                              <>
+                                <div>Month: {product.rent_price_per_month}</div>
+                              </>
+                            </TableCell>
+                          </TableRow>
+                        ))}
                     </TableBody>
                   </Table>
                 </TableContainer>

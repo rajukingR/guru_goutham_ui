@@ -20,15 +20,13 @@ import { useNavigate } from "react-router-dom";
 
 // ✅ Put this at the top of PoOperationAddPageLayout.jsx
 const generateRandomId = () => {
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-  let code = '';
+  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+  let code = "";
   for (let i = 0; i < 5; i++) {
     code += chars.charAt(Math.floor(Math.random() * chars.length));
   }
   return `PQ-${code}`;
 };
-
-
 
 const PoOperationAddPageLayout = () => {
   const [purchaseRequests, setPurchaseRequests] = useState([]);
@@ -68,51 +66,51 @@ const PoOperationAddPageLayout = () => {
     message: "",
     severity: "success",
   });
-useEffect(() => {
-  setFormData((prev) => ({
-    ...prev,
-    purchaseQuotationId: generateRandomId()
-  }));
+  useEffect(() => {
+    setFormData((prev) => ({
+      ...prev,
+      purchaseQuotationId: generateRandomId(),
+    }));
 
-  const fetchData = async () => {
-    try {
-      const prResponse = await fetch(`${API_URL}/purchase-requests/approved`);
-      if (!prResponse.ok) throw new Error("Failed to fetch purchase requests");
-      const prData = await prResponse.json();
-      setPurchaseRequests(prData);
+    const fetchData = async () => {
+      try {
+        const prResponse = await fetch(`${API_URL}/purchase-requests/approved`);
+        if (!prResponse.ok)
+          throw new Error("Failed to fetch purchase requests");
+        const prData = await prResponse.json();
+        setPurchaseRequests(prData);
 
-      const supResponse = await fetch(`${API_URL}/supplier`);
-      if (!supResponse.ok) throw new Error("Failed to fetch suppliers");
-      const supData = await supResponse.json();
-      setSuppliers(supData);
+        const supResponse = await fetch(`${API_URL}/supplier`);
+        if (!supResponse.ok) throw new Error("Failed to fetch suppliers");
+        const supData = await supResponse.json();
+        setSuppliers(supData);
 
-      const prodResponse = await fetch(`${API_URL}/product-templete`);
-      if (!prodResponse.ok) throw new Error("Failed to fetch products");
-      const prodData = await prodResponse.json();
-      setProducts(prodData);
+        const prodResponse = await fetch(`${API_URL}/product-templete`);
+        if (!prodResponse.ok) throw new Error("Failed to fetch products");
+        const prodData = await prodResponse.json();
+        setProducts(prodData);
 
-      setLoading({
-        purchaseRequests: false,
-        suppliers: false,
-        products: false,
-      });
-    } catch (err) {
-      setError({
-        purchaseRequests: err.message,
-        suppliers: err.message,
-        products: err.message,
-      });
-      setLoading({
-        purchaseRequests: false,
-        suppliers: false,
-        products: false,
-      });
-    }
-  };
+        setLoading({
+          purchaseRequests: false,
+          suppliers: false,
+          products: false,
+        });
+      } catch (err) {
+        setError({
+          purchaseRequests: err.message,
+          suppliers: err.message,
+          products: err.message,
+        });
+        setLoading({
+          purchaseRequests: false,
+          suppliers: false,
+          products: false,
+        });
+      }
+    };
 
-  fetchData();
-}, []);
-
+    fetchData();
+  }, []);
 
   const handlePurchaseRequestChange = (e) => {
     const selectedId = e.target.value;
@@ -307,11 +305,10 @@ useEffect(() => {
             </Field>
 
             <Field
-  label="Purchase Receipt ID"
-  value={formData.purchaseRequestId}
-  InputProps={{ readOnly: true }}
-/>
-
+              label="Purchase Receipt ID"
+              value={formData.purchaseRequestId}
+              InputProps={{ readOnly: true }}
+            />
 
             <Field
               label="Purchase Request Status"
@@ -452,17 +449,22 @@ useEffect(() => {
               <TableContainer component={Paper}>
                 <Table size="small">
                   <TableHead>
-  <TableRow sx={{ backgroundColor: "#0d47a1" }}>
-    <TableCell padding="checkbox" sx={{ color: "#fff" }}>
-      <Checkbox sx={{ color: "#fff" }} />
-    </TableCell>
-    <TableCell sx={{ color: "#fff" }}>Product Name</TableCell>
-    <TableCell sx={{ color: "#fff" }}>Brand</TableCell>
-    <TableCell sx={{ color: "#fff" }}>Specifications</TableCell>
-    <TableCell sx={{ color: "#fff" }}>Price per Piece</TableCell> {/* ✅ New column */}
-    <TableCell sx={{ color: "#fff" }}>Quantity</TableCell>
-  </TableRow>
-</TableHead>
+                    <TableRow sx={{ backgroundColor: "#0d47a1" }}>
+                      <TableCell padding="checkbox" sx={{ color: "#fff" }}>
+                        <Checkbox sx={{ color: "#fff" }} />
+                      </TableCell>
+                      <TableCell sx={{ color: "#fff" }}>Product Name</TableCell>
+                      <TableCell sx={{ color: "#fff" }}>Brand</TableCell>
+                      <TableCell sx={{ color: "#fff" }}>
+                        Specifications
+                      </TableCell>
+                      <TableCell sx={{ color: "#fff" }}>
+                        Price per Piece
+                      </TableCell>{" "}
+                      {/* ✅ New column */}
+                      <TableCell sx={{ color: "#fff" }}>Quantity</TableCell>
+                    </TableRow>
+                  </TableHead>
 
                   <TableBody>
                     {filteredProducts.map((product) => (
@@ -499,14 +501,16 @@ useEffect(() => {
                           </div>
                         </TableCell>
                         <TableCell>
-  <>
-    {/* <div><strong>Day:</strong> ₹{product.rent_price_per_day}</div> */}
-    <div><strong>Month:</strong> ₹{product.rent_price_per_month}</div>
-    {/* <div><strong>6 Months:</strong> ₹{product.rent_price_6_months}</div>
+                          <>
+                            {/* <div><strong>Day:</strong> ₹{product.rent_price_per_day}</div> */}
+                            <div>
+                              <strong>Month:</strong> ₹
+                              {product.rent_price_per_month}
+                            </div>
+                            {/* <div><strong>6 Months:</strong> ₹{product.rent_price_6_months}</div>
     <div><strong>1 Year:</strong> ₹{product.rent_price_1_year}</div> */}
-  </>
-</TableCell>
-
+                          </>
+                        </TableCell>
 
                         <TableCell>
                           <Box display="flex" alignItems="center">

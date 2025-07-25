@@ -121,6 +121,7 @@ import DispatchOrdersAddForm from "../pages/crm/dispatch-orders/DispatchOrdersAd
 import DispatchOrdersTable from "../pages/crm/dispatch-orders/DispatchOrdersTable.jsx";
 import DispatchOrdersEditForm from "../pages/crm/dispatch-orders/DispatchOrdersEditForm.jsx";
 import CreditNoteInvoice from "../pages/operations/credit-note-invoice/CreditNoteInvoice.jsx";
+import ProductCategoriesEditPage from "../pages/product_library/productcategories/ProductCategoriesEditPage.jsx";
 const ProtectedRoute = ({ element }) => {
   const user = useSelector((state) => state.auth.user);
   return user ? element : <Navigate to="/signin" replace />;
@@ -169,8 +170,8 @@ const RoutesConfig = () => {
               element={<ProductCategoriesAddPage />}
             />
             <Route
-              path="product_library/product_categories"
-              element={<ProductCategoriesPage />}
+              path="product_library/product_categories/edit/:id"
+              element={<ProductCategoriesEditPage />}
             />
 
             <Route
@@ -363,9 +364,9 @@ const RoutesConfig = () => {
               path="operations/invoices/edit/:id"
               element={<InvoicesEditPage />}
             />
-            <Route path="operations/grn" element={<GrnLayoutTableContent />} />
+            {/* <Route path="operations/grn" element={<GrnLayoutTableContent />} />
             <Route path="operations/grn/add" element={<GrnAddForm />} />
-            <Route path="operations/grn/edit/:id" element={<GrnEditForm />} />
+            <Route path="operations/grn/edit/:id" element={<GrnEditForm />} /> */}
             <Route
               path="inventory/asset-modifications"
               element={<AssetTrackerOp />}
@@ -393,15 +394,15 @@ const RoutesConfig = () => {
               element={<CreditNoteInvoice />}
             />
             <Route
-              path="crm/credit_notes"
+              path="operations/grn"
               element={<CreaditNotesTableLayout />}
             />
             <Route
-              path="crm/credit_notes/add"
+              path="operations/grn/add"
               element={<CreaditNotesAddFormLayout />}
             />
             <Route
-              path="crm/credit_notes/edit/:id"
+              path="operations/grn/edit/:id"
               element={<CreaditNotesEditFormLayout />}
             />
 

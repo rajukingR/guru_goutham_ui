@@ -392,7 +392,7 @@ const DateRangeSelector = memo(
               setDateRanges({ ...dateRanges, invoiceEndDate: e.target.value })
             }
           />
-          <Field
+          {/* <Field
             label="Previous Delivered Start Date"
             type="date"
             name="previousDeliveredStartDate"
@@ -439,7 +439,7 @@ const DateRangeSelector = memo(
                 creditNoteEndDate: e.target.value,
               })
             }
-          />
+          /> */}
         </Box>
       </Box>
     );

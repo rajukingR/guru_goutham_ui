@@ -47,7 +47,7 @@ const CreditNotesTableLayout = () => {
 
   return (
     <div>
-      <h2 style={{ marginBottom: "10px" }}>Return Orders</h2>
+      <h2 style={{ marginBottom: "10px" }}>Goods return notes</h2>
       <DynamicTable columns={columns} data={data} />
     </div>
   );

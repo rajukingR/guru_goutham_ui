@@ -7,10 +7,11 @@ const GoodsReceiptsTable = () => {
   const [data, setData] = useState([]);
 
   const columns = [
-    { id: "id", label: "S.No." },
+    { id: "s_id", label: "S.No." },
     { id: "goods_receipt_id", label: "Goods Receipt ID" },
-    { id: "vendor_invoice_number", label: "Invoice No" },
     { id: "purchase_order_id", label: "Purchase Order ID" },
+    { id: "supplier_name", label: "Supplier Name" },
+
     { id: "goods_receipt_date", label: "Receipt Date" },
     { id: "purchase_type", label: "Purchase Type" },
     { id: "description", label: "Description" },
@@ -37,9 +38,10 @@ const GoodsReceiptsTable = () => {
             ).join("; ");
 
             return {
-              id: index + 1,
+              s_id: index + 1,
               ...item,
-              products_summary: productsSummary || "No products",
+                  supplier_name: item.supplier?.supplier_name || "N/A",
+
             };
           });
 

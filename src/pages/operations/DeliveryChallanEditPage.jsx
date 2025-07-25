@@ -241,7 +241,7 @@ const cancelBtnStyle = {
   outline: "none",
 };
 
-const createBtnStyle = {
+const updateBtnStyle = {
   padding: "0.75rem 1.5rem",
   backgroundColor: "#2563eb",
   color: "white",
@@ -266,27 +266,6 @@ const selectProductBtnStyle = {
   transition: "all 0.2s ease",
   outline: "none",
   width: "100%",
-};
-
-const fileUploadContainer = {
-  gridColumn: "1 / -1",
-};
-
-const fileUploadLabel = {
-  display: "block",
-  cursor: "pointer",
-};
-
-const fileUploadButton = {
-  display: "inline-block",
-  padding: "0.75rem 1.5rem",
-  backgroundColor: "#ffffff",
-  color: "#374151",
-  border: "1px solid #d1d5db",
-  borderRadius: "8px",
-  fontSize: "0.875rem",
-  fontWeight: "500",
-  transition: "all 0.2s ease",
 };
 
 // Field component moved outside and memoized
@@ -378,18 +357,11 @@ const Field = memo(
 );
 
 const DeliveryChallanEditPage = () => {
+  const { id } = useParams();
   const navigate = useNavigate();
-  const { id } = useParams(); // Get the delivery challan ID from URL params
+  const { inventoryData } = useInventory();
 
   // State for form data
-  const { inventoryData } = useInventory();
-  const [assetSearchTerms, setAssetSearchTerms] = useState({});
-
-  const getAvailableQty = (productId) => {
-    const entry = inventoryData.find((item) => item.id === productId);
-    return entry ? entry.available_quantity : "N/A";
-  };
-
   const [formData, setFormData] = useState({
     dc_id: "",
     dc_title: "",
@@ -397,6 +369,7 @@ const DeliveryChallanEditPage = () => {
     order_id: "",
     customer_code: "",
     order_number: "",
+    dispatch_order_number: "",
     payment_type: "",
     dc_date: new Date().toISOString().split("T")[0],
     dc_status: "Dispatched",
@@ -432,9 +405,8 @@ const DeliveryChallanEditPage = () => {
   const [quantities, setQuantities] = useState({});
   const [searchTerm, setSearchTerm] = useState("");
   const [showProductTable, setShowProductTable] = useState(false);
-  const [availableAssetIds, setAvailableAssetIds] = useState({});
   const [deviceIds, setDeviceIds] = useState({});
-  const [deviceIdErrors, setDeviceIdErrors] = useState({});
+  const [isLoading, setIsLoading] = useState(true);
 
   const [snackbar, setSnackbar] = useState({
     open: false,
@@ -442,41 +414,28 @@ const DeliveryChallanEditPage = () => {
     severity: "success",
   });
 
-  // Fetch delivery challan data and other required data on component mount
+  const getAvailableQty = (productId) => {
+    const entry = inventoryData.find((item) => item.id === productId);
+    return entry ? entry.available_quantity : "N/A";
+  };
+
+  // Fetch delivery challan data and related data on component mount
   useEffect(() => {
     const fetchData = async () => {
       try {
+        setIsLoading(true);
+        
         // Fetch the delivery challan to edit
         const dcResponse = await fetch(`${API_URL}/delivery-challans/${id}`);
         if (!dcResponse.ok) throw new Error("Failed to fetch delivery challan");
         const dcData = await dcResponse.json();
-        
-        // Set form data with the fetched delivery challan
-        setFormData({
-          ...dcData,
-          dc_date: dcData.dc_date.split('T')[0] // Format date if needed
-        });
 
-        // Set selected products and quantities
-        const productIds = dcData.items.map(item => item.product_id);
-        setSelectedProductIds(productIds);
-        
-        const newQuantities = {};
-        dcData.items.forEach(item => {
-          newQuantities[item.product_id] = item.quantity;
-        });
-        setQuantities(newQuantities);
-
-        // Set device IDs
-        const newDeviceIds = {};
-        dcData.items.forEach(item => {
-          newDeviceIds[item.product_id] = item.device_ids || [];
-        });
-        setDeviceIds(newDeviceIds);
-
-        // Fetch approved dispatch orders
-        const dispatchOrderResponse = await fetch(`${API_URL}/dispatch-orders/approved`);
-        if (!dispatchOrderResponse.ok) throw new Error("Failed to fetch dispatch orders");
+        // Fetch dispatch orders
+        const dispatchOrderResponse = await fetch(
+          `${API_URL}/dispatch-orders/approved`
+        );
+        if (!dispatchOrderResponse.ok)
+          throw new Error("Failed to fetch dispatch orders");
         const dispatchOrderData = await dispatchOrderResponse.json();
         setDispatchOrders(dispatchOrderData);
 
@@ -486,6 +445,26 @@ const DeliveryChallanEditPage = () => {
         const prodData = await prodResponse.json();
         setProducts(prodData);
 
+        // Set form data from the fetched delivery challan
+        setFormData({
+          ...dcData,
+          dc_date: dcData.dc_date.split("T")[0], // Format date for input
+        });
+
+        // Set selected products and quantities
+        const productIds = dcData.items.map((item) => item.product_id);
+        setSelectedProductIds(productIds);
+
+        const newQuantities = {};
+        const newDeviceIds = {};
+        dcData.items.forEach((item) => {
+          newQuantities[item.product_id] = item.quantity;
+          newDeviceIds[item.product_id] = item.device_ids || [];
+        });
+        setQuantities(newQuantities);
+        setDeviceIds(newDeviceIds);
+
+        setIsLoading(false);
       } catch (error) {
         console.error("Error fetching data:", error);
         setSnackbar({
@@ -493,6 +472,7 @@ const DeliveryChallanEditPage = () => {
           message: "Error fetching data: " + error.message,
           severity: "error",
         });
+        setIsLoading(false);
       }
     };
 
@@ -520,6 +500,7 @@ const DeliveryChallanEditPage = () => {
       order_id: selectedOrder.id,
       customer_code: selectedOrder.customer_code,
       order_number: selectedOrder.order_number,
+      dispatch_order_number: selectedOrder.dispatch_order_id,
       payment_type: selectedOrder.payment_type,
       email: selectedOrder.email,
       gst_number: selectedOrder.gst_number,
@@ -553,53 +534,6 @@ const DeliveryChallanEditPage = () => {
     });
     setQuantities(newQuantities);
   };
-
-  // Fetch location data when pincode changes
-  useEffect(() => {
-    const fetchLocationFromPincode = async () => {
-      const pincode = formData.pincode;
-
-      if (pincode && pincode.length === 6) {
-        try {
-          const response = await fetch(
-            `https://api.postalpincode.in/pincode/${pincode}`
-          );
-          const data = await response.json();
-
-          if (data && data[0]?.Status === "Success") {
-            const postOffice = data[0].PostOffice[0];
-
-            setFormData((prev) => ({
-              ...prev,
-              city: postOffice.District,
-              state: postOffice.State,
-              country: "India",
-            }));
-          } else {
-            setSnackbar({
-              open: true,
-              message: "Could not find location for this pincode",
-              severity: "warning",
-            });
-          }
-        } catch (error) {
-          console.error("Error fetching location data:", error);
-          setSnackbar({
-            open: true,
-            message:
-              "Error fetching location data. Please check the pincode and try again.",
-            severity: "error",
-          });
-        }
-      }
-    };
-
-    const debounceTimer = setTimeout(() => {
-      fetchLocationFromPincode();
-    }, 500);
-
-    return () => clearTimeout(debounceTimer);
-  }, [formData.pincode]);
 
   // Handle form field changes
   const handleInputChange = useCallback((e) => {
@@ -726,6 +660,14 @@ const DeliveryChallanEditPage = () => {
     }
   };
 
+  if (isLoading) {
+    return (
+      <div style={containerStyle}>
+        <Typography variant="h6">Loading delivery challan data...</Typography>
+      </div>
+    );
+  }
+
   return (
     <div style={containerStyle}>
       <Snackbar
@@ -746,7 +688,7 @@ const DeliveryChallanEditPage = () => {
       <div style={headerStyle}>
         <h1 style={titleStyle}>Edit Delivery Challan</h1>
         <p style={subtitleStyle}>
-          Edit the details below for this delivery challan
+          Edit the details below for delivery challan: {formData.dc_id}
         </p>
       </div>
 
@@ -783,7 +725,9 @@ const DeliveryChallanEditPage = () => {
                 onChange={(e) => handleOrderSelect(e.target.value)}
                 options={dispatchOrders.map((order) => ({
                   value: order.id,
-                  label: `${order.dispatch_order_id} - ${order.shipping_name || ""}`,
+                  label: `${order.dispatch_order_id} - ${
+                    order.shipping_name || ""
+                  }`,
                 }))}
               />
 
@@ -796,13 +740,37 @@ const DeliveryChallanEditPage = () => {
                 required
               />
               <Field
-                label="Payment type"
-                name="payment_type"
-                placeholder="Payment Type"
-                value={formData.payment_type}
-                onChange={handleInputChange}
-                disabled
+                label="Transaction Type"
+                name="type"
+                type="select"
+                placeholder="Select Type"
+                value={formData.type}
+                onChange={(e) => {
+                  handleInputChange(e);
+                  // Clear rental-specific fields when switching to Buy
+                  if (e.target.value === "Buy") {
+                    setFormData((prev) => ({
+                      ...prev,
+                      payment_type: "", // Set default payment type for Buy
+                    }));
+                  }
+                }}
+                options={[
+                  { value: "Rent", label: "Rent" },
+                  { value: "Buy", label: "Buy" },
+                ]}
               />
+
+              {formData.type === "Rent" && (
+                <Field
+                  label="Payment type"
+                  name="payment_type"
+                  placeholder="Payment Type"
+                  value={formData.payment_type}
+                  onChange={handleInputChange}
+                  disabled
+                />
+              )}
               <Field
                 label="DC Status"
                 name="dc_status"
@@ -839,20 +807,7 @@ const DeliveryChallanEditPage = () => {
                 onChange={handleInputChange}
                 required
               />
-              
-              <Field
-                label="Transaction Type"
-                name="type"
-                type="select"
-                placeholder="Select Type"
-                value={formData.type}
-                onChange={handleInputChange}
-                options={[
-                  { value: "Rent", label: "Rent" },
-                  { value: "Sale", label: "Sale" },
-                  { value: "Lease", label: "Lease" },
-                ]}
-              />
+
               <Field
                 label="Industry"
                 name="industry"

@@ -771,7 +771,7 @@ const [returnedDates, setReturnedDates] = useState({});
 
       console.log("Updating payload:", payload);
 
-      const response = await fetch(`${API_URL}/dispatch-orders/update/${id}`, {
+      const response = await fetch(`${API_URL}/dispatch-orders/${id}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
