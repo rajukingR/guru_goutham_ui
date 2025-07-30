@@ -2412,7 +2412,7 @@ const capitalize = (text) =>
 // Invoices Dialog Component
 
 const InvoiceDialog = ({ open, onClose, invoiceData }) => {
-    if (!invoiceData) return null;
+  if (!invoiceData) return null;
 
   const invoiceType = invoiceData.type;
   const isBuyTransaction = invoiceData.transaction_type === "Buy";
@@ -2431,6 +2431,28 @@ const InvoiceDialog = ({ open, onClose, invoiceData }) => {
   const monthDiff =
     (invoiceStartDate.getFullYear() - dcDate.getFullYear()) * 12 +
     (invoiceStartDate.getMonth() - dcDate.getMonth());
+
+  // Check for special case conditions
+  const hasAdditionalChallans =
+    invoiceData.additional_delivery_challans?.length > 0;
+  let additionalChallanMonthDiff = 0;
+
+  if (hasAdditionalChallans) {
+    const additionalChallanDate = new Date(
+      invoiceData.additional_delivery_challans[0].dc_date
+    );
+    additionalChallanMonthDiff =
+      (invoiceStartDate.getFullYear() - additionalChallanDate.getFullYear()) *
+        12 +
+      (invoiceStartDate.getMonth() - additionalChallanDate.getMonth());
+  }
+
+  // Special case conditions
+  const specialCase =
+    paymentMode &&
+    monthDiff === 0 &&
+    hasAdditionalChallans &&
+    additionalChallanMonthDiff === 1;
 
   // Only show DC period if exactly 0 or 1 month difference and not starting on 1st
   const showDcPeriod =
@@ -2527,8 +2549,13 @@ const InvoiceDialog = ({ open, onClose, invoiceData }) => {
           : Number(item.unit_price) || 0;
         const dailyRate = rate / 30;
         const originalDeviceIds = item.device_ids || [];
-        const days = calculateDays(invoiceStartDate, invoiceEndDate); // Actual days calculation
-        const isFullMonth = days >= 28; // Consider as full month if 28+ days
+
+        // For special case, calculate days from DC date to invoice end date
+        const days = specialCase
+          ? calculateDays(dcDate, invoiceEndDate)
+          : calculateDays(invoiceStartDate, invoiceEndDate);
+
+        const isFullMonth = days >= 28;
 
         const returnedItems =
           invoiceData.credit_notes?.flatMap((cn) =>
@@ -2626,9 +2653,10 @@ const InvoiceDialog = ({ open, onClose, invoiceData }) => {
           0
         );
 
-        const dcAmountBeforeReturns = showDcPeriod && !paymentMode && !isBuyTransaction
-          ? effectiveQty * dailyRate * dcDays
-          : 0;
+        const dcAmountBeforeReturns =
+          showDcPeriod && !paymentMode && !isBuyTransaction
+            ? effectiveQty * dailyRate * dcDays
+            : 0;
 
         return {
           ...item,
@@ -2645,21 +2673,33 @@ const InvoiceDialog = ({ open, onClose, invoiceData }) => {
           dcAmountBeforeReturns,
           returnedDevices,
           totalReturnedQtyAmount: returnedDevicesAmount,
-          description: `Billing Start Date: ${formatDate(
-            invoiceStartDate
-          )} - Billing End Date: ${formatDate(invoiceEndDate)} (${days} days)`,
+          description: specialCase
+            ? `Billing from DC Date: ${formatDate(dcDate)} to ${formatDate(
+                invoiceEndDate
+              )} (${days} days)`
+            : `Billing Start Date: ${formatDate(
+                invoiceStartDate
+              )} - Billing End Date: ${formatDate(
+                invoiceEndDate
+              )} (${days} days)`,
           isFullMonth,
+          isSpecialCase: specialCase,
         };
       }) || [];
 
     // Step 4: Process additional delivery challan items
+    // In the calculateInvoiceItems function, update the additionalItems processing:
     const additionalItems =
       invoiceData.additional_delivery_challans?.flatMap((challan) =>
         challan.items.map((item) => {
           const quantity = Number(item.quantity) || 0;
           const unit_price =
             quantity > 0 ? Number(item.total_price) / quantity : 0;
-          const amount = Number(item.total_price) || 0;
+
+          // For special case, use full amount and set days to full month
+          const amount = specialCase
+            ? Number(item.total_price)
+            : Number(item.total_price) || 0;
 
           const challanDateObj = new Date(challan.dc_date);
           const challanMonthEnd = new Date(
@@ -2667,86 +2707,57 @@ const InvoiceDialog = ({ open, onClose, invoiceData }) => {
             challanDateObj.getMonth() + 1,
             0
           );
-          const days = calculateDays(challan.dc_date, challanMonthEnd);
+
+          // For special case, show full month days (31 for August)
+          const days = specialCase
+            ? calculateDays(
+                new Date(
+                  challanDateObj.getFullYear(),
+                  challanDateObj.getMonth(),
+                  1
+                ),
+                challanMonthEnd
+              )
+            : calculateDays(challan.dc_date, challanMonthEnd);
+
           const isFullMonth = days >= 28;
 
           const productDetails = invoiceData.items?.find(
             (mainItem) => mainItem.product_id === item.product_id
           )?.productDetails;
 
-          const relatedReturns =
-            challan.credit_notes?.flatMap((cn) =>
-              cn.items
-                .filter((ri) => ri.product_id === item.product_id)
-                .map((ri) => {
-                  const daysUsed = calculateReturnDays(cn.returned_date);
-                  return {
-                    returnedDate: cn.returned_date,
-                    daysUsed,
-                    deviceIds: ri.device_ids,
-                    amount: parseFloat(
-                      (
-                        (unit_price / 30) *
-                        ri.device_ids.length *
-                        daysUsed
-                      ).toFixed(2)
-                    ),
-                  };
-                })
-            ) || [];
-
-          const totalReturnedQtyAmount = relatedReturns.reduce(
-            (sum, r) => sum + r.amount,
-            0
-          );
-
-          // Calculate amount based on payment mode
-          let calculatedAmount;
-          if (paymentMode) {
-            // For Postpaid, calculate based on actual usage
-            calculatedAmount = isFullMonth
-              ? quantity * unit_price
-              : quantity * (unit_price / 30) * days;
-          } else {
-            // For Prepaid, calculate full amount
-            calculatedAmount = isFullMonth
-              ? quantity * unit_price
-              : quantity * (unit_price / 30) * days;
-          }
-
           return {
             ...item,
             isAdditionalChallan: true,
             challanNumber: challan.dc_id,
             challanDate: challan.dc_date,
-            challanMonthEndDate: challanMonthEnd.toISOString().split("T")[0],
             device_ids: item.device_ids || [],
             quantity,
             unit_price,
             rate: unit_price,
-            amount: calculatedAmount,
-            days,
-            description: `Additional Delivery Challan: ${
-              challan.dc_id
-            } (${formatDate(challan.dc_date)}) - ${days} days`,
-            returnedDevices: relatedReturns,
-            totalReturnedQtyAmount,
+            amount: amount,
+            days: specialCase ? 31 : days, // Show full month days in special case
+            description: specialCase
+              ? `Additional Delivery Challan: ${challan.dc_id} (Full Amount)`
+              : `Additional Delivery Challan: ${challan.dc_id} (${formatDate(
+                  challan.dc_date
+                )}) - ${days} days`,
             productDetails,
-            isFullMonth,
+            isFullMonth: true, // Always treat as full month in special case
+            isSpecialCase: specialCase,
           };
         })
       ) || [];
 
-    // Step 5: Combine all items
-    return [...mainItems, ...additionalItems];
-  };
+    // In special case, don't group items
+    if (specialCase) {
+      return [...mainItems, ...additionalItems];
+    }
 
-  const items = calculateInvoiceItems();
-
-  const groupItemsByProduct = (items) => {
+    // Normal case - group items by product
     const grouped = {};
 
-    items.forEach((item) => {
+    [...mainItems, ...additionalItems].forEach((item) => {
       const key = item.product_id;
       if (!grouped[key]) {
         grouped[key] = {
@@ -2793,55 +2804,51 @@ const InvoiceDialog = ({ open, onClose, invoiceData }) => {
     return Object.values(grouped);
   };
 
-  const groupedItems = groupItemsByProduct(items);
+  const items = calculateInvoiceItems();
 
-  const computedTotalAmount1 = groupedItems.reduce((acc, group) => {
-    // Main invoice period amount (full month or prorated)
-    const mainAmount = paymentMode
-      ? group.totalAmount // For Postpaid, we already calculated the correct amount
-      : group.isFullMonth
-      ? group.rate * group.totalQuantity
-      : group.dailyRate * group.totalQuantity * group.days;
+  // Calculate totals
+  const computedTotalAmount1 = items.reduce((total, item) => {
+    if (item.isSpecialCase) {
+      // For special case, just add the amount directly
+      return total + (item.amount || 0);
+    } else {
+      // For normal cases, use the existing logic
+      const mainAmount = paymentMode
+        ? item.totalAmount
+        : item.isFullMonth
+        ? item.rate * item.totalQuantity
+        : item.dailyRate * item.totalQuantity * item.days;
 
-    // DC period amount (only for Prepaid invoices)
-    const dcAmount = !paymentMode ? group.dcAmountBeforeReturns : 0;
+      const dcAmount = !paymentMode ? item.dcAmountBeforeReturns : 0;
+      const returnsAmount = paymentMode ? item.totalReturnedQtyAmount : 0;
 
-    // Returned amounts (ONLY subtract for Postpaid invoices)
-    const returnsAmount = paymentMode
-      ? group.totalReturnedQtyAmount
-      : 0;
-
-    return acc + mainAmount + dcAmount - returnsAmount;
+      return total + mainAmount + dcAmount - returnsAmount;
+    }
   }, 0);
 
-  const computedPostpaidTotalAmount = groupedItems.reduce((total, group) => {
-  let groupTotal = 0;
+  const computedPostpaidTotalAmount = items.reduce((total, item) => {
+    if (item.isSpecialCase) {
+      // Directly add special case amount
+      return total + (item.amount || 0);
+    } else {
+      // Main amount (for Postpaid always added, no subtraction)
+      const mainAmount = item.isFullMonth
+        ? item.rate * item.totalQuantity
+        : item.dailyRate * item.totalQuantity * item.days;
 
-  // 1. Main item charge
-  if (group.isFullMonth) {
-    groupTotal += group.rate * group.totalQuantity;
-  } else {
-    groupTotal += (group.dailyRate || group.rate / 30) * group.totalQuantity * group.days;
-  }
+      // Mid-month usage amount
+      const dcAmount = item.dcAmountBeforeReturns || 0;
 
-  // 2. Add mid-month usage (dcAmountBeforeReturns)
-  group.allRows?.forEach((row) => {
-    if (row.dcAmountBeforeReturns > 0) {
-      groupTotal += row.dcAmountBeforeReturns;
+      // Returned amount (included in Postpaid as ADDITION not subtraction)
+      const returnsAmount = item.totalReturnedQtyAmount || 0;
+
+      return total + mainAmount + dcAmount + returnsAmount;
     }
-  });
+  }, 0);
 
-  // 3. Add returned device charges (Postpaid only)
-  if (paymentMode && group.returnedDevices?.length > 0) {
-    group.returnedDevices.forEach((rd) => {
-      groupTotal += rd.amount;
-    });
-  }
-
-  return total + groupTotal;
-}, 0);
-
-const computedTotalAmount = paymentMode ? computedPostpaidTotalAmount : computedTotalAmount1;
+  const computedTotalAmount = paymentMode
+    ? computedPostpaidTotalAmount
+    : computedTotalAmount1;
 
   const netAmount = computedTotalAmount;
   const cgst = netAmount * 0.09;
@@ -2949,7 +2956,6 @@ const computedTotalAmount = paymentMode ? computedPostpaidTotalAmount : computed
           </div>
         )}
 
-        {/* TABLE */}
         <table style={tableStyle}>
           <thead>
             <tr>
@@ -2975,7 +2981,120 @@ const computedTotalAmount = paymentMode ? computedPostpaidTotalAmount : computed
             {(() => {
               let rowCounter = 0; // Global counter for alternating row styles
 
-              return groupedItems.map((group, index) => {
+              // In special case, render items directly without grouping
+              if (specialCase) {
+                return items.map((item, index) => {
+                  const dailyRate = item.dailyRate || item.rate / 30;
+                  const product = item.productDetails || item.product;
+                  const isAdditional = item.isAdditionalChallan;
+
+                  const renderSpecifications = (product) => {
+                    if (!product) return null;
+                    return (
+                      <div
+                        style={{
+                          fontSize: "12px",
+                          color: "#555",
+                          textAlign: "justify",
+                          lineHeight: "1.4",
+                        }}
+                      >
+                        Specifications:{" "}
+                        {product?.brand && (
+                          <>
+                            <strong>Brand:</strong> {product.brand}.{" "}
+                          </>
+                        )}
+                        {product?.model && (
+                          <>
+                            <strong>Model:</strong> {product.model}.{" "}
+                          </>
+                        )}
+                        {product?.processor && (
+                          <>
+                            <strong>Processor:</strong> {product.processor}.{" "}
+                          </>
+                        )}
+                        {product?.ram && (
+                          <>
+                            <strong>RAM:</strong> {product.ram}.{" "}
+                          </>
+                        )}
+                        {product?.storage && (
+                          <>
+                            <strong>Storage:</strong> {product.storage}.{" "}
+                          </>
+                        )}
+                        {product?.disk_type && (
+                          <>
+                            <strong>Disk Type:</strong> {product.disk_type}.{" "}
+                          </>
+                        )}
+                        {product?.graphics && (
+                          <>
+                            <strong>Graphics:</strong> {product.graphics}.{" "}
+                          </>
+                        )}
+                        {product?.os && (
+                          <>
+                            <strong>OS:</strong> {product.os}.{" "}
+                          </>
+                        )}
+                      </div>
+                    );
+                  };
+
+                  return (
+                    <tr
+                      key={`item-${index}`}
+                      style={
+                        ++rowCounter % 2 === 0
+                          ? tableRowEvenStyle
+                          : tableRowOddStyle
+                      }
+                    >
+                      <td style={tableCellCenterStyle}>{index + 1}</td>
+                      <td style={tableCellStyle}>
+                        <div style={itemTitleStyle}>{item.product_name}</div>
+                        {renderSpecifications(product)}
+                        {item.device_ids.length > 0 && (
+                          <>
+                            <br />
+                            <div style={itemTitleStyle}>
+                              Asset IDs: {item.device_ids.join(", ")}
+                            </div>
+                          </>
+                        )}
+                        <br />
+                        <div style={itemTitleStyle}>{item.description}</div>
+                        {isAdditional && (
+                          <div style={itemTitleStyle}>
+                            Challan No: {item.challanNumber}
+                          </div>
+                        )}
+                      </td>
+                      <td style={tableCellCenterStyle}>{item.quantity}</td>
+                      {invoiceData.transaction_type === "Rent" && (
+                        <>
+                          <td style={tableCellCenterStyle}>{item.days}</td>
+                          <td style={tableCellCenterStyle}>
+                            {formatINRCurrency(dailyRate)}
+                          </td>
+                        </>
+                      )}
+                      <td style={tableCellRightStyle}>
+                        {formatINRCurrency(item.rate)}
+                      </td>
+                      <td style={tableCellRightStyle}>
+                        {formatINRCurrency(item.amount)}
+                      </td>
+                    </tr>
+                  );
+                });
+              }
+
+              // Normal case - render grouped items
+              return items.map((group, index) => {
                 const dailyRate = group.dailyRate || group.rate / 30;
                 const product = group.productDetails || group.product;
                 const isAdditional = group.isAdditional;
@@ -3103,7 +3222,8 @@ const computedTotalAmount = paymentMode ? computedPostpaidTotalAmount : computed
                     </tr>
 
                     {/* Mid-Month Usage Rows */}
-                    {!isAdditional && !isBuyTransaction &&
+                    {!isAdditional &&
+                      !isBuyTransaction &&
                       showDcPeriod &&
                       group.allRows.map((row, rowIndex) =>
                         row.dcAmountBeforeReturns > 0 ? (
@@ -3166,10 +3286,6 @@ const computedTotalAmount = paymentMode ? computedPostpaidTotalAmount : computed
                                 {group.product_name}
                               </div>
                               {renderSpecifications(product)}
-                              {/* <br />
-                              Used for {rd.daysUsed} days:{" "}
-                              {formatDate(startDate)} to{" "}
-                              {formatDate(rd.returnedDate)} */}
                             </td>
                             <td style={tableCellCenterStyle}>
                               {rd.deviceIds.length}
