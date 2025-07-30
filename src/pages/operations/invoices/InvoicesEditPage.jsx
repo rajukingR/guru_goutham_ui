@@ -593,7 +593,7 @@ const InvoicesEditPage = () => {
               product_id: item.product_id,
               product_name: item.product_name,
               quantity: item.quantity,
-              unit_price: parseFloat(item.total_price) / item.quantity || 0,
+              unit_price: parseFloat(item.unit_price),
               total_price: item.total_price,
               product: item.product,
               device_ids: item.device_ids || [],
@@ -1156,76 +1156,92 @@ const InvoicesEditPage = () => {
     formData.rental_duration,
     formData.rental_duration_days,
   ]);
-
 const handleSubmit = async (e) => {
-    e.preventDefault();
+  e.preventDefault();
 
-    try {
-      const selectedOrder = orders.find(order => order.id === parseInt(selectedOrderId));
+  try {
+    const selectedOrder = orders.find(order => order.id === parseInt(selectedOrderId));
 
-      const submissionData = {
-        ...formData,
-        customer_id: formData.customer_id || (selectedOrder?.contact?.id || ""),
-        dc_id: formData.dc_id,
-        dispatch_order_number: formData.dispatch_order_number || formData.dispatch_order_id,
-        dc_date: formData.dc_date,
-        invoice_start_date: dateRanges.invoiceStartDate,
-        invoice_end_date: dateRanges.invoiceEndDate,
-        previous_delivered_start_date: dateRanges.previousDeliveredStartDate,
-        previous_delivered_end_date: dateRanges.previousDeliveredEndDate,
-        credit_note_start_date: dateRanges.creditNoteStartDate,
-        credit_note_end_date: dateRanges.creditNoteEndDate,
+    // Prepare items with proper pricing
+    const itemsWithPricing = formData.items.map((item) => {
+      const product = products.find(p => p.id === item.product_id);
+      
+      let unit_price = parseFloat(product.rent_price_per_month) || 0;;
+      let total_price = parseFloat(product.purchase_price) || 0;;
+
+     
+
+      return {
+        ...item,
+        order_id: productOrderMap[item.product_id] || "",
+        device_ids: returnedDeviceIds[item.product_id] || [],
+        new_device_ids: newDeviceIds[item.product_id] || [],
+        returned_device_ids: selectedReturnIds[item.product_id]
+          ? [selectedReturnIds[item.product_id]]
+          : [],
         rental_duration: formData.rental_duration || "0",
         rental_duration_days: formData.rental_duration_days || 0,
-        payment_mode: formData.payment_type || "",
-        items: formData.items.map((item) => ({
-          ...item,
-          order_id: productOrderMap[item.product_id] || "",
-          device_ids: returnedDeviceIds[item.product_id] || [],
-          new_device_ids: newDeviceIds[item.product_id] || [],
-          returned_device_ids: selectedReturnIds[item.product_id]
-            ? [selectedReturnIds[item.product_id]]
-            : [],
-          rental_duration: formData.rental_duration || "0",
-          rental_duration_days: formData.rental_duration_days || 0,
-          rental_duration_months: formData.rental_duration
-            ? parseInt(formData.rental_duration)
-            : 0,
-        })),
+        rental_duration_months: formData.rental_duration
+          ? parseInt(formData.rental_duration)
+          : 0,
+        unit_price: unit_price, // Send as number, let backend handle formatting
+        total_price: total_price // Send as number, let backend handle formatting
       };
+    });
 
-      const response = await fetch(`${API_URL}/invoices/${id}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(submissionData),
-      });
+    const submissionData = {
+      ...formData,
+      customer_id: formData.customer_id || (selectedOrder?.contact?.id || ""),
+      dc_id: formData.dc_id,
+      dispatch_order_number: formData.dispatch_order_number || formData.dispatch_order_id,
+      dc_date: formData.dc_date,
+      invoice_start_date: dateRanges.invoiceStartDate,
+      invoice_end_date: dateRanges.invoiceEndDate,
+      previous_delivered_start_date: dateRanges.previousDeliveredStartDate,
+      previous_delivered_end_date: dateRanges.previousDeliveredEndDate,
+      credit_note_start_date: dateRanges.creditNoteStartDate,
+      credit_note_end_date: dateRanges.creditNoteEndDate,
+      rental_duration: formData.rental_duration || "0",
+      rental_duration_days: formData.rental_duration_days || 0,
+      rental_duration_months: formData.rental_duration
+        ? parseInt(formData.rental_duration)
+        : 0,
+      payment_mode: formData.payment_type || "",
+      items: itemsWithPricing
+    };
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || "Failed to update invoice");
-      }
+    const response = await fetch(`${API_URL}/invoices/${id}`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(submissionData),
+    });
 
-      const result = await response.json();
-      setSnackbar({
-        open: true,
-        message: "Invoice updated successfully!",
-        severity: "success",
-      });
-
-      setTimeout(() => {
-        navigate("/dashboard/operations/invoices");
-      }, 1500);
-    } catch (error) {
-      console.error("Error updating invoice:", error);
-      setSnackbar({
-        open: true,
-        message: "Error updating invoice: " + error.message,
-        severity: "error",
-      });
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || "Failed to update invoice");
     }
-  };
+
+    const result = await response.json();
+    setSnackbar({
+      open: true,
+      message: "Invoice updated successfully!",
+      severity: "success",
+    });
+
+    setTimeout(() => {
+      navigate("/dashboard/operations/invoices");
+    }, 1500);
+  } catch (error) {
+    console.error("Error updating invoice:", error);
+    setSnackbar({
+      open: true,
+      message: "Error updating invoice: " + error.message,
+      severity: "error",
+    });
+  }
+};
 
 
   const formatINR = (number) =>

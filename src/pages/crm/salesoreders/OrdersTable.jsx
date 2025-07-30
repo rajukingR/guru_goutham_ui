@@ -14,7 +14,6 @@ const OrdersTable = () => {
     { id: "transaction_type", label: "Purchase Type" },
     { id: "payment_type", label: "Payment Type" },
 
-    { id: "quotation_id", label: "Quotation ID" },
     { id: "order_date", label: "Order Date" },
     { id: "rental_start_date", label: "Rental Start" },
 

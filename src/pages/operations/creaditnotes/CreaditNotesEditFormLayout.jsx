@@ -77,25 +77,27 @@ const CreaditNotesEditFormLayout = () => {
   const [snackbarMessage, setSnackbarMessage] = useState("");
   const [snackbarSeverity, setSnackbarSeverity] = useState("success");
   const [searchMode, setSearchMode] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
+  const [errors, setErrors] = useState({
+    paymentType: false,
+  });
+  const [originalData, setOriginalData] = useState(null);
 
-  // Fetch credit note data on component mount
+  // Fetch credit note data and related data on component mount
   useEffect(() => {
     const fetchData = async () => {
       try {
-        setIsLoading(true);
-        
-        // Fetch credit note details
+        // Fetch credit note data
         const creditNoteResponse = await axios.get(`${API_URL}/credit-notes/${id}`);
         const creditNoteData = creditNoteResponse.data;
+        setOriginalData(creditNoteData);
         
-        // Set form data
+        // Set form data from the fetched credit note
         setFormData({
           creditNoteNumber: creditNoteData.credit_note_number,
           creditNoteTitle: creditNoteData.credit_note_title,
           returnedDate: creditNoteData.returned_date,
           industry: creditNoteData.industry,
-          transactionType: creditNoteData.transaction_type,
+          transactionType: creditNoteData.transaction_type || "Credit Note",
           paymentType: creditNoteData.payment_type,
           dcId: creditNoteData.dc_id,
           dcNumber: creditNoteData.dc_number,
@@ -111,79 +113,65 @@ const CreaditNotesEditFormLayout = () => {
           shippingName: creditNoteData.shipping_name,
           pincode: creditNoteData.pincode,
           status: creditNoteData.status,
-          printCreditNote: creditNoteData.print_credit_note,
+          printCreditNote: creditNoteData.print_credit_note || false,
         });
 
-        // Prepare selected products and quantities
-        const selectedIds = [];
+        // Set selected products and quantities
+        const productIds = creditNoteData.items.map(item => item.product_id);
+        setSelectedProductIds(productIds);
+        
         const qtyMap = {};
         const deviceIdMap = {};
-        const assetMap = {};
-        
         creditNoteData.items.forEach(item => {
-          selectedIds.push(item.product_id);
           qtyMap[item.product_id] = item.quantity;
           deviceIdMap[item.product_id] = item.device_ids || [];
-          
-          // Create asset map from the credit note items
-          if (item.device_ids && item.device_ids.length > 0) {
-            assetMap[item.product_id] = item.device_ids;
-          }
         });
-        
-        setSelectedProductIds(selectedIds);
         setQuantities(qtyMap);
         setDeviceIds(deviceIdMap);
-        setAvailableAssetIds(assetMap);
 
-        // Set the selected order data from credit note
-        setSelectedOrder({
-          id: creditNoteData.dc_id,
-          dc_id: creditNoteData.dc_number,
-          dc_date: creditNoteData.dc_date,
-          customer_name: creditNoteData.customer_name,
-          shipping_name: creditNoteData.shipping_name,
-          pincode: creditNoteData.pincode,
-          items: creditNoteData.items.map(item => ({
-            product_id: item.product_id,
-            product_name: item.product_name,
-            quantity: item.quantity,
-            device_ids: item.device_ids || []
-          }))
-        });
-
-        // Fetch contacts and products
-        const [contactResponse, prodResponse] = await Promise.all([
-          axios.get(`${API_URL}/contacts/delivered-contacts`),
-          axios.get(`${API_URL}/product-templete`)
-        ]);
-        
+        // Fetch contacts
+        const contactResponse = await axios.get(`${API_URL}/contacts/delivered-contacts`);
         setOrders(contactResponse.data);
+
+        // Fetch products
+        const prodResponse = await axios.get(`${API_URL}/product-templete`);
         setProducts(prodResponse.data);
-        
-        // Fetch delivery challans for the customer if needed
-        if (creditNoteData.customer_id && !creditNoteData.dc_id) {
-          const dcListResponse = await axios.get(
+
+        // Fetch delivery challans for this customer
+        if (creditNoteData.customer_id) {
+          const dcResponse = await axios.get(
             `${API_URL}/delivery-challans/customer/${creditNoteData.customer_id}`
           );
-          setDeliveryChallans(dcListResponse.data);
+          setDeliveryChallans(dcResponse.data);
+
+          // Find and set the selected delivery challan
+          const selectedDC = dcResponse.data.find(dc => dc.id === creditNoteData.dc_id);
+          if (selectedDC) {
+            setSelectedOrder(selectedDC);
+            
+            // Prepare available asset IDs
+            const assetMap = {};
+            selectedDC.items.forEach((item) => {
+              assetMap[item.product_id] = item.device_ids;
+            });
+            setAvailableAssetIds(assetMap);
+          }
         }
-        
-        setIsLoading(false);
+
       } catch (error) {
         console.error("Error fetching data:", error);
         setSnackbarMessage("Error fetching data: " + error.message);
         setSnackbarSeverity("error");
         setOpenSnackbar(true);
-        setIsLoading(false);
       }
     };
 
     fetchData();
   }, [id]);
+
   // Fetch delivery challans when customer is selected
   useEffect(() => {
-    if (formData.customerId && !formData.dcId) {
+    if (formData.customerId && formData.customerId !== originalData?.customer_id) {
       const fetchDeliveryChallans = async () => {
         try {
           const response = await axios.get(
@@ -201,7 +189,7 @@ const CreaditNotesEditFormLayout = () => {
       };
       fetchDeliveryChallans();
     }
-  }, [formData.customerId, formData.dcId]);
+  }, [formData.customerId, originalData]);
 
   const handleOrderSelect = (customerId) => {
     const selectedCustomer = orders.find((order) => order.id === customerId);
@@ -213,31 +201,43 @@ const CreaditNotesEditFormLayout = () => {
         email: selectedCustomer.email,
         pan: selectedCustomer.pan_no,
         industry: selectedCustomer.industry,
-        paymentType: selectedCustomer.payment_type,
       }));
     }
   };
 
-const handleDeliveryChallanSelect = (dcId) => {
-  const selectedDC = deliveryChallans.find((dc) => dc.id === dcId);
-  if (selectedDC) {
-    setSelectedOrder(selectedDC);
-    setFormData((prev) => ({
-      ...prev,
-      dcId: selectedDC.id,
-      dcNumber: selectedDC.dispatch_order_number || selectedDC.dc_id,
-      dcDate: selectedDC.dc_date,
-      shippingName: selectedDC.shipping_name,
-      pincode: selectedDC.pincode,
-      customerName: selectedDC.customer_name || prev.customerName,
-    }));
+  const handleDeliveryChallanSelect = (dcId) => {
+    const selectedDC = deliveryChallans.find((dc) => dc.id === dcId);
+    if (selectedDC) {
+      setSelectedOrder(selectedDC);
+      setFormData((prev) => ({
+        ...prev,
+        dcId: selectedDC.id,
+        dcNumber: selectedDC.dispatch_order_number || selectedDC.dc_id,
+        paymentType: selectedDC.payment_type,
+        dcDate: selectedDC.dc_date,
+        shippingName: selectedDC.shipping_name,
+        pincode: selectedDC.pincode,
+        customerName: selectedDC.customer_name || prev.customerName,
+      }));
 
-    // Reset search state completely
-    setFilteredDeliveryChallans([]);
-    setDcSearchTerm("");
-    setSearchMode(false);
-  }
-};
+      setSearchMode(false);
+      setFilteredDeliveryChallans([]);
+      setDcSearchTerm("");
+
+      // Prepare available asset IDs
+      const assetMap = {};
+      selectedDC.items.forEach((item) => {
+        assetMap[item.product_id] = item.device_ids;
+      });
+      setAvailableAssetIds(assetMap);
+      
+      // Reset selected products when DC changes
+      setSelectedProductIds([]);
+      setQuantities({});
+      setDeviceIds({});
+      setDeviceIdErrors({});
+    }
+  };
 
   const handleProductSelection = (productId) => {
     setSelectedProductIds((prev) => {
@@ -250,6 +250,13 @@ const handleDeliveryChallanSelect = (dcId) => {
         const newDeviceIds = { ...deviceIds };
         delete newDeviceIds[productId];
         setDeviceIds(newDeviceIds);
+
+        // Clear any errors for this product
+        setDeviceIdErrors((prevErrors) => {
+          const newErrors = { ...prevErrors };
+          delete newErrors[productId];
+          return newErrors;
+        });
 
         return prev.filter((id) => id !== productId);
       } else {
@@ -264,6 +271,12 @@ const handleDeliveryChallanSelect = (dcId) => {
           [productId]: defaultQty,
         }));
 
+        // Initialize empty device IDs array if not already set
+        setDeviceIds((prev) => ({
+          ...prev,
+          [productId]: prev[productId] || [],
+        }));
+
         return [...prev, productId];
       }
     });
@@ -276,10 +289,21 @@ const handleDeliveryChallanSelect = (dcId) => {
     );
     const invoiceQty = invoiceItem?.quantity || 0;
 
+    // Validate against original DC quantity
     if (numValue > invoiceQty) {
       setDeviceIdErrors((prev) => ({
         ...prev,
         [productId]: `Credit quantity cannot exceed DC quantity (${invoiceQty})`,
+      }));
+      return;
+    }
+
+    // Validate against selected asset IDs
+    const selectedDevices = deviceIds[productId] || [];
+    if (numValue < selectedDevices.length) {
+      setDeviceIdErrors((prev) => ({
+        ...prev,
+        [productId]: `Quantity cannot be less than selected devices (${selectedDevices.length})`,
       }));
       return;
     }
@@ -289,7 +313,14 @@ const handleDeliveryChallanSelect = (dcId) => {
       [productId]: numValue,
     }));
 
-    // Validate device IDs count matches quantity
+    // Clear error if validation passes
+    setDeviceIdErrors((prev) => {
+      const newErrors = { ...prev };
+      delete newErrors[productId];
+      return newErrors;
+    });
+
+    // Validate device IDs count matches new quantity
     validateDeviceIds(productId, numValue);
   };
 
@@ -363,6 +394,11 @@ const handleDeliveryChallanSelect = (dcId) => {
       ...prev,
       [name]: type === "checkbox" ? checked : value,
     }));
+
+    // Clear error when user selects something
+    if (name === "paymentType" && value) {
+      setErrors((prev) => ({ ...prev, paymentType: false }));
+    }
   };
 
   const handleSelectChange = (e) => {
@@ -377,14 +413,96 @@ const handleDeliveryChallanSelect = (dcId) => {
     }
   };
 
-  const resetDcSearch = () => {
-  setFilteredDeliveryChallans([]);
-  setDcSearchTerm("");
-  setSearchMode(false); // Changed to false to fully reset
-};
+  const handleDcSearch = () => {
+    if (!dcSearchTerm.trim()) {
+      setFilteredDeliveryChallans([]);
+      return;
+    }
+
+    const filtered = deliveryChallans.filter(
+      (dc) =>
+        dc.dc_id.toLowerCase().includes(dcSearchTerm.toLowerCase()) ||
+        dc.dc_date.includes(dcSearchTerm)
+    );
+    setFilteredDeliveryChallans(filtered);
+    setSearchMode(true);
+  };
 
   const handleUpdate = async () => {
-    // Validate device IDs match quantities
+    // Validate at least one product is selected
+    if (selectedProductIds.length === 0) {
+      setSnackbarMessage("Please select at least one product");
+      setSnackbarSeverity("error");
+      setOpenSnackbar(true);
+      return;
+    }
+
+    // Validate each selected product has quantity and matching asset IDs
+    let productErrors = {};
+    let hasProductErrors = false;
+
+    selectedProductIds.forEach((productId) => {
+      const qty = quantities[productId] || 0;
+      const selectedDevices = deviceIds[productId] || [];
+      const availableAssets = availableAssetIds[productId] || [];
+
+      // Quantity validation
+      if (qty <= 0) {
+        productErrors[productId] = "Quantity must be greater than 0";
+        hasProductErrors = true;
+      }
+
+      // Asset ID validation (only if product has asset IDs)
+      if (availableAssets.length > 0) {
+        if (selectedDevices.length === 0) {
+          productErrors[productId] = "Please select at least one asset ID";
+          hasProductErrors = true;
+        } else if (selectedDevices.length !== qty) {
+          productErrors[
+            productId
+          ] = `Select exactly ${qty} asset IDs for this product`;
+          hasProductErrors = true;
+        }
+      }
+    });
+
+    setDeviceIdErrors(productErrors);
+    if (hasProductErrors) {
+      setSnackbarMessage("Please fix product selection errors");
+      setSnackbarSeverity("error");
+      setOpenSnackbar(true);
+      return;
+    }
+
+    // Validate required fields
+    if (!formData.returnedDate) {
+      setSnackbarMessage("Returned Date is required");
+      setSnackbarSeverity("error");
+      setOpenSnackbar(true);
+      return;
+    }
+
+    if (!formData.paymentType) {
+      setSnackbarMessage("Payment Type is required");
+      setSnackbarSeverity("error");
+      setOpenSnackbar(true);
+      return;
+    }
+
+    if (!formData.customerId) {
+      setSnackbarMessage("Customer selection is required");
+      setSnackbarSeverity("error");
+      setOpenSnackbar(true);
+      return;
+    }
+
+    if (!formData.dcId) {
+      setSnackbarMessage("Delivery Challan selection is required");
+      setSnackbarSeverity("error");
+      setOpenSnackbar(true);
+      return;
+    }
+
     let isValid = true;
     const newErrors = {};
 
@@ -430,6 +548,7 @@ const handleDeliveryChallanSelect = (dcId) => {
       transaction_type: formData.transactionType,
       payment_type: formData.paymentType,
       dc_id: formData.dcId,
+      dispatch_order_id: selectedOrder.dispatch_order_id,
       dc_number: formData.dcNumber,
       customer_id: formData.customerId,
       dc_date: formData.dcDate,
@@ -465,14 +584,14 @@ const handleDeliveryChallanSelect = (dcId) => {
 
     try {
       await axios.put(`${API_URL}/credit-notes/${id}`, payload);
-      setSnackbarMessage("Credit note updated successfully!");
+      setSnackbarMessage("GRN updated successfully!");
       setSnackbarSeverity("success");
       setOpenSnackbar(true);
       setTimeout(() => navigate("/dashboard/operations/credit_notes"), 3000);
     } catch (error) {
-      console.error("Error updating credit note:", error);
+      console.error("Error updating grn:", error);
       setSnackbarMessage(
-        "Failed to update credit note: " +
+        "Failed to update grn: " +
           (error.response?.data?.message || error.message)
       );
       setSnackbarSeverity("error");
@@ -484,33 +603,6 @@ const handleDeliveryChallanSelect = (dcId) => {
     if (reason === "clickaway") return;
     setOpenSnackbar(false);
   };
-
-  const handleDcSearch = () => {
-  if (!dcSearchTerm.trim()) {
-    setFilteredDeliveryChallans([]);
-    return;
-  }
-
-  // Always search through the latest deliveryChallans state
-  const filtered = deliveryChallans.filter(
-    (dc) =>
-      dc.dc_id.toLowerCase().includes(dcSearchTerm.toLowerCase()) ||
-      dc.dc_date.includes(dcSearchTerm)
-  );
-  
-  setFilteredDeliveryChallans(filtered);
-  setSearchMode(true);
-};
-
-  if (isLoading) {
-    return (
-      <div style={containerStyle}>
-        <div style={{ textAlign: "center", padding: "2rem" }}>
-          <Typography variant="h6">Loading credit note data...</Typography>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div style={containerStyle}>
@@ -579,31 +671,43 @@ const handleDeliveryChallanSelect = (dcId) => {
             </div>
 
             <div style={fieldContainerStyle}>
-              <label style={labelStyle}>Transaction Type</label>
-              <input
-                type="text"
-                placeholder="e.g. Refund"
-                style={inputStyle}
-                name="transactionType"
-                value={formData.transactionType}
-                onChange={handleInputChange}
-              />
-            </div>
+              {formData.paymentType !== "Postpaid" && (
+                <>
+                  <div style={fieldContainerStyle}>
+                    <label style={labelStyle}>Transaction Type</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Refund"
+                      style={inputStyle}
+                      name="transactionType"
+                      value={formData.transactionType}
+                      onChange={handleInputChange}
+                    />
+                  </div>
 
-            <div style={fieldContainerStyle}>
-              <label style={labelStyle}>Payment Type</label>
-              <select
-                name="paymentType"
-                value={formData.paymentType}
-                onChange={handleInputChange}
-                style={inputStyle}
-              >
-                <option value="">-- Select Payment Type --</option>
-                <option value="Cash">Cash</option>
-                <option value="Bank Transfer">Bank Transfer</option>
-                <option value="UPI">UPI</option>
-                <option value="Cheque">Cheque</option>
-              </select>
+                  <div style={fieldContainerStyle}>
+                    <label style={labelStyle}>
+                      Payment Type
+                      <span style={requiredStyle}>*</span>
+                    </label>
+                    <select
+                      name="paymentType"
+                      value={formData.paymentType}
+                      onChange={handleInputChange}
+                      style={inputStyle}
+                      required
+                    >
+                      <option value="" disabled>
+                        -- Select Payment Type --
+                      </option>
+                      <option value="Cash">Cash</option>
+                      <option value="Bank Transfer">Bank Transfer</option>
+                      <option value="UPI">UPI</option>
+                      <option value="Cheque">Cheque</option>
+                    </select>
+                  </div>
+                </>
+              )}
             </div>
 
             <div style={fieldContainerStyle}>
@@ -641,7 +745,7 @@ const handleDeliveryChallanSelect = (dcId) => {
                   displayEmpty
                   inputProps={{ "aria-label": "Without label" }}
                   style={inputStyle}
-                  disabled={!!formData.dcId} // Disable if DC is already selected
+                  required
                 >
                   <MenuItem value="" disabled>
                     Select Customer
@@ -656,102 +760,113 @@ const handleDeliveryChallanSelect = (dcId) => {
             </div>
 
             <div style={fieldContainerStyle}>
-  <label style={labelStyle}>Delivery Challan</label>
-  <div style={{ display: "flex", gap: "8px", flexDirection: "column" }}>
-    <div style={{ display: "flex", gap: "8px" }}>
-      <TextField
-        size="small"
-        placeholder="Search by DC ID or Date"
-        value={dcSearchTerm}
-        onChange={(e) => {
-          setDcSearchTerm(e.target.value);
-          if (formData.dcId) {
-            // Clear current selection if user starts typing
-            setFormData((prev) => ({
-              ...prev,
-              dcId: "",
-              dcNumber: "",
-              dcDate: "",
-            }));
-            setSelectedOrder(null);
-          }
-        }}
-        fullWidth
-        onKeyPress={(e) => e.key === "Enter" && handleDcSearch()}
-        disabled={!!formData.dcId} // Disable if DC is already selected
-      />
-      <Button
-  variant="contained"
-  size="small"
-  onClick={formData.dcId ? resetDcSearch : handleDcSearch}
-  disabled={!formData.customerId}
->
-  {formData.dcId ? "CLEAR" : "SEARCH"}
-</Button>
-    </div>
+              <label style={labelStyle}>
+                Delivery Challan<span style={requiredStyle}>*</span>
+              </label>
 
-    {/* Selected DC Info */}
-    {formData.dcId && (
-      <div
-        style={{
-          padding: "8px",
-          border: "1px solid #e0e0e0",
-          borderRadius: "4px",
-          backgroundColor: "#f8f9fa",
-        }}
-      >
-        <Typography variant="body2">
-          <strong>Selected:</strong> {formData.dcNumber} (
-          {new Date(formData.dcDate).toLocaleDateString('en-US', {
-            year: 'numeric',
-            month: 'short',
-            day: 'numeric'
-          })})
-        </Typography>
-      </div>
-    )}
+              <div
+                style={{ display: "flex", gap: "8px", flexDirection: "column" }}
+              >
+                {/* Combined Select and Search Input */}
+                <div style={{ position: "relative" }}>
+                  <FormControl fullWidth size="small">
+                    <Select
+                      value={formData.dcId || ""}
+                      onChange={(e) =>
+                        handleDeliveryChallanSelect(e.target.value)
+                      }
+                      displayEmpty
+                      style={{
+                        ...inputStyle,
+                        borderColor: errors.dcId ? "red" : "#d1d5db",
+                      }}
+                      disabled={!formData.customerId}
+                      MenuProps={{
+                        PaperProps: {
+                          style: {
+                            maxHeight: 300,
+                          },
+                        },
+                      }}
+                      renderValue={(selected) => {
+                        if (!selected) {
+                          return <em>Select Delivery Challan</em>;
+                        }
+                        const selectedDC = deliveryChallans.find(
+                          (dc) => dc.id === selected
+                        );
+                        return selectedDC
+                          ? `${selectedDC.dc_id} (${selectedDC.dc_date})`
+                          : "Select Delivery Challan";
+                      }}
+                    >
+                      {/* Search Input inside Dropdown */}
+                      <div
+                        style={{
+                          padding: "8px",
+                          position: "sticky",
+                          top: 0,
+                          backgroundColor: "#fff",
+                          zIndex: 1,
+                        }}
+                      >
+                        <TextField
+                          size="small"
+                          placeholder="Search DC..."
+                          fullWidth
+                          value={dcSearchTerm}
+                          onChange={(e) => setDcSearchTerm(e.target.value)}
+                          onClick={(e) => e.stopPropagation()}
+                        />
+                      </div>
 
-    {/* Search Results */}
-    {searchMode && filteredDeliveryChallans.length > 0 && (
-      <Paper
-        style={{
-          maxHeight: "200px",
-          overflow: "auto",
-          marginTop: "8px",
-        }}
-      >
-        <List>
-          {filteredDeliveryChallans.map((dc) => (
-            <ListItem
-              key={dc.id}
-              button
-              onClick={() => handleDeliveryChallanSelect(dc.id)}
-            >
-              <ListItemText
-                primary={`${dc.dc_id} (${new Date(dc.dc_date).toLocaleDateString('en-US', {
-                  year: 'numeric',
-                  month: 'short',
-                  day: 'numeric'
-                })})`}
-              />
-            </ListItem>
-          ))}
-        </List>
-      </Paper>
-    )}
+                      {/* Filtered DC List */}
+                      {deliveryChallans
+                        .filter(
+                          (dc) =>
+                            dc.dc_id
+                              .toLowerCase()
+                              .includes(dcSearchTerm.toLowerCase()) ||
+                            dc.dc_date.includes(dcSearchTerm)
+                        )
+                        .map((dc) => (
+                          <MenuItem key={dc.id} value={dc.id}>
+                            {dc.dc_id} ({dc.dc_date})
+                          </MenuItem>
+                        ))}
+                    </Select>
+                  </FormControl>
+                </div>
 
-    {searchMode &&
-      filteredDeliveryChallans.length === 0 &&
-      dcSearchTerm && (
-        <Typography
-          variant="body2"
-          style={{ padding: "8px", color: "#666" }}
-        >
-          No matching Delivery Challans found
-        </Typography>
-      )}
-  </div>
-</div>
+                {/* Selected DC Info */}
+                {formData.dcId && (
+                  <div
+                    style={{
+                      padding: "8px",
+                      border: "1px solid #e0e0e0",
+                      borderRadius: "4px",
+                      backgroundColor: "#f8f9fa",
+                    }}
+                  >
+                    <Typography variant="body2">
+                      <strong>Selected:</strong> {formData.dcNumber} (
+                      {new Date(formData.dcDate).toLocaleDateString("en-US", {
+                        year: "numeric",
+                        month: "short",
+                        day: "numeric",
+                      })}
+                      )
+                    </Typography>
+                  </div>
+                )}
+              </div>
+
+              {errors.dcId && (
+                <span style={{ color: "red", fontSize: "0.75rem" }}>
+                  Delivery Challan selection is required
+                </span>
+              )}
+            </div>
 
             <div style={fieldContainerStyle}>
               <label style={labelStyle}>Customer ID</label>
@@ -1046,7 +1161,7 @@ const handleDeliveryChallanSelect = (dcId) => {
                             </TableCell>
 
                             <TableCell>
-                              {availableAssetIds[product.id]?.length > 0 && (
+                              {availableAssetIds[product.id]?.length > 0 ? (
                                 <Box
                                   display="flex"
                                   flexDirection="column"
@@ -1068,13 +1183,21 @@ const handleDeliveryChallanSelect = (dcId) => {
                                             setDeviceIds((prev) => {
                                               const currentIds =
                                                 prev[product.id] || [];
+                                              const newIds = isChecked
+                                                ? [...currentIds, assetId]
+                                                : currentIds.filter(
+                                                    (id) => id !== assetId
+                                                  );
+
+                                              // Validate after change
+                                              validateDeviceIds(
+                                                product.id,
+                                                quantities[product.id] || 1
+                                              );
+
                                               return {
                                                 ...prev,
-                                                [product.id]: isChecked
-                                                  ? [...currentIds, assetId]
-                                                  : currentIds.filter(
-                                                      (id) => id !== assetId
-                                                    ),
+                                                [product.id]: newIds,
                                               };
                                             });
                                           }}
@@ -1100,6 +1223,13 @@ const handleDeliveryChallanSelect = (dcId) => {
                                     </Typography>
                                   )}
                                 </Box>
+                              ) : (
+                                <Typography
+                                  variant="body2"
+                                  color="textSecondary"
+                                >
+                                  No asset IDs available
+                                </Typography>
                               )}
                             </TableCell>
                           </TableRow>
@@ -1152,7 +1282,7 @@ const handleDeliveryChallanSelect = (dcId) => {
   );
 };
 
-// Modern Styles
+// Modern Styles (same as in the add form)
 const containerStyle = {
   padding: "2rem",
   fontFamily:

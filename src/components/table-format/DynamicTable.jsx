@@ -915,6 +915,16 @@ const GoodsReturnNoteDialog = ({ open, onClose, grnData }) => {
 const CreditNoteDialog = ({ open, onClose, creditNoteData }) => {
   if (!creditNoteData) return null;
 
+  // Helper functions
+  const formatDate = (dateStr) => {
+    if (!dateStr) return "-";
+    const date = new Date(dateStr);
+    const day = String(date.getDate()).padStart(2, "0");
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const year = date.getFullYear();
+    return `${day}/${month}/${year}`;
+  };
+
   // Calculate days between returned_date and rental_end_date
   const calculateDaysDifference = (returnedDate, rentalEndDate) => {
     if (!returnedDate || !rentalEndDate) return 0;
@@ -935,6 +945,15 @@ const CreditNoteDialog = ({ open, onClose, creditNoteData }) => {
       0
     );
 
+    const monthStartDate = new Date(
+      returnedDate.getFullYear(),
+      returnedDate.getMonth(),
+      1
+    );
+
+    // Calculate days used (from 1st July to 20th July 2025 = 20 days)
+    const daysUsed = calculateDaysDifference(monthStartDate, returnedDate) - 1;
+
     // Calculate day difference
     const daysDifference = Math.ceil(
       (endOfMonth - returnedDate) / (1000 * 60 * 60 * 24)
@@ -950,6 +969,10 @@ const CreditNoteDialog = ({ open, onClose, creditNoteData }) => {
         days: daysDifference,
         daily_rate: dailyRate,
         total_price: totalPrice,
+        daysUsed,
+        monthStartDate,
+        returnedDate,
+        endOfMonth,
       };
     });
   };
@@ -1185,10 +1208,18 @@ const CreditNoteDialog = ({ open, onClose, creditNoteData }) => {
                         )}
                       </div>
                       {item.device_ids?.length > 0 && (
-                        <div style={itemTitleStyle}>
-                          <br />
-                          Asset IDs:{item.device_ids.join(", ")}
-                        </div>
+                        <>
+                          <div style={itemTitleStyle}>
+                            <br />
+                            Asset IDs: {item.device_ids.join(", ")}
+                          </div>
+                          <div>
+                            <br />
+                            Used for {item.daysUsed} days{" "}
+                            {formatDate(item.monthStartDate)} to{" "}
+                            {formatDate(item.returnedDate)}
+                          </div>
+                        </>
                       )}
                     </td>
                     <td style={tableCellCenterStyle}>{item.quantity}</td>
@@ -2381,13 +2412,14 @@ const capitalize = (text) =>
 // Invoices Dialog Component
 
 const InvoiceDialog = ({ open, onClose, invoiceData }) => {
-  if (!invoiceData) return null;
+    if (!invoiceData) return null;
 
   const invoiceType = invoiceData.type;
   const isBuyTransaction = invoiceData.transaction_type === "Buy";
+  const isRentTransaction = invoiceData.transaction_type === "Rent";
   const invoiceDate = new Date(invoiceData.invoice_start_date);
   const paymentMode = invoiceData.payment_mode === "Postpaid";
-  
+  const isKarnataka = invoiceData.shippingDetail?.state === "Karnataka";
 
   // Date calculations
   const invoiceStartDate = new Date(invoiceData.invoice_start_date);
@@ -2400,8 +2432,9 @@ const InvoiceDialog = ({ open, onClose, invoiceData }) => {
     (invoiceStartDate.getFullYear() - dcDate.getFullYear()) * 12 +
     (invoiceStartDate.getMonth() - dcDate.getMonth());
 
-  // Only show DC period if exactly 1 month difference and not starting on 1st
-  const showDcPeriod = monthDiff === 1 && dcDate.getDate() !== 1;
+  // Only show DC period if exactly 0 or 1 month difference and not starting on 1st
+  const showDcPeriod =
+    (monthDiff === 1 || monthDiff === 0) && dcDate.getDate() !== 1;
 
   // Helper functions
   const formatDate = (dateStr) => {
@@ -2490,7 +2523,7 @@ const InvoiceDialog = ({ open, onClose, invoiceData }) => {
     const mainItems =
       invoiceData.items?.map((item) => {
         const rate = isBuyTransaction
-          ? Number(item.productDetails?.purchase_price) || 0
+          ? Number(item.total_price) || 0
           : Number(item.unit_price) || 0;
         const dailyRate = rate / 30;
         const originalDeviceIds = item.device_ids || [];
@@ -2573,17 +2606,27 @@ const InvoiceDialog = ({ open, onClose, invoiceData }) => {
         );
         const usedQty = effectiveQty - returnedQty;
 
-        // Calculate amount based on actual days or full month rate
-        const fullMonthAmount = isFullMonth
-          ? effectiveQty * rate
-          : effectiveQty * dailyRate * days;
+        // Calculate amount based on payment mode
+        let fullMonthAmount;
+        if (paymentMode) {
+          // For Postpaid, calculate based on actual usage (full period minus returns)
+          fullMonthAmount = effectiveQty * rate;
+          if (!isFullMonth) {
+            fullMonthAmount = effectiveQty * dailyRate * days;
+          }
+        } else {
+          // For Prepaid, calculate full amount (returns will be handled separately)
+          fullMonthAmount = isFullMonth
+            ? effectiveQty * rate
+            : effectiveQty * dailyRate * days;
+        }
 
         const returnedDevicesAmount = returnedDevices.reduce(
           (sum, rd) => sum + rd.amount,
           0
         );
 
-        const dcAmountBeforeReturns = showDcPeriod
+        const dcAmountBeforeReturns = showDcPeriod && !paymentMode && !isBuyTransaction
           ? effectiveQty * dailyRate * dcDays
           : 0;
 
@@ -2657,10 +2700,19 @@ const InvoiceDialog = ({ open, onClose, invoiceData }) => {
             0
           );
 
-          // Calculate amount based on actual days or full month rate
-          const calculatedAmount = isFullMonth
-            ? quantity * unit_price
-            : quantity * (unit_price / 30) * days;
+          // Calculate amount based on payment mode
+          let calculatedAmount;
+          if (paymentMode) {
+            // For Postpaid, calculate based on actual usage
+            calculatedAmount = isFullMonth
+              ? quantity * unit_price
+              : quantity * (unit_price / 30) * days;
+          } else {
+            // For Prepaid, calculate full amount
+            calculatedAmount = isFullMonth
+              ? quantity * unit_price
+              : quantity * (unit_price / 30) * days;
+          }
 
           return {
             ...item,
@@ -2691,33 +2743,6 @@ const InvoiceDialog = ({ open, onClose, invoiceData }) => {
 
   const items = calculateInvoiceItems();
 
-  // ✅ Totals (corrected)
- const totalAmount =
-  parseFloat(
-    items
-      ?.reduce((sum, item) => {
-        const itemTotal =
-          item.amount +
-          (showDcPeriod && !item.isAdditionalChallan && !paymentMode // Add !paymentMode check here
-            ? item.dcAmountBeforeReturns
-            : 0) +
-          (item.totalReturnedQtyAmount || 0);
-
-        return sum + itemTotal;
-      }, 0)
-      .toFixed(2)
-  ) || 0;
-
-  const returnsTotal =
-    items?.reduce((sum, item) => sum + (item.totalReturnedQtyAmount || 0), 0) ||
-    0;
-
-  const netAmount = totalAmount;
-  const cgst = netAmount * 0.09;
-  const sgst = netAmount * 0.09;
-  const totalTax = cgst + sgst;
-  const grandTotal = netAmount + cgst + sgst;
-
   const groupItemsByProduct = (items) => {
     const grouped = {};
 
@@ -2730,10 +2755,10 @@ const InvoiceDialog = ({ open, onClose, invoiceData }) => {
           allRows: [item],
           isAdditional: item.isAdditionalChallan,
           totalQuantity: item.quantity || 0,
-          totalAmount: item.amount || 0, // This should be just the base amount
+          totalAmount: item.amount || 0,
           dcAmountBeforeReturns: item.dcAmountBeforeReturns || 0,
           returnedDevices: [...(item.returnedDevices || [])],
-          totalReturnedQtyAmount: item.totalReturnedQtyAmount || 0, // Add this
+          totalReturnedQtyAmount: item.totalReturnedQtyAmount || 0,
         };
       } else {
         grouped[key].allDeviceIds = [
@@ -2742,13 +2767,26 @@ const InvoiceDialog = ({ open, onClose, invoiceData }) => {
         ];
         grouped[key].allRows.push(item);
         grouped[key].totalQuantity += item.quantity || 0;
-        grouped[key].totalAmount += item.amount || 0; // Only add base amount here
+        grouped[key].totalAmount += item.amount || 0;
         grouped[key].dcAmountBeforeReturns += item.dcAmountBeforeReturns || 0;
-        grouped[key].returnedDevices = [
-          ...grouped[key].returnedDevices,
-          ...(item.returnedDevices || []),
-        ];
-        grouped[key].totalReturnedQtyAmount += item.totalReturnedQtyAmount || 0;
+
+        // Merge returned devices without duplicates
+        const existingDeviceIds = new Set(
+          grouped[key].returnedDevices.flatMap((rd) => rd.deviceIds)
+        );
+
+        item.returnedDevices?.forEach((rd) => {
+          const newDeviceIds = rd.deviceIds.filter(
+            (id) => !existingDeviceIds.has(id)
+          );
+          if (newDeviceIds.length > 0) {
+            grouped[key].returnedDevices.push({
+              ...rd,
+              deviceIds: newDeviceIds,
+            });
+            grouped[key].totalReturnedQtyAmount += rd.amount;
+          }
+        });
       }
     });
 
@@ -2757,6 +2795,63 @@ const InvoiceDialog = ({ open, onClose, invoiceData }) => {
 
   const groupedItems = groupItemsByProduct(items);
 
+  const computedTotalAmount1 = groupedItems.reduce((acc, group) => {
+    // Main invoice period amount (full month or prorated)
+    const mainAmount = paymentMode
+      ? group.totalAmount // For Postpaid, we already calculated the correct amount
+      : group.isFullMonth
+      ? group.rate * group.totalQuantity
+      : group.dailyRate * group.totalQuantity * group.days;
+
+    // DC period amount (only for Prepaid invoices)
+    const dcAmount = !paymentMode ? group.dcAmountBeforeReturns : 0;
+
+    // Returned amounts (ONLY subtract for Postpaid invoices)
+    const returnsAmount = paymentMode
+      ? group.totalReturnedQtyAmount
+      : 0;
+
+    return acc + mainAmount + dcAmount - returnsAmount;
+  }, 0);
+
+  const computedPostpaidTotalAmount = groupedItems.reduce((total, group) => {
+  let groupTotal = 0;
+
+  // 1. Main item charge
+  if (group.isFullMonth) {
+    groupTotal += group.rate * group.totalQuantity;
+  } else {
+    groupTotal += (group.dailyRate || group.rate / 30) * group.totalQuantity * group.days;
+  }
+
+  // 2. Add mid-month usage (dcAmountBeforeReturns)
+  group.allRows?.forEach((row) => {
+    if (row.dcAmountBeforeReturns > 0) {
+      groupTotal += row.dcAmountBeforeReturns;
+    }
+  });
+
+  // 3. Add returned device charges (Postpaid only)
+  if (paymentMode && group.returnedDevices?.length > 0) {
+    group.returnedDevices.forEach((rd) => {
+      groupTotal += rd.amount;
+    });
+  }
+
+  return total + groupTotal;
+}, 0);
+
+const computedTotalAmount = paymentMode ? computedPostpaidTotalAmount : computedTotalAmount1;
+
+  const netAmount = computedTotalAmount;
+  const cgst = netAmount * 0.09;
+  const sgst = netAmount * 0.09;
+  const igst = isKarnataka ? 0 : netAmount * 0.18;
+  const totalTax = cgst + sgst + igst;
+  const grandTotal = netAmount + totalTax;
+
+  // Table rendering remains the same as your original code
+  // Just make sure to conditionally show/hide sections based on paymentMode
   const renderInvoice = () => {
     return (
       <div
@@ -2790,7 +2885,10 @@ const InvoiceDialog = ({ open, onClose, invoiceData }) => {
             <div style={challanDetailsStyle}>
               Invoice No: {invoiceData.invoice_number}
               <br />
-              Invoice Date: {formatDate(invoiceDate)}
+              Invoice Date:{" "}
+              {paymentMode
+                ? formatDate(invoiceEndDate)
+                : formatDate(invoiceDate)}
             </div>
           </div>
         </div>
@@ -2881,7 +2979,7 @@ const InvoiceDialog = ({ open, onClose, invoiceData }) => {
                 const dailyRate = group.dailyRate || group.rate / 30;
                 const product = group.productDetails || group.product;
                 const isAdditional = group.isAdditional;
-                const days = group.days; // Now properly defined for each item
+                const days = group.days;
 
                 const renderSpecifications = (product) => {
                   if (!product) return null;
@@ -2990,14 +3088,12 @@ const InvoiceDialog = ({ open, onClose, invoiceData }) => {
                       <td style={tableCellRightStyle}>
                         {group.isFullMonth ? (
                           <>
-                            
                             {formatINRCurrency(
                               group.rate * group.totalQuantity
                             )}
                           </>
                         ) : (
                           <>
-                            
                             {formatINRCurrency(
                               group.dailyRate * group.totalQuantity * group.days
                             )}
@@ -3007,7 +3103,7 @@ const InvoiceDialog = ({ open, onClose, invoiceData }) => {
                     </tr>
 
                     {/* Mid-Month Usage Rows */}
-                    {!isAdditional && !paymentMode &&
+                    {!isAdditional && !isBuyTransaction &&
                       showDcPeriod &&
                       group.allRows.map((row, rowIndex) =>
                         row.dcAmountBeforeReturns > 0 ? (
@@ -3045,10 +3141,8 @@ const InvoiceDialog = ({ open, onClose, invoiceData }) => {
                         ) : null
                       )}
 
-                    {/* Returned Device Rows */}
-
-                    {group.allRows.map((row, rowIndex) =>
-                      row.returnedDevices?.map((rd, rdIndex) => {
+                    {paymentMode &&
+                      group.returnedDevices?.map((rd, rdIndex) => {
                         const returnDate = new Date(rd.returnedDate);
                         const startDate =
                           monthDiff > 1
@@ -3060,7 +3154,7 @@ const InvoiceDialog = ({ open, onClose, invoiceData }) => {
                             : dcDate;
 
                         return (
-                          <tr>
+                          <tr key={`returned-${index}-${rdIndex}`}>
                             <td style={tableCellCenterStyle}></td>
                             <td style={tableCellStyle}>
                               <div>
@@ -3072,10 +3166,10 @@ const InvoiceDialog = ({ open, onClose, invoiceData }) => {
                                 {group.product_name}
                               </div>
                               {renderSpecifications(product)}
-                              <br />
+                              {/* <br />
                               Used for {rd.daysUsed} days:{" "}
                               {formatDate(startDate)} to{" "}
-                              {formatDate(rd.returnedDate)}
+                              {formatDate(rd.returnedDate)} */}
                             </td>
                             <td style={tableCellCenterStyle}>
                               {rd.deviceIds.length}
@@ -3090,8 +3184,7 @@ const InvoiceDialog = ({ open, onClose, invoiceData }) => {
                             </td>
                           </tr>
                         );
-                      })
-                    )}
+                      })}
                   </React.Fragment>
                 );
               });
@@ -3105,29 +3198,8 @@ const InvoiceDialog = ({ open, onClose, invoiceData }) => {
                 <strong>TOTAL</strong>
               </td>
               <td style={tableCellRightStyle}>
-  {formatINRCurrency(
-    groupedItems.reduce((acc, group) => {
-      const base = group.totalAmount || 0;
-      const dc = paymentMode ? 0 : // Skip dcAmount if paymentMode is Postpaid
-        group.allRows?.reduce(
-          (sum, row) => sum + (row.dcAmountBeforeReturns || 0),
-          0
-        ) || 0;
-      const returns =
-        group.allRows?.reduce((sum, row) => {
-          return (
-            sum +
-            (row.returnedDevices?.reduce(
-              (subSum, rd) => subSum + (rd.amount || 0),
-              0
-            ) || 0)
-          );
-        }, 0) || 0;
-
-      return acc + base + dc + returns;
-    }, 0)
-  )}
-</td>
+                {formatINRCurrency(computedTotalAmount)}
+              </td>
             </tr>
           </tbody>
         </table>
@@ -3137,7 +3209,7 @@ const InvoiceDialog = ({ open, onClose, invoiceData }) => {
           <div style={taxDetailsStyle}>
             <div style={taxRowStyle}>
               <span>Subtotal:</span>
-              <span>{formatINRCurrency(totalAmount)}</span>
+              <span>{formatINRCurrency(computedTotalAmount)}</span>
             </div>
 
             <div style={taxRowStyle}>
@@ -3148,6 +3220,12 @@ const InvoiceDialog = ({ open, onClose, invoiceData }) => {
               <span>SGST @9%:</span>
               <span>{formatINRCurrency(sgst)}</span>
             </div>
+            {!isKarnataka && (
+              <div style={taxRowStyle}>
+                <span>IGST @18%:</span>
+                <span>{formatINRCurrency(igst)}</span>
+              </div>
+            )}
             <div style={taxRowTotalStyle}>
               <span>Total Tax:</span>
               <span>{formatINRCurrency1(totalTax)}</span>

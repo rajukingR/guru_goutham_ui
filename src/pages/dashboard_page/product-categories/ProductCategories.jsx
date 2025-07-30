@@ -200,31 +200,37 @@ const ProductCategories = () => {
               )}
             </div>
 
-            <div style={legendBelowStyle}>
-              {categoryData.map((item, index) => (
-                <div
-                  key={index}
-                  style={{
-                    ...legendItemStyle,
-                    backgroundColor:
-                      hoveredCategory === index ? "#f8fafc" : "transparent",
-                    borderRadius: 8,
-                    padding: "4px 8px",
-                    transition: "all 0.2s ease",
-                  }}
-                  onMouseEnter={() => setHoveredCategory(index)}
-                  onMouseLeave={() => setHoveredCategory(null)}
-                >
-                  <div
-                    style={{ ...legendColorStyle, backgroundColor: item.color }}
-                  />
-                  <span style={legendTextStyle}>{item.name}</span>
-                  <span style={legendValueStyle}>
-                    ({((item.value / totalValue) * 100).toFixed(1)}%)
-                  </span>
-                </div>
-              ))}
-            </div>
+            <div style={legendRowsContainerStyle}>
+  {Array.from({ length: Math.ceil(categoryData.length / 5) }).map((_, rowIndex) => (
+    <div key={rowIndex} style={legendRowStyle}>
+      {categoryData
+        .slice(rowIndex * 5, rowIndex * 5 + 5)
+        .map((item, index) => (
+          <div
+            key={index}
+            style={{
+              ...legendItemBoxStyle,
+              backgroundColor:
+                hoveredCategory === rowIndex * 5 + index ? "#f1f5f9" : "#ffffff",
+            }}
+            onMouseEnter={() => setHoveredCategory(rowIndex * 5 + index)}
+            onMouseLeave={() => setHoveredCategory(null)}
+          >
+            <div
+              style={{
+                ...legendDotStyle,
+                backgroundColor: item.color,
+              }}
+            />
+            <span style={legendTextStyle}>
+              {item.name} (₹{item.value.toLocaleString("en-IN")})
+            </span>
+          </div>
+        ))}
+    </div>
+  ))}
+</div>
+
           </>
         ) : (
           <div style={loadingStyle}>No data available</div>
@@ -235,6 +241,47 @@ const ProductCategories = () => {
 };
 
 // ========== Your ORIGINAL Styles ==========
+
+
+const legendRowsContainerStyle = {
+  display: "flex",
+  flexDirection: "column",
+  gap: "12px",
+  marginTop: "1.5rem",
+};
+
+const legendRowStyle = {
+  display: "flex",
+  flexDirection: "row",
+  gap: "12px",
+};
+
+const legendItemBoxStyle = {
+  display: "flex",
+  alignItems: "center",
+  padding: "6px 12px",
+  borderRadius: "8px",
+  border: "1px solid #e2e8f0",
+  gap: "8px",
+  minHeight: "36px",
+  whiteSpace: "nowrap",
+  overflow: "hidden",
+  textOverflow: "ellipsis",
+  minWidth: "200px",
+};
+
+const legendDotStyle = {
+  width: "10px",
+  height: "10px",
+  borderRadius: "50%",
+  flexShrink: 0,
+};
+
+const legendTextStyle = {
+  fontSize: "14px",
+  fontWeight: 500,
+  color: "#1e293b",
+};
 
 const chartCardStyle = {
   backgroundColor: "#ffffff",
@@ -340,14 +387,6 @@ const legendColorStyle = {
   flexShrink: 0,
 };
 
-const legendTextStyle = {
-  fontSize: "0.875rem",
-  color: "#64748b",
-  whiteSpace: "nowrap",
-  overflow: "hidden",
-  textOverflow: "ellipsis",
-  maxWidth: "120px",
-};
 
 const legendValueStyle = {
   fontSize: "0.875rem",

@@ -41,7 +41,7 @@ const InvoicesTablePage = () => {
           const formatted = response.data.map((item, index) => ({
             s_id: index + 1,
             ...item,
-
+            payment_mode: item.payment_mode === "" ? "Buy": item.payment_mode,
             status: item.approval_status === "Approved" ? "Active" : "Inactive",
           }));
           setData(formatted);

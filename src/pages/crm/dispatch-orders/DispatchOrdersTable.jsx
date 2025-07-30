@@ -14,7 +14,6 @@ const DispatchOrdersTable = () => {
     { id: "shipping_phone_number", label: "Phone" },
     { id: "order_number", label: "Order No." },
     { id: "payment_type", label: "Payment Type" },
-    { id: "type", label: "Type" },
     { id: "city", label: "City" },
     { id: "state", label: "State" },
   ];
@@ -34,6 +33,8 @@ const DispatchOrdersTable = () => {
           const formattedData = response.data.map((item, index) => ({
             s_no: index + 1,
             ...item,
+                        payment_type: item.payment_type === "" ? "Buy": item.payment_type,
+
             status:
               item.dispatch_order_status === "Approved" ? "Active" : "Inactive",
           }));

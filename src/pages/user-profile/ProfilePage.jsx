@@ -113,7 +113,7 @@ const ProfilePage = () => {
                   <Typography variant="h5" fontWeight="600">
                     {profileData ? profileData.full_name : "Loading..."}
                   </Typography>
-                  <Chip 
+                  {/* <Chip 
                     label={profileData ? profileData.role_name : ""} 
                     color="primary" 
                     size="small"
@@ -122,7 +122,7 @@ const ProfilePage = () => {
                       background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
                       color: "white"
                     }}
-                  />
+                  /> */}
                 </Box>
                 
                 <Box sx={{ display: "flex", gap: 1 }}>

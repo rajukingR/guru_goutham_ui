@@ -1177,41 +1177,46 @@ const InvoicesAddPage = () => {
   ]);
 
   // Handle form submission
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+const handleSubmit = async (e) => {
+  e.preventDefault();
 
-    try {
-      // Prepare the data to be sent
-      const selectedOrder = orders.find(order => order.id === parseInt(selectedOrderId));
+  try {
+    // Prepare the data to be sent
+    const selectedOrder = orders.find(order => order.id === parseInt(selectedOrderId));
 
-      const submissionData = {
-        ...formData,
-          customer_id: formData.customer_id || (selectedOrder?.contact?.id || ""),
+    const submissionData = {
+      ...formData,
+      customer_id: formData.customer_id || (selectedOrder?.contact?.id || ""),
 
-        // Include date ranges in the submission
-        dc_id: formData.dc_id,
-        dispatch_order_number:
-          formData.dispatch_order_number || formData.dispatch_order_id, // Use whichever is available
+      // Include date ranges in the submission
+      dc_id: formData.dc_id,
+      dispatch_order_number:
+        formData.dispatch_order_number || formData.dispatch_order_id, // Use whichever is available
 
-        dc_date: formData.dc_date,
-        invoice_start_date: dateRanges.invoiceStartDate,
-        invoice_end_date: dateRanges.invoiceEndDate,
-        previous_delivered_start_date: dateRanges.previousDeliveredStartDate,
-        previous_delivered_end_date: dateRanges.previousDeliveredEndDate,
-        credit_note_start_date: dateRanges.creditNoteStartDate,
-        credit_note_end_date: dateRanges.creditNoteEndDate,
+      dc_date: formData.dc_date,
+      invoice_start_date: dateRanges.invoiceStartDate,
+      invoice_end_date: dateRanges.invoiceEndDate,
+      previous_delivered_start_date: dateRanges.previousDeliveredStartDate,
+      previous_delivered_end_date: dateRanges.previousDeliveredEndDate,
+      credit_note_start_date: dateRanges.creditNoteStartDate,
+      credit_note_end_date: dateRanges.creditNoteEndDate,
 
-        // Ensure rental duration fields are included
-        rental_duration: formData.rental_duration || "0",
-        rental_duration_days: formData.rental_duration_days || 0,
-        rental_duration_months: formData.rental_duration
-          ? parseInt(formData.rental_duration)
-          : 0,
-        payment_mode: formData.payment_type || "",
+      // Ensure rental duration fields are included
+      rental_duration: formData.rental_duration || "0",
+      rental_duration_days: formData.rental_duration_days || 0,
+      rental_duration_months: formData.rental_duration
+        ? parseInt(formData.rental_duration)
+        : 0,
+      payment_mode: formData.payment_type || "",
 
-        items: formData.items.map((item) => ({
+      items: formData.items.map((item) => {
+        const product = products.find(p => p.id === item.product_id);
+        const unit_price = product ? product.rent_price_per_month : 0;
+        const total_price = product ? product.purchase_price : 0;
+
+        return {
           ...item,
-          order_id: productOrderMap[item.product_id] || "", // ✅ set here
+          order_id: productOrderMap[item.product_id] || "",
           device_ids: returnedDeviceIds[item.product_id] || [],
           new_device_ids: newDeviceIds[item.product_id] || [],
           returned_device_ids: selectedReturnIds[item.product_id]
@@ -1222,41 +1227,44 @@ const InvoicesAddPage = () => {
           rental_duration_months: formData.rental_duration
             ? parseInt(formData.rental_duration)
             : 0,
-        })),
-      };
+          unit_price: unit_price,  // Add unit_price from product's purchase_price
+          total_price: total_price // Calculate total_price based on quantity
+        };
+      }),
+    };
 
-      const response = await fetch(`${API_URL}/invoices/create`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(submissionData),
-      });
+    const response = await fetch(`${API_URL}/invoices/create`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(submissionData),
+    });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || "Failed to create invoice");
-      }
-
-      const result = await response.json();
-      setSnackbar({
-        open: true,
-        message: "Invoice created successfully!",
-        severity: "success",
-      });
-
-      setTimeout(() => {
-        navigate("/dashboard/operations/invoices");
-      }, 1500);
-    } catch (error) {
-      console.error("Error creating invoice:", error);
-      setSnackbar({
-        open: true,
-        message: "Error creating invoice: " + error.message,
-        severity: "error",
-      });
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || "Failed to create invoice");
     }
-  };
+
+    const result = await response.json();
+    setSnackbar({
+      open: true,
+      message: "Invoice created successfully!",
+      severity: "success",
+    });
+
+    setTimeout(() => {
+      navigate("/dashboard/operations/invoices");
+    }, 1500);
+  } catch (error) {
+    console.error("Error creating invoice:", error);
+    setSnackbar({
+      open: true,
+      message: "Error creating invoice: " + error.message,
+      severity: "error",
+    });
+  }
+};
 
   const formatINR = (number) =>
     new Intl.NumberFormat("en-IN", {
@@ -1352,7 +1360,7 @@ const InvoicesAddPage = () => {
                     setFormData((prev) => ({
                       ...prev,
                       payment_mode: "",
-                      payment_type: "", // Clear payment type
+                      payment_type: "",
                       rental_duration: "0",
                       rental_duration_days: 0,
                       rental_start_date: "",

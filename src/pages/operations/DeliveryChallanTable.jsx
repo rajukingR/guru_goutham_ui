@@ -52,6 +52,8 @@ const DeliveryChallanTable = () => {
           const formatted = response.data.map((item, index) => ({
             s_id: index + 1,
             ...item,
+                        payment_type: item.payment_type === "" ? "Buy": item.payment_type,
+
             dc_status: getStatusBadge(item.dc_status), // format status here
           }));
           setData(formatted);

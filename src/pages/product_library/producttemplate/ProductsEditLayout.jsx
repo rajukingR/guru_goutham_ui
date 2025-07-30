@@ -1090,7 +1090,7 @@ const ProductsEditLayout = () => {
               required
             />
 
-            <Field
+            {/* <Field
               label="Stock Location"
               type="select"
               name="stock_location"
@@ -1104,7 +1104,7 @@ const ProductsEditLayout = () => {
                   {location.stockName}
                 </option>
               ))}
-            </Field>
+            </Field> */}
           </div>
         </div>
 

@@ -10,18 +10,19 @@ const CreditNotesTableLayout = () => {
     { id: "s_id", label: "S.No." },
     // { id: "credit_note_number", label: "Credit Note No." },
     { id: "dispatch_order_number", label: "Order Number" },
+    { id: "returned_date", label: "Returned Date" },
 
     { id: "customer_name", label: "Customer Name" },
-    { id: "industry", label: "Industry" },
     { id: "transaction_type", label: "Transaction Type" },
     { id: "payment_type", label: "Payment Type" },
-    { id: "returned_date", label: "Returned Date" },
     // { id: "invoice_date", label: "Invoice Date" },
     // { id: "invoice_start_date", label: "Start Date" },
     // { id: "invoice_end_date", label: "End Date" },
+        { id: "industry", label: "Industry" },
+
     { id: "pan", label: "PAN" },
     { id: "email", label: "Email" },
-    { id: "shipping_name", label: "Shipping Name" },
+    // { id: "shipping_name", label: "Shipping Name" },
     { id: "pincode", label: "Pincode" },
     // { id: "created_by", label: "Created By" },
   ];

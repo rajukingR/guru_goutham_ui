@@ -85,6 +85,9 @@ const CreaditNotesAddFormLayout = () => {
   const [snackbarMessage, setSnackbarMessage] = useState("");
   const [snackbarSeverity, setSnackbarSeverity] = useState("success");
   const [searchMode, setSearchMode] = useState(false);
+  const [errors, setErrors] = useState({
+    paymentType: false,
+  });
 
   // Fetch contacts and products on component mount
   useEffect(() => {
@@ -142,7 +145,6 @@ const CreaditNotesAddFormLayout = () => {
         email: selectedCustomer.email,
         pan: selectedCustomer.pan_no,
         industry: selectedCustomer.industry,
-        paymentType: selectedCustomer.payment_type,
       }));
     }
   };
@@ -155,6 +157,7 @@ const CreaditNotesAddFormLayout = () => {
         ...prev,
         dcId: selectedDC.id,
         dcNumber: selectedDC.dispatch_order_number || selectedDC.dc_id,
+        paymentType: selectedDC.payment_type, // This sets the payment type from DC
         dcDate: selectedDC.dc_date,
         shippingName: selectedDC.shipping_name,
         pincode: selectedDC.pincode,
@@ -185,6 +188,13 @@ const CreaditNotesAddFormLayout = () => {
         delete newDeviceIds[productId];
         setDeviceIds(newDeviceIds);
 
+        // Clear any errors for this product
+        setDeviceIdErrors((prevErrors) => {
+          const newErrors = { ...prevErrors };
+          delete newErrors[productId];
+          return newErrors;
+        });
+
         return prev.filter((id) => id !== productId);
       } else {
         // Add product
@@ -196,6 +206,12 @@ const CreaditNotesAddFormLayout = () => {
         setQuantities((prev) => ({
           ...prev,
           [productId]: defaultQty,
+        }));
+
+        // Initialize empty device IDs array
+        setDeviceIds((prev) => ({
+          ...prev,
+          [productId]: [],
         }));
 
         return [...prev, productId];
@@ -210,10 +226,21 @@ const CreaditNotesAddFormLayout = () => {
     );
     const invoiceQty = invoiceItem?.quantity || 0;
 
+    // Validate against original DC quantity
     if (numValue > invoiceQty) {
       setDeviceIdErrors((prev) => ({
         ...prev,
         [productId]: `Credit quantity cannot exceed DC quantity (${invoiceQty})`,
+      }));
+      return;
+    }
+
+    // Validate against selected asset IDs
+    const selectedDevices = deviceIds[productId] || [];
+    if (numValue < selectedDevices.length) {
+      setDeviceIdErrors((prev) => ({
+        ...prev,
+        [productId]: `Quantity cannot be less than selected devices (${selectedDevices.length})`,
       }));
       return;
     }
@@ -223,7 +250,14 @@ const CreaditNotesAddFormLayout = () => {
       [productId]: numValue,
     }));
 
-    // Validate device IDs count matches quantity
+    // Clear error if validation passes
+    setDeviceIdErrors((prev) => {
+      const newErrors = { ...prev };
+      delete newErrors[productId];
+      return newErrors;
+    });
+
+    // Validate device IDs count matches new quantity
     validateDeviceIds(productId, numValue);
   };
 
@@ -297,6 +331,11 @@ const CreaditNotesAddFormLayout = () => {
       ...prev,
       [name]: type === "checkbox" ? checked : value,
     }));
+
+    // Clear error when user selects something
+    if (name === "paymentType" && value) {
+      setErrors((prev) => ({ ...prev, paymentType: false }));
+    }
   };
 
   const handleSelectChange = (e) => {
@@ -319,7 +358,80 @@ const CreaditNotesAddFormLayout = () => {
   };
 
   const handleSubmit = async () => {
-    // Validate device IDs match quantities
+    // Validate at least one product is selected
+    if (selectedProductIds.length === 0) {
+      setSnackbarMessage("Please select at least one product");
+      setSnackbarSeverity("error");
+      setOpenSnackbar(true);
+      return;
+    }
+
+    // Validate each selected product has quantity and matching asset IDs
+    let productErrors = {};
+    let hasProductErrors = false;
+
+    selectedProductIds.forEach((productId) => {
+      const qty = quantities[productId] || 0;
+      const selectedDevices = deviceIds[productId] || [];
+      const availableAssets = availableAssetIds[productId] || [];
+
+      // Quantity validation
+      if (qty <= 0) {
+        productErrors[productId] = "Quantity must be greater than 0";
+        hasProductErrors = true;
+      }
+
+      // Asset ID validation (only if product has asset IDs)
+      if (availableAssets.length > 0) {
+        if (selectedDevices.length === 0) {
+          productErrors[productId] = "Please select at least one asset ID";
+          hasProductErrors = true;
+        } else if (selectedDevices.length !== qty) {
+          productErrors[
+            productId
+          ] = `Select exactly ${qty} asset IDs for this product`;
+          hasProductErrors = true;
+        }
+      }
+    });
+
+    setDeviceIdErrors(productErrors);
+    if (hasProductErrors) {
+      setSnackbarMessage("Please fix product selection errors");
+      setSnackbarSeverity("error");
+      setOpenSnackbar(true);
+      return;
+    }
+
+    // Validate required fields
+    if (!formData.returnedDate) {
+      setSnackbarMessage("Returned Date is required");
+      setSnackbarSeverity("error");
+      setOpenSnackbar(true);
+      return;
+    }
+
+    if (!formData.paymentType) {
+      setSnackbarMessage("Payment Type is required");
+      setSnackbarSeverity("error");
+      setOpenSnackbar(true);
+      return;
+    }
+
+    if (!formData.customerId) {
+      setSnackbarMessage("Customer selection is required");
+      setSnackbarSeverity("error");
+      setOpenSnackbar(true);
+      return;
+    }
+
+    if (!formData.dcId) {
+      setSnackbarMessage("Delivery Challan selection is required");
+      setSnackbarSeverity("error");
+      setOpenSnackbar(true);
+      return;
+    }
+
     let isValid = true;
     const newErrors = {};
 
@@ -365,6 +477,7 @@ const CreaditNotesAddFormLayout = () => {
       transaction_type: formData.transactionType,
       payment_type: formData.paymentType,
       dc_id: formData.dcId,
+      dispatch_order_id: selectedOrder.dispatch_order_id,
       dc_number: formData.dcNumber,
       customer_id: formData.customerId,
       dc_date: formData.dcDate,
@@ -403,11 +516,11 @@ const CreaditNotesAddFormLayout = () => {
       setSnackbarMessage("GRN created successfully!");
       setSnackbarSeverity("success");
       setOpenSnackbar(true);
-      setTimeout(() => navigate("/dashboard/operations/credit_notes"), 3000);
+      setTimeout(() => navigate("/dashboard/operations/grn"), 3000);
     } catch (error) {
-      console.error("Error creating credit note:", error);
+      console.error("Error creating grn:", error);
       setSnackbarMessage(
-        "Failed to create credit note: " +
+        "Failed to create grn: " +
           (error.response?.data?.message || error.message)
       );
       setSnackbarSeverity("error");
@@ -501,31 +614,43 @@ const CreaditNotesAddFormLayout = () => {
             </div>
 
             <div style={fieldContainerStyle}>
-              <label style={labelStyle}>Transaction Type</label>
-              <input
-                type="text"
-                placeholder="e.g. Refund"
-                style={inputStyle}
-                name="transactionType"
-                value={formData.transactionType}
-                onChange={handleInputChange}
-              />
-            </div>
+              {formData.paymentType !== "Postpaid" && (
+                <>
+                  <div style={fieldContainerStyle}>
+                    <label style={labelStyle}>Transaction Type</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Refund"
+                      style={inputStyle}
+                      name="transactionType"
+                      value={formData.transactionType}
+                      onChange={handleInputChange}
+                    />
+                  </div>
 
-            <div style={fieldContainerStyle}>
-              <label style={labelStyle}>Payment Type</label>
-              <select
-                name="paymentType"
-                value={formData.paymentType}
-                onChange={handleInputChange}
-                style={inputStyle}
-              >
-                <option value="">-- Select Payment Type --</option>
-                <option value="Cash">Cash</option>
-                <option value="Bank Transfer">Bank Transfer</option>
-                <option value="UPI">UPI</option>
-                <option value="Cheque">Cheque</option>
-              </select>
+                  <div style={fieldContainerStyle}>
+                    <label style={labelStyle}>
+                      Payment Type
+                      <span style={requiredStyle}>*</span>
+                    </label>
+                    <select
+                      name="paymentType"
+                      value={formData.paymentType}
+                      onChange={handleInputChange}
+                      style={inputStyle}
+                      required
+                    >
+                      <option value="" disabled selected>
+                        -- Select Payment Type --
+                      </option>
+                      <option value="Cash">Cash</option>
+                      <option value="Bank Transfer">Bank Transfer</option>
+                      <option value="UPI">UPI</option>
+                      <option value="Cheque">Cheque</option>
+                    </select>
+                  </div>
+                </>
+              )}
             </div>
 
             <div style={fieldContainerStyle}>
@@ -563,6 +688,7 @@ const CreaditNotesAddFormLayout = () => {
                   displayEmpty
                   inputProps={{ "aria-label": "Without label" }}
                   style={inputStyle}
+                  required
                 >
                   <MenuItem value="" disabled>
                     Select Customer
@@ -577,39 +703,82 @@ const CreaditNotesAddFormLayout = () => {
             </div>
 
             <div style={fieldContainerStyle}>
-              <label style={labelStyle}>Delivery Challan</label>
+              <label style={labelStyle}>
+                Delivery Challan<span style={requiredStyle}>*</span>
+              </label>
+
               <div
                 style={{ display: "flex", gap: "8px", flexDirection: "column" }}
               >
-                <div style={{ display: "flex", gap: "8px" }}>
-                  <TextField
-                    size="small"
-                    placeholder="Search by DC ID or Date"
-                    value={dcSearchTerm}
-                    onChange={(e) => {
-                      setDcSearchTerm(e.target.value);
-                      if (formData.dcId) {
-                        // Clear current selection if user starts typing
-                        setFormData((prev) => ({
-                          ...prev,
-                          dcId: "",
-                          dcNumber: "",
-                          dcDate: "",
-                        }));
-                        setSelectedOrder(null);
+                {/* Combined Select and Search Input */}
+                <div style={{ position: "relative" }}>
+                  <FormControl fullWidth size="small">
+                    <Select
+                      value={formData.dcId || ""}
+                      onChange={(e) =>
+                        handleDeliveryChallanSelect(e.target.value)
                       }
-                    }}
-                    fullWidth
-                    onKeyPress={(e) => e.key === "Enter" && handleDcSearch()}
-                  />
-                  <Button
-                    variant="contained"
-                    size="small"
-                    onClick={formData.dcId ? resetDcSearch : handleDcSearch}
-                    disabled={!formData.customerId}
-                  >
-                    {formData.dcId ? "CLEAR" : "SEARCH"}
-                  </Button>
+                      displayEmpty
+                      style={{
+                        ...inputStyle,
+                        borderColor: errors.dcId ? "red" : "#d1d5db",
+                      }}
+                      disabled={!formData.customerId}
+                      MenuProps={{
+                        PaperProps: {
+                          style: {
+                            maxHeight: 300,
+                          },
+                        },
+                      }}
+                      renderValue={(selected) => {
+                        if (!selected) {
+                          return <em>Select Delivery Challan</em>;
+                        }
+                        const selectedDC = deliveryChallans.find(
+                          (dc) => dc.id === selected
+                        );
+                        return selectedDC
+                          ? `${selectedDC.dc_id} (${selectedDC.dc_date})`
+                          : "Select Delivery Challan";
+                      }}
+                    >
+                      {/* Search Input inside Dropdown */}
+                      <div
+                        style={{
+                          padding: "8px",
+                          position: "sticky",
+                          top: 0,
+                          backgroundColor: "#fff",
+                          zIndex: 1,
+                        }}
+                      >
+                        <TextField
+                          size="small"
+                          placeholder="Search DC..."
+                          fullWidth
+                          value={dcSearchTerm}
+                          onChange={(e) => setDcSearchTerm(e.target.value)}
+                          onClick={(e) => e.stopPropagation()}
+                        />
+                      </div>
+
+                      {/* Filtered DC List */}
+                      {deliveryChallans
+                        .filter(
+                          (dc) =>
+                            dc.dc_id
+                              .toLowerCase()
+                              .includes(dcSearchTerm.toLowerCase()) ||
+                            dc.dc_date.includes(dcSearchTerm)
+                        )
+                        .map((dc) => (
+                          <MenuItem key={dc.id} value={dc.id}>
+                            {dc.dc_id} ({dc.dc_date})
+                          </MenuItem>
+                        ))}
+                    </Select>
+                  </FormControl>
                 </div>
 
                 {/* Selected DC Info */}
@@ -619,51 +788,27 @@ const CreaditNotesAddFormLayout = () => {
                       padding: "8px",
                       border: "1px solid #e0e0e0",
                       borderRadius: "4px",
+                      backgroundColor: "#f8f9fa",
                     }}
                   >
                     <Typography variant="body2">
                       <strong>Selected:</strong> {formData.dcNumber} (
-                      {formData.dcDate})
+                      {new Date(formData.dcDate).toLocaleDateString("en-US", {
+                        year: "numeric",
+                        month: "short",
+                        day: "numeric",
+                      })}
+                      )
                     </Typography>
                   </div>
                 )}
-
-                {/* Search Results */}
-                {searchMode && filteredDeliveryChallans.length > 0 && (
-                  <Paper
-                    style={{
-                      maxHeight: "200px",
-                      overflow: "auto",
-                      marginTop: "8px",
-                    }}
-                  >
-                    <List>
-                      {filteredDeliveryChallans.map((dc) => (
-                        <ListItem
-                          key={dc.id}
-                          button
-                          onClick={() => handleDeliveryChallanSelect(dc.id)}
-                        >
-                          <ListItemText
-                            primary={`${dc.dc_id} (${dc.dc_date})`}
-                          />
-                        </ListItem>
-                      ))}
-                    </List>
-                  </Paper>
-                )}
-
-                {searchMode &&
-                  filteredDeliveryChallans.length === 0 &&
-                  dcSearchTerm && (
-                    <Typography
-                      variant="body2"
-                      style={{ padding: "8px", color: "#666" }}
-                    >
-                      No matching Delivery Challans found
-                    </Typography>
-                  )}
               </div>
+
+              {errors.dcId && (
+                <span style={{ color: "red", fontSize: "0.75rem" }}>
+                  Delivery Challan selection is required
+                </span>
+              )}
             </div>
 
             <div style={fieldContainerStyle}>
@@ -959,7 +1104,7 @@ const CreaditNotesAddFormLayout = () => {
                             </TableCell>
 
                             <TableCell>
-                              {availableAssetIds[product.id]?.length > 0 && (
+                              {availableAssetIds[product.id]?.length > 0 ? (
                                 <Box
                                   display="flex"
                                   flexDirection="column"
@@ -981,13 +1126,21 @@ const CreaditNotesAddFormLayout = () => {
                                             setDeviceIds((prev) => {
                                               const currentIds =
                                                 prev[product.id] || [];
+                                              const newIds = isChecked
+                                                ? [...currentIds, assetId]
+                                                : currentIds.filter(
+                                                    (id) => id !== assetId
+                                                  );
+
+                                              // Validate after change
+                                              validateDeviceIds(
+                                                product.id,
+                                                quantities[product.id] || 1
+                                              );
+
                                               return {
                                                 ...prev,
-                                                [product.id]: isChecked
-                                                  ? [...currentIds, assetId]
-                                                  : currentIds.filter(
-                                                      (id) => id !== assetId
-                                                    ),
+                                                [product.id]: newIds,
                                               };
                                             });
                                           }}
@@ -1013,6 +1166,13 @@ const CreaditNotesAddFormLayout = () => {
                                     </Typography>
                                   )}
                                 </Box>
+                              ) : (
+                                <Typography
+                                  variant="body2"
+                                  color="textSecondary"
+                                >
+                                  No asset IDs available
+                                </Typography>
                               )}
                             </TableCell>
                           </TableRow>
@@ -1043,7 +1203,7 @@ const CreaditNotesAddFormLayout = () => {
           onClick={handleSubmit}
           disabled={!selectedOrder}
         >
-          Create Credit Note
+          Create GRN
         </button>
       </div>
 

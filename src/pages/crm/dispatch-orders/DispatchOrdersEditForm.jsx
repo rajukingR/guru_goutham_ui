@@ -1159,7 +1159,7 @@ const [returnedDates, setReturnedDates] = useState({});
                           Select Added date
                         </TableCell> */}
 
-                        <TableCell sx={{ color: "#fff" }}>Price</TableCell>
+                        {/* <TableCell sx={{ color: "#fff" }}>Price</TableCell> */}
                       </TableRow>
                     </TableHead>
                     <TableBody>
@@ -1260,7 +1260,7 @@ const [returnedDates, setReturnedDates] = useState({});
                               />
                             </TableCell> */}
 
-                            <TableCell>
+                            {/* <TableCell>
                               {formData.type === "Rent" ? (
                                 <>
                                   <div>
@@ -1270,7 +1270,7 @@ const [returnedDates, setReturnedDates] = useState({});
                               ) : (
                                 product.purchase_price
                               )}
-                            </TableCell>
+                            </TableCell> */}
                           </TableRow>
                         ))}
                     </TableBody>

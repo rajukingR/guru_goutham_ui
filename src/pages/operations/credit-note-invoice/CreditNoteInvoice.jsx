@@ -8,30 +8,40 @@ const CreditNoteInvoice = () => {
 
   const columns = [
     { id: "s_id", label: "S.No." },
+    // { id: "credit_note_number", label: "Credit Note No." },
     { id: "dispatch_order_number", label: "Order Number" },
+    { id: "returned_date", label: "Returned Date" },
+
     { id: "customer_name", label: "Customer Name" },
-    { id: "industry", label: "Industry" },
     { id: "transaction_type", label: "Transaction Type" },
     { id: "payment_type", label: "Payment Type" },
-    { id: "returned_date", label: "Returned Date" },
+
+        { id: "industry", label: "Industry" },
+
+    { id: "pan", label: "PAN" },
+    { id: "email", label: "Email" },
+    { id: "pincode", label: "Pincode" },
     
   ];
 
   useEffect(() => {
     const fetchCreditNotes = async () => {
-      try {
-        const response = await axios.get(`${API_URL}/credit-notes`);
-        if (response.status === 200) {
-          const formatted = response.data.map((item, index) => ({
-            s_id: index + 1,
-            ...item,
-          }));
-          setData(formatted);
-        }
-      } catch (error) {
-        console.error("Failed to fetch credit notes:", error);
-      }
-    };
+  try {
+    const response = await axios.get(`${API_URL}/credit-notes`);
+    if (response.status === 200) {
+      const filteredData = response.data
+        .filter((item) => item.payment_type !== "Postpaid") // 🔥 filter here
+        .map((item, index) => ({
+          s_id: index + 1,
+          ...item,
+        }));
+      setData(filteredData);
+    }
+  } catch (error) {
+    console.error("Failed to fetch credit notes:", error);
+  }
+};
+
 
     fetchCreditNotes();
   }, []);
