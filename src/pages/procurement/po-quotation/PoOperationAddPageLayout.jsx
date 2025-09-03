@@ -18,7 +18,6 @@ import {
 import { Add, Remove } from "@mui/icons-material";
 import { useNavigate } from "react-router-dom";
 
-// ✅ Put this at the top of PoOperationAddPageLayout.jsx
 const generateRandomId = () => {
   const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
   let code = "";
@@ -35,7 +34,7 @@ const PoOperationAddPageLayout = () => {
   const [products, setProducts] = useState([]);
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
-    purchaseQuotationId: "",
+    purchaseQuotationId: generateRandomId(),
     purchaseRequestId: "",
     purchaseQuotationDate: new Date().toISOString().split("T")[0],
     purchaseType: "",
@@ -61,17 +60,20 @@ const PoOperationAddPageLayout = () => {
     suppliers: "",
     products: "",
   });
+  const [validationErrors, setValidationErrors] = useState({
+    purchaseRequestId: "",
+    poQuotationStatus: "",
+    owner: "",
+    description: "",
+    products: "",
+  });
   const [snackbar, setSnackbar] = useState({
     open: false,
     message: "",
     severity: "success",
   });
-  useEffect(() => {
-    setFormData((prev) => ({
-      ...prev,
-      purchaseQuotationId: generateRandomId(),
-    }));
 
+  useEffect(() => {
     const fetchData = async () => {
       try {
         const prResponse = await fetch(`${API_URL}/purchase-requests/approved`);
@@ -87,8 +89,15 @@ const PoOperationAddPageLayout = () => {
 
         const prodResponse = await fetch(`${API_URL}/product-templete`);
         if (!prodResponse.ok) throw new Error("Failed to fetch products");
+
         const prodData = await prodResponse.json();
-        setProducts(prodData);
+
+        // ✅ Filter out "Assembled PC" category
+        const filteredProdData = prodData.filter(
+          (product) => product.product_category !== "Assembled PC"
+        );
+
+        setProducts(filteredProdData);
 
         setLoading({
           purchaseRequests: false,
@@ -112,8 +121,28 @@ const PoOperationAddPageLayout = () => {
     fetchData();
   }, []);
 
+  const validateForm = () => {
+    const errors = {
+      purchaseRequestId: !formData.purchaseRequestId
+        ? "Purchase Request is required"
+        : "",
+      poQuotationStatus: !formData.poQuotationStatus
+        ? "Status is required"
+        : "",
+      products:
+        selectedProductIds.length === 0
+          ? "At least one product is required"
+          : "",
+    };
+
+    setValidationErrors(errors);
+    return !Object.values(errors).some((error) => error !== "");
+  };
+
   const handlePurchaseRequestChange = (e) => {
     const selectedId = e.target.value;
+    setValidationErrors((prev) => ({ ...prev, purchaseRequestId: "" }));
+
     if (!selectedId) {
       setSelectedPurchaseRequest(null);
       setFormData((prev) => ({
@@ -141,21 +170,18 @@ const PoOperationAddPageLayout = () => {
     );
     const supplierName = supplier ? supplier.supplier_name : "No Supplier name";
 
-    // Auto-fill the form fields
     setFormData((prev) => ({
       ...prev,
       purchaseRequestId: selectedRequest.purchase_request_id,
-      purchaseType: selectedRequest.purchase_type, // 👈 This line
+      purchaseType: selectedRequest.purchase_type,
       purchaseRequestStatus: selectedRequest.purchase_request_status,
       owner: selectedRequest.owner,
       supplier_id: selectedRequest.supplier_id,
-      supplierName:
-        selectedRequest.supplier?.supplier_name || "No Supplier name",
+      supplierName: supplierName,
       description: selectedRequest.description,
       isSupplierLocked: true,
     }));
 
-    // Set selected products and quantities from the purchase request
     const productIds = selectedRequest.selected_products.map(
       (item) => item.product_id
     );
@@ -170,6 +196,7 @@ const PoOperationAddPageLayout = () => {
 
   const handleInputChange = (field, value) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
+    setValidationErrors((prev) => ({ ...prev, [field]: "" }));
   };
 
   const filteredProducts = products.filter(
@@ -196,6 +223,15 @@ const PoOperationAddPageLayout = () => {
   };
 
   const handleSubmit = async () => {
+    if (!validateForm()) {
+      setSnackbar({
+        open: true,
+        message: "Please fill all required fields",
+        severity: "error",
+      });
+      return;
+    }
+
     try {
       const payload = {
         purchase_quotation_id: formData.purchaseQuotationId,
@@ -232,7 +268,10 @@ const PoOperationAddPageLayout = () => {
       });
 
       if (!response.ok) {
-        throw new Error("Failed to create purchase quotation");
+        const errorData = await response.json();
+        throw new Error(
+          errorData.message || "Failed to create purchase quotation"
+        );
       }
 
       setSnackbar({
@@ -295,11 +334,13 @@ const PoOperationAddPageLayout = () => {
               placeholder="Select Purchase Request"
               onChange={handlePurchaseRequestChange}
               value={selectedPurchaseRequest?.id || ""}
+              error={validationErrors.purchaseRequestId}
+              required
             >
               <option value="">Select Purchase Request</option>
               {purchaseRequests.map((request) => (
                 <option key={request.id} value={request.id}>
-                  {request.purchase_request_id} | {request.owner}
+                  {request.purchase_request_id} | {request.supplier.supplier_name}
                 </option>
               ))}
             </Field>
@@ -446,23 +487,51 @@ const PoOperationAddPageLayout = () => {
                 />
               </Box>
 
-              <TableContainer component={Paper}>
-                <Table size="small">
+              <TableContainer
+                component={Paper}
+                sx={{
+                  maxHeight: "400px", // or whatever height you prefer
+                  overflow: "auto",
+                  position: "relative",
+                }}
+              >
+                <Table size="small" stickyHeader>
                   <TableHead>
                     <TableRow sx={{ backgroundColor: "#0d47a1" }}>
-                      <TableCell padding="checkbox" sx={{ color: "#fff" }}>
-                        <Checkbox sx={{ color: "#fff" }} />
+                      <TableCell
+                        padding="checkbox"
+                        sx={{ backgroundColor: "#0d47a1" }}
+                      >
+                        <Checkbox
+                          sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
+                        />
                       </TableCell>
-                      <TableCell sx={{ color: "#fff" }}>Product Name</TableCell>
-                      <TableCell sx={{ color: "#fff" }}>Brand</TableCell>
-                      <TableCell sx={{ color: "#fff" }}>
+                      <TableCell
+                        sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
+                      >
+                        Product Name
+                      </TableCell>
+                      <TableCell
+                        sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
+                      >
+                        Brand
+                      </TableCell>
+                      <TableCell
+                        sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
+                      >
                         Specifications
                       </TableCell>
-                      <TableCell sx={{ color: "#fff" }}>
+                      <TableCell
+                        sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
+                      >
                         Price per Piece
                       </TableCell>{" "}
                       {/* ✅ New column */}
-                      <TableCell sx={{ color: "#fff" }}>Quantity</TableCell>
+                      <TableCell
+                        sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
+                      >
+                        Quantity
+                      </TableCell>
                     </TableRow>
                   </TableHead>
 
@@ -571,9 +640,14 @@ const Field = ({
   children,
   onChange,
   lockedValueDisplay,
+  error,
+  required = false,
 }) => (
   <div style={{ ...fieldContainerStyle, ...style }}>
-    <label style={labelStyle}>{label}</label>
+    <label style={labelStyle}>
+      {label}
+      {required && <span style={{ color: "red" }}>*</span>}
+    </label>
     {lockedValueDisplay ? (
       <div
         style={{
@@ -588,7 +662,10 @@ const Field = ({
     ) : type === "select" ? (
       <div style={selectWrapperStyle}>
         <select
-          style={selectStyle}
+          style={{
+            ...selectStyle,
+            borderColor: error ? "red" : "#d1d5db",
+          }}
           value={value}
           disabled={disabled}
           onChange={onChange}
@@ -600,7 +677,11 @@ const Field = ({
     ) : type === "textarea" ? (
       <textarea
         placeholder={placeholder}
-        style={{ ...inputStyle, height: "80px" }}
+        style={{
+          ...inputStyle,
+          height: "80px",
+          borderColor: error ? "red" : "#d1d5db",
+        }}
         value={value}
         disabled={disabled}
         onChange={onChange}
@@ -609,11 +690,19 @@ const Field = ({
       <input
         type={type}
         placeholder={placeholder}
-        style={inputStyle}
+        style={{
+          ...inputStyle,
+          borderColor: error ? "red" : "#d1d5db",
+        }}
         value={value}
         disabled={disabled}
         onChange={onChange}
       />
+    )}
+    {error && (
+      <div style={{ color: "red", fontSize: "0.75rem", marginTop: "4px" }}>
+        {error}
+      </div>
     )}
   </div>
 );

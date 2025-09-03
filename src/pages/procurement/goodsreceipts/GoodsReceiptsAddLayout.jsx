@@ -17,15 +17,15 @@ import {
   Button,
 } from "@mui/material";
 import { Add, Remove } from "@mui/icons-material";
-
 import API_URL, { IMAGE_API_URL } from "../../../api/Api_url";
+
 const generateRandomId = () => {
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-  let randomPart = '';
+  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+  let randomPart = "";
   for (let i = 0; i < 5; i++) {
     randomPart += chars.charAt(Math.floor(Math.random() * chars.length));
   }
-  return `GR-${randomPart}`; // Changed prefix from PO- to GR- for Goods Receipt
+  return `GR-${randomPart}`;
 };
 
 const GoodsReceiptsAddLayout = () => {
@@ -35,10 +35,18 @@ const GoodsReceiptsAddLayout = () => {
   const [products, setProducts] = useState([]);
   const navigate = useNavigate();
   const [assetIds, setAssetIds] = useState({});
-  const [assetIdErrors, setAssetIdErrors] = useState({}); // { productId: 'Error message' }
+  const [assetIdErrors, setAssetIdErrors] = useState({});
+  const [validationErrors, setValidationErrors] = useState({
+    purchaseOrderId: "",
+    goodsReceiptStatus: "",
+    owner: "",
+    description: "",
+    products: "",
+    vendorInvoiceNumber: "",
+  });
 
   const [formData, setFormData] = useState({
-    goodsReceiptId: "",
+    goodsReceiptId: generateRandomId(),
     vendorInvoiceNumber: "",
     purchaseOrderId: "",
     purchaseOrderStatus: "",
@@ -71,31 +79,20 @@ const GoodsReceiptsAddLayout = () => {
     message: "",
     severity: "success",
   });
- useEffect(() => {
-  setFormData(prev => ({
-    ...prev,
-    goodsReceiptId: generateRandomId() // Changed field name to match your Goods Receipt form
-  }));
-
-  // Include any fetch calls specific to Goods Receipt here
-}, []);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        // Fetch approved purchase orders
         const poResponse = await fetch(`${API_URL}/purchase-orders/approved`);
         if (!poResponse.ok) throw new Error("Failed to fetch purchase orders");
         const poData = await poResponse.json();
         setPurchaseOrders(poData);
 
-        // Fetch suppliers
         const supResponse = await fetch(`${API_URL}/supplier`);
         if (!supResponse.ok) throw new Error("Failed to fetch suppliers");
         const supData = await supResponse.json();
         setSuppliers(supData);
 
-        // Fetch products
         const prodResponse = await fetch(`${API_URL}/product-templete`);
         if (!prodResponse.ok) throw new Error("Failed to fetch products");
         const prodData = await prodResponse.json();
@@ -123,8 +120,64 @@ const GoodsReceiptsAddLayout = () => {
     fetchData();
   }, []);
 
+  const validateForm = () => {
+    const errors = {
+      purchaseOrderId: !formData.purchaseOrderId
+        ? "Purchase Order is required"
+        : "",
+      goodsReceiptStatus: !formData.goodsReceiptStatus
+        ? "Status is required"
+        : "",
+      // owner: !formData.owner ? "Owner is required" : "",
+      // vendorInvoiceNumber: !formData.vendorInvoiceNumber ? "Vendor Invoice Number is required" : "",
+      products:
+        selectedProductIds.length === 0
+          ? "At least one product is required"
+          : "",
+    };
+
+    setValidationErrors(errors);
+    return !Object.values(errors).some((error) => error !== "");
+  };
+
+  const validateAssetIds = () => {
+    const errors = {};
+    let isValid = true;
+
+    Object.entries(quantities).forEach(([productId, qty]) => {
+      if (qty > 0) {
+        const currentAssetIds = assetIds[productId] || [];
+
+        if (currentAssetIds.length !== qty) {
+          errors[productId] = `Please enter exactly ${qty} asset ID(s)`;
+          isValid = false;
+        }
+
+        currentAssetIds.forEach((id, index) => {
+          if (!id.trim()) {
+            errors[productId] = `Asset ID ${index + 1} cannot be empty`;
+            isValid = false;
+          }
+        });
+
+        const uniqueIds = new Set(
+          currentAssetIds.map((id) => id.trim().toLowerCase())
+        );
+        if (uniqueIds.size !== currentAssetIds.length) {
+          errors[productId] = "Duplicate asset IDs found";
+          isValid = false;
+        }
+      }
+    });
+
+    setAssetIdErrors(errors);
+    return isValid;
+  };
+
   const handlePurchaseOrderChange = (e) => {
     const selectedId = e.target.value;
+    setValidationErrors((prev) => ({ ...prev, purchaseOrderId: "" }));
+
     if (!selectedId) {
       setSelectedPurchaseOrder(null);
       setFormData((prev) => ({
@@ -148,20 +201,18 @@ const GoodsReceiptsAddLayout = () => {
     const supplier = suppliers.find((s) => s.id === selectedOrder.supplier_id);
     const supplierName = supplier ? supplier.supplier_name : "No Supplier name";
 
-    // Auto-fill the form fields
     setFormData((prev) => ({
       ...prev,
       purchaseOrderId: selectedOrder.purchase_order_id,
       purchaseOrderStatus: selectedOrder.po_status,
       supplier_id: selectedOrder.supplier_id,
-      supplierName: selectedOrder.supplier?.supplier_name || "No Supplier name",
+      supplierName: supplierName,
       description: selectedOrder.description,
       isSupplierLocked: true,
       owner: selectedOrder.owner,
-      purchaseType:selectedOrder.purchase_type,
+      purchaseType: selectedOrder.purchase_type,
     }));
 
-    // Set selected products and quantities from the purchase order
     const productIds = selectedOrder.selected_products.map(
       (item) => item.product_id
     );
@@ -176,6 +227,7 @@ const GoodsReceiptsAddLayout = () => {
 
   const handleInputChange = (field, value) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
+    setValidationErrors((prev) => ({ ...prev, [field]: "" }));
   };
 
   const filteredProducts = products.filter(
@@ -189,7 +241,6 @@ const GoodsReceiptsAddLayout = () => {
     const qty = Math.max(0, parseInt(value) || 0);
     setQuantities({ ...quantities, [id]: qty });
 
-    // When quantity changes, adjust asset IDs array
     if (qty < (assetIds[id]?.length || 0)) {
       setAssetIds((prev) => ({
         ...prev,
@@ -209,60 +260,29 @@ const GoodsReceiptsAddLayout = () => {
     }));
   };
 
-  // Validate asset IDs before submission
-  const validateAssetIds = () => {
-    const errors = {};
-    let isValid = true;
-
-    // Check each product with quantity
-    Object.entries(quantities).forEach(([productId, qty]) => {
-      if (qty > 0) {
-        const currentAssetIds = assetIds[productId] || [];
-
-        // Check if number of asset IDs matches quantity
-        if (currentAssetIds.length !== qty) {
-          errors[productId] = `Please enter exactly ${qty} asset ID(s)`;
-          isValid = false;
-        }
-
-        // Check for empty asset IDs
-        currentAssetIds.forEach((id, index) => {
-          if (!id.trim()) {
-            errors[productId] = `Asset ID ${index + 1} cannot be empty`;
-            isValid = false;
-          }
-        });
-
-        // Check for duplicate asset IDs
-        const uniqueIds = new Set(
-          currentAssetIds.map((id) => id.trim().toLowerCase())
-        );
-        if (uniqueIds.size !== currentAssetIds.length) {
-          errors[productId] = "Duplicate asset IDs found";
-          isValid = false;
-        }
-      }
-    });
-
-    setAssetIdErrors(errors);
-    return isValid;
-  };
-
-  // Handle form submission
   const handleSubmit = async () => {
+    if (!validateForm()) {
+      setSnackbar({
+        open: true,
+        message: "Please fill all required fields",
+        severity: "error",
+      });
+      return;
+    }
+
+    if (!validateAssetIds()) {
+      setSnackbar({
+        open: true,
+        message: "Please fix all asset ID errors",
+        severity: "error",
+      });
+      return;
+    }
+
     try {
-      if (!selectedPurchaseOrder) {
-        throw new Error("Please select a purchase order");
-      }
-
-      // Validate asset IDs
-      if (!validateAssetIds()) {
-        throw new Error("Please fix all asset ID errors before submitting");
-      }
-
-      // Prepare items with asset IDs
+      // Prepare items array
       const items = selectedPurchaseOrder.selected_products
-        .filter((item) => quantities[item.product_id] > 0) // Only include items with quantity > 0
+        .filter((item) => quantities[item.product_id] > 0)
         .map((item) => {
           const product = products.find((p) => p.id === item.product_id);
           const quantity = quantities[item.product_id] || 0;
@@ -272,19 +292,30 @@ const GoodsReceiptsAddLayout = () => {
             product_id: item.product_id,
             product_name: product?.product_name || "",
             quantity: quantity,
-            asset_ids: productAssetIds.filter((id) => id.trim() !== ""), // Include non-empty asset IDs
+            asset_ids: productAssetIds.filter((id) => id.trim() !== ""),
           };
         });
 
-      // Check if there are any items to submit
       if (items.length === 0) {
         throw new Error("Please add at least one product with quantity > 0");
       }
 
+      // Optional: Frontend duplicate check within the current form
+      const allAssetIds = items.flatMap((item) => item.asset_ids);
+      const duplicateInForm = allAssetIds.filter(
+        (id, index, arr) => arr.indexOf(id) !== index
+      );
+
+      if (duplicateInForm.length > 0) {
+        throw new Error(
+          `Duplicate asset IDs in form: ${duplicateInForm.join(", ")}`
+        );
+      }
+
+      // Prepare payload
       const payload = {
-        goods_receipt_id: formData.goodsReceiptId || `GR-${Date.now()}`,
-        vendor_invoice_number:
-          formData.vendorInvoiceNumber || `INV-${Date.now()}`,
+        goods_receipt_id: formData.goodsReceiptId,
+        vendor_invoice_number: formData.vendorInvoiceNumber,
         purchase_order_id: selectedPurchaseOrder.purchase_order_id,
         supplier_id: formData.supplier_id,
         purchase_order_status: formData.purchaseOrderStatus,
@@ -303,7 +334,18 @@ const GoodsReceiptsAddLayout = () => {
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.message || "Failed to create goods receipt");
+
+        // If backend returns duplicate asset IDs
+        if (errorData.duplicateDetails) {
+          const messages = errorData.duplicateDetails
+            .map((d) => `${d.product_name}: ${d.duplicates.join(", ")}`)
+            .join("; ");
+          throw new Error(`Duplicate asset IDs found: ${messages}`);
+        } else {
+          throw new Error(
+            errorData.message || "Failed to create goods receipt"
+          );
+        }
       }
 
       setSnackbar({
@@ -356,6 +398,7 @@ const GoodsReceiptsAddLayout = () => {
               onChange={(e) =>
                 handleInputChange("goodsReceiptId", e.target.value)
               }
+              disabled
             />
             {/* <Field
               label="Vendor Invoice Number"
@@ -364,17 +407,20 @@ const GoodsReceiptsAddLayout = () => {
               onChange={(e) =>
                 handleInputChange("vendorInvoiceNumber", e.target.value)
               }
+              error={validationErrors.vendorInvoiceNumber}
             /> */}
             <Field
-              label="Purchase Order Details"
+              label="Purchase Order"
               type="select"
               value={selectedPurchaseOrder?.id || ""}
               onChange={handlePurchaseOrderChange}
+              error={validationErrors.purchaseOrderId}
+              required
             >
               <option value="">Select Purchase Order</option>
               {purchaseOrders.map((order) => (
                 <option key={order.id} value={order.id}>
-                  {order.purchase_order_id} - {order.owner}
+                  {order.purchase_order_id} - {order.supplier.supplier_name}
                 </option>
               ))}
             </Field>
@@ -402,25 +448,26 @@ const GoodsReceiptsAddLayout = () => {
               disabled
             />
             <Field
-              label="Goods Receipt Status*"
+              label="Goods Receipt Status"
               type="select"
-              placeholder="Select Status"
-              options={["Pending", "Approved", "Rejected"]}
               value={formData.goodsReceiptStatus}
               onChange={(e) =>
                 handleInputChange("goodsReceiptStatus", e.target.value)
               }
+              error={validationErrors.goodsReceiptStatus}
+              options={["Pending", "Approved", "Rejected"]}
             />
             <Field
               label="Owner"
               placeholder="Enter Owner"
               value={formData.owner}
               onChange={(e) => handleInputChange("owner", e.target.value)}
+              error={validationErrors.owner}
             />
           </div>
         </div>
 
-        {/* Column 2: Supplier Details */}
+        {/* Supplier Details */}
         <div style={cardStyle}>
           <div style={cardHeaderContainerStyle}>
             <div style={iconStyle}>🏢</div>
@@ -462,6 +509,8 @@ const GoodsReceiptsAddLayout = () => {
               placeholder="Enter Description"
               value={formData.description}
               onChange={(e) => handleInputChange("description", e.target.value)}
+              error={validationErrors.description}
+              type="textarea"
             />
           </div>
         </div>
@@ -471,6 +520,11 @@ const GoodsReceiptsAddLayout = () => {
         <div style={cardHeaderContainerStyle}>
           <h3 style={cardHeaderStyle}>Selected Products</h3>
         </div>
+        {validationErrors.products && (
+          <div style={{ color: "red", margin: "0 0 1rem 1rem" }}>
+            {validationErrors.products}
+          </div>
+        )}
         <div style={{ marginBottom: "1.5rem" }}>
           <button
             onClick={() => setShowProductTable(!showProductTable)}
@@ -503,129 +557,189 @@ const GoodsReceiptsAddLayout = () => {
                 />
               </Box>
 
-              <TableContainer component={Paper}>
-                <Table size="small">
+              <TableContainer
+                component={Paper}
+                sx={{
+                  maxHeight: "400px", // or whatever height you prefer
+                  overflow: "auto",
+                  position: "relative",
+                }}
+              >
+                <Table size="small" stickyHeader>
                   <TableHead>
                     <TableRow sx={{ backgroundColor: "#0d47a1" }}>
-                      <TableCell padding="checkbox" sx={{ color: "#fff" }}>
-                        <Checkbox sx={{ color: "#fff" }} />
+                      <TableCell
+                        padding="checkbox"
+                        sx={{ backgroundColor: "#0d47a1" }}
+                      >
+                        <Checkbox
+                          sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
+                        />
                       </TableCell>
-                      <TableCell sx={{ color: "#fff" }}>Product Name</TableCell>
-                      <TableCell sx={{ color: "#fff" }}>Brand</TableCell>
-                      <TableCell sx={{ color: "#fff" }}>
+                      <TableCell
+                        sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
+                      >
+                        Product Name
+                      </TableCell>
+                      <TableCell
+                        sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
+                      >
+                        Brand
+                      </TableCell>
+                      <TableCell
+                        sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
+                      >
                         Specifications
                       </TableCell>
-                      <TableCell sx={{ color: "#fff" }}>
+                      <TableCell
+                        sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
+                      >
                         Price per Piece
                       </TableCell>
-                      <TableCell sx={{ color: "#fff" }}>Quantity</TableCell>
-                      <TableCell sx={{ color: "#fff" }}>Asset IDs</TableCell>
+                      <TableCell
+                        sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
+                      >
+                        Quantity
+                      </TableCell>
+                      <TableCell
+                        sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
+                      >
+                        Asset IDs
+                      </TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
-  {filteredProducts
-    .filter((product) => selectedProductIds.includes(product.id))
-    .map((product) => (
-      <TableRow key={product.id}>
-        <TableCell padding="checkbox">
-          <Checkbox
-            checked={selectedProductIds.includes(product.id)}
-            onChange={() => {
-              setSelectedProductIds((prev) =>
-                prev.includes(product.id)
-                  ? prev.filter((id) => id !== product.id)
-                  : [...prev, product.id]
-              );
-            }}
-          />
-        </TableCell>
-        <TableCell>{product.product_name}</TableCell>
-        <TableCell>{product.brand}</TableCell>
-        <TableCell>
-          <div><strong>Model:</strong> {product.model}</div>
-          <div><strong>Processor:</strong> {product.processor}</div>
-          <div><strong>RAM:</strong> {product.ram}</div>
-          <div><strong>Storage:</strong> {product.storage}</div>
-          <div><strong>Graphics:</strong> {product.graphics}</div>
-        </TableCell>
-        <TableCell>
-          {/* <div><strong>Day:</strong> ₹{product.rent_price_per_day}</div> */}
-          <div><strong>Month:</strong> ₹{product.rent_price_per_month}</div>
-          {/* <div><strong>6 Months:</strong> ₹{product.rent_price_6_months}</div>
-          <div><strong>1 Year:</strong> ₹{product.rent_price_1_year}</div> */}
-        </TableCell>
-        <TableCell>
-          <Box display="flex" alignItems="center">
-            <IconButton size="small" onClick={() => decrementQty(product.id)}>
-              <Remove fontSize="small" />
-            </IconButton>
-            <TextField
-              type="number"
-              size="small"
-              value={quantities[product.id] || ""}
-              onChange={(e) =>
-                handleQtyChange(product.id, e.target.value)
-              }
-              inputProps={{
-                min: 0,
-                style: { width: 50, textAlign: "center" },
-              }}
-            />
-            <IconButton size="small" onClick={() => incrementQty(product.id)}>
-              <Add fontSize="small" />
-            </IconButton>
-          </Box>
-        </TableCell>
-        <TableCell>
-          {quantities[product.id] > 0 && (
-            <Box display="flex" flexDirection="column" gap={1}>
-              {(assetIds[product.id] || []).map((id, idx) => (
-                <TextField
-                  key={idx}
-                  size="small"
-                  placeholder={`Asset ID ${idx + 1}`}
-                  value={id}
-                  onChange={(e) => {
-                    const updated = [...(assetIds[product.id] || [])];
-                    updated[idx] = e.target.value;
-                    setAssetIds((prev) => ({
-                      ...prev,
-                      [product.id]: updated,
-                    }));
-                    if (assetIdErrors[product.id]) {
-                      setAssetIdErrors((prev) => {
-                        const newErrors = { ...prev };
-                        delete newErrors[product.id];
-                        return newErrors;
-                      });
-                    }
-                  }}
-                  error={Boolean(assetIdErrors[product.id])}
-                  helperText={idx === 0 ? assetIdErrors[product.id] : ""}
-                />
-              ))}
-              {(assetIds[product.id]?.length || 0) <
-                (quantities[product.id] || 0) && (
-                <Button
-                  size="small"
-                  variant="outlined"
-                  onClick={() =>
-                    setAssetIds((prev) => ({
-                      ...prev,
-                      [product.id]: [...(prev[product.id] || []), ""],
-                    }))
-                  }
-                >
-                  + Add Asset ID
-                </Button>
-              )}
-            </Box>
-          )}
-        </TableCell>
-      </TableRow>
-    ))}
-</TableBody>
-
+                    {filteredProducts
+                      .filter((product) =>
+                        selectedProductIds.includes(product.id)
+                      )
+                      .map((product) => (
+                        <TableRow key={product.id}>
+                          <TableCell padding="checkbox">
+                            <Checkbox
+                              checked={selectedProductIds.includes(product.id)}
+                              onChange={() => {
+                                setSelectedProductIds((prev) =>
+                                  prev.includes(product.id)
+                                    ? prev.filter((id) => id !== product.id)
+                                    : [...prev, product.id]
+                                );
+                              }}
+                            />
+                          </TableCell>
+                          <TableCell>{product.product_name}</TableCell>
+                          <TableCell>{product.brand}</TableCell>
+                          <TableCell>
+                            <div>
+                              <strong>Model:</strong> {product.model}
+                            </div>
+                            <div>
+                              <strong>Processor:</strong> {product.processor}
+                            </div>
+                            <div>
+                              <strong>RAM:</strong> {product.ram}
+                            </div>
+                            <div>
+                              <strong>Storage:</strong> {product.storage}
+                            </div>
+                            <div>
+                              <strong>Graphics:</strong> {product.graphics}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div>
+                              <strong>Month:</strong> ₹
+                              {product.rent_price_per_month}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <Box display="flex" alignItems="center">
+                              <IconButton
+                                size="small"
+                                onClick={() => decrementQty(product.id)}
+                              >
+                                <Remove fontSize="small" />
+                              </IconButton>
+                              <TextField
+                                type="number"
+                                size="small"
+                                value={quantities[product.id] || ""}
+                                onChange={(e) =>
+                                  handleQtyChange(product.id, e.target.value)
+                                }
+                                inputProps={{
+                                  min: 0,
+                                  style: { width: 50, textAlign: "center" },
+                                }}
+                              />
+                              <IconButton
+                                size="small"
+                                onClick={() => incrementQty(product.id)}
+                              >
+                                <Add fontSize="small" />
+                              </IconButton>
+                            </Box>
+                          </TableCell>
+                          <TableCell>
+                            {quantities[product.id] > 0 && (
+                              <Box
+                                display="flex"
+                                flexDirection="column"
+                                gap={1}
+                              >
+                                {(assetIds[product.id] || []).map((id, idx) => (
+                                  <TextField
+                                    key={idx}
+                                    size="small"
+                                    placeholder={`Asset ID ${idx + 1}`}
+                                    value={id}
+                                    onChange={(e) => {
+                                      const updated = [
+                                        ...(assetIds[product.id] || []),
+                                      ];
+                                      updated[idx] = e.target.value;
+                                      setAssetIds((prev) => ({
+                                        ...prev,
+                                        [product.id]: updated,
+                                      }));
+                                      if (assetIdErrors[product.id]) {
+                                        setAssetIdErrors((prev) => {
+                                          const newErrors = { ...prev };
+                                          delete newErrors[product.id];
+                                          return newErrors;
+                                        });
+                                      }
+                                    }}
+                                    error={Boolean(assetIdErrors[product.id])}
+                                    helperText={
+                                      idx === 0 ? assetIdErrors[product.id] : ""
+                                    }
+                                  />
+                                ))}
+                                {(assetIds[product.id]?.length || 0) <
+                                  (quantities[product.id] || 0) && (
+                                  <Button
+                                    size="small"
+                                    variant="outlined"
+                                    onClick={() =>
+                                      setAssetIds((prev) => ({
+                                        ...prev,
+                                        [product.id]: [
+                                          ...(prev[product.id] || []),
+                                          "",
+                                        ],
+                                      }))
+                                    }
+                                  >
+                                    + Add Asset ID
+                                  </Button>
+                                )}
+                              </Box>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                  </TableBody>
                 </Table>
               </TableContainer>
             </Box>
@@ -658,13 +772,21 @@ const Field = ({
   options = [],
   onChange,
   children,
+  error = "",
+  required = false,
 }) => (
   <div style={fieldContainerStyle}>
-    <label style={labelStyle}>{label}</label>
+    <label style={labelStyle}>
+      {label}
+      {required && <span style={{ color: "red" }}>*</span>}
+    </label>
     {type === "select" ? (
       <div style={selectWrapperStyle}>
         <select
-          style={selectStyle}
+          style={{
+            ...selectStyle,
+            borderColor: error ? "red" : "#cbd5e1",
+          }}
           disabled={disabled}
           value={value}
           onChange={onChange}
@@ -684,20 +806,40 @@ const Field = ({
         </select>
         <div style={selectArrowStyle}>▼</div>
       </div>
+    ) : type === "textarea" ? (
+      <textarea
+        placeholder={placeholder}
+        value={value}
+        disabled={disabled}
+        style={{
+          ...inputStyle,
+          height: "80px",
+          borderColor: error ? "red" : "#cbd5e1",
+        }}
+        onChange={onChange}
+      />
     ) : (
       <input
         type={type}
         placeholder={placeholder}
         value={value}
         disabled={disabled}
-        style={inputStyle}
+        style={{
+          ...inputStyle,
+          borderColor: error ? "red" : "#cbd5e1",
+        }}
         onChange={onChange}
       />
+    )}
+    {error && (
+      <div style={{ color: "red", fontSize: "0.75rem", marginTop: "4px" }}>
+        {error}
+      </div>
     )}
   </div>
 );
 
-// Styles
+// Styles (same as before)
 const containerStyle = {
   padding: "2rem",
   fontFamily: '"Inter", "Segoe UI", sans-serif',
@@ -801,7 +943,6 @@ const cancelBtnStyle = {
   cursor: "pointer",
   fontWeight: "500",
   fontSize: "0.875rem",
-  transition: "all 0.2s ease",
 };
 
 const createBtnStyle = {
@@ -813,7 +954,6 @@ const createBtnStyle = {
   cursor: "pointer",
   fontWeight: "500",
   fontSize: "0.875rem",
-  transition: "all 0.2s ease",
 };
 
 export default GoodsReceiptsAddLayout;

@@ -63,7 +63,6 @@ const ProductsAddLayout = () => {
     cabinet: "",
     smps: "",
     ram_slots: "",
-    power: "",
 
     // Monitor specific
     screen_size: "",
@@ -71,6 +70,10 @@ const ProductsAddLayout = () => {
     // HDD specific
     capacity: "",
     speed: "",
+frequency_band: "",
+    wifi_standard: "",
+    // SSD specific
+    ssd_type: "",
 
     // RAM specific
     ramType: "",
@@ -152,7 +155,7 @@ const ProductsAddLayout = () => {
     if (name === "maxSpeed" || name === "speed") {
       // Ensure speed values are reasonable
       const floatValue = parseFloat(value);
-      if (floatValue > 10) {
+      if (floatValue > 10000) {
         // Assuming 10GHz is a reasonable max
         showSnackbar("Please enter a valid speed (max 10GHz)", "error");
         return;
@@ -244,12 +247,16 @@ const ProductsAddLayout = () => {
     try {
       const formDataToSend = new FormData();
 
-      // Append all fields to FormData with proper value handling
-      Object.entries(formData).forEach(([key, value]) => {
-        // Skip null/undefined values
+      // ✅ If product_category is RAM, set ram = sizeGb
+      const formDataCopy = { ...formData };
+      if (formDataCopy.product_category === "RAM") {
+        formDataCopy.ram = formDataCopy.sizeGb?.toString() || "";
+      }
+
+      // Append all fields to FormData
+      Object.entries(formDataCopy).forEach(([key, value]) => {
         if (value === null || value === undefined) return;
 
-        // Handle different value types appropriately
         if (typeof value === "boolean") {
           formDataToSend.append(key, value ? "1" : "0");
         } else if (value instanceof File) {
@@ -259,7 +266,7 @@ const ProductsAddLayout = () => {
         }
       });
 
-      // Submit the multipart/form-data request
+      // Submit the request
       const response = await axios.post(
         `${API_URL}/product-templete/create`,
         formDataToSend,
@@ -270,17 +277,15 @@ const ProductsAddLayout = () => {
         }
       );
 
-      // Show success message
       showSnackbar(
         response.data.message || "Product added successfully!",
         "success"
       );
 
-      // Reset form after success
+      // Reset form
       setFormData({
-        // Common fields
         product_category: "",
-        product_id: generateProductId(), // Generate new ID for next product
+        product_id: generateProductId(),
         product_name: "",
         product_image: null,
         brand: "",
@@ -317,7 +322,6 @@ const ProductsAddLayout = () => {
         cabinet: "",
         smps: "",
         ram_slots: "",
-        power: "",
 
         // Monitor
         screen_size: "",
@@ -325,7 +329,9 @@ const ProductsAddLayout = () => {
         // Storage
         capacity: "",
         speed: "",
-
+        frequency_band: "", 
+        wifi_standard: "",
+        ssd_type: "",
         // RAM
         ramType: "",
         sizeGb: "",
@@ -347,22 +353,19 @@ const ProductsAddLayout = () => {
         is_active: true,
       });
 
-      // Navigate after delay
+      // Navigate to product library after success
       setTimeout(() => {
         navigate("/dashboard/product_library");
       }, 1500);
     } catch (err) {
-      // Enhanced error handling
       let errorMessage = "An error occurred while saving the product";
 
       if (err.response) {
-        // Server responded with error status
         errorMessage =
           err.response.data.message ||
           err.response.data.error ||
           `Server error: ${err.response.status}`;
       } else if (err.request) {
-        // Request was made but no response
         errorMessage = "No response from server. Please check your connection.";
       }
 
@@ -515,32 +518,34 @@ const ProductsAddLayout = () => {
               required
             />
 
-            <div style={{ gridColumn: "1 / -1" }}>
-        <label style={{ display: "block", marginBottom: "8px" }}>
-          Included Accessories:
-        </label>
-        <div style={checkboxGroupStyle}>
-          {["mouse", "keyboard", "dvd", "speaker", "webcam"].map((field) => (
-            <label
-              key={field}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                marginRight: "15px",
-              }}
-            >
-              <input
-                type="checkbox"
-                name={field}
-                checked={formData[field]}
-                onChange={handleChange}
-                style={{ marginRight: "5px" }}
-              />
-              {field.charAt(0).toUpperCase() + field.slice(1)}
-            </label>
-          ))}
-        </div>
-      </div>
+            {/* <div style={{ gridColumn: "1 / -1" }}>
+              <label style={{ display: "block", marginBottom: "8px" }}>
+                Included Accessories:
+              </label>
+              <div style={checkboxGroupStyle}>
+                {["mouse", "keyboard", "dvd", "speaker", "webcam"].map(
+                  (field) => (
+                    <label
+                      key={field}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        marginRight: "15px",
+                      }}
+                    >
+                      <input
+                        type="checkbox"
+                        name={field}
+                        checked={formData[field]}
+                        onChange={handleChange}
+                        style={{ marginRight: "5px" }}
+                      />
+                      {field.charAt(0).toUpperCase() + field.slice(1)}
+                    </label>
+                  )
+                )}
+              </div>
+            </div> */}
           </>
         );
 
@@ -704,6 +709,88 @@ const ProductsAddLayout = () => {
             />
           </>
         );
+      case "SSD":
+        return (
+          <>
+            <Field
+              label="Storage Capacity"
+              name="capacity"
+              placeholder="Enter Storage Capacity (e.g., 512GB)"
+              value={formData.capacity}
+              onChange={handleChange}
+              required
+            />
+
+            <Field
+              label="SSD Type"
+              name="ssd_type"
+              type="select"
+              value={formData.ssd_type}
+              onChange={handleChange}
+              required
+            >
+              <option value="">Select SSD Type</option>
+              <option value="SATA">SATA</option>
+              <option value="M.2">M.2</option>
+              <option value="NVMe">NVMe</option>
+            </Field>
+
+            <Field
+              label="Read/Write Speed"
+              name="speed"
+              placeholder="Enter Speed (e.g., 3500 MB/s)"
+              value={formData.speed}
+              onChange={handleChange}
+            />
+          </>
+        );
+        case "Wi-Fi":
+  return (
+    <>
+      <Field
+        label="Wi-Fi Standard"
+        name="wifi_standard"
+        type="select"
+        value={formData.wifi_standard}
+        onChange={handleChange}
+        required
+      >
+        <option value="">Select Standard</option>
+        <option value="802.11a">802.11a</option>
+        <option value="802.11b">802.11b</option>
+        <option value="802.11g">802.11g</option>
+        <option value="802.11n">802.11n</option>
+        <option value="802.11ac">802.11ac</option>
+        <option value="802.11ax (Wi-Fi 6)">802.11ax (Wi-Fi 6)</option>
+      </Field>
+
+      <Field
+        label="Frequency Band"
+        name="frequency_band"
+        type="select"
+        value={formData.frequency_band}
+        onChange={handleChange}
+        required
+      >
+        <option value="">Select Frequency</option>
+        <option value="2.4GHz">2.4GHz</option>
+        <option value="5GHz">5GHz</option>
+      </Field>
+
+      <Field
+        label="Max Speed"
+        name="speed"
+        placeholder="Enter Max Speed (e.g., 1200 Mbps)"
+        value={formData.speed}
+        onChange={handleChange}
+      />
+
+     
+
+      
+    </>
+  );
+
 
       case "Processor":
         return (
@@ -836,7 +923,9 @@ const ProductsAddLayout = () => {
                 <option value="">Select Disk Type</option>
                 <option value="HDD">HDD</option>
                 <option value="SSD">SSD</option>
-                <option value="SSD / HDD / Hybrid / NVMe">SSD / HDD / Hybrid / NVMe</option>
+                <option value="SSD / HDD / Hybrid / NVMe">
+                  SSD / HDD / Hybrid / NVMe
+                </option>
               </Field>
 
               <Field
@@ -884,32 +973,34 @@ const ProductsAddLayout = () => {
                 required
               />
             </div>
-             <div style={{ gridColumn: "1 / -1" }}>
-        <label style={{ display: "block", marginBottom: "8px" }}>
-          Included Accessories:
-        </label>
-        <div style={checkboxGroupStyle}>
-          {["mouse", "keyboard", "dvd", "speaker", "webcam"].map((field) => (
-            <label
-              key={field}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                marginRight: "15px",
-              }}
-            >
-              <input
-                type="checkbox"
-                name={field}
-                checked={formData[field]}
-                onChange={handleChange}
-                style={{ marginRight: "5px" }}
-              />
-              {field.charAt(0).toUpperCase() + field.slice(1)}
-            </label>
-          ))}
-        </div>
-      </div>
+            {/* <div style={{ gridColumn: "1 / -1" }}>
+              <label style={{ display: "block", marginBottom: "8px" }}>
+                Included Accessories:
+              </label>
+              <div style={checkboxGroupStyle}>
+                {["mouse", "keyboard", "dvd", "speaker", "webcam"].map(
+                  (field) => (
+                    <label
+                      key={field}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        marginRight: "15px",
+                      }}
+                    >
+                      <input
+                        type="checkbox"
+                        name={field}
+                        checked={formData[field]}
+                        onChange={handleChange}
+                        style={{ marginRight: "5px" }}
+                      />
+                      {field.charAt(0).toUpperCase() + field.slice(1)}
+                    </label>
+                  )
+                )}
+              </div>
+            </div> */}
           </>
         );
 
@@ -943,11 +1034,11 @@ const ProductsAddLayout = () => {
                   required
                 >
                   <option value="">Select Size</option>
-                  <option value="4">4 GB</option>
-                  <option value="8">8 GB</option>
-                  <option value="16">16 GB</option>
-                  <option value="32">32 GB</option>
-                  <option value="64">64 GB</option>
+                  <option value="4GB">4 GB</option>
+                  <option value="8GB">8 GB</option>
+                  <option value="16GB">16 GB</option>
+                  <option value="32GB">32 GB</option>
+                  <option value="64GB">64 GB</option>
                 </Field>
 
                 <Field
@@ -1001,9 +1092,9 @@ const ProductsAddLayout = () => {
           <>
             <Field
               label="Power in Watts"
-              name="power"
+              name="smps"
               placeholder="Enter Power (e.g., 450W)"
-              value={formData.power}
+              value={formData.smps}
               onChange={handleChange}
               required
             />

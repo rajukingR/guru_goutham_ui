@@ -80,9 +80,13 @@ const POQuotationEdit = () => {
           prodResponse.json(),
         ]);
 
+        const filteredProdData = prodData.filter(
+          (product) => product.product_category !== "Assembled PC"
+        );
+
         setPurchaseRequests(prData);
         setSuppliers(supData);
-        setProducts(prodData);
+        setProducts(filteredProdData); // ✅ Set filtered product data here
 
         // If in edit mode, fetch the existing quotation
         if (isEditMode) {
@@ -508,13 +512,23 @@ const POQuotationEdit = () => {
               />
             </Box>
 
-            <TableContainer component={Paper}>
-              <Table size="small">
+            <TableContainer
+              component={Paper}
+              sx={{
+                maxHeight: "400px", // or whatever height you prefer
+                overflow: "auto",
+                position: "relative",
+              }}
+            >
+              <Table size="small" stickyHeader>
                 <TableHead>
                   <TableRow sx={{ backgroundColor: "#0d47a1" }}>
-                    <TableCell padding="checkbox" sx={{ color: "#fff" }}>
+                    <TableCell
+                      padding="checkbox"
+                      sx={{ backgroundColor: "#0d47a1" }}
+                    >
                       <Checkbox
-                        sx={{ color: "#fff" }}
+                        sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
                         indeterminate={
                           selectedProductIds.length > 0 &&
                           selectedProductIds.length < products.length
@@ -532,11 +546,32 @@ const POQuotationEdit = () => {
                         }}
                       />
                     </TableCell>
-                    <TableCell sx={{ color: "#fff" }}>Product Name</TableCell>
-                    <TableCell sx={{ color: "#fff" }}>Brand</TableCell>
-                   <TableCell sx={{ color: "#fff" }}>Specifications</TableCell>
-                       <TableCell sx={{ color: "#fff" }}>Price per Piece</TableCell> {/* ✅ New column */}
-                    <TableCell sx={{ color: "#fff" }}>Quantity</TableCell>
+                    <TableCell
+                      sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
+                    >
+                      Product Name
+                    </TableCell>
+                    <TableCell
+                      sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
+                    >
+                      Brand
+                    </TableCell>
+                    <TableCell
+                      sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
+                    >
+                      Specifications
+                    </TableCell>
+                    <TableCell
+                      sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
+                    >
+                      Price per Piece
+                    </TableCell>{" "}
+                    {/* ✅ New column */}
+                    <TableCell
+                      sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
+                    >
+                      Quantity
+                    </TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
@@ -557,30 +592,33 @@ const POQuotationEdit = () => {
                       <TableCell>{product.product_name}</TableCell>
                       <TableCell>{product.brand}</TableCell>
                       <TableCell>
-                                               <div>
-                                                 <strong>Model:</strong> {product.model}
-                                               </div>
-                                               <div>
-                                                 <strong>Processor:</strong> {product.processor}
-                                               </div>
-                                               <div>
-                                                 <strong>RAM:</strong> {product.ram}
-                                               </div>
-                                               <div>
-                                                 <strong>Storage:</strong> {product.storage}
-                                               </div>
-                                               <div>
-                                                 <strong>Graphics:</strong> {product.graphics}
-                                               </div>
-                                             </TableCell>
-                                             <TableCell>
-                       <>
-                         {/* <div><strong>Day:</strong> ₹{product.rent_price_per_day}</div> */}
-                         <div><strong>Month:</strong> ₹{product.rent_price_per_month}</div>
-                         {/* <div><strong>6 Months:</strong> ₹{product.rent_price_6_months}</div>
+                        <div>
+                          <strong>Model:</strong> {product.model}
+                        </div>
+                        <div>
+                          <strong>Processor:</strong> {product.processor}
+                        </div>
+                        <div>
+                          <strong>RAM:</strong> {product.ram}
+                        </div>
+                        <div>
+                          <strong>Storage:</strong> {product.storage}
+                        </div>
+                        <div>
+                          <strong>Graphics:</strong> {product.graphics}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <>
+                          {/* <div><strong>Day:</strong> ₹{product.rent_price_per_day}</div> */}
+                          <div>
+                            <strong>Month:</strong> ₹
+                            {product.rent_price_per_month}
+                          </div>
+                          {/* <div><strong>6 Months:</strong> ₹{product.rent_price_6_months}</div>
                          <div><strong>1 Year:</strong> ₹{product.rent_price_1_year}</div> */}
-                       </>
-                     </TableCell>
+                        </>
+                      </TableCell>
                       <TableCell>
                         <Box display="flex" alignItems="center">
                           <IconButton

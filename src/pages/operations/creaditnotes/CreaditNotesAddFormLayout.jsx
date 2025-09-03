@@ -64,6 +64,9 @@ const CreaditNotesAddFormLayout = () => {
     email: "",
     shippingName: "",
     pincode: "",
+    vehicleNo: "",
+    collectedPersonName: "",
+    collectedPersonNo: "",
     status: "Draft",
     printCreditNote: false,
   });
@@ -432,6 +435,23 @@ const CreaditNotesAddFormLayout = () => {
       return;
     }
 
+     // Validate collected person fields
+    if (!formData.collectedPersonName) {
+      setErrors((prev) => ({ ...prev, collectedPersonName: true }));
+      setSnackbarMessage("Collected Person Name is required");
+      setSnackbarSeverity("error");
+      setOpenSnackbar(true);
+      return;
+    }
+
+    if (!formData.collectedPersonNo) {
+      setErrors((prev) => ({ ...prev, collectedPersonNo: true }));
+      setSnackbarMessage("Collected Person No is required");
+      setSnackbarSeverity("error");
+      setOpenSnackbar(true);
+      return;
+    }
+
     let isValid = true;
     const newErrors = {};
 
@@ -491,6 +511,9 @@ const CreaditNotesAddFormLayout = () => {
       email: formData.email,
       shipping_name: formData.shippingName,
       pincode: formData.pincode,
+      vehicle_no: formData.vehicleNo,
+      collected_person_name: formData.collectedPersonName,
+      collected_person_no: formData.collectedPersonNo,
       status: formData.status,
       print_credit_note: formData.printCreditNote,
       items: selectedProductIds.map((productId) => {
@@ -574,7 +597,7 @@ const CreaditNotesAddFormLayout = () => {
               />
             </div>
 
-            <div style={fieldContainerStyle}>
+            {/* <div style={fieldContainerStyle}>
               <label style={labelStyle}>Title</label>
               <input
                 type="text"
@@ -584,7 +607,7 @@ const CreaditNotesAddFormLayout = () => {
                 value={formData.creditNoteTitle}
                 onChange={handleInputChange}
               />
-            </div>
+            </div> */}
 
             <div style={fieldContainerStyle}>
               <label style={labelStyle}>
@@ -597,7 +620,6 @@ const CreaditNotesAddFormLayout = () => {
                 name="returnedDate"
                 value={formData.returnedDate}
                 onChange={handleInputChange}
-                required
               />
             </div>
 
@@ -638,7 +660,6 @@ const CreaditNotesAddFormLayout = () => {
                       value={formData.paymentType}
                       onChange={handleInputChange}
                       style={inputStyle}
-                      required
                     >
                       <option value="" disabled selected>
                         -- Select Payment Type --
@@ -688,7 +709,6 @@ const CreaditNotesAddFormLayout = () => {
                   displayEmpty
                   inputProps={{ "aria-label": "Without label" }}
                   style={inputStyle}
-                  required
                 >
                   <MenuItem value="" disabled>
                     Select Customer
@@ -811,7 +831,7 @@ const CreaditNotesAddFormLayout = () => {
               )}
             </div>
 
-            <div style={fieldContainerStyle}>
+            {/* <div style={fieldContainerStyle}>
               <label style={labelStyle}>Customer ID</label>
               <input
                 type="text"
@@ -822,7 +842,7 @@ const CreaditNotesAddFormLayout = () => {
                 onChange={handleInputChange}
                 disabled
               />
-            </div>
+            </div> */}
 
             <div style={fieldContainerStyle}>
               <label style={labelStyle}>Customer Name</label>
@@ -867,7 +887,7 @@ const CreaditNotesAddFormLayout = () => {
         <div style={cardStyle}>
           <div style={cardHeaderContainerStyle}>
             <div style={iconStyle}>⚙️</div>
-            <h3 style={cardHeaderStyle}>Control:</h3>
+            <h3 style={cardHeaderStyle}>Other Details:</h3>
           </div>
           <div style={fieldsGridStyle}>
             <div style={fieldContainerStyle}>
@@ -916,6 +936,67 @@ const CreaditNotesAddFormLayout = () => {
                 value={formData.pincode}
                 onChange={handleInputChange}
               />
+            </div>
+
+             <div style={fieldContainerStyle}>
+              <label style={labelStyle}>Vehicle No</label>
+              <input
+                type="text"
+                placeholder="Enter Vehicle No"
+                style={{
+                  ...inputStyle,
+                  borderColor: errors.vehicleNo ? "red" : "#d1d5db",
+                }}
+                name="vehicleNo"
+                value={formData.vehicleNo}
+                onChange={handleInputChange}
+              />
+            </div>
+
+            <div style={fieldContainerStyle}>
+              <label style={labelStyle}>
+                Collected Person Name
+                <span style={requiredStyle}>*</span>
+              </label>
+              <input
+                type="text"
+                placeholder="Enter Collected Person Name"
+                style={{
+                  ...inputStyle,
+                  borderColor: errors.collectedPersonName ? "red" : "#d1d5db",
+                }}
+                name="collectedPersonName"
+                value={formData.collectedPersonName}
+                onChange={handleInputChange}
+              />
+              {errors.collectedPersonName && (
+                <span style={{ color: "red", fontSize: "0.75rem" }}>
+                  This field is required
+                </span>
+              )}
+            </div>
+            
+            <div style={fieldContainerStyle}>
+              <label style={labelStyle}>
+                Collected Person No
+                <span style={requiredStyle}>*</span>
+              </label>
+              <input
+                type="text"
+                placeholder="Enter Collected Person No"
+                style={{
+                  ...inputStyle,
+                  borderColor: errors.collectedPersonNo ? "red" : "#d1d5db",
+                }}
+                name="collectedPersonNo"
+                value={formData.collectedPersonNo}
+                onChange={handleInputChange}
+              />
+              {errors.collectedPersonNo && (
+                <span style={{ color: "red", fontSize: "0.75rem" }}>
+                  This field is required
+                </span>
+              )}
             </div>
           </div>
         </div>

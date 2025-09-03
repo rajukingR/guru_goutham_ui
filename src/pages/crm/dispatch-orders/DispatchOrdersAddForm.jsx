@@ -18,7 +18,6 @@ import {
 import { Add, Remove } from "@mui/icons-material";
 import { useNavigate } from "react-router-dom";
 import API_URL from "../../../api/Api_url";
-import { useInventory } from "../../../contexts/InventoryContext";
 
 // Styles (same as in your original code)
 const containerStyle = {
@@ -301,6 +300,7 @@ const Field = memo(
     readOnly = false,
     value,
     onChange,
+    error = "", // <-- Accept error prop
     ...props
   }) => (
     <div style={fieldContainerStyle}>
@@ -308,10 +308,14 @@ const Field = memo(
         {label}
         {required && <span style={requiredStyle}>*</span>}
       </label>
+
       {type === "select" ? (
         <div style={selectWrapperStyle}>
           <select
-            style={selectStyle}
+            style={{
+              ...selectStyle,
+              borderColor: error ? "red" : "#d1d5db",
+            }}
             name={name}
             value={value}
             onChange={onChange}
@@ -331,7 +335,10 @@ const Field = memo(
         <textarea
           name={name}
           placeholder={placeholder}
-          style={textareaStyle}
+          style={{
+            ...textareaStyle,
+            borderColor: error ? "red" : "#d1d5db",
+          }}
           rows={3}
           readOnly={readOnly}
           value={value}
@@ -343,21 +350,46 @@ const Field = memo(
           type="date"
           name={name}
           placeholder={placeholder}
-          style={inputStyle}
+          style={{
+            ...inputStyle,
+            borderColor: error ? "red" : "#d1d5db",
+          }}
           value={value}
           onChange={onChange}
           readOnly={readOnly}
           {...props}
         />
       ) : type === "checkbox" ? (
-        <input
-          type="checkbox"
-          name={name}
-          checked={value}
-          onChange={onChange}
-          style={checkboxStyle}
-          {...props}
-        />
+        <div style={checkboxContainerStyle}>
+          <label style={checkboxLabelStyle}>
+            <input
+              type="checkbox"
+              name={name}
+              checked={value}
+              onChange={onChange}
+              style={checkboxStyle}
+              {...props}
+            />
+            <div
+              style={{
+                ...checkboxCustomStyle,
+                backgroundColor: value ? "#2563eb" : "#ffffff",
+                borderColor: value ? "#2563eb" : "#d1d5db",
+              }}
+            >
+              {value && <span style={checkmarkStyle}>&#10003;</span>}
+            </div>
+            <div>
+              <span style={checkboxTextStyle}>
+                {label}
+                {required && <span style={requiredStyle}>*</span>}
+              </span>
+              {props.description && (
+                <span style={checkboxDescStyle}>{props.description}</span>
+              )}
+            </div>
+          </label>
+        </div>
       ) : (
         <input
           type={type}
@@ -366,12 +398,20 @@ const Field = memo(
           style={{
             ...inputStyle,
             backgroundColor: readOnly ? "#f3f4f6" : "#ffffff",
+            borderColor: error ? "red" : "#d1d5db",
           }}
           readOnly={readOnly}
           value={value}
           onChange={onChange}
           {...props}
         />
+      )}
+
+      {/* Show error message */}
+      {error && (
+        <div style={{ color: "red", fontSize: "0.75rem", marginTop: "4px" }}>
+          {error}
+        </div>
       )}
     </div>
   )
@@ -390,13 +430,27 @@ const DispatchOrdersAddForm = ({ product }) => {
   const navigate = useNavigate();
 
   // State for form data
-  const { inventoryData } = useInventory();
   const [assetSearchTerms, setAssetSearchTerms] = useState({});
+  const [approvedReceiptProducts, setApprovedReceiptProducts] = useState([]);
 
   const getAvailableQty = (productId) => {
-    const entry = inventoryData.find((item) => item.id === productId);
-    return entry ? entry.available_quantity : "N/A";
+    const entry = approvedReceiptProducts.find(
+      (item) => item.product_id === productId
+    );
+    return entry ? entry.available_quantity : 0;
   };
+
+  const getAvailableAssetIds = (productId) => {
+    const entry = approvedReceiptProducts.find(
+      (item) => item.product_id === productId
+    );
+    return entry ? entry.available_asset_ids : [];
+  };
+
+  const [errors, setErrors] = useState({
+    order_id: "",
+    dispatch_order_status: "",
+  });
 
   const [formData, setFormData] = useState({
     dispatch_order_id: "",
@@ -407,7 +461,7 @@ const DispatchOrdersAddForm = ({ product }) => {
     order_number: "",
     payment_type: "",
     dispatch_order_date: new Date().toISOString().split("T")[0],
-    dispatch_order_status: "Dispatched",
+    dispatch_order_status: "",
     dealer_reference: "",
     email: "",
     gst_number: "",
@@ -424,6 +478,8 @@ const DispatchOrdersAddForm = ({ product }) => {
     pincode: "",
     city: "",
     state: "",
+    peripheral_update: false,
+    is_direct_invoice: false,
     country: "India",
     items: [],
   });
@@ -435,7 +491,6 @@ const DispatchOrdersAddForm = ({ product }) => {
   const [quantities, setQuantities] = useState({});
   const [searchTerm, setSearchTerm] = useState("");
   const [showProductTable, setShowProductTable] = useState(false);
-  const [availableAssetIds, setAvailableAssetIds] = useState({});
   const [deviceIds, setDeviceIds] = useState({});
   const [deviceIdErrors, setDeviceIdErrors] = useState({});
   const [selectedRAM, setSelectedRAM] = useState({});
@@ -454,6 +509,30 @@ const DispatchOrdersAddForm = ({ product }) => {
       ...prev,
       dispatch_order_id: generateDispatchOrderId(),
     }));
+  }, []);
+
+  // Fetch approved receipt products on component mount
+  useEffect(() => {
+    const fetchApprovedReceiptProducts = async () => {
+      try {
+        const response = await fetch(
+          `${API_URL}/goods-receipts/approved-receipt-products`
+        );
+        if (!response.ok)
+          throw new Error("Failed to fetch approved receipt products");
+        const data = await response.json();
+        setApprovedReceiptProducts(data.products || []);
+      } catch (error) {
+        console.error("Error fetching approved receipt products:", error);
+        setSnackbar({
+          open: true,
+          message: "Error fetching approved receipt products: " + error.message,
+          severity: "error",
+        });
+      }
+    };
+
+    fetchApprovedReceiptProducts();
   }, []);
 
   // Fetch orders and products on component mount
@@ -493,16 +572,13 @@ const DispatchOrdersAddForm = ({ product }) => {
 
     const { personalDetails, address, items } = selectedOrder;
 
-    // Set available asset IDs for each product
-    const newAvailableAssetIds = {};
+    // Set device IDs for each product
     const newDeviceIds = {};
 
     items.forEach((item) => {
-      newAvailableAssetIds[item.product_id] = item.available_asset_ids || [];
       newDeviceIds[item.product_id] = item.device_ids || [];
     });
 
-    setAvailableAssetIds(newAvailableAssetIds);
     setDeviceIds(newDeviceIds);
 
     setFormData({
@@ -529,6 +605,10 @@ const DispatchOrdersAddForm = ({ product }) => {
         quantity: item.requested_quantity,
         item_total_value: item.item_total_value,
         device_ids: item.device_ids || [],
+        offer_purchase_price: item.offer_purchase_price || 0,
+        offer_rent_price_per_month: item.offer_rent_price_per_month || 0,
+        purchase_price: item.purchase_price || 0,
+        rent_price_per_month: item.rent_price_per_month || 0,
       })),
     });
 
@@ -649,6 +729,34 @@ const DispatchOrdersAddForm = ({ product }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
+    // Validate form
+    let isValid = true;
+    const newErrors = {
+      order_id: "",
+      dispatch_order_status: "",
+    };
+
+    // Validate required fields
+    if (!formData.order_id) {
+      newErrors.order_id = "Order selection is required";
+      isValid = false;
+    }
+    if (!formData.dispatch_order_status) {
+      newErrors.dispatch_order_status = "Dispatch order status is required";
+      isValid = false;
+    }
+
+    setErrors(newErrors);
+
+    if (!isValid) {
+      setSnackbar({
+        open: true,
+        message: "Please fix the errors before submitting",
+        severity: "error",
+      });
+      return;
+    }
+
     // Validate Asset IDs
     let hasErrors = false;
     const newDeviceIdErrors = {};
@@ -698,11 +806,16 @@ const DispatchOrdersAddForm = ({ product }) => {
 
       // Prepare items data
       const items = selectedProductIds.map((productId) => {
+        const orderItem = selectedOrder.items.find(
+          (item) => item.product_id === productId
+        );
+
         const product = products.find((p) => p.id === productId);
         const quantity = quantities[productId] || 1;
         const selectedDeviceIds = deviceIds[productId] || [];
 
         let total_price = 0;
+
         if (formData.transaction_type === "Rent") {
           const rentalDuration = selectedOrder?.rental_duration || 1;
           if (rentalDuration === 12) {
@@ -710,8 +823,13 @@ const DispatchOrdersAddForm = ({ product }) => {
           } else if (rentalDuration === 6) {
             total_price = product.rent_price_6_months * quantity;
           } else {
-            total_price =
-              product.rent_price_per_month * quantity * rentalDuration;
+            const monthlyPrice =
+              product?.offer_rent_price_per_month &&
+              product.offer_rent_price_per_month !== ""
+                ? Number(product.offer_rent_price_per_month)
+                : Number(product?.rent_price_per_month || 0);
+
+            total_price = monthlyPrice;
           }
         } else {
           total_price = product.purchase_price * quantity;
@@ -723,6 +841,20 @@ const DispatchOrdersAddForm = ({ product }) => {
           quantity,
           total_price,
           device_ids: selectedDeviceIds,
+          purchase_price:
+            orderItem?.purchase_price || product.purchase_price || 0,
+          rent_price_per_month:
+            orderItem?.rent_price_per_month ||
+            product.rent_price_per_month ||
+            0,
+          offer_purchase_price:
+            orderItem?.offer_purchase_price ||
+            product.offer_purchase_price ||
+            0,
+          offer_rent_price_per_month:
+            orderItem?.offer_rent_price_per_month ||
+            product.offer_rent_price_per_month ||
+            0,
         };
       });
 
@@ -803,19 +935,19 @@ const DispatchOrdersAddForm = ({ product }) => {
                 onChange={handleInputChange}
               />
               <Field
-                label="Dispatch Order Title"
-                name="dispatch_order_title"
-                placeholder="Enter Dispatch Order Title"
-                value={formData.dispatch_order_title}
-                onChange={handleInputChange}
-              />
-              <Field
-                label="Order Details"
+                label="Select Order"
                 name="order_id"
                 type="select"
                 placeholder="Select Order"
                 value={formData.order_id}
-                onChange={(e) => handleOrderSelect(e.target.value)}
+                onChange={(e) => {
+                  handleOrderSelect(e.target.value);
+                  // Clear error when a selection is made
+                  if (errors.order_id) {
+                    setErrors({ ...errors, order_id: "" });
+                  }
+                }}
+                error={errors.order_id}
                 options={orders.map((order) => {
                   const customer =
                     order.personalDetails || order.personal_details || {};
@@ -875,12 +1007,18 @@ const DispatchOrdersAddForm = ({ product }) => {
                 type="select"
                 placeholder="Select Status"
                 value={formData.dispatch_order_status}
-                onChange={handleInputChange}
+                onChange={(e) => {
+                  handleInputChange(e);
+                  // Clear error when a selection is made
+                  if (errors.dispatch_order_status) {
+                    setErrors({ ...errors, dispatch_order_status: "" });
+                  }
+                }}
+                error={errors.dispatch_order_status}
                 options={[
                   { value: "Pending", label: "Pending" },
                   { value: "Approved", label: "Approved" },
                 ]}
-                required
               />
               <Field
                 label="Dispatch Order Date"
@@ -1002,6 +1140,27 @@ const DispatchOrdersAddForm = ({ product }) => {
               />
             </div>
           </div>
+          {/* Peripheral Update Checkbox */}
+          <div style={fieldContainerStyle}>
+            <Field
+              label="Peripheral Update Required"
+              name="peripheral_update"
+              type="checkbox"
+              value={formData.peripheral_update}
+              onChange={handleInputChange}
+              description="Check if this delivery includes peripheral updates"
+            />
+
+            {/* Direct Invoice Checkbox */}
+            <Field
+              label="Direct Invoice"
+              name="is_direct_invoice"
+              type="checkbox"
+              value={formData.is_direct_invoice}
+              onChange={handleInputChange}
+              description="Check if this is a direct invoice"
+            />
+          </div>
         </div>
 
         {/* Select Products Section */}
@@ -1043,13 +1202,23 @@ const DispatchOrdersAddForm = ({ product }) => {
                   />
                 </Box>
 
-                <TableContainer component={Paper}>
-                  <Table size="small">
+                <TableContainer
+                  component={Paper}
+                  sx={{
+                    maxHeight: "400px", // or whatever height you prefer
+                    overflow: "auto",
+                    position: "relative",
+                  }}
+                >
+                  <Table size="small" stickyHeader>
                     <TableHead>
                       <TableRow sx={{ backgroundColor: "#0d47a1" }}>
-                        <TableCell padding="checkbox" sx={{ color: "#fff" }}>
+                        <TableCell
+                          padding="checkbox"
+                          sx={{ backgroundColor: "#0d47a1" }}
+                        >
                           <Checkbox
-                            sx={{ color: "#fff" }}
+                            sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
                             checked={
                               selectedProductIds.length ===
                                 filteredProducts.length &&
@@ -1080,35 +1249,52 @@ const DispatchOrdersAddForm = ({ product }) => {
                             }}
                           />
                         </TableCell>
-                        <TableCell sx={{ color: "#fff" }}>
+                        <TableCell
+                          sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
+                        >
                           Product Name
                         </TableCell>
-                        <TableCell sx={{ color: "#fff" }}>Brand</TableCell>
-                        <TableCell sx={{ color: "#fff" }}>Model</TableCell>
-                        <TableCell sx={{ color: "#fff" }}>Processor</TableCell>
-                        <TableCell sx={{ color: "#fff" }}>RAM</TableCell>
-                        <TableCell sx={{ color: "#fff" }}>Storage</TableCell>
-                        <TableCell sx={{ color: "#fff" }}>Graphics</TableCell>
-                        <TableCell sx={{ color: "#fff" }}>
+                        <TableCell
+                          sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
+                        >
+                          Processor
+                        </TableCell>
+                        <TableCell
+                          sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
+                        >
+                          RAM
+                        </TableCell>
+                        <TableCell
+                          sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
+                        >
+                          Storage
+                        </TableCell>
+                        <TableCell
+                          sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
+                        >
+                          Graphics
+                        </TableCell>
+                        <TableCell
+                          sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
+                        >
                           Available Quantity
                         </TableCell>
 
-                        <TableCell sx={{ color: "#fff" }}>Quantity</TableCell>
-                        <TableCell sx={{ color: "#fff" }}>
+                        <TableCell
+                          sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
+                        >
+                          Quantity
+                        </TableCell>
+                        <TableCell
+                          sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
+                        >
                           Selected Asset IDs
                         </TableCell>
-                        <TableCell sx={{ color: "#fff" }}>
+                        <TableCell
+                          sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
+                        >
                           Choose Asset IDs
                         </TableCell>
-                        {/* <TableCell sx={{ color: "#fff" }}>
-                          {" "}
-                          Selected Ram Asset IDs
-                        </TableCell>
-                        <TableCell sx={{ color: "#fff" }}>
-                          Choose Ram Asset IDs
-                        </TableCell> */}
-
-                        {/* <TableCell sx={{ color: "#fff" }}>Price</TableCell> */}
                       </TableRow>
                     </TableHead>
                     <TableBody>
@@ -1129,8 +1315,6 @@ const DispatchOrdersAddForm = ({ product }) => {
                               />
                             </TableCell>
                             <TableCell>{product.product_name}</TableCell>
-                            <TableCell>{product.brand}</TableCell>
-                            <TableCell>{product.model}</TableCell>
                             <TableCell>{product.processor}</TableCell>
                             <TableCell>{product.ram}</TableCell>
                             <TableCell>{product.storage}</TableCell>
@@ -1153,7 +1337,7 @@ const DispatchOrdersAddForm = ({ product }) => {
                               {(deviceIds[product.id] || []).join(", ")}
                             </TableCell>
                             <TableCell>
-                              {availableAssetIds[product.id]?.length > 0 && (
+                              {getAvailableAssetIds(product.id)?.length > 0 && (
                                 <Box
                                   display="flex"
                                   flexDirection="column"
@@ -1184,7 +1368,7 @@ const DispatchOrdersAddForm = ({ product }) => {
                                         p: 1,
                                       }}
                                     >
-                                      {availableAssetIds[product.id]
+                                      {getAvailableAssetIds(product.id)
                                         .filter((assetId) =>
                                           assetId
                                             .toLowerCase()
@@ -1268,131 +1452,6 @@ const DispatchOrdersAddForm = ({ product }) => {
                                 </Box>
                               )}
                             </TableCell>
-                            {/* <TableCell>
-                              {(selectedRAM[product.id] || []).join(", ")}
-                            </TableCell>
-
-                            <TableCell>
-                              {availableRAMOptions?.length > 0 && (
-                                <Box
-                                  display="flex"
-                                  flexDirection="column"
-                                  gap={1}
-                                >
-                                  <TextField
-                                    size="small"
-                                    placeholder="Search RAM"
-                                    value={ramSearchTerms[product.id] || ""}
-                                    onChange={(e) =>
-                                      setRamSearchTerms((prev) => ({
-                                        ...prev,
-                                        [product.id]: e.target.value,
-                                      }))
-                                    }
-                                    disabled={
-                                      (selectedRAM[product.id]?.length || 0) >=
-                                      (quantities[product.id] || 0)
-                                    }
-                                  />
-
-                                  {(ramSearchTerms[product.id] || "").trim() !==
-                                    "" &&
-                                    (selectedRAM[product.id]?.length || 0) <
-                                      (quantities[product.id] || 0) && (
-                                      <Box
-                                        sx={{
-                                          maxHeight: 150,
-                                          overflowY: "auto",
-                                          border: "1px solid #e0e0e0",
-                                          borderRadius: 1,
-                                          p: 1,
-                                        }}
-                                      >
-                                        {availableRAMOptions
-                                          .filter((ram) =>
-                                            ram
-                                              .toLowerCase()
-                                              .includes(
-                                                ramSearchTerms[
-                                                  product.id
-                                                ].toLowerCase()
-                                              )
-                                          )
-                                          .filter(
-                                            (ram) =>
-                                              !(
-                                                selectedRAM[product.id] || []
-                                              ).includes(ram)
-                                          )
-                                          .map((ram) => {
-                                            const currentRAMs =
-                                              selectedRAM[product.id] || [];
-                                            const maxQty =
-                                              quantities[product.id] || 0;
-
-                                            return (
-                                              <Box
-                                                key={ram}
-                                                sx={{
-                                                  cursor: "pointer",
-                                                  px: 1,
-                                                  py: 0.5,
-                                                  "&:hover": {
-                                                    backgroundColor: "#f0f0f0",
-                                                  },
-                                                }}
-                                                onClick={() => {
-                                                  if (
-                                                    currentRAMs.length >= maxQty
-                                                  ) {
-                                                    setRamError(
-                                                      `Only ${maxQty} RAM asset ID(s) allowed.`
-                                                    );
-                                                    return;
-                                                  }
-
-                                                  setSelectedRAM((prev) => ({
-                                                    ...prev,
-                                                    [product.id]: [
-                                                      ...currentRAMs,
-                                                      ram,
-                                                    ],
-                                                  }));
-
-                                                  setRamError("");
-                                                  setRamSearchTerms((prev) => ({
-                                                    ...prev,
-                                                    [product.id]: "",
-                                                  }));
-                                                }}
-                                              >
-                                                {ram}
-                                              </Box>
-                                            );
-                                          })}
-                                      </Box>
-                                    )}
-
-                                  {ramError && (
-                                    <Typography color="error" variant="caption">
-                                      {ramError}
-                                    </Typography>
-                                  )}
-                                </Box>
-                              )}
-                            </TableCell> */}
-
-                            {/* <TableCell>
-                              {formData.transaction_type === "Rent" ? (
-                                <>
-                                  <div>
-                                    Month: {product.rent_price_per_month}
-                                  </div>
-                                </>
-                              ) : (
-                                product.purchase_price
-                              )}
-                            </TableCell> */}
                           </TableRow>
                         ))}
                     </TableBody>

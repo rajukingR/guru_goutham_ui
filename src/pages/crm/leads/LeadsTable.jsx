@@ -9,8 +9,10 @@ const LeadsTable = () => {
   const columns = [
     { id: "s_id", label: "S.No." },
     { id: "lead_id", label: "Lead ID" },
-    { id: "lead_title", label: "Title" },
+    // { id: "lead_title", label: "Title" },
     { id: "transaction_type", label: "Transaction Type" },
+        { id: "payment_type", label: "Payment Type" },
+
     { id: "lead_date", label: "Lead Date" },
     { id: "contact_name", label: "Contact Name" },
     { id: "contact_phone", label: "Phone" },

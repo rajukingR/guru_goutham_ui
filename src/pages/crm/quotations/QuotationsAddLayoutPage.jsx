@@ -13,8 +13,13 @@ import {
   IconButton,
   Snackbar,
   Alert,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Button,
 } from "@mui/material";
-import { Add, Remove } from "@mui/icons-material";
+import { Add, Remove, Edit } from "@mui/icons-material";
 import API_URL, { IMAGE_API_URL } from "../../../api/Api_url";
 import { useNavigate } from "react-router-dom";
 
@@ -50,6 +55,22 @@ const QuotationsAddLayoutPage = () => {
   const [selectedProductIds, setSelectedProductIds] = useState([]);
   const [quantities, setQuantities] = useState({});
   const [selectedLeadId, setSelectedLeadId] = useState(null);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editingProduct, setEditingProduct] = useState(null);
+
+  const [productOfferPrices, setProductOfferPrices] = useState({});
+  const [productRentOfferPrices, setProductRentOfferPrices] = useState({});
+
+  const [priceForm, setPriceForm] = useState({
+    purchase_price: "",
+    rent_price_per_month: "",
+    offer_purchase_price: "",
+    offer_rent_price_per_month: "",
+  });
+
+  const [errors, setErrors] = useState({
+    selectedLead: "",
+  });
 
   const [formData, setFormData] = useState({
     quotationId: "",
@@ -81,6 +102,7 @@ const QuotationsAddLayoutPage = () => {
     state: "",
     country: "India",
   });
+
   useEffect(() => {
     setFormData((prev) => ({
       ...prev,
@@ -187,6 +209,7 @@ const QuotationsAddLayoutPage = () => {
       }
     }
   };
+
   // Handle input changes
   const handleInputChange = (field, value) => {
     setFormData((prev) => ({
@@ -235,6 +258,122 @@ const QuotationsAddLayoutPage = () => {
     fetchLocationData();
   }, [formData.pincode]);
 
+  const handleOpenEditDialog = (product) => {
+    setEditingProduct(product);
+    setPriceForm({
+      purchase_price: product.purchase_price || "",
+      rent_price_per_month: product.rent_price_per_month || "",
+      offer_purchase_price: product.offer_purchase_price || "",
+      offer_rent_price_per_month: product.offer_rent_price_per_month || "",
+    });
+    setEditDialogOpen(true);
+  };
+
+  // Close edit dialog
+  const handleCloseEditDialog = () => {
+    setEditDialogOpen(false);
+    setEditingProduct(null);
+    setPriceForm({
+      purchase_price: "",
+      rent_price_per_month: "",
+    });
+  };
+
+  // Handle price form change
+  const handlePriceFormChange = (field, value) => {
+    setPriceForm((prev) => ({
+      ...prev,
+      [field]: value,
+    }));
+  };
+
+  // // Submit updated prices
+  // const handleUpdatePrices = async () => {
+  //   if (!editingProduct) return;
+
+  //   // Check if the product is selected
+  //   if (!selectedProductIds.includes(editingProduct.id)) {
+  //     setSnackbar({
+  //       open: true,
+  //       message:
+  //         "This product is not selected. Please select it first to update prices.",
+  //       severity: "warning",
+  //     });
+  //     return;
+  //   }
+
+  //   try {
+  //     const payload = {
+  //       offer_purchase_price: priceForm.offer_purchase_price
+  //         ? parseFloat(priceForm.offer_purchase_price)
+  //         : null,
+  //       offer_rent_price_per_month: priceForm.offer_rent_price_per_month
+  //         ? parseFloat(priceForm.offer_rent_price_per_month)
+  //         : null,
+  //     };
+
+  //     const response = await fetch(
+  //       `${API_URL}/product-templete/${editingProduct.id}`,
+  //       {
+  //         method: "PUT",
+  //         headers: {
+  //           "Content-Type": "application/json",
+  //         },
+  //         body: JSON.stringify(payload),
+  //       }
+  //     );
+
+  //     if (!response.ok) {
+  //       throw new Error("Failed to update product prices");
+  //     }
+
+  //     // Update the product in local state
+  //     setProducts((prevProducts) =>
+  //       prevProducts.map((product) =>
+  //         product.id === editingProduct.id
+  //           ? { ...product, ...payload }
+  //           : product
+  //       )
+  //     );
+
+  //     setSnackbar({
+  //       open: true,
+  //       message: "Product prices updated successfully!",
+  //       severity: "success",
+  //     });
+
+  //     handleCloseEditDialog();
+  //   } catch (error) {
+  //     console.error("Error updating product prices:", error);
+  //     setSnackbar({
+  //       open: true,
+  //       message: "Error updating product prices. Please try again.",
+  //       severity: "error",
+  //     });
+  //   }
+  // };
+
+  const handleUpdatePrices = () => {
+    if (!editingProduct) return;
+
+    setProductOfferPrices((prev) => ({
+      ...prev,
+      [editingProduct.id]: priceForm.offer_purchase_price,
+    }));
+    setProductRentOfferPrices((prev) => ({
+      ...prev,
+      [editingProduct.id]: priceForm.offer_rent_price_per_month,
+    }));
+
+    setSnackbar({
+      open: true,
+      message: "Offer price updated successfully!",
+      severity: "success",
+    });
+
+    handleCloseEditDialog();
+  };
+
   const filteredProducts = products.filter(
     (product) =>
       product.product_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -260,6 +399,28 @@ const QuotationsAddLayoutPage = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    // Validate form
+    let isValid = true;
+    const newErrors = {
+      selectedLead: "",
+    };
+
+    // Validate lead selection
+    if (!selectedLeadId) {
+      newErrors.selectedLead = "Lead selection is required";
+      isValid = false;
+    }
+
+    setErrors(newErrors);
+
+    if (!isValid) {
+      setSnackbar({
+        open: true,
+        message: "Please fix the errors before submitting",
+        severity: "error",
+      });
+      return;
+    }
 
     try {
       const quotationPayload = {
@@ -281,6 +442,15 @@ const QuotationsAddLayoutPage = () => {
         status: formData.quotationStatus,
         items: selectedProductIds.map((productId) => {
           const product = products.find((p) => p.id === productId);
+
+          const offerPrice = productOfferPrices[productId] || 0;
+          const rentOfferPrice = productRentOfferPrices[productId] || 0;
+
+          const offer_purchase_price = offerPrice;
+          const offer_rent_price_per_month = rentOfferPrice;
+          const purchase_price = product.purchase_price;
+          const rent_price_per_month = product.rent_price_per_month;
+
           // Get quantity from lead products if available
           const leadProduct = selectedLeadId
             ? leads
@@ -293,6 +463,10 @@ const QuotationsAddLayoutPage = () => {
             requested_quantity: leadProduct?.quantity || 1,
             quotation_quantity: quantities[productId] || 0,
             product_name: product?.product_name || "",
+            offer_purchase_price,
+            offer_rent_price_per_month,
+            purchase_price,
+            rent_price_per_month,
           };
         }),
       };
@@ -353,11 +527,81 @@ const QuotationsAddLayoutPage = () => {
         </Alert>
       </Snackbar>
 
+      {/* Price Edit Dialog */}
+      <Dialog open={editDialogOpen} onClose={handleCloseEditDialog}>
+        <DialogContent>
+          {editingProduct && (
+            <div style={formContainerStyle}>
+              {/* Quotation Information Section */}
+              <div style={cardStyle}>
+                <div style={cardHeaderContainerStyle}>
+                  <h3 style={cardHeaderStyle}>Edit Product Prices</h3>
+                </div>
+              </div>
+              <Field
+                label="Product Name"
+                value={editingProduct.product_name}
+                placeholder=""
+                disabled={true} // properly disables the field
+              />
+              <div style={fieldsGridStyle}>
+                {/* Product Name - Disabled */}
+
+                {/* Disabled - Actual Prices */}
+                <Field
+                  label="Purchase Price (₹)"
+                  type="number"
+                  value={priceForm.purchase_price}
+                  placeholder=""
+                  disabled={true}
+                />
+                <Field
+                  label="Monthly Rental Price (₹)"
+                  type="number"
+                  value={priceForm.rent_price_per_month}
+                  placeholder=""
+                  disabled={true}
+                />
+
+                {/* Editable - Offer Prices */}
+                <Field
+                  label="Offer Purchase Price (₹)"
+                  type="number"
+                  value={priceForm.offer_purchase_price || ""}
+                  onChange={(e) =>
+                    handlePriceFormChange(
+                      "offer_purchase_price",
+                      e.target.value
+                    )
+                  }
+                  placeholder=""
+                />
+                <Field
+                  label="Offer Monthly Rental Price (₹)"
+                  type="number"
+                  value={priceForm.offer_rent_price_per_month || ""}
+                  onChange={(e) =>
+                    handlePriceFormChange(
+                      "offer_rent_price_per_month",
+                      e.target.value
+                    )
+                  }
+                  placeholder=""
+                />
+              </div>
+            </div>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseEditDialog}>Cancel</Button>
+          <Button onClick={handleUpdatePrices} variant="contained">
+            Update Prices
+          </Button>
+        </DialogActions>
+      </Dialog>
+
       <div style={headerStyle}>
-        <h1 style={titleStyle}>Create a new Quotation</h1>
-        <p style={subtitleStyle}>
-          Fill in the details below to create a new quotation
-        </p>
+        <h1 style={titleStyle}>Create Quotation</h1>
       </div>
 
       <form onSubmit={handleSubmit}>
@@ -377,24 +621,24 @@ const QuotationsAddLayoutPage = () => {
                   handleInputChange("quotationId", e.target.value)
                 }
               />
+
               <Field
-                label="Quotation Title"
-                placeholder="Enter Quotation Title"
-                value={formData.quotationTitle}
-                onChange={(e) =>
-                  handleInputChange("quotationTitle", e.target.value)
-                }
-              />
-              <Field
-                label="Lead Details"
+                label="Select Lead"
                 type="select"
                 placeholder="Select Lead"
                 value={selectedLeadId || ""}
-                onChange={(e) => handleLeadChange(e.target.value)}
+                onChange={(e) => {
+                  handleLeadChange(e.target.value);
+                  // Clear error when user selects something
+                  if (errors.selectedLead) {
+                    setErrors({ ...errors, selectedLead: "" });
+                  }
+                }}
                 options={leads.map((lead) => ({
                   value: lead.id,
                   label: `${lead.lead_id} - ${lead.contact.first_name} ${lead.contact.last_name}`,
                 }))}
+                error={errors.selectedLead}
               />
               <Field
                 label="Lead ID"
@@ -411,6 +655,7 @@ const QuotationsAddLayoutPage = () => {
                   handleInputChange("transactionType", e.target.value)
                 }
                 options={["Rent", "Buy"]}
+                disabled
               />
               <Field
                 label="Quotation Status"
@@ -516,45 +761,7 @@ const QuotationsAddLayoutPage = () => {
                   handleInputChange("phoneNumber", e.target.value)
                 }
               />
-              <Box display="flex" gap={2}>
-                {/* <Field
-                  label="Rental Duration (Months)"
-                  placeholder="Enter Months"
-                  type="number"
-                  value={formData.rentalDurationMonths}
-                  onChange={(e) =>
-                    handleInputChange("rentalDurationMonths", e.target.value)
-                  }
-                /> */}
-                {/* <Field
-                  label="Rental Duration (Days)"
-                  placeholder="Enter Days"
-                  type="number"
-                  value={formData.rentalDurationDays}
-                  onChange={(e) =>
-                    handleInputChange("rentalDurationDays", e.target.value)
-                  }
-                /> */}
-              </Box>
 
-              {/* <Field
-                label="Rental Start Date"
-                type="date"
-                placeholder="Select Date"
-                value={formData.rentalStartDate}
-                onChange={(e) =>
-                  handleInputChange("rentalStartDate", e.target.value)
-                }
-              />
-              <Field
-                label="Rental End Date"
-                type="date"
-                placeholder="Select Date"
-                value={formData.rentalEndDate}
-                onChange={(e) =>
-                  handleInputChange("rentalEndDate", e.target.value)
-                }
-              /> */}
               <Field
                 label="Quotation Date"
                 type="date"
@@ -659,24 +866,55 @@ const QuotationsAddLayoutPage = () => {
                   />
                 </Box>
 
-                <TableContainer component={Paper}>
-                  <Table size="small">
+                <TableContainer
+                  component={Paper}
+                  sx={{
+                    maxHeight: "400px", // or whatever height you prefer
+                    overflow: "auto",
+                    position: "relative",
+                  }}
+                >
+                  <Table size="small" stickyHeader>
                     <TableHead>
                       <TableRow sx={{ backgroundColor: "#0d47a1" }}>
-                        <TableCell padding="checkbox" sx={{ color: "#fff" }}>
-                          <Checkbox sx={{ color: "#fff" }} />
+                        <TableCell
+                          padding="checkbox"
+                          sx={{ backgroundColor: "#0d47a1" }}
+                        >
+                          <Checkbox
+                            sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
+                          />
                         </TableCell>
-                        <TableCell sx={{ color: "#fff" }}>
+                        <TableCell
+                          sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
+                        >
                           Product Name
                         </TableCell>
-                        <TableCell sx={{ color: "#fff" }}>Brand</TableCell>
-                        <TableCell sx={{ color: "#fff" }}>
+                        <TableCell
+                          sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
+                        >
+                          Product Category
+                        </TableCell>
+                        <TableCell
+                          sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
+                        >
                           Specifications
                         </TableCell>
-                        <TableCell sx={{ color: "#fff" }}>
+                        <TableCell
+                          sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
+                        >
                           Price per Piece
                         </TableCell>
-                        <TableCell sx={{ color: "#fff" }}>Quantity</TableCell>
+                        <TableCell
+                          sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
+                        >
+                          Quantity
+                        </TableCell>
+                        <TableCell
+                          sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
+                        >
+                          Actions
+                        </TableCell>
                       </TableRow>
                     </TableHead>
                     <TableBody>
@@ -695,7 +933,7 @@ const QuotationsAddLayoutPage = () => {
                             />
                           </TableCell>
                           <TableCell>{product.product_name}</TableCell>
-                          <TableCell>{product.brand}</TableCell>
+                          <TableCell>{product.product_category}</TableCell>
                           <TableCell>
                             <div>
                               <strong>Model:</strong> {product.model}
@@ -715,22 +953,18 @@ const QuotationsAddLayoutPage = () => {
                           </TableCell>
                           <TableCell>
                             <>
-                              {/* <div>
-                                <strong>Day:</strong> ₹
-                                {product.rent_price_per_day}
-                              </div> */}
+                              <div>
+                                <strong>Purchase Price:</strong> ₹
+                                {productOfferPrices[product.id] ||
+                                  product.offer_purchase_price ||
+                                  product.purchase_price}
+                              </div>
                               <div>
                                 <strong>Month:</strong> ₹
-                                {product.rent_price_per_month}
+                                {productRentOfferPrices[product.id] ||
+                                  product.offer_rent_price_per_month ||
+                                  product.rent_price_per_month}
                               </div>
-                              {/* <div>
-                                <strong>6 Months:</strong> ₹
-                                {product.rent_price_6_months}
-                              </div>
-                              <div>
-                                <strong>1 Year:</strong> ₹
-                                {product.rent_price_1_year}
-                              </div> */}
                             </>
                           </TableCell>
                           <TableCell>
@@ -760,6 +994,26 @@ const QuotationsAddLayoutPage = () => {
                                 <Add fontSize="small" />
                               </IconButton>
                             </Box>
+                          </TableCell>
+                          <TableCell>
+                            <IconButton
+                              size="small"
+                              onClick={() => handleOpenEditDialog(product)}
+                              title="Edit Prices"
+                              disabled={
+                                !selectedProductIds.includes(product.id)
+                              } // Add this line
+                              style={{
+                                opacity: selectedProductIds.includes(product.id)
+                                  ? 1
+                                  : 0.5,
+                                cursor: selectedProductIds.includes(product.id)
+                                  ? "pointer"
+                                  : "not-allowed",
+                              }}
+                            >
+                              <Edit fontSize="small" />
+                            </IconButton>
                           </TableCell>
                         </TableRow>
                       ))}
@@ -803,33 +1057,51 @@ const Field = ({
   value,
   onChange,
   readOnly = false,
+  required = false,
+  error = "",
+  disabled = false, // default false
 }) => (
   <div style={fieldContainerStyle}>
-    <label style={labelStyle}>{label}</label>
+    <label style={labelStyle}>
+      {label}
+      {required && <span style={{ color: "red" }}>*</span>}
+    </label>
+
     {type === "select" ? (
-      <div style={selectWrapperStyle}>
-        <select
-          style={selectStyle}
-          value={value}
-          onChange={onChange}
-          disabled={readOnly}
-        >
-          <option value="" disabled>
-            {placeholder}
-          </option>
-          {options.map((option, idx) =>
-            typeof option === "object" ? (
-              <option key={idx} value={option.value}>
-                {option.label}
-              </option>
-            ) : (
-              <option key={idx} value={option}>
-                {option}
-              </option>
-            )
-          )}
-        </select>
-        <div style={selectArrowStyle}>▼</div>
+      <div>
+        <div style={selectWrapperStyle}>
+          <select
+            style={{
+              ...selectStyle,
+              borderColor: error ? "red" : "#d1d5db",
+            }}
+            value={value}
+            onChange={onChange}
+            disabled={disabled || readOnly} // <- apply disabled here
+            required={required}
+          >
+            <option value="" disabled>
+              {placeholder}
+            </option>
+            {options.map((option, idx) =>
+              typeof option === "object" ? (
+                <option key={idx} value={option.value}>
+                  {option.label}
+                </option>
+              ) : (
+                <option key={idx} value={option}>
+                  {option}
+                </option>
+              )
+            )}
+          </select>
+          <div style={selectArrowStyle}>▼</div>
+        </div>
+        {error && (
+          <div style={{ color: "red", fontSize: "0.75rem", marginTop: "4px" }}>
+            {error}
+          </div>
+        )}
       </div>
     ) : type === "textarea" ? (
       <textarea
@@ -839,15 +1111,7 @@ const Field = ({
         value={value}
         onChange={onChange}
         readOnly={readOnly}
-      />
-    ) : type === "date" ? (
-      <input
-        type="date"
-        placeholder={placeholder}
-        style={inputStyle}
-        value={value}
-        onChange={onChange}
-        readOnly={readOnly}
+        disabled={disabled} // <- apply disabled
       />
     ) : (
       <input
@@ -857,6 +1121,7 @@ const Field = ({
         value={value}
         onChange={onChange}
         readOnly={readOnly}
+        disabled={disabled} // <- apply disabled
       />
     )}
   </div>

@@ -265,22 +265,15 @@ const SupplierEditLayout = () => {
             <h3 style={cardHeaderStyle}>Supplier Information</h3>
           </div>
           <div style={fieldsGridStyle}>
-            <Field 
+            {/* <Field 
               label="Supplier ID" 
               name="supplier_code"
               placeholder="Enter Supplier ID" 
               value={formData.supplier_code}
               onChange={handleChange}
               disabled
-            />
-            <Field 
-              type="date" 
-              name="registration_date"
-              placeholder="dd-mm-yyyy" 
-              label="Date" 
-              value={formData.registration_date}
-              onChange={handleChange}
-            />
+            /> */}
+            
             <Field 
               label="Supplier Name" 
               name="supplier_name"
@@ -329,9 +322,9 @@ const SupplierEditLayout = () => {
           </div>
           <div style={fieldsGridStyle}>
             <Field 
-              label="Address Line 1" 
+              label="Address Line" 
               name="address_line1"
-              placeholder="Enter Address Line 1" 
+              placeholder="Enter Address Line" 
               value={formData.address.address_line1}
               onChange={(e) => handleChange({
                 target: {
@@ -340,7 +333,7 @@ const SupplierEditLayout = () => {
                 }
               })}
             />
-            <Field 
+            {/* <Field 
               label="Address Line 2" 
               name="address_line2"
               placeholder="Enter Address Line 2" 
@@ -351,7 +344,7 @@ const SupplierEditLayout = () => {
                   value: e.target.value
                 }
               })}
-            />
+            /> */}
             <Field 
               label="Pincode" 
               name="pincode"
@@ -404,9 +397,9 @@ const SupplierEditLayout = () => {
               disabled
             />
             <Field 
-              label="Telephone 1" 
+              label="Telephone" 
               name="telephone1"
-              placeholder="Enter Telephone 1" 
+              placeholder="Enter Telephone" 
               value={formData.address.telephone1}
               onChange={(e) => handleChange({
                 target: {
@@ -415,18 +408,7 @@ const SupplierEditLayout = () => {
                 }
               })}
             />
-            <Field 
-              label="Telephone 2" 
-              name="telephone2"
-              placeholder="Enter Telephone 2" 
-              value={formData.address.telephone2}
-              onChange={(e) => handleChange({
-                target: {
-                  name: e.target.name,
-                  value: e.target.value
-                }
-              })}
-            />
+            
             <Field 
               label="Website" 
               name="website"

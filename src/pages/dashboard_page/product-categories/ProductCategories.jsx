@@ -201,19 +201,19 @@ const ProductCategories = () => {
             </div>
 
             <div style={legendRowsContainerStyle}>
-  {Array.from({ length: Math.ceil(categoryData.length / 5) }).map((_, rowIndex) => (
+  {Array.from({ length: Math.ceil(categoryData.length / 4) }).map((_, rowIndex) => (
     <div key={rowIndex} style={legendRowStyle}>
       {categoryData
-        .slice(rowIndex * 5, rowIndex * 5 + 5)
+        .slice(rowIndex * 4, rowIndex * 4 + 4)
         .map((item, index) => (
           <div
             key={index}
             style={{
               ...legendItemBoxStyle,
               backgroundColor:
-                hoveredCategory === rowIndex * 5 + index ? "#f1f5f9" : "#ffffff",
+                hoveredCategory === rowIndex * 4 + index ? "#f1f5f9" : "#ffffff",
             }}
-            onMouseEnter={() => setHoveredCategory(rowIndex * 5 + index)}
+            onMouseEnter={() => setHoveredCategory(rowIndex * 4 + index)}
             onMouseLeave={() => setHoveredCategory(null)}
           >
             <div

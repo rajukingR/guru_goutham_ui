@@ -41,6 +41,13 @@ const SalesOrdersAddLayoutPage = ({ product }) => {
     return entry ? entry.available_quantity : "N/A";
   };
 
+  const [errors, setErrors] = useState({
+    selectedQuotation: "",
+    rentalDuration: "",
+    rentalStartDate: "",
+    rentalEndDate: "",
+  });
+
   const navigate = useNavigate();
 
   const [formData, setFormData] = useState({
@@ -56,8 +63,7 @@ const SalesOrdersAddLayoutPage = ({ product }) => {
     remarks: "",
     order_generated_by: "Login User",
     rental_duration: null,
-    rental_duration_days: null, // Add this line
-
+    rental_duration_days: null,
     rental_start_date: null,
     rental_end_date: null,
     order_date: new Date().toISOString().split("T")[0],
@@ -73,6 +79,12 @@ const SalesOrdersAddLayoutPage = ({ product }) => {
     address: {
       billing_address: "",
       shipping_address: "",
+      shipping_street: "",
+      shipping_landmark: "",
+      shipping_city: "",
+      shipping_state: "",
+      shipping_country: "India",
+      shipping_pincode: "",
       city: "",
       state: "",
       pincode: "",
@@ -88,6 +100,7 @@ const SalesOrdersAddLayoutPage = ({ product }) => {
   const [deviceIdErrors, setDeviceIdErrors] = useState({});
   const [selectedAssetIds, setSelectedAssetIds] = useState({});
   const [availableAssetIds, setAvailableAssetIds] = useState({});
+  const [quotationItems, setQuotationItems] = useState([]);
 
   const [loading, setLoading] = useState({
     quotations: true,
@@ -224,6 +237,8 @@ const SalesOrdersAddLayoutPage = ({ product }) => {
     );
     if (!selectedQuotation) return;
 
+    setQuotationItems(selectedQuotation.items);
+
     const assetIdsMap = {};
     selectedQuotation.items.forEach((item) => {
       assetIdsMap[item.product_id] = item.available_asset_ids || [];
@@ -231,6 +246,13 @@ const SalesOrdersAddLayoutPage = ({ product }) => {
     setAvailableAssetIds(assetIdsMap);
 
     try {
+      // Determine shipping address based on transaction type
+      const transactionType = selectedQuotation.transaction_type;
+      const shippingAddress =
+        transactionType === "Buy"
+          ? ""
+          : selectedQuotation.customer?.address?.street || "";
+
       // Update form data with quotation information
       setFormData((prev) => ({
         ...prev,
@@ -258,7 +280,7 @@ const SalesOrdersAddLayoutPage = ({ product }) => {
         address: {
           ...prev.address,
           billing_address: selectedQuotation.customer?.address?.street || "",
-          shipping_address: selectedQuotation.customer?.address?.street || "",
+          shipping_address: shippingAddress,
           city: selectedQuotation.customer?.address?.city || "",
           state: selectedQuotation.customer?.address?.state || "",
           pincode: selectedQuotation.customer?.address?.pincode || "",
@@ -268,6 +290,8 @@ const SalesOrdersAddLayoutPage = ({ product }) => {
           product_id: item.product_id,
           product_name: item.product_name,
           quantity: item.quotation_quantity,
+          offer_purchase_price: item.offer_purchase_price,
+          offer_rent_price_per_month: item.offer_rent_price_per_month,
         })),
       }));
 
@@ -288,6 +312,58 @@ const SalesOrdersAddLayoutPage = ({ product }) => {
       });
     }
   };
+
+  // Fetch location data when shipping pincode changes
+  useEffect(() => {
+    const fetchShippingLocationFromPincode = async () => {
+      const shippingPincode = formData.address.shipping_pincode;
+
+      // Only make API call if shipping pincode is 6 digits (India specific)
+      if (shippingPincode && shippingPincode.length === 6) {
+        try {
+          const response = await fetch(
+            `https://api.postalpincode.in/pincode/${shippingPincode}`
+          );
+          const data = await response.json();
+
+          if (data && data[0]?.Status === "Success") {
+            const postOffice = data[0].PostOffice[0];
+
+            setFormData((prev) => ({
+              ...prev,
+              address: {
+                ...prev.address,
+                shipping_city: postOffice.District,
+                shipping_state: postOffice.State,
+                shipping_country: "India",
+              },
+            }));
+          } else {
+            setSnackbar({
+              open: true,
+              message: "Could not find location for this shipping pincode",
+              severity: "warning",
+            });
+          }
+        } catch (error) {
+          console.error("Error fetching shipping location data:", error);
+          setSnackbar({
+            open: true,
+            message:
+              "Error fetching shipping location data. Please check the pincode and try again.",
+            severity: "error",
+          });
+        }
+      }
+    };
+
+    // Add debounce to prevent too many API calls
+    const debounceTimer = setTimeout(() => {
+      fetchShippingLocationFromPincode();
+    }, 500);
+
+    return () => clearTimeout(debounceTimer);
+  }, [formData.address.shipping_pincode]);
 
   // Fetch location data when pincode changes
   useEffect(() => {
@@ -316,9 +392,7 @@ const SalesOrdersAddLayoutPage = ({ product }) => {
                 billing_address:
                   prev.address.billing_address ||
                   `${postOffice.Name}, ${postOffice.District}`,
-                shipping_address:
-                  prev.address.shipping_address ||
-                  `${postOffice.Name}, ${postOffice.District}`,
+                shipping_address: prev.address.shipping_address,
               },
             }));
           } else {
@@ -434,14 +508,67 @@ const SalesOrdersAddLayoutPage = ({ product }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
+    // Validate form
+    let isValid = true;
+    const newErrors = {
+      selectedQuotation: "",
+      rentalDuration: "",
+      rentalStartDate: "",
+      rentalEndDate: "",
+    };
+
+    // Validate quotation selection
+    if (!formData.quotation_id) {
+      newErrors.selectedQuotation = "Quotation selection is required";
+      isValid = false;
+    }
+
+    // Validate rental fields if transaction type is Rent
+    if (formData.transaction_type === "Rent") {
+      if (!formData.rental_duration && !formData.rental_duration_days) {
+        newErrors.rentalDuration = "Rental duration is required";
+        isValid = false;
+      }
+      if (!formData.rental_start_date) {
+        newErrors.rentalStartDate = "Rental start date is required";
+        isValid = false;
+      }
+      if (!formData.rental_end_date) {
+        newErrors.rentalEndDate = "Rental end date is required";
+        isValid = false;
+      }
+    }
+
+    setErrors(newErrors);
+
+    if (!isValid) {
+      setSnackbar({
+        open: true,
+        message: "Please fix the errors before submitting",
+        severity: "error",
+      });
+      return;
+    }
+
     // Prepare items array with Asset IDs
     const orderItems = selectedProductIds.map((productId) => {
+      const quotationItem = quotationItems.find(
+        (item) => item.product_id === productId
+      );
       const product = products.find((p) => p.id === productId);
+
       return {
         product_id: productId,
         product_name: product?.product_name || "Unknown Product",
         requested_quantity: quantities[productId] || 1,
         device_ids: deviceIds[productId] || [],
+        // Include the offer prices from the quotation
+        offer_purchase_price: quotationItem?.offer_purchase_price || 0,
+        offer_rent_price_per_month:
+          quotationItem?.offer_rent_price_per_month || 0,
+        // Include regular prices as well if needed
+        purchase_price: quotationItem?.purchase_price || 0,
+        rent_price_per_month: quotationItem?.rent_price_per_month || 0,
       };
     });
 
@@ -518,10 +645,7 @@ const SalesOrdersAddLayoutPage = ({ product }) => {
       </Snackbar>
 
       <div style={headerStyle}>
-        <h1 style={titleStyle}>Create a new Order</h1>
-        <p style={subtitleStyle}>
-          Fill in the details below to create a new order
-        </p>
+        <h1 style={titleStyle}>Create Order</h1>
       </div>
 
       <form onSubmit={handleSubmit}>
@@ -543,7 +667,7 @@ const SalesOrdersAddLayoutPage = ({ product }) => {
                   })
                 }
               />
-              <Field
+              {/* <Field
                 label="Order Title"
                 placeholder="Enter Order Title"
                 value={formData.order_title}
@@ -552,17 +676,22 @@ const SalesOrdersAddLayoutPage = ({ product }) => {
                     target: { name: "order_title", value: e.target.value },
                   })
                 }
-              />
+              /> */}
               <Field
-                label="Quotation Details"
+                label="Select Quotation"
                 type="select"
                 placeholder="Select Quotation"
                 value={formData.quotation_id}
-                onChange={(e) =>
+                onChange={(e) => {
                   handleChange({
                     target: { name: "quotation_id", value: e.target.value },
-                  })
-                }
+                  });
+                  // Clear error when a selection is made
+                  if (errors.selectedQuotation) {
+                    setErrors({ ...errors, selectedQuotation: "" });
+                  }
+                }}
+                error={errors.selectedQuotation}
                 options={quotations.map((q) => ({
                   value: q.id,
                   label: `${q.quotation_id} - ${q.customer_first_name} ${q.customer_last_name}`,
@@ -595,6 +724,10 @@ const SalesOrdersAddLayoutPage = ({ product }) => {
                       rental_duration_days: null,
                       rental_start_date: null,
                       rental_end_date: null,
+                      address: {
+                        ...prev.address,
+                        shipping_address: "", // Clear shipping address for Buy transactions
+                      },
                     }));
                   }
                 }}
@@ -655,19 +788,6 @@ const SalesOrdersAddLayoutPage = ({ product }) => {
 
               {formData.transaction_type === "Rent" && (
                 <>
-                  {/* <Field
-                    label="Payment Type"
-                    type="select"
-                    placeholder="Select Payment Type"
-                    value={formData.payment_type}
-                    onChange={(e) =>
-                      handleChange({
-                        target: { name: "payment_type", value: e.target.value },
-                      })
-                    }
-                    options={["Prepaid", "Postpaid"]}
-                  /> */}
-
                   <Field
                     label="Rental Duration (months)"
                     placeholder="Enter Duration in Months"
@@ -679,6 +799,7 @@ const SalesOrdersAddLayoutPage = ({ product }) => {
                         e.target.value
                       )
                     }
+                    error={errors.rentalDuration}
                   />
 
                   <Field
@@ -694,6 +815,7 @@ const SalesOrdersAddLayoutPage = ({ product }) => {
                         },
                       })
                     }
+                    error={errors.rentalStartDate}
                   />
 
                   <Field
@@ -709,6 +831,7 @@ const SalesOrdersAddLayoutPage = ({ product }) => {
                         },
                       })
                     }
+                    error={errors.rentalEndDate}
                   />
                 </>
               )}
@@ -833,9 +956,20 @@ const SalesOrdersAddLayoutPage = ({ product }) => {
           <div style={cardStyle}>
             <div style={cardHeaderContainerStyle}>
               <div style={iconStyle}>🏠</div>
-              <h3 style={cardHeaderStyle}>Address</h3>
+              <h3 style={cardHeaderStyle}>Billing Address</h3>
             </div>
             <div style={fieldsGridStyle}>
+              <Field
+                label="Pincode"
+                placeholder="Enter Pincode"
+                type="number"
+                value={formData.address.pincode || ""} // Correct path
+                onChange={(e) =>
+                  handleChange({
+                    target: { name: "address.pincode", value: e.target.value },
+                  })
+                }
+              />
               <Field
                 label="Billing Address"
                 placeholder="Enter Billing Address"
@@ -850,31 +984,7 @@ const SalesOrdersAddLayoutPage = ({ product }) => {
                   })
                 }
               />
-              <Field
-                label="Shipping Address"
-                placeholder="Enter Shipping Address"
-                type="textarea"
-                value={formData.address.shipping_address}
-                onChange={(e) =>
-                  handleChange({
-                    target: {
-                      name: "address.shipping_address",
-                      value: e.target.value,
-                    },
-                  })
-                }
-              />
-              <Field
-                label="Pincode"
-                placeholder="Enter Pincode"
-                type="number"
-                value={formData.address.pincode || ""} // Correct path
-                onChange={(e) =>
-                  handleChange({
-                    target: { name: "address.pincode", value: e.target.value },
-                  })
-                }
-              />
+
               <Field
                 label="City"
                 placeholder="Enter City"
@@ -884,6 +994,7 @@ const SalesOrdersAddLayoutPage = ({ product }) => {
                     target: { name: "address.city", value: e.target.value },
                   })
                 }
+                disabled
               />
               <Field
                 label="State"
@@ -894,6 +1005,7 @@ const SalesOrdersAddLayoutPage = ({ product }) => {
                     target: { name: "address.state", value: e.target.value },
                   })
                 }
+                disabled
               />
               <Field
                 label="Country"
@@ -904,7 +1016,106 @@ const SalesOrdersAddLayoutPage = ({ product }) => {
                     target: { name: "address.country", value: e.target.value },
                   })
                 }
+                disabled
               />
+            </div>
+          </div>
+
+          {/* Address Section */}
+          <div style={cardStyle}>
+            <div style={cardHeaderContainerStyle}>
+              <div style={iconStyle}>🏠</div>
+              <h3 style={cardHeaderStyle}>Shipping Address</h3>
+            </div>
+            <div style={fieldsGridStyle}>
+              {/* Shipping Address (only for Rent) */}
+              {formData.transaction_type === "Rent" && (
+                <>
+                  <Field
+                    label="Shipping Pincode"
+                    placeholder="Enter Shipping Pincode"
+                    type="number"
+                    value={formData.address.shipping_pincode || ""}
+                    onChange={(e) =>
+                      handleChange({
+                        target: {
+                          name: "address.shipping_pincode",
+                          value: e.target.value,
+                        },
+                      })
+                    }
+                  />
+
+                  <Field
+                    label="Shipping Street"
+                    placeholder="Enter Shipping Street"
+                    value={formData.address.shipping_street || ""}
+                    onChange={(e) =>
+                      handleChange({
+                        target: {
+                          name: "address.shipping_street",
+                          value: e.target.value,
+                        },
+                      })
+                    }
+                  />
+                  <Field
+                    label="Shipping Landmark"
+                    placeholder="Enter Landmark"
+                    value={formData.address.shipping_landmark || ""}
+                    onChange={(e) =>
+                      handleChange({
+                        target: {
+                          name: "address.shipping_landmark",
+                          value: e.target.value,
+                        },
+                      })
+                    }
+                  />
+                  <Field
+                    label="Shipping City"
+                    placeholder="Enter City"
+                    value={formData.address.shipping_city || ""}
+                    onChange={(e) =>
+                      handleChange({
+                        target: {
+                          name: "address.shipping_city",
+                          value: e.target.value,
+                        },
+                      })
+                    }
+                    disabled
+                  />
+                  <Field
+                    label="Shipping State"
+                    placeholder="Enter State"
+                    value={formData.address.shipping_state || ""}
+                    onChange={(e) =>
+                      handleChange({
+                        target: {
+                          name: "address.shipping_state",
+                          value: e.target.value,
+                        },
+                      })
+                    }
+                    disabled
+                  />
+                  <Field
+                    label="Shipping Country"
+                    placeholder="Enter Country"
+                    value={formData.address.shipping_country || ""}
+                    onChange={(e) =>
+                      handleChange({
+                        target: {
+                          name: "address.shipping_country",
+                          value: e.target.value,
+                        },
+                      })
+                    }
+                    disabled
+                  />
+                </>
+              )}
             </div>
           </div>
         </div>
@@ -947,29 +1158,51 @@ const SalesOrdersAddLayoutPage = ({ product }) => {
                   />
                 </Box>
 
-                <TableContainer component={Paper}>
-                  <Table size="small">
+                <TableContainer
+                  component={Paper}
+                  sx={{
+                    maxHeight: "400px", // or whatever height you prefer
+                    overflow: "auto",
+                    position: "relative",
+                  }}
+                >
+                  <Table size="small" stickyHeader>
                     <TableHead>
                       <TableRow sx={{ backgroundColor: "#0d47a1" }}>
-                        <TableCell padding="checkbox" sx={{ color: "#fff" }}>
-                          <Checkbox sx={{ color: "#fff" }} />
+                        <TableCell
+                          padding="checkbox"
+                          sx={{ backgroundColor: "#0d47a1" }}
+                        >
+                          <Checkbox
+                            sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
+                          />
                         </TableCell>
-                        <TableCell sx={{ color: "#fff" }}>
+                        <TableCell
+                          sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
+                        >
                           Product Name
                         </TableCell>
-                        <TableCell sx={{ color: "#fff" }}>
+                        <TableCell
+                          sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
+                        >
                           Product Category
                         </TableCell>
-                        <TableCell sx={{ color: "#fff" }}>Brand</TableCell>
-                        <TableCell sx={{ color: "#fff" }}>
+                        {/* <TableCell sx={{ backgroundColor: "#0d47a1", color: "#fff" }}>Brand</TableCell> */}
+                        <TableCell
+                          sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
+                        >
                           Specifications
                         </TableCell>
 
-                        <TableCell sx={{ color: "#fff" }}>
+                        {/* <TableCell sx={{ backgroundColor: "#0d47a1", color: "#fff" }}>
                           Price per Piece
+                        </TableCell> */}
+                        <TableCell
+                          sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
+                        >
+                          Quantity
                         </TableCell>
-                        <TableCell sx={{ color: "#fff" }}>Quantity</TableCell>
-                        {/* <TableCell sx={{ color: "#fff" }}>Asset IDs</TableCell> */}
+                        {/* <TableCell sx={{ backgroundColor: "#0d47a1", color: "#fff" }}>Asset IDs</TableCell> */}
                       </TableRow>
                     </TableHead>
                     <TableBody>
@@ -996,7 +1229,7 @@ const SalesOrdersAddLayoutPage = ({ product }) => {
                             </TableCell>
                             <TableCell>{product.product_name}</TableCell>
                             <TableCell>{product.product_category}</TableCell>
-                            <TableCell>{product.brand}</TableCell>
+                            {/* <TableCell>{product.brand}</TableCell> */}
                             <TableCell>
                               <div>
                                 <strong>Model:</strong> {product.model}
@@ -1014,7 +1247,7 @@ const SalesOrdersAddLayoutPage = ({ product }) => {
                                 <strong>Graphics:</strong> {product.graphics}
                               </div>
                             </TableCell>
-                            <TableCell>
+                            {/* <TableCell>
                               {formData.transaction_type === "Rent" ? (
                                 <>
                                   <div>
@@ -1024,7 +1257,7 @@ const SalesOrdersAddLayoutPage = ({ product }) => {
                               ) : (
                                 product.purchase_price
                               )}
-                            </TableCell>
+                            </TableCell> */}
 
                             <TableCell>
                               <Box display="flex" alignItems="center">
@@ -1045,8 +1278,6 @@ const SalesOrdersAddLayoutPage = ({ product }) => {
                                     handleQtyChange(product.id, e.target.value)
                                   }
                                   inputProps={{
-                                    min: 0,
-                                    max: getAvailableQty(product.id), // Add max limit based on available quantity
                                     style: { width: 50, textAlign: "center" },
                                   }}
                                 />
@@ -1149,61 +1380,118 @@ const Field = ({
   value,
   onChange,
   readOnly = false,
+  disabled = false, // ✅ added
+  required = false,
+  error = "",
 }) => (
   <div style={fieldContainerStyle}>
-    <label style={labelStyle}>{label}</label>
+    <label style={labelStyle}>
+      {label}
+      {required && <span style={{ color: "red" }}>*</span>}
+    </label>
     {type === "select" ? (
-      <div style={selectWrapperStyle}>
-        <select
-          style={selectStyle}
-          value={value}
-          onChange={onChange}
-          disabled={readOnly}
-        >
-          <option value="" disabled>
-            {placeholder}
-          </option>
-          {options.map((option, idx) =>
-            typeof option === "object" ? (
-              <option key={idx} value={option.value}>
-                {option.label}
-              </option>
-            ) : (
-              <option key={idx} value={option}>
-                {option}
-              </option>
-            )
-          )}
-        </select>
-        <div style={selectArrowStyle}>▼</div>
+      <div>
+        <div style={selectWrapperStyle}>
+          <select
+            style={{
+              ...selectStyle,
+              borderColor: error ? "red" : "#d1d5db",
+              backgroundColor: disabled ? "#f3f4f6" : "white", // ✅ grey background if disabled
+            }}
+            value={value}
+            onChange={onChange}
+            disabled={disabled} // ✅ use disabled
+            required={required}
+          >
+            <option value="" disabled>
+              {placeholder}
+            </option>
+            {options.map((option, idx) =>
+              typeof option === "object" ? (
+                <option key={idx} value={option.value}>
+                  {option.label}
+                </option>
+              ) : (
+                <option key={idx} value={option}>
+                  {option}
+                </option>
+              )
+            )}
+          </select>
+          <div style={selectArrowStyle}>▼</div>
+        </div>
+        {error && (
+          <div style={{ color: "red", fontSize: "0.75rem", marginTop: "4px" }}>
+            {error}
+          </div>
+        )}
       </div>
     ) : type === "textarea" ? (
-      <textarea
-        placeholder={placeholder}
-        style={textareaStyle}
-        rows={3}
-        value={value}
-        onChange={onChange}
-        readOnly={readOnly}
-      />
+      <>
+        <textarea
+          placeholder={placeholder}
+          style={{
+            ...textareaStyle,
+            borderColor: error ? "red" : "#d1d5db",
+            backgroundColor: disabled ? "#f3f4f6" : "white",
+          }}
+          rows={3}
+          value={value}
+          onChange={onChange}
+          readOnly={readOnly}
+          disabled={disabled} // ✅ use disabled
+          required={required}
+        />
+        {error && (
+          <div style={{ color: "red", fontSize: "0.75rem", marginTop: "4px" }}>
+            {error}
+          </div>
+        )}
+      </>
     ) : type === "date" ? (
-      <input
-        type="date"
-        placeholder={placeholder}
-        style={inputStyle}
-        value={value}
-        onChange={onChange}
-        readOnly={readOnly}
-      />
+      <>
+        <input
+          type="date"
+          placeholder={placeholder}
+          style={{
+            ...inputStyle,
+            borderColor: error ? "red" : "#d1d5db",
+            backgroundColor: disabled ? "#f3f4f6" : "white",
+          }}
+          value={value}
+          onChange={onChange}
+          readOnly={readOnly}
+          disabled={disabled} // ✅ use disabled
+          required={required}
+        />
+        {error && (
+          <div style={{ color: "red", fontSize: "0.75rem", marginTop: "4px" }}>
+            {error}
+          </div>
+        )}
+      </>
     ) : (
-      <input
-        type={type}
-        placeholder={placeholder}
-        style={inputStyle}
-        value={value}
-        onChange={onChange}
-        readOnly={readOnly}
-      />
+      <>
+        <input
+          type={type}
+          placeholder={placeholder}
+          style={{
+            ...inputStyle,
+            borderColor: error ? "red" : "#d1d5db",
+            backgroundColor: disabled ? "#f3f4f6" : "white",
+          }}
+          value={value}
+          onChange={onChange}
+          readOnly={readOnly}
+          disabled={disabled} // ✅ use disabled
+          required={required}
+        />
+        {error && (
+          <div style={{ color: "red", fontSize: "0.75rem", marginTop: "4px" }}>
+            {error}
+          </div>
+        )}
+      </>
     )}
   </div>
 );

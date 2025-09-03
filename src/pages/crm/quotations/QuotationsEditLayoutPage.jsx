@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
 import {
   Box,
   TextField,
@@ -14,27 +13,32 @@ import {
   IconButton,
   Snackbar,
   Alert,
-  CircularProgress,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Button,
 } from "@mui/material";
-import { Add, Remove } from "@mui/icons-material";
-
+import { Add, Remove, Edit } from "@mui/icons-material";
 import API_URL, { IMAGE_API_URL } from "../../../api/Api_url";
+import { useNavigate, useParams } from "react-router-dom";
 
 const QuotationsEditLayoutPage = () => {
-  const { id } = useParams();
   const navigate = useNavigate();
+  const { id } = useParams(); // Get quotation ID from URL params
+
+  const [quotation, setQuotation] = useState(null);
   const [leads, setLeads] = useState([]);
   const [products, setProducts] = useState([]);
-  const [quotation, setQuotation] = useState(null);
   const [loading, setLoading] = useState({
+    quotation: true,
     leads: true,
     products: true,
-    quotation: true,
   });
   const [error, setError] = useState({
+    quotation: null,
     leads: null,
     products: null,
-    quotation: null,
   });
   const [snackbar, setSnackbar] = useState({
     open: false,
@@ -46,24 +50,42 @@ const QuotationsEditLayoutPage = () => {
   const [selectedProductIds, setSelectedProductIds] = useState([]);
   const [quantities, setQuantities] = useState({});
   const [selectedLeadId, setSelectedLeadId] = useState(null);
-  const [isFetchingLeadDetails, setIsFetchingLeadDetails] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editingProduct, setEditingProduct] = useState(null);
+
+  const [productOfferPrices, setProductOfferPrices] = useState({});
+  const [productRentOfferPrices, setProductRentOfferPrices] = useState({});
+
+  const [priceForm, setPriceForm] = useState({
+    purchase_price: "",
+    rent_price_per_month: "",
+    offer_purchase_price: "",
+    offer_rent_price_per_month: "",
+  });
+
+  const [errors, setErrors] = useState({
+    selectedLead: "",
+  });
 
   const [formData, setFormData] = useState({
     quotationId: "",
     quotationTitle: "",
     leadId: "",
     transactionType: "",
+    payment_type: "",
     quotationStatus: "Pending",
     sourceOfEnquiry: "",
     owner: "",
     remarks: "",
     quotationGeneratedBy: "",
     activeStatus: true,
-    firstName: "",
-    lastName: "",
+    customer_id: "",
+    customer_first_name: "",
+    customer_last_name: "",
     email: "",
     phoneNumber: "",
     rentalDurationMonths: "",
+    rentalDurationDays: "",
     rentalStartDate: "",
     rentalEndDate: "",
     quotationDate: new Date().toISOString().split("T")[0],
@@ -76,7 +98,7 @@ const QuotationsEditLayoutPage = () => {
     country: "India",
   });
 
-  // Fetch quotation data to edit
+  // Fetch quotation data
   useEffect(() => {
     const fetchQuotation = async () => {
       try {
@@ -87,55 +109,67 @@ const QuotationsEditLayoutPage = () => {
         const data = await response.json();
         setQuotation(data);
 
-        // Initialize form with existing quotation data
+        // Extract address data from customer object
+        const customerAddress = data.customer?.address || {};
+
+        // Set form data from fetched quotation
         setFormData({
-          quotationId: data.quotation_id,
-          quotationTitle: data.quotation_title,
-          leadId: data.lead_id
-            ? `L${data.lead_id.toString().padStart(3, "0")}`
-            : "",
-          transactionType: data.transaction_type,
-          quotationStatus: data.status,
+          quotationId: data.quotation_id || "",
+          quotationTitle: data.quotation_title || "",
+          leadId: data.lead_id || "",
+          transactionType: data.transaction_type || "",
+          payment_type: data.payment_type || "",
+          quotationStatus: data.status || "Pending",
           sourceOfEnquiry: data.source_of_enquiry || "",
           owner: data.owner || "",
           remarks: data.remarks || "",
           quotationGeneratedBy: data.quotation_generated_by || "",
-          activeStatus: data.is_active,
-          firstName: data.lead?.contact?.first_name || "",
-          lastName: data.lead?.contact?.last_name || "",
-          email: data.lead?.contact?.email || "",
-          phoneNumber: data.lead?.contact?.phone_number || "",
-          rentalDurationMonths: data.rental_duration || "",
+          activeStatus: data.is_active !== undefined ? data.is_active : true,
+          customer_id: data.customer_id || "",
+          customer_first_name:
+            data.customer_first_name || data.customer?.first_name || "",
+          customer_last_name:
+            data.customer_last_name || data.customer?.last_name || "",
+          email: data.email || data.customer?.email || "",
+          phoneNumber: data.phone_number || data.customer?.phone_number || "",
+          rentalDurationMonths: data.rental_duration_months || "",
+          rentalDurationDays: data.rental_duration_days || "",
           rentalStartDate: data.rental_start_date || "",
           rentalEndDate: data.rental_end_date || "",
           quotationDate:
             data.quotation_date || new Date().toISOString().split("T")[0],
-          industry: data.lead?.contact?.industry || "",
-          street: data.lead?.contact?.address?.street || "",
-          landmark: data.lead?.contact?.address?.landmark || "",
-          pincode: data.lead?.contact?.address?.zip || "",
-          city: data.lead?.contact?.address?.city || "",
-          state: data.lead?.contact?.address?.state || "",
-          country: data.lead?.contact?.address?.country || "India",
+          industry: data.industry || data.customer?.industry || "",
+          street: customerAddress.street || "",
+          landmark: data.landmark || "",
+          pincode: customerAddress.pincode || "",
+          city: customerAddress.city || "",
+          state: customerAddress.state || "",
+          country: customerAddress.country || "India",
         });
 
-        // Set selected lead if available
-        if (data.lead_id) {
-          setSelectedLeadId(data.lead_id);
-          // Automatically fetch and fill lead details
-          fetchAndFillLeadDetails(data.lead_id);
-        }
+        // Set selected lead
+        setSelectedLeadId(data.lead_id);
 
-        // Initialize selected products and quantities
+        // Set selected products and quantities
+        // Inside the fetchQuotation useEffect, after setting the quotation data
         if (data.items && data.items.length > 0) {
           const productIds = data.items.map((item) => item.product_id);
           setSelectedProductIds(productIds);
 
           const productQuantities = {};
+          const productOfferPrices = {};
+          const productRentOfferPrices = {};
+
           data.items.forEach((item) => {
             productQuantities[item.product_id] = item.quotation_quantity;
+            productOfferPrices[item.product_id] = item.offer_purchase_price;
+            productRentOfferPrices[item.product_id] =
+              item.offer_rent_price_per_month;
           });
+
           setQuantities(productQuantities);
+          setProductOfferPrices(productOfferPrices);
+          setProductRentOfferPrices(productRentOfferPrices);
         }
 
         setLoading((prev) => ({ ...prev, quotation: false }));
@@ -144,7 +178,7 @@ const QuotationsEditLayoutPage = () => {
         setLoading((prev) => ({ ...prev, quotation: false }));
         setSnackbar({
           open: true,
-          message: "Failed to load quotation data",
+          message: "Failed to load quotation",
           severity: "error",
         });
       }
@@ -203,96 +237,57 @@ const QuotationsEditLayoutPage = () => {
     fetchProducts();
   }, []);
 
-  // Function to fetch and fill lead details
-  const fetchAndFillLeadDetails = async (leadId) => {
-    setIsFetchingLeadDetails(true);
-    try {
-      const numericLeadId =
-        typeof leadId === "string" && leadId.startsWith("L")
-          ? leads.find((l) => l.lead_id === leadId)?.id
-          : leadId;
-
-      if (!numericLeadId) {
-        throw new Error("Selected lead not found");
-      }
-
-      const response = await fetch(`${API_URL}/leads/${numericLeadId}`);
-      if (!response.ok) {
-        throw new Error("Failed to fetch lead details");
-      }
-
-      const selectedLead = await response.json();
-
-      if (selectedLead) {
-        // Update form data with lead information
-        setFormData((prev) => ({
-          ...prev,
-          leadId: selectedLead.lead_id,
-          leadTitle: selectedLead.lead_title,
-          transactionType: selectedLead.transaction_type,
-          sourceOfEnquiry: selectedLead.source_of_enquiry,
-          owner: selectedLead.owner,
-          remarks: selectedLead.remarks || prev.remarks,
-          quotationGeneratedBy:
-            selectedLead.lead_generated_by || prev.quotationGeneratedBy,
-          activeStatus: selectedLead.is_active,
-          firstName: selectedLead.contact?.first_name || "",
-          lastName: selectedLead.contact?.last_name || "",
-          email: selectedLead.contact?.email || "",
-          phoneNumber: selectedLead.contact?.phone_number || "",
-          rentalDurationMonths: selectedLead.rental_duration_months || "",
-          rentalStartDate: selectedLead.rental_start_date || "",
-          rentalEndDate: selectedLead.rental_end_date || "",
-          industry: selectedLead.contact?.industry || "",
-          street: selectedLead.contact?.address?.street || "",
-          pincode: selectedLead.contact?.address?.zip || "",
-          city: selectedLead.contact?.address?.city || "",
-          state: selectedLead.contact?.address?.state || "",
-          country: selectedLead.contact?.address?.country || "India",
-        }));
-
-        // Auto-select products from the lead
-        if (selectedLead.products && selectedLead.products.length > 0) {
-          const productIds = selectedLead.products.map((product) => product.id);
-          setSelectedProductIds(productIds);
-
-          const productQuantities = {};
-          selectedLead.products.forEach((product) => {
-            productQuantities[product.id] = product.LeadProduct.quantity;
-          });
-          setQuantities(productQuantities);
-        }
-      }
-    } catch (error) {
-      console.error("Error fetching lead details:", error);
-      setSnackbar({
-        open: true,
-        message: "Error loading lead details. Please try again.",
-        severity: "error",
-      });
-    } finally {
-      setIsFetchingLeadDetails(false);
-    }
-  };
-
   // Handle lead selection change
   const handleLeadChange = (leadId) => {
-    const numericLeadId =
-      typeof leadId === "string" && leadId.startsWith("L")
-        ? leads.find((l) => l.lead_id === leadId)?.id
-        : leadId;
+    setSelectedLeadId(leadId);
+    const selectedLead = leads.find((lead) => lead.id === parseInt(leadId));
 
-    if (!numericLeadId) {
-      setSnackbar({
-        open: true,
-        message: "Selected lead not found",
-        severity: "error",
-      });
-      return;
+    if (selectedLead) {
+      // Extract address data from lead's contact
+      const leadAddress = selectedLead.contact?.address || {};
+
+      setFormData((prev) => ({
+        ...prev,
+        leadId: selectedLead.lead_id,
+        leadTitle: selectedLead.lead_title,
+        transactionType: selectedLead.transaction_type,
+        payment_type: selectedLead.payment_type,
+        sourceOfEnquiry: selectedLead.source_of_enquiry,
+        owner: selectedLead.owner,
+        remarks: selectedLead.remarks,
+        quotationGeneratedBy: selectedLead.lead_generated_by,
+        activeStatus: selectedLead.is_active,
+        customer_id: selectedLead.contact?.id || "",
+        customer_first_name: selectedLead.contact?.first_name || "",
+        customer_last_name: selectedLead.contact?.last_name || "",
+        email: selectedLead.contact?.email || "",
+        phoneNumber: selectedLead.contact?.phone_number || "",
+        rentalDurationMonths: selectedLead.rental_duration_months || "",
+        rentalDurationDays: selectedLead.rental_duration_days || "",
+        rentalStartDate: selectedLead.rental_start_date || "",
+        rentalEndDate: selectedLead.rental_end_date || "",
+        industry: selectedLead.contact?.industry || "",
+        street: leadAddress.street || "",
+        pincode: leadAddress.pincode || "",
+        city: leadAddress.city || "",
+        state: leadAddress.state || "",
+        country: leadAddress.country || "India",
+      }));
+
+      // Auto-select products from the lead
+      if (selectedLead.lead_products && selectedLead.lead_products.length > 0) {
+        const productIds = selectedLead.lead_products.map(
+          (product) => product.product_id
+        );
+        setSelectedProductIds(productIds);
+
+        const productQuantities = {};
+        selectedLead.lead_products.forEach((product) => {
+          productQuantities[product.product_id] = product.quantity;
+        });
+        setQuantities(productQuantities);
+      }
     }
-
-    setSelectedLeadId(numericLeadId);
-    fetchAndFillLeadDetails(numericLeadId);
   };
 
   // Handle input changes
@@ -343,6 +338,134 @@ const QuotationsEditLayoutPage = () => {
     fetchLocationData();
   }, [formData.pincode]);
 
+  // Open edit dialog for a product
+  const handleOpenEditDialog = (product) => {
+    setEditingProduct(product);
+
+    // Get the current offer prices from state (or use the product's default if not set)
+    const currentOfferPrice =
+      productOfferPrices[product.id] || product.offer_purchase_price || "";
+    const currentRentOfferPrice =
+      productRentOfferPrices[product.id] ||
+      product.offer_rent_price_per_month ||
+      "";
+
+    setPriceForm({
+      purchase_price: product.purchase_price || "",
+      rent_price_per_month: product.rent_price_per_month || "",
+      offer_purchase_price: currentOfferPrice,
+      offer_rent_price_per_month: currentRentOfferPrice,
+    });
+
+    setEditDialogOpen(true);
+  };
+
+  // Close edit dialog
+  const handleCloseEditDialog = () => {
+    setEditDialogOpen(false);
+    setEditingProduct(null);
+    setPriceForm({
+      purchase_price: "",
+      rent_price_per_month: "",
+    });
+  };
+
+  // Handle price form change
+  const handlePriceFormChange = (field, value) => {
+    setPriceForm((prev) => ({
+      ...prev,
+      [field]: value,
+    }));
+  };
+
+  // // Submit updated prices
+  // const handleUpdatePrices = async () => {
+  //   if (!editingProduct) return;
+
+  //   // Check if the product is selected
+  //   if (!selectedProductIds.includes(editingProduct.id)) {
+  //     setSnackbar({
+  //       open: true,
+  //       message:
+  //         "This product is not selected. Please select it first to update prices.",
+  //       severity: "warning",
+  //     });
+  //     return;
+  //   }
+
+  //   try {
+  //     const payload = {
+  //       // new editable offer prices
+  //       offer_purchase_price: priceForm.offer_purchase_price
+  //         ? parseFloat(priceForm.offer_purchase_price)
+  //         : null,
+  //       offer_rent_price_per_month: priceForm.offer_rent_price_per_month
+  //         ? parseFloat(priceForm.offer_rent_price_per_month)
+  //         : null,
+  //     };
+
+  //     const response = await fetch(
+  //       `${API_URL}/product-templete/${editingProduct.id}`,
+  //       {
+  //         method: "PUT",
+  //         headers: {
+  //           "Content-Type": "application/json",
+  //         },
+  //         body: JSON.stringify(payload),
+  //       }
+  //     );
+
+  //     if (!response.ok) {
+  //       throw new Error("Failed to update product prices");
+  //     }
+
+  //     // Update the product in local state
+  //     setProducts((prevProducts) =>
+  //       prevProducts.map((product) =>
+  //         product.id === editingProduct.id
+  //           ? { ...product, ...payload }
+  //           : product
+  //       )
+  //     );
+
+  //     setSnackbar({
+  //       open: true,
+  //       message: "Product prices updated successfully!",
+  //       severity: "success",
+  //     });
+
+  //     handleCloseEditDialog();
+  //   } catch (error) {
+  //     console.error("Error updating product prices:", error);
+  //     setSnackbar({
+  //       open: true,
+  //       message: "Error updating product prices. Please try again.",
+  //       severity: "error",
+  //     });
+  //   }
+  // };
+
+  const handleUpdatePrices = () => {
+    if (!editingProduct) return;
+
+    setProductOfferPrices((prev) => ({
+      ...prev,
+      [editingProduct.id]: priceForm.offer_purchase_price,
+    }));
+    setProductRentOfferPrices((prev) => ({
+      ...prev,
+      [editingProduct.id]: priceForm.offer_rent_price_per_month,
+    }));
+
+    setSnackbar({
+      open: true,
+      message: "Offer price updated successfully!",
+      severity: "success",
+    });
+
+    handleCloseEditDialog();
+  };
+
   const filteredProducts = products.filter(
     (product) =>
       product.product_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -368,27 +491,79 @@ const QuotationsEditLayoutPage = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    // Validate form
+    let isValid = true;
+    const newErrors = {
+      selectedLead: "",
+    };
+
+    // Validate lead selection
+    if (!selectedLeadId) {
+      newErrors.selectedLead = "Lead selection is required";
+      isValid = false;
+    }
+
+    setErrors(newErrors);
+
+    if (!isValid) {
+      setSnackbar({
+        open: true,
+        message: "Please fix the errors before submitting",
+        severity: "error",
+      });
+      return;
+    }
 
     try {
       const quotationPayload = {
         quotation_id: formData.quotationId,
         quotation_title: formData.quotationTitle,
+        transaction_type: formData.transactionType,
+        payment_type: formData.payment_type,
         lead_id: selectedLeadId,
         rental_start_date: formData.rentalStartDate,
         rental_end_date: formData.rentalEndDate,
         quotation_date: formData.quotationDate,
         rental_duration: parseInt(formData.rentalDurationMonths) || 0,
+        rental_duration_days: parseInt(formData.rentalDurationDays) || 0,
+        customer_id: formData.customer_id,
+        customer_first_name: formData.customer_first_name,
+        customer_last_name: formData.customer_last_name,
         remarks: formData.remarks,
         quotation_generated_by: formData.quotationGeneratedBy,
         status: formData.quotationStatus,
-        is_active: formData.activeStatus,
         items: selectedProductIds.map((productId) => {
           const product = products.find((p) => p.id === productId);
+
+          // Get the offer prices from state (or use the original if not set)
+          const offerPrice =
+            productOfferPrices[productId] || product.offer_purchase_price || 0;
+          const rentOfferPrice =
+            productRentOfferPrices[productId] ||
+            product.offer_rent_price_per_month ||
+            0;
+
+          const offer_purchase_price = offerPrice;
+          const offer_rent_price_per_month = rentOfferPrice;
+          const purchase_price = product.purchase_price;
+          const rent_price_per_month = product.rent_price_per_month;
+
+          // Get quantity from lead products if available
+          const leadProduct = selectedLeadId
+            ? leads
+                .find((lead) => lead.id === parseInt(selectedLeadId))
+                ?.lead_products?.find((lp) => lp.product_id === productId)
+            : null;
+
           return {
             product_id: productId,
-            requested_quantity: product?.LeadProduct?.quantity || 1,
+            requested_quantity: leadProduct?.quantity || 1,
             quotation_quantity: quantities[productId] || 0,
             product_name: product?.product_name || "",
+            offer_purchase_price,
+            offer_rent_price_per_month,
+            purchase_price,
+            rent_price_per_month,
           };
         }),
       };
@@ -414,7 +589,6 @@ const QuotationsEditLayoutPage = () => {
         severity: "success",
       });
 
-      // Redirect to view page after successful update
       setTimeout(() => {
         navigate("/dashboard/crm/quotations");
       }, 1500);
@@ -428,31 +602,12 @@ const QuotationsEditLayoutPage = () => {
     }
   };
 
-  if (loading.quotation || loading.leads || loading.products) {
-    return (
-      <div style={containerStyle}>
-        <div style={{ textAlign: "center", padding: "2rem" }}>
-          <CircularProgress />
-          <p>Loading quotation data...</p>
-        </div>
-      </div>
-    );
+  if (loading.quotation) {
+    return <div style={containerStyle}>Loading quotation data...</div>;
   }
 
   if (error.quotation) {
-    return (
-      <div style={containerStyle}>
-        <div style={{ textAlign: "center", padding: "2rem" }}>
-          <p style={{ color: "red" }}>{error.quotation}</p>
-          <button
-            onClick={() => window.location.reload()}
-            style={createBtnStyle}
-          >
-            Retry
-          </button>
-        </div>
-      </div>
-    );
+    return <div style={containerStyle}>Error: {error.quotation}</div>;
   }
 
   return (
@@ -472,11 +627,80 @@ const QuotationsEditLayoutPage = () => {
         </Alert>
       </Snackbar>
 
+      {/* Price Edit Dialog */}
+      <Dialog open={editDialogOpen} onClose={handleCloseEditDialog}>
+        <DialogContent>
+          {editingProduct && (
+            <div style={formContainerStyle}>
+              {/* Quotation Information Section */}
+              <div style={cardStyle}>
+                <div style={cardHeaderContainerStyle}>
+                  <h3 style={cardHeaderStyle}>Edit Product Prices</h3>
+                </div>
+              </div>
+              <Field
+                label="Product Name"
+                value={editingProduct.product_name}
+                placeholder=""
+                disabled={true} // properly disables the field
+              />
+              <div style={fieldsGridStyle}>
+                {/* Product Name - Disabled */}
+
+                {/* Disabled - Actual Prices */}
+                <Field
+                  label="Purchase Price (₹)"
+                  type="number"
+                  value={priceForm.purchase_price}
+                  placeholder=""
+                  disabled={true}
+                />
+                <Field
+                  label="Monthly Rental Price (₹)"
+                  type="number"
+                  value={priceForm.rent_price_per_month}
+                  placeholder=""
+                  disabled={true}
+                />
+
+                {/* Editable - Offer Prices */}
+                <Field
+                  label="Offer Purchase Price (₹)"
+                  type="number"
+                  value={priceForm.offer_purchase_price || ""}
+                  onChange={(e) =>
+                    handlePriceFormChange(
+                      "offer_purchase_price",
+                      e.target.value
+                    )
+                  }
+                  placeholder=""
+                />
+                <Field
+                  label="Offer Monthly Rental Price (₹)"
+                  type="number"
+                  value={priceForm.offer_rent_price_per_month || ""}
+                  onChange={(e) =>
+                    handlePriceFormChange(
+                      "offer_rent_price_per_month",
+                      e.target.value
+                    )
+                  }
+                  placeholder=""
+                />
+              </div>
+            </div>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseEditDialog}>Cancel</Button>
+          <Button onClick={handleUpdatePrices} variant="contained">
+            Update Prices
+          </Button>
+        </DialogActions>
+      </Dialog>
       <div style={headerStyle}>
         <h1 style={titleStyle}>Edit Quotation</h1>
-        <p style={subtitleStyle}>
-          Edit the details below for quotation #{formData.quotationId}
-        </p>
       </div>
 
       <form onSubmit={handleSubmit}>
@@ -495,38 +719,26 @@ const QuotationsEditLayoutPage = () => {
                 onChange={(e) =>
                   handleInputChange("quotationId", e.target.value)
                 }
-                readOnly
               />
+
               <Field
-                label="Quotation Title"
-                placeholder="Enter Quotation Title"
-                value={formData.quotationTitle}
-                onChange={(e) =>
-                  handleInputChange("quotationTitle", e.target.value)
-                }
-              />
-              <Field
-                label="Lead Details"
+                label="Select Lead"
                 type="select"
                 placeholder="Select Lead"
-                value={
-                  leads.find((l) => l.id === selectedLeadId)?.lead_id || ""
-                }
-                onChange={(e) => handleLeadChange(e.target.value)}
+                value={selectedLeadId || ""}
+                onChange={(e) => {
+                  handleLeadChange(e.target.value);
+                  // Clear error when user selects something
+                  if (errors.selectedLead) {
+                    setErrors({ ...errors, selectedLead: "" });
+                  }
+                }}
                 options={leads.map((lead) => ({
-                  value: lead.lead_id,
-                  label: `${lead.lead_id} - ${lead.lead_title}`,
+                  value: lead.id,
+                  label: `${lead.lead_id} - ${lead.contact.first_name} ${lead.contact.last_name}`,
                 }))}
-                disabled={isFetchingLeadDetails}
+                error={errors.selectedLead}
               />
-              {isFetchingLeadDetails && (
-                <div style={{ gridColumn: "1 / -1", textAlign: "center" }}>
-                  <CircularProgress size={24} />
-                  <span style={{ marginLeft: "8px" }}>
-                    Loading lead details...
-                  </span>
-                </div>
-              )}
               <Field
                 label="Lead ID"
                 placeholder="Enter Lead ID"
@@ -552,16 +764,6 @@ const QuotationsEditLayoutPage = () => {
                   handleInputChange("quotationStatus", e.target.value)
                 }
                 options={["Pending", "Approved", "Rejected"]}
-              />
-              <Field
-                label="Source of Enquiry"
-                type="select"
-                placeholder="Select Source"
-                value={formData.sourceOfEnquiry}
-                onChange={(e) =>
-                  handleInputChange("sourceOfEnquiry", e.target.value)
-                }
-                options={["Search Engine", "Referral", "Advertisement"]}
               />
               <Field
                 label="Owner"
@@ -618,14 +820,18 @@ const QuotationsEditLayoutPage = () => {
               <Field
                 label="First Name"
                 placeholder="Enter First Name"
-                value={formData.firstName}
-                onChange={(e) => handleInputChange("firstName", e.target.value)}
+                value={formData.customer_first_name}
+                onChange={(e) =>
+                  handleInputChange("customer_first_name", e.target.value)
+                }
               />
               <Field
                 label="Last Name"
                 placeholder="Enter Last Name"
-                value={formData.lastName}
-                onChange={(e) => handleInputChange("lastName", e.target.value)}
+                value={formData.customer_last_name}
+                onChange={(e) =>
+                  handleInputChange("customer_last_name", e.target.value)
+                }
               />
               <Field
                 label="Email ID"
@@ -643,33 +849,7 @@ const QuotationsEditLayoutPage = () => {
                   handleInputChange("phoneNumber", e.target.value)
                 }
               />
-              {/* <Field
-                label="Rental Duration (Months)"
-                placeholder="Enter Duration"
-                type="number"
-                value={formData.rentalDurationMonths}
-                onChange={(e) =>
-                  handleInputChange("rentalDurationMonths", e.target.value)
-                }
-              />
-              <Field
-                label="Rental Start Date"
-                type="date"
-                placeholder="Select Date"
-                value={formData.rentalStartDate}
-                onChange={(e) =>
-                  handleInputChange("rentalStartDate", e.target.value)
-                }
-              />
-              <Field
-                label="Rental End Date"
-                type="date"
-                placeholder="Select Date"
-                value={formData.rentalEndDate}
-                onChange={(e) =>
-                  handleInputChange("rentalEndDate", e.target.value)
-                }
-              /> */}
+
               <Field
                 label="Quotation Date"
                 type="date"
@@ -759,7 +939,7 @@ const QuotationsEditLayoutPage = () => {
                 marginBottom: "1rem",
               }}
             >
-              {showProductTable ? "Hide Product List" : "Edit Products"}
+              {showProductTable ? "Hide Product List" : "Select Products"}
             </button>
 
             {showProductTable && (
@@ -774,24 +954,55 @@ const QuotationsEditLayoutPage = () => {
                   />
                 </Box>
 
-                <TableContainer component={Paper}>
-                  <Table size="small">
+                <TableContainer
+                  component={Paper}
+                  sx={{
+                    maxHeight: "400px", // or whatever height you prefer
+                    overflow: "auto",
+                    position: "relative",
+                  }}
+                >
+                  <Table size="small" stickyHeader>
                     <TableHead>
                       <TableRow sx={{ backgroundColor: "#0d47a1" }}>
-                        <TableCell padding="checkbox" sx={{ color: "#fff" }}>
-                          <Checkbox sx={{ color: "#fff" }} />
+                        <TableCell
+                          padding="checkbox"
+                          sx={{ backgroundColor: "#0d47a1" }}
+                        >
+                          <Checkbox
+                            sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
+                          />
                         </TableCell>
-                        <TableCell sx={{ color: "#fff" }}>
+                        <TableCell
+                          sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
+                        >
                           Product Name
                         </TableCell>
-                        <TableCell sx={{ color: "#fff" }}>Brand</TableCell>
-                        <TableCell sx={{ color: "#fff" }}>
+                        <TableCell
+                          sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
+                        >
+                          Product Category
+                        </TableCell>
+                        <TableCell
+                          sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
+                        >
                           Specifications
                         </TableCell>
-                        <TableCell sx={{ color: "#fff" }}>
+                        <TableCell
+                          sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
+                        >
                           Price per Piece
                         </TableCell>
-                        <TableCell sx={{ color: "#fff" }}>Quantity</TableCell>
+                        <TableCell
+                          sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
+                        >
+                          Quantity
+                        </TableCell>
+                        <TableCell
+                          sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
+                        >
+                          Actions
+                        </TableCell>
                       </TableRow>
                     </TableHead>
                     <TableBody>
@@ -810,7 +1021,7 @@ const QuotationsEditLayoutPage = () => {
                             />
                           </TableCell>
                           <TableCell>{product.product_name}</TableCell>
-                          <TableCell>{product.brand}</TableCell>
+                          <TableCell>{product.product_category}</TableCell>
                           <TableCell>
                             <div>
                               <strong>Model:</strong> {product.model}
@@ -830,24 +1041,19 @@ const QuotationsEditLayoutPage = () => {
                           </TableCell>
                           <TableCell>
                             <>
-                              {/* <div>
-                                <strong>Day:</strong> ₹
-                                {product.rent_price_per_day}
-                              </div> */}
+                              <div>
+                                <strong>Purchase Price:</strong> ₹
+                                {productOfferPrices[product.id] ||
+                                  product.purchase_price}
+                              </div>
                               <div>
                                 <strong>Month:</strong> ₹
-                                {product.rent_price_per_month}
+                                {productRentOfferPrices[product.id] ||
+                                  product.rent_price_per_month}
                               </div>
-                              {/* <div>
-                                <strong>6 Months:</strong> ₹
-                                {product.rent_price_6_months}
-                              </div>
-                              <div>
-                                <strong>1 Year:</strong> ₹
-                                {product.rent_price_1_year}
-                              </div> */}
                             </>
                           </TableCell>
+
                           <TableCell>
                             <Box display="flex" alignItems="center">
                               <IconButton
@@ -876,6 +1082,26 @@ const QuotationsEditLayoutPage = () => {
                               </IconButton>
                             </Box>
                           </TableCell>
+                          <TableCell>
+                            <IconButton
+                              size="small"
+                              onClick={() => handleOpenEditDialog(product)}
+                              title="Edit Prices"
+                              disabled={
+                                !selectedProductIds.includes(product.id)
+                              } // Add this line
+                              style={{
+                                opacity: selectedProductIds.includes(product.id)
+                                  ? 1
+                                  : 0.5,
+                                cursor: selectedProductIds.includes(product.id)
+                                  ? "pointer"
+                                  : "not-allowed",
+                              }}
+                            >
+                              <Edit fontSize="small" />
+                            </IconButton>
+                          </TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
@@ -893,7 +1119,7 @@ const QuotationsEditLayoutPage = () => {
             style={cancelBtnStyle}
             onMouseEnter={(e) => (e.target.style.backgroundColor = "#e5e7eb")}
             onMouseLeave={(e) => (e.target.style.backgroundColor = "#f3f4f6")}
-            onClick={() => navigate(-1)}
+            onClick={() => navigate("/dashboard/crm/quotations")}
           >
             Cancel
           </button>
@@ -911,7 +1137,6 @@ const QuotationsEditLayoutPage = () => {
   );
 };
 
-// Field component
 const Field = ({
   label,
   placeholder,
@@ -920,34 +1145,51 @@ const Field = ({
   value,
   onChange,
   readOnly = false,
-  disabled = false,
+  required = false,
+  error = "",
+  disabled = false, // default false
 }) => (
   <div style={fieldContainerStyle}>
-    <label style={labelStyle}>{label}</label>
+    <label style={labelStyle}>
+      {label}
+      {required && <span style={{ color: "red" }}>*</span>}
+    </label>
+
     {type === "select" ? (
-      <div style={selectWrapperStyle}>
-        <select
-          style={{ ...selectStyle, opacity: disabled ? 0.7 : 1 }}
-          value={value}
-          onChange={onChange}
-          disabled={readOnly || disabled}
-        >
-          <option value="" disabled>
-            {placeholder}
-          </option>
-          {options.map((option, idx) =>
-            typeof option === "object" ? (
-              <option key={idx} value={option.value}>
-                {option.label}
-              </option>
-            ) : (
-              <option key={idx} value={option}>
-                {option}
-              </option>
-            )
-          )}
-        </select>
-        <div style={selectArrowStyle}>▼</div>
+      <div>
+        <div style={selectWrapperStyle}>
+          <select
+            style={{
+              ...selectStyle,
+              borderColor: error ? "red" : "#d1d5db",
+            }}
+            value={value}
+            onChange={onChange}
+            disabled={disabled || readOnly} // <- apply disabled here
+            required={required}
+          >
+            <option value="" disabled>
+              {placeholder}
+            </option>
+            {options.map((option, idx) =>
+              typeof option === "object" ? (
+                <option key={idx} value={option.value}>
+                  {option.label}
+                </option>
+              ) : (
+                <option key={idx} value={option}>
+                  {option}
+                </option>
+              )
+            )}
+          </select>
+          <div style={selectArrowStyle}>▼</div>
+        </div>
+        {error && (
+          <div style={{ color: "red", fontSize: "0.75rem", marginTop: "4px" }}>
+            {error}
+          </div>
+        )}
       </div>
     ) : type === "textarea" ? (
       <textarea
@@ -957,17 +1199,7 @@ const Field = ({
         value={value}
         onChange={onChange}
         readOnly={readOnly}
-        disabled={disabled}
-      />
-    ) : type === "date" ? (
-      <input
-        type="date"
-        placeholder={placeholder}
-        style={inputStyle}
-        value={value}
-        onChange={onChange}
-        readOnly={readOnly}
-        disabled={disabled}
+        disabled={disabled} // <- apply disabled
       />
     ) : (
       <input
@@ -977,13 +1209,13 @@ const Field = ({
         value={value}
         onChange={onChange}
         readOnly={readOnly}
-        disabled={disabled}
+        disabled={disabled} // <- apply disabled
       />
     )}
   </div>
 );
 
-// Styles
+// Styles (same as in your original code)
 const containerStyle = {
   padding: "2rem",
   fontFamily:
@@ -1000,7 +1232,7 @@ const headerStyle = {
 const titleStyle = {
   fontSize: "2rem",
   fontWeight: "700",
-  color: "#1e293b",
+  color: "##1e293b",
   margin: "0 0 0.5rem 0",
   letterSpacing: "-0.025em",
 };

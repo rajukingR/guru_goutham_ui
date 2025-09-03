@@ -13,9 +13,9 @@ const POQuotationTable = () => {
     { id: "purchase_quotation_id", label: "Quotation ID" },
     { id: "purchase_request_id", label: "Purchase Request ID" },
     { id: "purchase_quotation_date", label: "Quotation Date" },
-    { id: "owner", label: "Owner" },
+    // { id: "owner", label: "Owner" },
     { id: "supplier_name", label: "Supplier Name" },
-    { id: "description", label: "Description" },
+    // { id: "description", label: "Description" },
     { id: "po_quotation_status", label: "Status" },
   ];
 

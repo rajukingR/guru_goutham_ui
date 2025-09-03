@@ -211,56 +211,120 @@ const monthButtonStyle = (isSelected) => ({
   },
 });
 
-// Field component moved outside and memoized
 const Field = memo(
   ({
     label,
     name,
-    value,
-    onChange,
     placeholder,
     type = "text",
+    options = [],
+    required = false,
     readOnly = false,
+    disabled = false,
+    value,
+    onChange,
+    error,
+    children, // <-- keep children support also
+    ...props
   }) => (
     <div style={fieldContainerStyle}>
-      <label style={labelStyle}>{label}</label>
+      <label style={labelStyle}>
+        {label}
+        {required && <span style={requiredStyle}>*</span>}
+      </label>
+
       {type === "select" ? (
         <div style={selectWrapperStyle}>
           <select
-            style={selectStyle}
+            style={{
+              ...selectStyle,
+              borderColor: error ? "#ef4444" : "#d1d5db",
+            }}
             name={name}
             value={value}
             onChange={onChange}
-            disabled={readOnly}
+            disabled={disabled || readOnly}
+            {...props}
           >
-            <option value="" disabled>
-              {placeholder}
-            </option>
+            {placeholder && (
+              <option value="" disabled>
+                {placeholder}
+              </option>
+            )}
+
+            {/* Support both `options` and `children` */}
+            {options.length > 0
+              ? options.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))
+              : children}
           </select>
           <div style={selectArrowStyle}>▼</div>
         </div>
+      ) : type === "textarea" ? (
+        <textarea
+          name={name}
+          placeholder={placeholder}
+          style={{
+            ...textareaStyle,
+            borderColor: error ? "#ef4444" : "#d1d5db",
+          }}
+          rows={3}
+          readOnly={readOnly}
+          value={value}
+          onChange={onChange}
+          {...props}
+        />
       ) : type === "date" ? (
         <input
           type="date"
-          style={inputStyle}
           name={name}
+          placeholder={placeholder}
+          style={{
+            ...inputStyle,
+            borderColor: error ? "#ef4444" : "#d1d5db",
+          }}
           value={value}
           onChange={onChange}
-          disabled={readOnly}
+          readOnly={readOnly}
+          {...props}
+        />
+      ) : type === "checkbox" ? (
+        <input
+          type="checkbox"
+          name={name}
+          checked={value}
+          onChange={onChange}
+          style={checkboxStyle}
+          {...props}
         />
       ) : (
         <input
           type={type}
           name={name}
-          value={value}
-          onChange={onChange}
           placeholder={placeholder}
           style={{
             ...inputStyle,
             backgroundColor: readOnly ? "#f3f4f6" : "#ffffff",
+            borderColor: error ? "#ef4444" : "#d1d5db",
           }}
           readOnly={readOnly}
+          value={value}
+          onChange={onChange}
+          {...props}
         />
+      )}
+
+      {error && (
+        <Typography
+          variant="caption"
+          color="error"
+          style={{ marginTop: "4px" }}
+        >
+          {error}
+        </Typography>
       )}
     </div>
   )
@@ -458,6 +522,10 @@ const generateInvoiceId = () => {
 const InvoicesAddPage = () => {
   const navigate = useNavigate();
 
+  const [errors, setErrors] = useState({
+    dc_id: "", // Add this line to track DC selection error
+  });
+
   const [formData, setFormData] = useState({
     invoice_number: "",
     invoice_title: "",
@@ -637,9 +705,9 @@ const InvoicesAddPage = () => {
           await approvedDispatchOrdersResponse.json();
 
         // Transform the dispatch orders data to match your existing structure
+        // In your fetchData useEffect, update the transformation:
         const transformedOrders = approvedDispatchOrdersData.map(
           (dispatchOrder) => {
-            // Use the first delivery challan if available, or fall back to dispatch order data
             const dc = dispatchOrder.delivery_challans?.[0] || dispatchOrder;
 
             return {
@@ -647,11 +715,10 @@ const InvoicesAddPage = () => {
               order_id: dispatchOrder.order_id,
               dc_id: dc.dc_id || dispatchOrder.dispatch_order_id,
               dispatch_order_number: dc.dispatch_order_id,
-
               dc_date: dc.dc_date || dispatchOrder.dispatch_order_date,
               customer_code: dispatchOrder.customer_code,
               order_number: dispatchOrder.order_number,
-              dispatch_order_id: dispatchOrder.dispatch_order_id, // Add this line
+              dispatch_order_id: dispatchOrder.dispatch_order_id,
               customer_id: dispatchOrder.contact?.id,
               dispatch_order: dispatchOrder,
 
@@ -684,10 +751,15 @@ const InvoicesAddPage = () => {
                 product_name: item.product_name,
                 quantity: item.quantity,
                 unit_price: parseFloat(item.total_price) / item.quantity || 0,
+                purchase_price: item.purchase_price || 0,
+                offer_purchase_price: item.offer_purchase_price || 0,
+                rent_price_per_month: item.rent_price_per_month || 0, // ✅ ADD THIS
+                offer_rent_price_per_month:
+                  item.offer_rent_price_per_month || 0, // ✅ ADD THIS
                 total_price: item.total_price,
                 product: item.product,
                 device_ids: item.device_ids || [],
-                order_id: dispatchOrder.order_id, // Include order_id in each item
+                order_id: dispatchOrder.order_id,
               })),
               rental_start_date: dispatchOrder.order?.rental_start_date || null,
               rental_end_date: dispatchOrder.order?.rental_end_date || null,
@@ -817,9 +889,10 @@ const InvoicesAddPage = () => {
 
       setSelectedOrderId(dispatchOrderId); // <-- sets selected value in dropdown
 
-      const customerId = selectedOrder.contact?.id || 
-                      selectedOrder.customer_code || 
-                      selectedOrder.dispatch_order?.customer_code;
+      const customerId =
+        selectedOrder.contact?.id ||
+        selectedOrder.customer_code ||
+        selectedOrder.dispatch_order?.customer_code;
 
       // You already have the rest of this code:
       const dispatchOrderDate =
@@ -896,7 +969,7 @@ const InvoicesAddPage = () => {
 
       setFormData({
         ...formData,
-      customer_id: customerId || "", // ✅ Ensure customer_id is set
+        customer_id: customerId || "", // ✅ Ensure customer_id is set
         customer_name: `${personal?.first_name || ""}`,
         email: personal?.email || "",
         phone_number: personal?.phone_number || "",
@@ -1180,18 +1253,57 @@ const InvoicesAddPage = () => {
 const handleSubmit = async (e) => {
   e.preventDefault();
 
+  // Validate form
+  let isValid = true;
+  const newErrors = {
+    dc_id: "",
+  };
+
+  // Validate DC selection
+  if (!selectedOrderId) {
+    newErrors.dc_id = "DC selection is required";
+    isValid = false;
+  }
+
+  setErrors(newErrors);
+
+  if (!isValid) {
+    setSnackbar({
+      open: true,
+      message: "Please select a DC before submitting",
+      severity: "error",
+    });
+    return;
+  }
+
   try {
     // Prepare the data to be sent
-    const selectedOrder = orders.find(order => order.id === parseInt(selectedOrderId));
+    const selectedOrder = orders.find(
+      (order) => order.id === parseInt(selectedOrderId)
+    );
+
+    // Create a map of product prices from the dispatch order
+    const dispatchOrderProductPrices = {};
+    if (selectedOrder && selectedOrder.items) {
+      selectedOrder.items.forEach((item) => {
+        dispatchOrderProductPrices[item.product_id] = {
+          offer_purchase_price: item.offer_purchase_price || "0.00",
+          purchase_price: item.purchase_price || "0.00",
+          rent_price_per_month: item.rent_price_per_month || "0.00",
+          offer_rent_price_per_month: item.offer_rent_price_per_month || "0.00",
+          total_price: item.total_price || "0.00",
+        };
+      });
+    }
 
     const submissionData = {
       ...formData,
-      customer_id: formData.customer_id || (selectedOrder?.contact?.id || ""),
+      customer_id: formData.customer_id || selectedOrder?.contact?.id || "",
 
       // Include date ranges in the submission
       dc_id: formData.dc_id,
       dispatch_order_number:
-        formData.dispatch_order_number || formData.dispatch_order_id, // Use whichever is available
+        formData.dispatch_order_number || formData.dispatch_order_id,
 
       dc_date: formData.dc_date,
       invoice_start_date: dateRanges.invoiceStartDate,
@@ -1210,9 +1322,17 @@ const handleSubmit = async (e) => {
       payment_mode: formData.payment_type || "",
 
       items: formData.items.map((item) => {
-        const product = products.find(p => p.id === item.product_id);
-        const unit_price = product ? product.rent_price_per_month : 0;
-        const total_price = product ? product.purchase_price : 0;
+        // Get prices from dispatch order instead of product template
+        const dispatchPrices = dispatchOrderProductPrices[item.product_id] || {};
+        
+        const offer_purchase_price = parseFloat(dispatchPrices.offer_purchase_price) || 0;
+        const purchase_price = parseFloat(dispatchPrices.purchase_price) || 0;
+        const rent_price_per_month = parseFloat(dispatchPrices.rent_price_per_month) || 0;
+        const offer_rent_price_per_month = parseFloat(dispatchPrices.offer_rent_price_per_month) || 0;
+
+        // Simple price assignment as requested
+        const total_price = offer_purchase_price === 0 ? purchase_price : offer_purchase_price;
+        const unit_price = offer_rent_price_per_month === 0 ? rent_price_per_month : offer_rent_price_per_month;
 
         return {
           ...item,
@@ -1227,8 +1347,12 @@ const handleSubmit = async (e) => {
           rental_duration_months: formData.rental_duration
             ? parseInt(formData.rental_duration)
             : 0,
-          unit_price: unit_price,  // Add unit_price from product's purchase_price
-          total_price: total_price // Calculate total_price based on quantity
+          unit_price: unit_price,
+          total_price: total_price,
+          purchase_price: purchase_price,
+          offer_purchase_price: offer_purchase_price,
+          rent_price_per_month: rent_price_per_month,
+          offer_rent_price_per_month: offer_rent_price_per_month,
         };
       }),
     };
@@ -1313,13 +1437,13 @@ const handleSubmit = async (e) => {
                 onChange={handleInputChange}
                 placeholder="Enter Invoice Id"
               />
-              <Field
+              {/* <Field
                 label="Invoice Title"
                 name="invoice_title"
                 value={formData.invoice_title}
                 onChange={handleInputChange}
                 placeholder="Enter Invoice Title"
-              />
+              /> */}
 
               <Field
                 label="Invoice Date"
@@ -1329,16 +1453,23 @@ const handleSubmit = async (e) => {
                 onChange={handleInputChange}
               />
 
-              <FormControl fullWidth size="small">
-                <InputLabel>Select 
-                </InputLabel>
+              <FormControl fullWidth size="small" error={!!errors.dc_id}>
+                <InputLabel>Select DC</InputLabel>
                 <Select
                   value={selectedOrderId || ""}
-                  onChange={(e) => handleCustomerSelect(e.target.value)}
-                  label="Select Customer"
+                  onChange={(e) => {
+                    handleCustomerSelect(e.target.value);
+                    if (errors.dc_id) {
+                      setErrors({ ...errors, dc_id: "" });
+                    }
+                  }}
+                  label="Select DC"
                   displayEmpty
                   inputProps={{ "aria-label": "Without label" }}
-                  style={inputStyle}
+                  style={{
+                    ...inputStyle,
+                    borderColor: errors.dc_id ? "red" : "#d1d5db",
+                  }}
                 >
                   {orders.map((order) => (
                     <MenuItem key={order.id} value={order.id}>
@@ -1347,27 +1478,32 @@ const handleSubmit = async (e) => {
                     </MenuItem>
                   ))}
                 </Select>
+                {errors.dc_id && (
+                  <Typography color="error" variant="caption">
+                    {errors.dc_id}
+                  </Typography>
+                )}
               </FormControl>
 
               <Field
                 label="Transaction Type"
                 name="transaction_type"
+                type="select"
+                placeholder="Select Type"
                 value={formData.transaction_type}
                 onChange={(e) => {
                   handleInputChange(e);
-                  // Clear rental-specific fields when switching to Buy
                   if (e.target.value === "Buy") {
                     setFormData((prev) => ({
                       ...prev,
-                      payment_mode: "",
                       payment_type: "",
-                      rental_duration: "0",
-                      rental_duration_days: 0,
-                      rental_start_date: "",
-                      rental_end_date: "",
                     }));
                   }
                 }}
+                options={[
+                  { value: "Rent", label: "Rent" },
+                  { value: "Buy", label: "Buy" },
+                ]}
               />
 
               {formData.transaction_type === "Rent" && (
@@ -1377,6 +1513,7 @@ const handleSubmit = async (e) => {
                     name="payment_mode"
                     value={formData.payment_type}
                     onChange={handleInputChange}
+                    disabled
                   />
 
                   <div
@@ -1529,6 +1666,13 @@ const handleSubmit = async (e) => {
               />
             </div>
           </div>
+
+          <div style={cardStyle}>
+            <div style={cardHeaderContainerStyle}>
+              <div style={iconStyle}>🏢</div>
+              <h3 style={cardHeaderStyle}>Courier Charges</h3>
+            </div>
+          </div>
         </div>
 
         {/* Select Products Section */}
@@ -1570,13 +1714,23 @@ const handleSubmit = async (e) => {
                   />
                 </Box>
 
-                <TableContainer component={Paper}>
-                  <Table size="small">
+                <TableContainer
+                  component={Paper}
+                  sx={{
+                    maxHeight: "400px", // or whatever height you prefer
+                    overflow: "auto",
+                    position: "relative",
+                  }}
+                >
+                  <Table size="small" stickyHeader>
                     <TableHead>
                       <TableRow sx={{ backgroundColor: "#0d47a1" }}>
-                        <TableCell padding="checkbox" sx={{ color: "#fff" }}>
+                        <TableCell
+                          padding="checkbox"
+                          sx={{ backgroundColor: "#0d47a1" }}
+                        >
                           <Checkbox
-                            sx={{ color: "#fff" }}
+                            sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
                             checked={
                               selectedProductIds.length ===
                                 filteredProducts.length &&
@@ -1607,18 +1761,26 @@ const handleSubmit = async (e) => {
                             }}
                           />
                         </TableCell>
-                        <TableCell sx={{ color: "#fff" }}>
+                        <TableCell
+                          sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
+                        >
                           Product Name
                         </TableCell>
-                        <TableCell sx={{ color: "#fff" }}>Brand</TableCell>
-                        <TableCell sx={{ color: "#fff" }}>
+                        {/* <TableCell sx={{ backgroundColor: "#0d47a1", color: "#fff" }}>Brand</TableCell> */}
+                        <TableCell
+                          sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
+                        >
                           Specifications
                         </TableCell>
-                        <TableCell sx={{ color: "#fff" }}>Quantity</TableCell>
-
-                        <TableCell sx={{ color: "#fff" }}>
-                          Price for Durations
+                        <TableCell
+                          sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
+                        >
+                          Quantity
                         </TableCell>
+
+                        {/* <TableCell sx={{ backgroundColor: "#0d47a1", color: "#fff" }}>
+                          Price for Durations
+                        </TableCell> */}
                       </TableRow>
                     </TableHead>
                     <TableBody>
@@ -1639,7 +1801,7 @@ const handleSubmit = async (e) => {
                               />
                             </TableCell>
                             <TableCell>{product.product_name}</TableCell>
-                            <TableCell>{product.brand}</TableCell>
+                            {/* <TableCell>{product.brand}</TableCell> */}
                             <TableCell>
                               {[
                                 product.model,
@@ -1693,11 +1855,11 @@ const handleSubmit = async (e) => {
                               </Box>
                             </TableCell>
 
-                            <TableCell>
+                            {/* <TableCell>
                               <>
                                 <div>Month: {product.rent_price_per_month}</div>
                               </>
-                            </TableCell>
+                            </TableCell> */}
                           </TableRow>
                         ))}
                     </TableBody>

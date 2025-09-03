@@ -20,7 +20,7 @@ import { useNavigate } from "react-router-dom";
 import API_URL from "../../api/Api_url";
 import { useInventory } from "../../contexts/InventoryContext";
 
-// Styles (same as in your original code)
+// Styles
 const containerStyle = {
   padding: "2rem",
   fontFamily:
@@ -289,7 +289,13 @@ const fileUploadButton = {
   transition: "all 0.2s ease",
 };
 
-// Field component moved outside and memoized
+const checkboxGroupStyle = {
+  display: "flex",
+  gap: "1rem",
+  marginTop: "0.5rem",
+};
+
+// Field component
 const Field = memo(
   ({
     label,
@@ -301,6 +307,7 @@ const Field = memo(
     readOnly = false,
     value,
     onChange,
+    error,
     ...props
   }) => (
     <div style={fieldContainerStyle}>
@@ -311,7 +318,10 @@ const Field = memo(
       {type === "select" ? (
         <div style={selectWrapperStyle}>
           <select
-            style={selectStyle}
+            style={{
+              ...selectStyle,
+              borderColor: error ? "#ef4444" : "#d1d5db",
+            }}
             name={name}
             value={value}
             onChange={onChange}
@@ -331,7 +341,10 @@ const Field = memo(
         <textarea
           name={name}
           placeholder={placeholder}
-          style={textareaStyle}
+          style={{
+            ...textareaStyle,
+            borderColor: error ? "#ef4444" : "#d1d5db",
+          }}
           rows={3}
           readOnly={readOnly}
           value={value}
@@ -343,7 +356,10 @@ const Field = memo(
           type="date"
           name={name}
           placeholder={placeholder}
-          style={inputStyle}
+          style={{
+            ...inputStyle,
+            borderColor: error ? "#ef4444" : "#d1d5db",
+          }}
           value={value}
           onChange={onChange}
           readOnly={readOnly}
@@ -366,12 +382,22 @@ const Field = memo(
           style={{
             ...inputStyle,
             backgroundColor: readOnly ? "#f3f4f6" : "#ffffff",
+            borderColor: error ? "#ef4444" : "#d1d5db",
           }}
           readOnly={readOnly}
           value={value}
           onChange={onChange}
           {...props}
         />
+      )}
+      {error && (
+        <Typography
+          variant="caption"
+          color="error"
+          style={{ marginTop: "4px" }}
+        >
+          {error}
+        </Typography>
       )}
     </div>
   )
@@ -388,10 +414,9 @@ const generateDcId = () => {
 
 const DeliveryChallanAddPage = ({ product }) => {
   const navigate = useNavigate();
-
-  // State for form data
   const { inventoryData } = useInventory();
   const [assetSearchTerms, setAssetSearchTerms] = useState({});
+  const [errors, setErrors] = useState({});
 
   const getAvailableQty = (productId) => {
     const entry = inventoryData.find((item) => item.id === productId);
@@ -408,7 +433,7 @@ const DeliveryChallanAddPage = ({ product }) => {
     dispatch_order_number: "",
     payment_type: "",
     dc_date: new Date().toISOString().split("T")[0],
-    dc_status: "Dispatched",
+    dc_status: "",
     dealer_reference: "",
     email: "",
     gst_number: "",
@@ -432,9 +457,14 @@ const DeliveryChallanAddPage = ({ product }) => {
     receiver_name: "",
     receiver_phone_number: "",
     items: [],
+    peripheral_update: false,
+    defualt_dc: false,
+    mouse: false,
+    cable: false,
+    bag: false,
+    others: false,
   });
 
-  // State for UI and data
   const [dispatchOrders, setDispatchOrders] = useState([]);
   const [products, setProducts] = useState([]);
   const [selectedProductIds, setSelectedProductIds] = useState([]);
@@ -444,6 +474,9 @@ const DeliveryChallanAddPage = ({ product }) => {
   const [availableAssetIds, setAvailableAssetIds] = useState({});
   const [deviceIds, setDeviceIds] = useState({});
   const [deviceIdErrors, setDeviceIdErrors] = useState({});
+  // Add a new state for the "Other" accessories input
+  const [showOtherAccessory, setShowOtherAccessory] = useState(false);
+  const [otherAccessory, setOtherAccessory] = useState("");
 
   const [snackbar, setSnackbar] = useState({
     open: false,
@@ -458,11 +491,9 @@ const DeliveryChallanAddPage = ({ product }) => {
     }));
   }, []);
 
-  // Fetch dispatch orders and products on component mount
   useEffect(() => {
     const fetchData = async () => {
       try {
-        // Fetch approved dispatch orders
         const dispatchOrderResponse = await fetch(
           `${API_URL}/dispatch-orders/approved`
         );
@@ -471,7 +502,6 @@ const DeliveryChallanAddPage = ({ product }) => {
         const dispatchOrderData = await dispatchOrderResponse.json();
         setDispatchOrders(dispatchOrderData);
 
-        // Fetch products
         const prodResponse = await fetch(`${API_URL}/product-templete`);
         if (!prodResponse.ok) throw new Error("Failed to fetch products");
         const prodData = await prodResponse.json();
@@ -489,7 +519,35 @@ const DeliveryChallanAddPage = ({ product }) => {
     fetchData();
   }, []);
 
-  // Handle dispatch order selection
+  const validateForm = () => {
+    const newErrors = {};
+
+    if (!formData.order_id) {
+      newErrors.order_id = "Dispatch Order is required";
+    }
+    if (!formData.dc_status) {
+      newErrors.dc_status = "DC Status is required";
+    }
+
+    if (!formData.delivery_person_name) {
+      newErrors.delivery_person_name = "Delivery Person Name is required";
+    }
+    if (!formData.delivery_person_phone_number) {
+      newErrors.delivery_person_phone_number =
+        "Delivery Person Phone is required";
+    }
+
+    if (!formData.receiver_name) {
+      newErrors.receiver_name = "Receiver Name is required";
+    }
+    if (!formData.receiver_phone_number) {
+      newErrors.receiver_phone_number = "Receiver Phone number is required";
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
   const handleOrderSelect = (orderId) => {
     const selectedOrder = dispatchOrders.find(
       (order) => order.id === parseInt(orderId)
@@ -498,7 +556,6 @@ const DeliveryChallanAddPage = ({ product }) => {
 
     const { contact, items } = selectedOrder;
 
-    // Set device IDs from the order items
     const newDeviceIds = {};
     items.forEach((item) => {
       newDeviceIds[item.product_id] = item.device_ids || [];
@@ -533,11 +590,9 @@ const DeliveryChallanAddPage = ({ product }) => {
       })),
     });
 
-    // Auto-select products from the order
     const productIds = items.map((item) => item.product_id);
     setSelectedProductIds(productIds);
 
-    // Set quantities
     const newQuantities = {};
     items.forEach((item) => {
       newQuantities[item.product_id] = item.quantity;
@@ -545,7 +600,6 @@ const DeliveryChallanAddPage = ({ product }) => {
     setQuantities(newQuantities);
   };
 
-  // Fetch location data when pincode changes
   useEffect(() => {
     const fetchLocationFromPincode = async () => {
       const pincode = formData.pincode;
@@ -592,7 +646,6 @@ const DeliveryChallanAddPage = ({ product }) => {
     return () => clearTimeout(debounceTimer);
   }, [formData.pincode]);
 
-  // Handle form field changes
   const handleInputChange = useCallback((e) => {
     const { name, value, type, checked } = e.target;
     setFormData((prev) => ({
@@ -601,7 +654,28 @@ const DeliveryChallanAddPage = ({ product }) => {
     }));
   }, []);
 
-  // Handle product selection
+  // Update the handleChange function to handle the "others" checkbox
+  const handleChange = useCallback((e) => {
+    const { name, value, type, checked } = e.target;
+
+    if (name === "others") {
+      setFormData((prev) => ({
+        ...prev,
+        [name]: checked,
+      }));
+      // Show/hide the other accessory input based on checkbox state
+      setShowOtherAccessory(checked);
+      if (!checked) {
+        setOtherAccessory(""); // Clear the other accessory field when unchecked
+      }
+    } else {
+      setFormData((prev) => ({
+        ...prev,
+        [name]: type === "checkbox" ? checked : value,
+      }));
+    }
+  }, []);
+
   const handleProductSelection = useCallback((productId) => {
     setSelectedProductIds((prev) => {
       if (prev.includes(productId)) {
@@ -619,7 +693,6 @@ const DeliveryChallanAddPage = ({ product }) => {
     });
   }, []);
 
-  // Handle quantity changes
   const handleQtyChange = useCallback((productId, value) => {
     const qty = Math.max(0, parseInt(value) || 0);
     setQuantities((prev) => ({ ...prev, [productId]: qty }));
@@ -639,7 +712,6 @@ const DeliveryChallanAddPage = ({ product }) => {
     }));
   }, []);
 
-  // Filter products based on search term
   const filteredProducts = products.filter(
     (product) =>
       product.product_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -650,25 +722,54 @@ const DeliveryChallanAddPage = ({ product }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
+    if (!validateForm()) {
+      return;
+    }
+
     try {
-      // Prepare items data
       const items = selectedProductIds.map((productId) => {
         const product = products.find((p) => p.id === productId);
         const quantity = quantities[productId] || 1;
         const selectedDeviceIds = deviceIds[productId] || [];
 
+        // let total_price = 0;
+        // if (formData.type === "Rent") {
+        //   const rentalDuration = 1;
+        //   if (rentalDuration === 12) {
+        //     total_price = product.rent_price_1_year * quantity;
+        //   } else if (rentalDuration === 6) {
+        //     total_price = product.rent_price_6_months * quantity;
+        //   } else {
+        //     total_price = product.rent_price_per_month * quantity;
+        //   }
+        // } else {
+        //   total_price = product.purchase_price * quantity;
+        // }
+
         let total_price = 0;
+
         if (formData.type === "Rent") {
-          const rentalDuration = 1;
+          const rentalDuration = 1; // can be 1, 6, or 12 months
           if (rentalDuration === 12) {
-            total_price = product.rent_price_1_year * quantity;
+            total_price = product?.rent_price_1_year
+              ? Number(product.rent_price_1_year) * quantity
+              : 0;
           } else if (rentalDuration === 6) {
-            total_price = product.rent_price_6_months * quantity;
+            total_price = product?.rent_price_6_months
+              ? Number(product.rent_price_6_months) * quantity
+              : 0;
           } else {
-            total_price = product.rent_price_per_month * quantity;
+            // monthly price with fallback to offer rent price
+            const monthlyPrice =
+              product?.offer_rent_price_per_month &&
+              product.offer_rent_price_per_month !== ""
+                ? Number(product.offer_rent_price_per_month)
+                : Number(product?.rent_price_per_month || 0);
+
+            total_price = monthlyPrice * quantity;
           }
         } else {
-          total_price = product.purchase_price * quantity;
+          total_price = Number(product?.purchase_price || 0) * quantity;
         }
 
         return {
@@ -683,6 +784,7 @@ const DeliveryChallanAddPage = ({ product }) => {
       const payload = {
         ...formData,
         items,
+        other_accessory: showOtherAccessory ? otherAccessory : "",
       };
 
       console.log("Submitting payload:", payload);
@@ -756,21 +858,22 @@ const DeliveryChallanAddPage = ({ product }) => {
                 placeholder="Enter DC ID"
                 value={formData.dc_id}
                 onChange={handleInputChange}
+                readOnly
               />
+
               <Field
-                label="DC Title"
-                name="dc_title"
-                placeholder="Enter DC Title"
-                value={formData.dc_title}
-                onChange={handleInputChange}
-              />
-              <Field
-                label="Dispatch Order Details"
+                label="Select Dispatch Order"
                 name="order_id"
                 type="select"
                 placeholder="Select Dispatch Order"
                 value={formData.order_id}
-                onChange={(e) => handleOrderSelect(e.target.value)}
+                onChange={(e) => {
+                  handleOrderSelect(e.target.value);
+                  if (errors.order_id) {
+                    setErrors({ ...errors, order_id: "" });
+                  }
+                }}
+                error={errors.order_id}
                 options={dispatchOrders.map((order) => ({
                   value: order.id,
                   label: `${order.dispatch_order_id} - ${
@@ -785,7 +888,7 @@ const DeliveryChallanAddPage = ({ product }) => {
                 placeholder="Enter Order Number"
                 value={formData.order_number}
                 onChange={handleInputChange}
-                required
+                readOnly
               />
               <Field
                 label="Transaction Type"
@@ -795,11 +898,10 @@ const DeliveryChallanAddPage = ({ product }) => {
                 value={formData.type}
                 onChange={(e) => {
                   handleInputChange(e);
-                  // Clear rental-specific fields when switching to Buy
                   if (e.target.value === "Buy") {
                     setFormData((prev) => ({
                       ...prev,
-                      payment_type: "", // Set default payment type for Buy
+                      payment_type: "",
                     }));
                   }
                 }}
@@ -807,6 +909,7 @@ const DeliveryChallanAddPage = ({ product }) => {
                   { value: "Rent", label: "Rent" },
                   { value: "Buy", label: "Buy" },
                 ]}
+                disabled
               />
 
               {formData.type === "Rent" && (
@@ -825,12 +928,17 @@ const DeliveryChallanAddPage = ({ product }) => {
                 type="select"
                 placeholder="Select Status"
                 value={formData.dc_status}
-                onChange={handleInputChange}
+                onChange={(e) => {
+                  handleInputChange(e);
+                  if (errors.dc_status) {
+                    setErrors({ ...errors, dc_status: "" });
+                  }
+                }}
+                error={errors.dc_status}
                 options={[
                   { value: "Pending", label: "Pending" },
                   { value: "Delivered", label: "Delivered" },
                 ]}
-                required
               />
               <Field
                 label="DC Date"
@@ -853,22 +961,7 @@ const DeliveryChallanAddPage = ({ product }) => {
                 placeholder="Enter Email"
                 value={formData.email}
                 onChange={handleInputChange}
-                required
               />
-
-              {/* <div style={fileUploadContainer}>
-                <label style={fileUploadLabel}>
-                  <input type="file" style={{ display: "none" }} />
-                  <span style={fileUploadButton}>Choose File</span>
-                </label>
-              </div>
-              <Field
-                label="DC Type"
-                name="regular_dc"
-                type="checkbox"
-                checked={formData.regular_dc}
-                onChange={handleInputChange}
-              /> */}
 
               <Field
                 label="Industry"
@@ -896,7 +989,7 @@ const DeliveryChallanAddPage = ({ product }) => {
             </div>
             <div style={fieldsGridStyle}>
               <Field
-                label="Order Placed by"
+                label="Customer Name"
                 name="shipping_ordered_by"
                 placeholder="Enter name"
                 value={formData.shipping_ordered_by}
@@ -910,13 +1003,7 @@ const DeliveryChallanAddPage = ({ product }) => {
                 value={formData.shipping_phone_number}
                 onChange={handleInputChange}
               />
-              <Field
-                label="Shipping Name"
-                name="shipping_name"
-                placeholder="Enter Shipping Name"
-                value={formData.shipping_name}
-                onChange={handleInputChange}
-              />
+
               <Field
                 label="Street"
                 name="street"
@@ -966,42 +1053,75 @@ const DeliveryChallanAddPage = ({ product }) => {
             </div>
           </div>
 
-          {/* Other Details Section */}
+          {/* Delivery Person Details Section */}
           <div style={cardStyle}>
             <div style={cardHeaderContainerStyle}>
               <div style={iconStyle}>📝</div>
-              <h3 style={cardHeaderStyle}>Other Details</h3>
+              <h3 style={cardHeaderStyle}>Delivery Person Details</h3>
             </div>
+
             <div style={fieldsGridStyle}>
+              {/* Vehicle Number */}
               <Field
                 label="Vehicle Number"
                 name="vehicle_number"
                 placeholder="Enter Vehicle Number"
                 value={formData.vehicle_number}
-                onChange={handleInputChange}
-                required
+                onChange={(e) => {
+                  handleInputChange(e);
+                  if (errors.vehicle_number) {
+                    setErrors({ ...errors, vehicle_number: "" });
+                  }
+                }}
+                error={errors.vehicle_number}
               />
+
+              {/* Delivery Person Name */}
               <Field
                 label="Delivery Person Name"
                 name="delivery_person_name"
                 placeholder="Enter Name"
                 value={formData.delivery_person_name}
-                onChange={handleInputChange}
+                onChange={(e) => {
+                  handleInputChange(e);
+                  if (errors.delivery_person_name) {
+                    setErrors({ ...errors, delivery_person_name: "" });
+                  }
+                }}
+                error={errors.delivery_person_name}
+                required
               />
+
+              {/* Delivery Person Phone */}
               <Field
                 label="Delivery Person Phone"
                 name="delivery_person_phone_number"
                 placeholder="Enter Phone"
                 type="tel"
                 value={formData.delivery_person_phone_number}
-                onChange={handleInputChange}
+                onChange={(e) => {
+                  handleInputChange(e);
+                  if (errors.delivery_person_phone_number) {
+                    setErrors({ ...errors, delivery_person_phone_number: "" });
+                  }
+                }}
+                error={errors.delivery_person_phone_number}
+                required
               />
+
               <Field
                 label="Receiver Name"
                 name="receiver_name"
                 placeholder="Enter Name"
                 value={formData.receiver_name}
-                onChange={handleInputChange}
+                onChange={(e) => {
+                  handleInputChange(e);
+                  if (errors.receiver_name) {
+                    setErrors({ ...errors, receiver_name: "" });
+                  }
+                }}
+                error={errors.receiver_name}
+                required
               />
               <Field
                 label="Receiver Phone Number"
@@ -1009,12 +1129,93 @@ const DeliveryChallanAddPage = ({ product }) => {
                 placeholder="Enter Phone"
                 type="tel"
                 value={formData.receiver_phone_number}
-                onChange={handleInputChange}
+                onChange={(e) => {
+                  handleInputChange(e);
+                  if (errors.receiver_phone_number) {
+                    setErrors({ ...errors, receiver_phone_number: "" });
+                  }
+                }}
+                error={errors.receiver_phone_number}
+                required
               />
+            </div>
+
+            {/* Demo DC Checkbox */}
+            <div style={fieldContainerStyle}>
+              <label
+                style={{
+                  ...labelStyle,
+                  display: "flex",
+                  alignItems: "center",
+                  marginTop: "20px",
+                }}
+              >
+                <input
+                  type="checkbox"
+                  name="defualt_dc"
+                  checked={formData.defualt_dc || false}
+                  onChange={handleChange}
+                  style={{
+                    marginRight: "0.5rem",
+                    width: "16px",
+                    height: "16px",
+                    cursor: "pointer",
+                  }}
+                />
+                Demo DC
+              </label>
+              <div
+                style={{
+                  fontSize: "0.75rem",
+                  color: "#6b7280",
+                  marginTop: "0.25rem",
+                  marginLeft: "1.5rem", // indent helper text
+                }}
+              >
+                Check if this is a demo delivery challan
+              </div>
+            </div>
+
+            {/* Accessories Checkboxes */}
+            <div style={fieldContainerStyle}>
+              <label style={labelStyle}>Included Accessories:</label>
+              <div style={checkboxGroupStyle}>
+                {["mouse", "cable", "bag", "others"].map((field) => (
+                  <label
+                    key={field}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      marginRight: "15px",
+                    }}
+                  >
+                    <input
+                      type="checkbox"
+                      name={field}
+                      checked={formData[field]}
+                      onChange={handleChange}
+                      style={{ marginRight: "5px" }}
+                    />
+                    {field.charAt(0).toUpperCase() + field.slice(1)}
+                  </label>
+                ))}
+              </div>
+
+              {/* Add the Other Accessory input field that appears when "others" is checked */}
+              {showOtherAccessory && (
+                <div style={{ marginTop: "10px" }}>
+                  <Field
+                    label="peripherals Other Accessory"
+                    name="other_accessory"
+                    placeholder="Enter accessory name"
+                    value={otherAccessory}
+                    onChange={(e) => setOtherAccessory(e.target.value)}
+                  />
+                </div>
+              )}
             </div>
           </div>
         </div>
-
         {/* Select Products Section */}
         <div style={cardStyle}>
           <div style={cardHeaderContainerStyle}>
@@ -1054,13 +1255,23 @@ const DeliveryChallanAddPage = ({ product }) => {
                   />
                 </Box>
 
-                <TableContainer component={Paper}>
-                  <Table size="small">
+                <TableContainer
+                  component={Paper}
+                  sx={{
+                    maxHeight: "400px",
+                    overflow: "auto",
+                    position: "relative",
+                  }}
+                >
+                  <Table size="small" stickyHeader>
                     <TableHead>
                       <TableRow sx={{ backgroundColor: "#0d47a1" }}>
-                        <TableCell padding="checkbox" sx={{ color: "#fff" }}>
+                        <TableCell
+                          padding="checkbox"
+                          sx={{ backgroundColor: "#0d47a1" }}
+                        >
                           <Checkbox
-                            sx={{ color: "#fff" }}
+                            sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
                             checked={
                               selectedProductIds.length ===
                                 filteredProducts.length &&
@@ -1091,23 +1302,41 @@ const DeliveryChallanAddPage = ({ product }) => {
                             }}
                           />
                         </TableCell>
-                        <TableCell sx={{ color: "#fff" }}>
+                        <TableCell
+                          sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
+                        >
                           Product Name
                         </TableCell>
-                        <TableCell sx={{ color: "#fff" }}>Brand</TableCell>
-                        <TableCell sx={{ color: "#fff" }}>Model</TableCell>
-                        <TableCell sx={{ color: "#fff" }}>Processor</TableCell>
-                        <TableCell sx={{ color: "#fff" }}>RAM</TableCell>
-                        <TableCell sx={{ color: "#fff" }}>Storage</TableCell>
-                        <TableCell sx={{ color: "#fff" }}>Graphics</TableCell>
-                        <TableCell sx={{ color: "#fff" }}>
-                          Available Quantity
+                        <TableCell
+                          sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
+                        >
+                          Processor
                         </TableCell>
-                        <TableCell sx={{ color: "#fff" }}>Quantity</TableCell>
-                        <TableCell sx={{ color: "#fff" }}>
+                        <TableCell
+                          sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
+                        >
+                          RAM
+                        </TableCell>
+                        <TableCell
+                          sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
+                        >
+                          Storage
+                        </TableCell>
+                        <TableCell
+                          sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
+                        >
+                          Graphics
+                        </TableCell>
+                        <TableCell
+                          sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
+                        >
+                          Quantity
+                        </TableCell>
+                        <TableCell
+                          sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
+                        >
                           Selected Asset IDs
                         </TableCell>
-                        <TableCell sx={{ color: "#fff" }}>Price</TableCell>
                       </TableRow>
                     </TableHead>
                     <TableBody>
@@ -1128,13 +1357,10 @@ const DeliveryChallanAddPage = ({ product }) => {
                               />
                             </TableCell>
                             <TableCell>{product.product_name}</TableCell>
-                            <TableCell>{product.brand}</TableCell>
-                            <TableCell>{product.model}</TableCell>
                             <TableCell>{product.processor}</TableCell>
                             <TableCell>{product.ram}</TableCell>
                             <TableCell>{product.storage}</TableCell>
                             <TableCell>{product.graphics}</TableCell>
-                            <TableCell>{getAvailableQty(product.id)}</TableCell>
                             <TableCell>
                               <TextField
                                 type="number"
@@ -1149,17 +1375,6 @@ const DeliveryChallanAddPage = ({ product }) => {
                             </TableCell>
                             <TableCell>
                               {(deviceIds[product.id] || []).join(", ")}
-                            </TableCell>
-                            <TableCell>
-                              {formData.type === "Rent" ? (
-                                <>
-                                  <div>
-                                    Month: {product.rent_price_per_month}
-                                  </div>
-                                </>
-                              ) : (
-                                product.purchase_price
-                              )}
                             </TableCell>
                           </TableRow>
                         ))}
@@ -1178,6 +1393,7 @@ const DeliveryChallanAddPage = ({ product }) => {
             style={cancelBtnStyle}
             onMouseEnter={(e) => (e.target.style.backgroundColor = "#e5e7eb")}
             onMouseLeave={(e) => (e.target.style.backgroundColor = "#f3f4f6")}
+            onClick={() => navigate("/dashboard/operations")}
           >
             Cancel
           </button>

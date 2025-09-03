@@ -45,10 +45,10 @@ import MiscellaneousServicesIcon from "@mui/icons-material/MiscellaneousServices
 import ChevronRightIcon from "@mui/icons-material/ChevronRight";
 import KeyboardArrowUpIcon from "@mui/icons-material/KeyboardArrowUp";
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
-import MoneyOffIcon from '@mui/icons-material/MoneyOff';
-import TravelExploreIcon from '@mui/icons-material/TravelExplore';
+import MoneyOffIcon from "@mui/icons-material/MoneyOff";
+import TravelExploreIcon from "@mui/icons-material/TravelExplore";
 import BarChartIcon from "@mui/icons-material/BarChart";
-import FeedbackIcon from '@mui/icons-material/Feedback';
+import FeedbackIcon from "@mui/icons-material/Feedback";
 import { MdAttachMoney, MdOutlineComputer } from "react-icons/md";
 
 import {
@@ -158,7 +158,6 @@ const Sidebar = ({ section }) => {
         //   icon: <LocalShippingIcon />,
         //   description: "Asset-IDs",
         // },
-        
       ];
       break;
 
@@ -172,11 +171,30 @@ const Sidebar = ({ section }) => {
           icon: <GroupIcon />,
           description: "All inventory items",
         },
+
         {
-          text: "Asset modification",
-          path: "/dashboard/inventory/asset-modifications",
+          text: "Assembled Products",
+          path: "/dashboard/inventory/assembled-products",
           icon: <GroupIcon />,
           description: "All inventory items",
+        },
+        // {
+        //   text: "Assets Modifications",
+        //   path: "/dashboard/inventory/asset-modifications",
+        //   icon: <GroupIcon />,
+        //   description: "All inventory items",
+        // },
+        {
+          text: "Wear House",
+          path: "/dashboard/inventory/wear-house",
+          icon: <GroupIcon />,
+          description: "Wear House",
+        },
+        {
+          text: "Clinet Place",
+          path: "/dashboard/inventory/client-place",
+          icon: <GroupIcon />,
+          description: "Clinet Place",
         },
       ];
       break;
@@ -210,7 +228,7 @@ const Sidebar = ({ section }) => {
           icon: <AssignmentIcon />,
           description: "Customer orders",
         },
-       
+
         {
           text: "Order Preparations",
           path: "/dashboard/crm/dispatch-orders",
@@ -243,13 +261,19 @@ const Sidebar = ({ section }) => {
           icon: <AccountBalanceIcon />,
           description: "Delivery documents",
         },
+        // {
+        //   text: "Assets Modifications",
+        //   path: "/dashboard/operations/asset-updation",
+        //   icon: <GroupIcon />,
+        //   description: "All inventory items",
+        // },
         {
           text: "Invoices",
           path: "/dashboard/operations/invoices",
           icon: <ReceiptIcon />,
           description: "Invoice management",
         },
-        
+
         {
           text: "Credit Notes",
           path: "/dashboard/operations/credit-notes",
@@ -269,20 +293,25 @@ const Sidebar = ({ section }) => {
           description: "Goods return notes",
         },
 
-        
+         {
+          text: "Plain GRN",
+          path: "/dashboard/operations/plain-grn",
+          icon: <ReceiptLongIcon />,
+          description: "Goods return notes",
+        },
+
         {
           text: "Client Journey",
           path: "/dashboard/operations/client_journey",
           icon: <TravelExploreIcon />,
           description: "Customer journey tracking",
         },
-        
 
         //  {
         //   text: "Feedback",
         //   path: "/dashboard/operations/feedback",
         //   icon: <FeedbackIcon/>,
-        //   description: "Customer feedback",                                                                   
+        //   description: "Customer feedback",
         // },
       ];
       break;
@@ -312,7 +341,7 @@ const Sidebar = ({ section }) => {
         },
       ];
       break;
-      case "reports":
+    case "reports":
       sectionTitle = "Reports";
       sectionIcon = <BusinessIcon />;
       menuItems = [
@@ -330,8 +359,6 @@ const Sidebar = ({ section }) => {
         // },
       ];
       break;
-
-      
 
     case "settings":
       sectionTitle = "Settings";
@@ -367,7 +394,7 @@ const Sidebar = ({ section }) => {
           icon: <FaUserTie />,
           description: "Tax configuration",
         },
-         {
+        {
           text: "Branch",
           path: "/dashboard/settings/Branch",
           icon: <MdOutlineAirlineSeatLegroomNormal />,
@@ -629,7 +656,8 @@ const Sidebar = ({ section }) => {
               left: "-100%",
               width: "100%",
               height: "100%",
-              background: "linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent)",
+              background:
+                "linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent)",
               animation: "shimmer 2s infinite",
             },
             "@keyframes shimmer": {
@@ -793,7 +821,9 @@ const Sidebar = ({ section }) => {
                       display: "flex",
                       alignItems: "center",
                       width: "100%",
-                      color: isSelected ? "#ffffff" : "rgba(255, 255, 255, 0.9)",
+                      color: isSelected
+                        ? "#ffffff"
+                        : "rgba(255, 255, 255, 0.9)",
                       transition: "all 0.3s ease",
                       zIndex: 1,
                       position: "relative",
@@ -839,7 +869,8 @@ const Sidebar = ({ section }) => {
                               ? "0 2px 4px rgba(0, 0, 0, 0.3)"
                               : "0 1px 2px rgba(0, 0, 0, 0.15)",
                             transition: "all 0.3s ease",
-                            fontFamily: '"Inter", "Segoe UI", "Roboto", sans-serif',
+                            fontFamily:
+                              '"Inter", "Segoe UI", "Roboto", sans-serif',
                           }}
                         >
                           {item.text}
@@ -856,23 +887,29 @@ const Sidebar = ({ section }) => {
                           height: "22px",
                           fontSize: "0.7rem",
                           fontWeight: 700,
-                          backgroundColor: item.badge === "New"
-                            ? "rgba(76, 175, 80, 0.9)"
-                            : "rgba(244, 67, 54, 0.9)",
+                          backgroundColor:
+                            item.badge === "New"
+                              ? "rgba(76, 175, 80, 0.9)"
+                              : "rgba(244, 67, 54, 0.9)",
                           color: "white",
                           border: "1px solid rgba(255, 255, 255, 0.3)",
                           boxShadow: "0 3px 12px rgba(0, 0, 0, 0.2)",
                           backdropFilter: "blur(8px)",
-                          animation: item.badge === "New" ? "bounce 2s ease-in-out infinite" : "none",
+                          animation:
+                            item.badge === "New"
+                              ? "bounce 2s ease-in-out infinite"
+                              : "none",
                           "& .MuiChip-label": {
                             padding: "0 8px",
                           },
                           "@keyframes bounce": {
-                            "0%, 20%, 50%, 80%, 100%": { transform: "translateY(0)" },
+                            "0%, 20%, 50%, 80%, 100%": {
+                              transform: "translateY(0)",
+                            },
                             "40%": { transform: "translateY(-4px)" },
                             "60%": { transform: "translateY(-2px)" },
                           },
-                                                  }}
+                        }}
                       />
                     )}
                   </Box>
@@ -917,11 +954,12 @@ const Sidebar = ({ section }) => {
             marginTop: "4px",
           }}
         >
-          © {new Date().getFullYear()} innogen<span style={{ color: "red" }}>X</span> All rights reserved.
+          © {new Date().getFullYear()} innogen
+          <span style={{ color: "red" }}>X</span> All rights reserved.
         </Typography>
       </Box>
     </Drawer>
   );
 };
- 
+
 export default Sidebar;

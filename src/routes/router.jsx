@@ -122,6 +122,13 @@ import DispatchOrdersTable from "../pages/crm/dispatch-orders/DispatchOrdersTabl
 import DispatchOrdersEditForm from "../pages/crm/dispatch-orders/DispatchOrdersEditForm.jsx";
 import CreditNoteInvoice from "../pages/operations/credit-note-invoice/CreditNoteInvoice.jsx";
 import ProductCategoriesEditPage from "../pages/product_library/productcategories/ProductCategoriesEditPage.jsx";
+import AssembledProductsTable from "../pages/inventory/assembled-prodcts/AssebmledProductsTable.jsx";
+import DesktopAssembler from "../pages/inventory/assembled-prodcts/DesktopAssembler.jsx";
+import HardwareSelector from "../pages/inventory/assembled-prodcts/DesktopAssembler.jsx";
+import HardwareSelectorEdit from "../pages/inventory/assembled-prodcts/HardwareSelectorEdit.jsx";
+import WearClientPlaceStock from "../pages/inventory/wear-clinet-place/WearClientPlaceStock.jsx";
+import ClientPlaceStock from "../pages/inventory/wear-clinet-place/ClientPlaceStock.jsx";
+import ClientsDetailsTable from "../pages/operations/plain-grn/ClientsDetailsTable.jsx";
 const ProtectedRoute = ({ element }) => {
   const user = useSelector((state) => state.auth.user);
   return user ? element : <Navigate to="/signin" replace />;
@@ -368,12 +375,36 @@ const RoutesConfig = () => {
             <Route path="operations/grn/add" element={<GrnAddForm />} />
             <Route path="operations/grn/edit/:id" element={<GrnEditForm />} /> */}
             <Route
-              path="inventory/asset-modifications"
+              path="operations/asset-updation"
               element={<AssetTrackerOp />}
             />
             <Route
-              path="inventory/asset-modifications/add"
+              path="inventory/assembled-products"
+              element={<AssembledProductsTable />}
+            />
+            <Route
+              path="inventory/wear-house"
+              element={<WearClientPlaceStock />}
+            />
+            <Route
+              path="inventory/client-place"
+              element={<ClientPlaceStock />}
+            />
+            <Route
+              path="inventory/assembled-products/add"
+              element={<DesktopAssembler />}
+            />
+            <Route
+              path="inventory/assembled-products/edit/:id"
+              element={<HardwareSelectorEdit />}
+            />
+            <Route
+              path="operations/asset-updation/add"
               element={<AssetModificationTrackerAdd />}
+            />
+            <Route
+              path="operations/asset-updation/edit/:id"
+              element={<AssetModificationTrackerEdit />}
             />
             <Route
               path="operations/asset_modification_tracker/edit/:id"
@@ -396,6 +427,10 @@ const RoutesConfig = () => {
             <Route
               path="operations/grn"
               element={<CreaditNotesTableLayout />}
+            />
+            <Route
+              path="operations/plain-grn"
+              element={<ClientsDetailsTable />}
             />
             <Route
               path="operations/grn/add"

@@ -3,6 +3,8 @@ import DynamicTable from "../../components/table-format/DynamicTable";
 import axios from "axios";
 import API_URL, { IMAGE_API_URL } from "../../api/Api_url";
 
+import DefaultImage from "../../assets/logos/default.jpg";
+
 const InventoryTable = () => {
   const [data, setData] = useState([]);
   const [summary, setSummary] = useState(null);
@@ -12,16 +14,18 @@ const InventoryTable = () => {
     { id: "product_image", label: "Image" },
 
     { id: "name", label: "Product Name" },
-    { id: "model", label: "Model" },
+    { id: "product_category", label: "Product Category" },
+
+    // { id: "model", label: "Model" },
     { id: "specifications", label: "Specifications" },
     { id: "total_quantity", label: "Total Quantity" },
     { id: "available_quantity", label: "Available Quantity" },
     { id: "rented_qty", label: "Rented Quantity" },
     { id: "buy_qty", label: "Sold Quantity" },
     { id: "purchase_price", label: "Purchase Price (₹)" },
-    { id: "total_value", label: "Total Stock Value (₹)" },
-    { id: "used_rent_value", label: "Used Rent Value (₹)" },
-    { id: "used_buy_value", label: "Used Buy Value (₹)" },
+    // { id: "total_value", label: "Total Stock Value (₹)" },
+    // { id: "used_rent_value", label: "Used Rent Value (₹)" },
+    // { id: "used_buy_value", label: "Used Buy Value (₹)" },
   ];
 
   const formatBoolean = (value) => (value ? "Yes" : "No");
@@ -50,7 +54,8 @@ const InventoryTable = () => {
               RAM: ${p.ram || "N/A"}, 
               Storage: ${p.storage || "N/A"}, 
               Disk: ${p.disk_type || "N/A"}, 
-              Processor: ${p.processor || "N/A"}, 
+              Processor: ${p.processor || "N/A"},
+              Model: ${p.model || "N/A"},
               Graphics: ${p.graphics || "N/A"}, 
               OS: ${p.os || "N/A"}, 
               Mouse: ${formatBoolean(p.mouse)}, 
@@ -77,11 +82,14 @@ const InventoryTable = () => {
                   }}
                   onError={(e) => {
                     e.target.onerror = null;
-                    e.target.src = "https://via.placeholder.com/50x50?text=N/A";
+                    e.target.src = DefaultImage; // ✅ Use local fallback image
                   }}
                 />
               ),
+
               name: p.product_name || "",
+              product_category: p.product_category || "",
+
               model: p.model || "",
               processor: p.processor || "",
               ram: p.ram || "",

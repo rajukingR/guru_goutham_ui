@@ -63,11 +63,17 @@ const SalesOrdersEditLayoutPage = ({ product }) => {
       pan_number: "",
     },
     address: {
-      street: "",
-      landmark: "",
-      pincode: "",
+      billing_address: "",
+      shipping_address: "",
+      shipping_street: "",
+      shipping_landmark: "",
+      shipping_city: "",
+      shipping_state: "",
+      shipping_country: "India",
+      shipping_pincode: "",
       city: "",
       state: "",
+      pincode: "",
       country: "India",
     },
     items: [],
@@ -78,6 +84,7 @@ const SalesOrdersEditLayoutPage = ({ product }) => {
   const [products, setProducts] = useState([]);
   const [deviceIds, setDeviceIds] = useState({});
   const [deviceIdErrors, setDeviceIdErrors] = useState({});
+const [originalOrderItems, setOriginalOrderItems] = useState([]);
 
   const [loading, setLoading] = useState({
     order: true,
@@ -110,6 +117,8 @@ const SalesOrdersEditLayoutPage = ({ product }) => {
           throw new Error("Failed to fetch order data");
         }
         const data = await response.json();
+
+        setOriginalOrderItems(data.items || []);
 
         // Initialize Asset IDs from order items
         const initialDeviceIds = {};
@@ -244,8 +253,7 @@ const SalesOrdersEditLayoutPage = ({ product }) => {
           email: quotationData.personalDetails?.email || "",
           phone_number: quotationData.personalDetails?.phone_number || "",
           gst_number: quotationData.personalDetails?.gst_number || "",
-                    pan_number: quotationData.personalDetails?.pan_number || "",
-
+          pan_number: quotationData.personalDetails?.pan_number || "",
         },
         address: {
           ...prev.address,
@@ -261,6 +269,10 @@ const SalesOrdersEditLayoutPage = ({ product }) => {
             product_id: item.product_id,
             product_name: item.product_name,
             requested_quantity: item.requested_quantity,
+            purchase_price: item.purchase_price,
+            rent_price_per_month: item.rent_price_per_month,
+            offer_purchase_price: item.offer_purchase_price,
+            offer_rent_price_per_month: item.offer_rent_price_per_month,
           })) || [],
       }));
 
@@ -281,6 +293,61 @@ const SalesOrdersEditLayoutPage = ({ product }) => {
       });
     }
   };
+
+
+
+    // Fetch location data when shipping pincode changes
+    useEffect(() => {
+      const fetchShippingLocationFromPincode = async () => {
+        const shippingPincode = formData.address.shipping_pincode;
+  
+        // Only make API call if shipping pincode is 6 digits (India specific)
+        if (shippingPincode && shippingPincode.length === 6) {
+          try {
+            const response = await fetch(
+              `https://api.postalpincode.in/pincode/${shippingPincode}`
+            );
+            const data = await response.json();
+  
+            if (data && data[0]?.Status === "Success") {
+              const postOffice = data[0].PostOffice[0];
+  
+              setFormData((prev) => ({
+                ...prev,
+                address: {
+                  ...prev.address,
+                  shipping_city: postOffice.District,
+                  shipping_state: postOffice.State,
+                  shipping_country: "India",
+                },
+              }));
+            } else {
+              setSnackbar({
+                open: true,
+                message: "Could not find location for this shipping pincode",
+                severity: "warning",
+              });
+            }
+          } catch (error) {
+            console.error("Error fetching shipping location data:", error);
+            setSnackbar({
+              open: true,
+              message:
+                "Error fetching shipping location data. Please check the pincode and try again.",
+              severity: "error",
+            });
+          }
+        }
+      };
+  
+      // Add debounce to prevent too many API calls
+      const debounceTimer = setTimeout(() => {
+        fetchShippingLocationFromPincode();
+      }, 500);
+  
+      return () => clearTimeout(debounceTimer);
+    }, [formData.address.shipping_pincode]);
+
 
   // Fetch location data when pincode changes
   useEffect(() => {
@@ -425,48 +492,27 @@ const SalesOrdersEditLayoutPage = ({ product }) => {
       product.description?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const handleSubmit = async (e) => {
+const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // Validate Asset IDs
-    // let hasErrors = false;
-    // const newDeviceIdErrors = {};
-
-    // selectedProductIds.forEach((productId) => {
-    //   const qty = quantities[productId] || 0;
-    //   const ids = deviceIds[productId] || [];
-
-    //   if (ids.length !== qty) {
-    //     newDeviceIdErrors[productId] = `Please add ${qty} Asset IDs`;
-    //     hasErrors = true;
-    //   } else {
-    //     const emptyIds = ids.filter((id) => !id.trim());
-    //     if (emptyIds.length > 0) {
-    //       newDeviceIdErrors[productId] = `All Asset IDs are required`;
-    //       hasErrors = true;
-    //     }
-    //   }
-    // });
-
-    // setDeviceIdErrors(newDeviceIdErrors);
-
-    // if (hasErrors) {
-    //   setSnackbar({
-    //     open: true,
-    //     message: "Please provide all required Asset IDs",
-    //     severity: "error",
-    //   });
-    //   return;
-    // }
-
-    // Prepare items array with Asset IDs
+    // Prepare items array with Asset IDs AND PRICING INFORMATION
     const orderItems = selectedProductIds.map((productId) => {
       const product = products.find((p) => p.id === productId);
+      
+      // Find the original item to get pricing data
+      const originalItem = originalOrderItems.find(item => item.product_id === productId) || 
+                          formData.items.find(item => item.product_id === productId);
+      
       return {
         product_id: productId,
         product_name: product?.product_name || "Unknown Product",
         requested_quantity: quantities[productId] || 1,
         device_ids: deviceIds[productId] || [],
+        // Include all pricing information from the original item
+        purchase_price: originalItem?.purchase_price || 0,
+        offer_purchase_price: originalItem?.offer_purchase_price || 0,
+        rent_price_per_month: originalItem?.rent_price_per_month || 0,
+        offer_rent_price_per_month: originalItem?.offer_rent_price_per_month || 0,
       };
     });
 
@@ -476,51 +522,50 @@ const SalesOrdersEditLayoutPage = ({ product }) => {
     };
 
     try {
-  const response = await fetch(`${API_URL}/orders/${id}`, {
-    method: "PUT",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(payload),
-  });
+      const response = await fetch(`${API_URL}/orders/${id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
 
-  if (!response.ok) {
-    const errorData = await response.json(); // read error body
+      if (!response.ok) {
+        const errorData = await response.json();
 
-    // Check if error contains a list of errors
-    if (errorData.errors && Array.isArray(errorData.errors)) {
-      const messages = errorData.errors.map(
-        (err) =>
-          `• ${err.message}` // Customize this line if needed
-      ).join("\n");
+        if (errorData.errors && Array.isArray(errorData.errors)) {
+          const messages = errorData.errors
+            .map((err) => `• ${err.message}`)
+            .join("\n");
 
-      throw new Error(`${errorData.message || "Update failed"}\n${messages}`);
+          throw new Error(
+            `${errorData.message || "Update failed"}\n${messages}`
+          );
+        }
+
+        throw new Error(errorData.message || "Failed to update order");
+      }
+
+      const data = await response.json();
+      setSnackbar({
+        open: true,
+        message: "Order updated successfully!",
+        severity: "success",
+      });
+
+      setTimeout(() => {
+        navigate("/dashboard/crm/orders");
+      }, 1500);
+    } catch (err) {
+      setSnackbar({
+        open: true,
+        message: err.message,
+        severity: "error",
+      });
     }
-
-    // fallback generic error
-    throw new Error(errorData.message || "Failed to update order");
-  }
-
-  const data = await response.json();
-  setSnackbar({
-    open: true,
-    message: "Order updated successfully!",
-    severity: "success",
-  });
-
-  setTimeout(() => {
-    navigate("/dashboard/crm/orders");
-  }, 1500);
-
-} catch (err) {
-  setSnackbar({
-    open: true,
-    message: err.message,
-    severity: "error",
-  });
-}
-
   };
+
+
   if (loading.order) {
     return (
       <div style={containerStyle}>
@@ -594,7 +639,7 @@ const SalesOrdersEditLayoutPage = ({ product }) => {
                   })
                 }
               />
-              <Field
+              {/* <Field
                 label="Order Title"
                 placeholder="Enter Order Title"
                 value={formData.order_title}
@@ -603,7 +648,7 @@ const SalesOrdersEditLayoutPage = ({ product }) => {
                     target: { name: "order_title", value: e.target.value },
                   })
                 }
-              />
+              /> */}
               <Field
                 label="Quotation Details"
                 type="select"
@@ -630,29 +675,28 @@ const SalesOrdersEditLayoutPage = ({ product }) => {
                 readOnly
               />
               <Field
-                label="Transaction Type"
-                type="select"
-                placeholder="Select Type"
-                value={formData.transaction_type}
-                onChange={(e) =>
-                  handleChange({
-                    target: { name: "transaction_type", value: e.target.value },
-                  })
-                }
-                options={["Rent", "Sale"]}
-              />
-              <Field
-                label="Payment Type"
-                type="select"
-                placeholder="Select Type"
-                value={formData.payment_type}
-                onChange={(e) =>
-                  handleChange({
-                    target: { name: "payment_type", value: e.target.value },
-                  })
-                }
-                options={["Prepaid", "Postpaid"]}
-              />
+  label="Transaction Type"
+  type="select"
+  placeholder="Select Type"
+  value={formData.transaction_type}
+  onChange={(e) => {
+    handleChange({
+      target: { name: "transaction_type", value: e.target.value },
+    });
+
+    // Clear rental fields when switching to Buy
+    if (e.target.value === "Buy") {
+      setFormData((prev) => ({
+        ...prev,
+        rental_duration: null,
+        rental_start_date: null,
+        rental_end_date: null,
+      }));
+    }
+  }}
+  options={["Rent", "Buy"]}
+/>
+              
               <Field
                 label="Order Status"
                 type="select"
@@ -671,18 +715,7 @@ const SalesOrdersEditLayoutPage = ({ product }) => {
                   "Cancelled",
                 ]}
               />
-              {/* <Field
-                label="Source of Entry"
-                type="select"
-                placeholder="Select Source"
-                value={formData.source_of_entry}
-                onChange={(e) =>
-                  handleChange({
-                    target: { name: "source_of_entry", value: e.target.value },
-                  })
-                }
-                options={["Online", "Offline", "Referral"]}
-              /> */}
+            
               <Field
                 label="Owner"
                 placeholder="Enter Owner Name"
@@ -704,59 +737,51 @@ const SalesOrdersEditLayoutPage = ({ product }) => {
                   })
                 }
               />
-              <Field
+              {/* <Field
                 label="Order Generated By"
                 placeholder="Generated By"
                 value={formData.order_generated_by}
                 readOnly
-              />
-              <Field
-                label="Rental Duration (months)"
-                placeholder="Enter Duration"
-                type="number"
-                value={formData.rental_duration || ""}
-                onChange={(e) =>
-                  handleChange({
-                    target: { name: "rental_duration", value: e.target.value },
-                  })
-                }
-              />
-              {/* <Field
-                label="Rental Duration (days)"
-                placeholder="Enter Duration Days"
-                type="number"
-                value={formData.rental_duration_days || ""}
-                onChange={(e) =>
-                  handleChange({
-                    target: { name: "rental_duration_days", value: e.target.value },
-                  })
-                }
               /> */}
-              <Field
-                label="Rental Start Date"
-                type="date"
-                placeholder="Select Date"
-                value={formData.rental_start_date || ""}
-                onChange={(e) =>
-                  handleChange({
-                    target: {
-                      name: "rental_start_date",
-                      value: e.target.value,
-                    },
-                  })
-                }
-              />
-              <Field
-                label="Rental End Date"
-                type="date"
-                placeholder="Select Date"
-                value={formData.rental_end_date || ""}
-                onChange={(e) =>
-                  handleChange({
-                    target: { name: "rental_end_date", value: e.target.value },
-                  })
-                }
-              />
+             {formData.transaction_type === "Rent" && (
+  <>
+    <Field
+      label="Rental Duration (months)"
+      placeholder="Enter Duration"
+      type="number"
+      value={formData.rental_duration || ""}
+      onChange={(e) =>
+        handleChange({
+          target: { name: "rental_duration", value: e.target.value },
+        })
+      }
+    />
+
+    <Field
+      label="Rental Start Date"
+      type="date"
+      placeholder="Select Date"
+      value={formData.rental_start_date || ""}
+      onChange={(e) =>
+        handleChange({
+          target: { name: "rental_start_date", value: e.target.value },
+        })
+      }
+    />
+
+    <Field
+      label="Rental End Date"
+      type="date"
+      placeholder="Select Date"
+      value={formData.rental_end_date || ""}
+      onChange={(e) =>
+        handleChange({
+          target: { name: "rental_end_date", value: e.target.value },
+        })
+      }
+    />
+  </>
+)}
               <Field
                 label="Order Date"
                 type="date"
@@ -768,7 +793,7 @@ const SalesOrdersEditLayoutPage = ({ product }) => {
                   })
                 }
               />
-              <Field
+              {/* <Field
                 label="Contact Status"
                 type="select"
                 placeholder="Select Status"
@@ -779,7 +804,7 @@ const SalesOrdersEditLayoutPage = ({ product }) => {
                   })
                 }
                 options={["Contacted", "Not Contacted", "Follow Up"]}
-              />
+              /> */}
             </div>
           </div>
 
@@ -850,26 +875,26 @@ const SalesOrdersEditLayoutPage = ({ product }) => {
                 placeholder="Enter GST Number"
                 value={formData.personalDetails.gst_number}
                 onChange={(e) =>
-  handleChange({
-    target: {
-      name: "personalDetails.gst_number",
-      value: e.target.value,
-    },
-  })
-}
+                  handleChange({
+                    target: {
+                      name: "personalDetails.gst_number",
+                      value: e.target.value,
+                    },
+                  })
+                }
               />
-               <Field
+              <Field
                 label="PAN Number"
                 placeholder="Enter PAN Number"
                 value={formData.personalDetails.pan_number}
                 onChange={(e) =>
-  handleChange({
-    target: {
-      name: "personalDetails.pan_number",
-      value: e.target.value,
-    },
-  })
-}
+                  handleChange({
+                    target: {
+                      name: "personalDetails.pan_number",
+                      value: e.target.value,
+                    },
+                  })
+                }
               />
             </div>
           </div>
@@ -929,6 +954,7 @@ const SalesOrdersEditLayoutPage = ({ product }) => {
                     target: { name: "address.city", value: e.target.value },
                   })
                 }
+                disabled
               />
               <Field
                 label="State"
@@ -939,6 +965,7 @@ const SalesOrdersEditLayoutPage = ({ product }) => {
                     target: { name: "address.state", value: e.target.value },
                   })
                 }
+                disabled
               />
               <Field
                 label="Country"
@@ -949,7 +976,106 @@ const SalesOrdersEditLayoutPage = ({ product }) => {
                     target: { name: "address.country", value: e.target.value },
                   })
                 }
+                disabled
               />
+            </div>
+          </div>
+
+          {/* Address Section */}
+          <div style={cardStyle}>
+            <div style={cardHeaderContainerStyle}>
+              <div style={iconStyle}>🏠</div>
+              <h3 style={cardHeaderStyle}>Shipping Address</h3>
+            </div>
+            <div style={fieldsGridStyle}>
+              {/* Shipping Address (only for Rent) */}
+              {formData.transaction_type === "Rent" && (
+                <>
+                  <Field
+                    label="Shipping Pincode"
+                    placeholder="Enter Shipping Pincode"
+                    type="number"
+                    value={formData.address.shipping_pincode || ""}
+                    onChange={(e) =>
+                      handleChange({
+                        target: {
+                          name: "address.shipping_pincode",
+                          value: e.target.value,
+                        },
+                      })
+                    }
+                  />
+
+                  <Field
+                    label="Shipping Street"
+                    placeholder="Enter Shipping Street"
+                    value={formData.address.shipping_street || ""}
+                    onChange={(e) =>
+                      handleChange({
+                        target: {
+                          name: "address.shipping_street",
+                          value: e.target.value,
+                        },
+                      })
+                    }
+                  />
+                  <Field
+                    label="Shipping Landmark"
+                    placeholder="Enter Landmark"
+                    value={formData.address.shipping_landmark || ""}
+                    onChange={(e) =>
+                      handleChange({
+                        target: {
+                          name: "address.shipping_landmark",
+                          value: e.target.value,
+                        },
+                      })
+                    }
+                  />
+                  <Field
+                    label="Shipping City"
+                    placeholder="Enter City"
+                    value={formData.address.shipping_city || ""}
+                    onChange={(e) =>
+                      handleChange({
+                        target: {
+                          name: "address.shipping_city",
+                          value: e.target.value,
+                        },
+                      })
+                    }
+                    disabled
+                  />
+                  <Field
+                    label="Shipping State"
+                    placeholder="Enter State"
+                    value={formData.address.shipping_state || ""}
+                    onChange={(e) =>
+                      handleChange({
+                        target: {
+                          name: "address.shipping_state",
+                          value: e.target.value,
+                        },
+                      })
+                    }
+                    disabled
+                  />
+                  <Field
+                    label="Shipping Country"
+                    placeholder="Enter Country"
+                    value={formData.address.shipping_country || ""}
+                    onChange={(e) =>
+                      handleChange({
+                        target: {
+                          name: "address.shipping_country",
+                          value: e.target.value,
+                        },
+                      })
+                    }
+                    disabled
+                  />
+                </>
+              )}
             </div>
           </div>
         </div>
@@ -992,147 +1118,188 @@ const SalesOrdersEditLayoutPage = ({ product }) => {
                   />
                 </Box>
 
-                <TableContainer component={Paper}>
-  <Table size="small">
-    <TableHead>
-      <TableRow sx={{ backgroundColor: "#0d47a1" }}>
-        <TableCell padding="checkbox" sx={{ color: "#fff" }}>
-          <Checkbox
-            sx={{ color: "#fff" }}
-            checked={
-              selectedProductIds.length > 0 &&
-              selectedProductIds.length === filteredProducts.length
-            }
-            indeterminate={
-              selectedProductIds.length > 0 &&
-              selectedProductIds.length < filteredProducts.length
-            }
-            onChange={(e) => {
-              if (e.target.checked) {
-                setSelectedProductIds(filteredProducts.map(p => p.id));
-                const newQuantities = {};
-                filteredProducts.forEach(p => {
-                  newQuantities[p.id] = quantities[p.id] || 1;
-                });
-                setQuantities(newQuantities);
-              } else {
-                setSelectedProductIds([]);
-                setQuantities({});
-              }
-            }}
-          />
-        </TableCell>
-        <TableCell sx={{ color: "#fff" }}>Product Name</TableCell>
-        <TableCell sx={{ color: "#fff" }}>Brand</TableCell>
-        <TableCell sx={{ color: "#fff" }}>Specifications</TableCell>
-        <TableCell sx={{ color: "#fff" }}>Available Qty</TableCell>
-        <TableCell sx={{ color: "#fff" }}>Price per Piece</TableCell>
-        <TableCell sx={{ color: "#fff" }}>Quantity</TableCell>
-      </TableRow>
-    </TableHead>
+                <TableContainer
+                  component={Paper}
+                  sx={{
+                    maxHeight: "400px", // or whatever height you prefer
+                    overflow: "auto",
+                    position: "relative",
+                  }}
+                >
+                  <Table size="small" stickyHeader>
+                    <TableHead>
+                      <TableRow sx={{ backgroundColor: "#0d47a1" }}>
+                        <TableCell
+                          padding="checkbox"
+                          sx={{ backgroundColor: "#0d47a1" }}
+                        >
+                          <Checkbox
+                            sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
+                            checked={
+                              selectedProductIds.length > 0 &&
+                              selectedProductIds.length ===
+                                filteredProducts.length
+                            }
+                            indeterminate={
+                              selectedProductIds.length > 0 &&
+                              selectedProductIds.length <
+                                filteredProducts.length
+                            }
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setSelectedProductIds(
+                                  filteredProducts.map((p) => p.id)
+                                );
+                                const newQuantities = {};
+                                filteredProducts.forEach((p) => {
+                                  newQuantities[p.id] = quantities[p.id] || 1;
+                                });
+                                setQuantities(newQuantities);
+                              } else {
+                                setSelectedProductIds([]);
+                                setQuantities({});
+                              }
+                            }}
+                          />
+                        </TableCell>
+                        <TableCell
+                          sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
+                        >
+                          Product Name
+                        </TableCell>
+                        <TableCell
+                          sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
+                        >
+                          Product Category
+                        </TableCell>
+                        <TableCell
+                          sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
+                        >
+                          Specifications
+                        </TableCell>
+                        {/* <TableCell sx={{ backgroundColor: "#0d47a1", color: "#fff" }}>Available Qty</TableCell> */}
+                        {/* <TableCell sx={{ backgroundColor: "#0d47a1", color: "#fff" }}>Price per Piece</TableCell> */}
+                        <TableCell
+                          sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
+                        >
+                          Quantity
+                        </TableCell>
+                      </TableRow>
+                    </TableHead>
 
-    <TableBody>
-      {filteredProducts.map((product) => {
-        const isSelected = selectedProductIds.includes(product.id);
-        return (
-          <TableRow key={product.id}>
-            <TableCell padding="checkbox">
-              <Checkbox
-                checked={isSelected}
-                onChange={() => {
-                  if (isSelected) {
-                    setSelectedProductIds((prev) =>
-                      prev.filter((id) => id !== product.id)
-                    );
-                    const updatedQuantities = { ...quantities };
-                    delete updatedQuantities[product.id];
-                    setQuantities(updatedQuantities);
-                  } else {
-                    setSelectedProductIds((prev) => [...prev, product.id]);
-                    setQuantities((prev) => ({
-                      ...prev,
-                      [product.id]: prev[product.id] || 1,
-                    }));
-                  }
-                }}
-              />
-            </TableCell>
-            <TableCell>{product.product_name}</TableCell>
-            <TableCell>{product.brand}</TableCell>
-            <TableCell>
-              <div>
-                <strong>Model:</strong> {product.model}
-              </div>
-              <div>
-                <strong>Processor:</strong> {product.processor}
-              </div>
-              <div>
-                <strong>RAM:</strong> {product.ram}
-              </div>
-              <div>
-                <strong>Storage:</strong> {product.storage}
-              </div>
-              <div>
-                <strong>Graphics:</strong> {product.graphics}
-              </div>
-            </TableCell>
-            <TableCell>{getAvailableQty(product.id)}</TableCell>
-            <TableCell>
+                    <TableBody>
+                      {filteredProducts.map((product) => {
+                        const isSelected = selectedProductIds.includes(
+                          product.id
+                        );
+                        return (
+                          <TableRow key={product.id}>
+                            <TableCell padding="checkbox">
+                              <Checkbox
+                                checked={isSelected}
+                                onChange={() => {
+                                  if (isSelected) {
+                                    setSelectedProductIds((prev) =>
+                                      prev.filter((id) => id !== product.id)
+                                    );
+                                    const updatedQuantities = { ...quantities };
+                                    delete updatedQuantities[product.id];
+                                    setQuantities(updatedQuantities);
+                                  } else {
+                                    setSelectedProductIds((prev) => [
+                                      ...prev,
+                                      product.id,
+                                    ]);
+                                    setQuantities((prev) => ({
+                                      ...prev,
+                                      [product.id]: prev[product.id] || 1,
+                                    }));
+                                  }
+                                }}
+                              />
+                            </TableCell>
+                            <TableCell>{product.product_name}</TableCell>
+                            <TableCell>{product.product_category}</TableCell>
+                            <TableCell>
+                              <div>
+                                <strong>Model:</strong> {product.model}
+                              </div>
+                              <div>
+                                <strong>Processor:</strong> {product.processor}
+                              </div>
+                              <div>
+                                <strong>RAM:</strong> {product.ram}
+                              </div>
+                              <div>
+                                <strong>Storage:</strong> {product.storage}
+                              </div>
+                              <div>
+                                <strong>Graphics:</strong> {product.graphics}
+                              </div>
+                            </TableCell>
+                            {/* <TableCell>{getAvailableQty(product.id)}</TableCell> */}
+                            {/* <TableCell>
               <strong>Month:</strong> ₹{product.rent_price_per_month}
-            </TableCell>
-            <TableCell>
-              {isSelected ? (
-                <Box display="flex" alignItems="center">
-                  <IconButton
-                    size="small"
-                    onClick={() =>
-                      setQuantities((prev) => ({
-                        ...prev,
-                        [product.id]: Math.max((prev[product.id] || 1) - 1, 1),
-                      }))
-                    }
-                  >
-                    <Remove fontSize="small" />
-                  </IconButton>
-                  <TextField
-                    type="number"
-                    size="small"
-                    value={quantities[product.id] || ""}
-                    onChange={(e) => {
-                      const value = Math.max(Number(e.target.value), 1);
-                      setQuantities((prev) => ({
-                        ...prev,
-                        [product.id]: value,
-                      }));
-                    }}
-                    inputProps={{
-                      min: 1,
-                      style: { width: 50, textAlign: "center" },
-                    }}
-                  />
-                  <IconButton
-                    size="small"
-                    onClick={() =>
-                      setQuantities((prev) => ({
-                        ...prev,
-                        [product.id]: (prev[product.id] || 1) + 1,
-                      }))
-                    }
-                  >
-                    <Add fontSize="small" />
-                  </IconButton>
-                </Box>
-              ) : (
-                "-"
-              )}
-            </TableCell>
-          </TableRow>
-        );
-      })}
-    </TableBody>
-  </Table>
-</TableContainer>
-
+            </TableCell> */}
+                            <TableCell>
+                              {isSelected ? (
+                                <Box display="flex" alignItems="center">
+                                  <IconButton
+                                    size="small"
+                                    onClick={() =>
+                                      setQuantities((prev) => ({
+                                        ...prev,
+                                        [product.id]: Math.max(
+                                          (prev[product.id] || 1) - 1,
+                                          1
+                                        ),
+                                      }))
+                                    }
+                                  >
+                                    <Remove fontSize="small" />
+                                  </IconButton>
+                                  <TextField
+                                    type="number"
+                                    size="small"
+                                    value={quantities[product.id] || ""}
+                                    onChange={(e) => {
+                                      const value = Math.max(
+                                        Number(e.target.value),
+                                        1
+                                      );
+                                      setQuantities((prev) => ({
+                                        ...prev,
+                                        [product.id]: value,
+                                      }));
+                                    }}
+                                    inputProps={{
+                                      min: 1,
+                                      style: { width: 50, textAlign: "center" },
+                                    }}
+                                  />
+                                  <IconButton
+                                    size="small"
+                                    onClick={() =>
+                                      setQuantities((prev) => ({
+                                        ...prev,
+                                        [product.id]:
+                                          (prev[product.id] || 1) + 1,
+                                      }))
+                                    }
+                                  >
+                                    <Add fontSize="small" />
+                                  </IconButton>
+                                </Box>
+                              ) : (
+                                "-"
+                              )}
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
               </Box>
             )}
 
@@ -1196,65 +1363,121 @@ const Field = ({
   value,
   onChange,
   readOnly = false,
+  disabled = false, // ✅ added
+  required = false,
+  error = "",
 }) => (
   <div style={fieldContainerStyle}>
-    <label style={labelStyle}>{label}</label>
+    <label style={labelStyle}>
+      {label}
+      {required && <span style={{ color: "red" }}>*</span>}
+    </label>
     {type === "select" ? (
-      <div style={selectWrapperStyle}>
-        <select
-          style={selectStyle}
-          value={value}
-          onChange={onChange}
-          disabled={readOnly}
-        >
-          <option value="" disabled>
-            {placeholder}
-          </option>
-          {options.map((option, idx) =>
-            typeof option === "object" ? (
-              <option key={idx} value={option.value}>
-                {option.label}
-              </option>
-            ) : (
-              <option key={idx} value={option}>
-                {option}
-              </option>
-            )
-          )}
-        </select>
-        <div style={selectArrowStyle}>▼</div>
+      <div>
+        <div style={selectWrapperStyle}>
+          <select
+            style={{
+              ...selectStyle,
+              borderColor: error ? "red" : "#d1d5db",
+              backgroundColor: disabled ? "#f3f4f6" : "white", // ✅ grey background if disabled
+            }}
+            value={value}
+            onChange={onChange}
+            disabled={disabled} // ✅ use disabled
+            required={required}
+          >
+            <option value="" disabled>
+              {placeholder}
+            </option>
+            {options.map((option, idx) =>
+              typeof option === "object" ? (
+                <option key={idx} value={option.value}>
+                  {option.label}
+                </option>
+              ) : (
+                <option key={idx} value={option}>
+                  {option}
+                </option>
+              )
+            )}
+          </select>
+          <div style={selectArrowStyle}>▼</div>
+        </div>
+        {error && (
+          <div style={{ color: "red", fontSize: "0.75rem", marginTop: "4px" }}>
+            {error}
+          </div>
+        )}
       </div>
     ) : type === "textarea" ? (
-      <textarea
-        placeholder={placeholder}
-        style={textareaStyle}
-        rows={3}
-        value={value}
-        onChange={onChange}
-        readOnly={readOnly}
-      />
+      <>
+        <textarea
+          placeholder={placeholder}
+          style={{
+            ...textareaStyle,
+            borderColor: error ? "red" : "#d1d5db",
+            backgroundColor: disabled ? "#f3f4f6" : "white",
+          }}
+          rows={3}
+          value={value}
+          onChange={onChange}
+          readOnly={readOnly}
+          disabled={disabled} // ✅ use disabled
+          required={required}
+        />
+        {error && (
+          <div style={{ color: "red", fontSize: "0.75rem", marginTop: "4px" }}>
+            {error}
+          </div>
+        )}
+      </>
     ) : type === "date" ? (
-      <input
-        type="date"
-        placeholder={placeholder}
-        style={inputStyle}
-        value={value}
-        onChange={onChange}
-        readOnly={readOnly}
-      />
+      <>
+        <input
+          type="date"
+          placeholder={placeholder}
+          style={{
+            ...inputStyle,
+            borderColor: error ? "red" : "#d1d5db",
+            backgroundColor: disabled ? "#f3f4f6" : "white",
+          }}
+          value={value}
+          onChange={onChange}
+          readOnly={readOnly}
+          disabled={disabled} // ✅ use disabled
+          required={required}
+        />
+        {error && (
+          <div style={{ color: "red", fontSize: "0.75rem", marginTop: "4px" }}>
+            {error}
+          </div>
+        )}
+      </>
     ) : (
-      <input
-        type={type}
-        placeholder={placeholder}
-        style={inputStyle}
-        value={value}
-        onChange={onChange}
-        readOnly={readOnly}
-      />
+      <>
+        <input
+          type={type}
+          placeholder={placeholder}
+          style={{
+            ...inputStyle,
+            borderColor: error ? "red" : "#d1d5db",
+            backgroundColor: disabled ? "#f3f4f6" : "white",
+          }}
+          value={value}
+          onChange={onChange}
+          readOnly={readOnly}
+          disabled={disabled} // ✅ use disabled
+          required={required}
+        />
+        {error && (
+          <div style={{ color: "red", fontSize: "0.75rem", marginTop: "4px" }}>
+            {error}
+          </div>
+        )}
+      </>
     )}
   </div>
 );
-
 // Styles (same as in SalesOrdersAddLayoutPage)
 const containerStyle = {
   padding: "2rem",

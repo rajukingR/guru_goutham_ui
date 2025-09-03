@@ -12,9 +12,9 @@ const PurchaseOrderTable = () => {
     { id: "purchase_quotation_id", label: "Quotation ID" },
     { id: "purchase_order_date", label: "Date" },
     { id: "purchase_type", label: "Purchase Type" },
-    { id: "owner", label: "Owner" },
+    // { id: "owner", label: "Owner" },
     { id: "supplier_name", label: "Supplier Name" }, // showing name not ID
-    { id: "description", label: "Description" },
+    // { id: "description", label: "Description" },
     { id: "po_status", label: "Status" },
   ];
 

@@ -14,9 +14,9 @@ const PurchaseRequestTable = () => {
     { id: "purchase_request_id", label: "Request ID" },
     { id: "purchase_request_date", label: "Date" },
     { id: "purchase_type", label: "Purchase Type" },
-    { id: "owner", label: "Owner" },
+    // { id: "owner", label: "Owner" },
     { id: "supplier_name", label: "Supplier Name" },
-    { id: "description", label: "Description" },
+    // { id: "description", label: "Description" },
     { id: "purchase_request_status", label: "Status" },
   ];
 

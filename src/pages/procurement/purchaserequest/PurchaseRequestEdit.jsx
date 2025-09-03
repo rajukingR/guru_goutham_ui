@@ -1,12 +1,23 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from "react";
 import {
-  Box, Checkbox, IconButton, MenuItem, Paper, Select,
-  Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TextField
-} from '@mui/material';
-import { Add, Remove } from '@mui/icons-material';
+  Box,
+  Checkbox,
+  IconButton,
+  MenuItem,
+  Paper,
+  Select,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  TextField,
+} from "@mui/material";
+import { Add, Remove } from "@mui/icons-material";
 import API_URL, { IMAGE_API_URL } from "../../../api/Api_url";
-import { useNavigate, useParams } from 'react-router-dom';
-import { Snackbar, Alert } from '@mui/material';
+import { useNavigate, useParams } from "react-router-dom";
+import { Snackbar, Alert } from "@mui/material";
 
 const PurchaseRequestEdit = () => {
   const { id } = useParams();
@@ -17,91 +28,98 @@ const PurchaseRequestEdit = () => {
   const [loading, setLoading] = useState({
     suppliers: true,
     products: true,
-    purchaseRequest: true
+    purchaseRequest: true,
   });
   const [error, setError] = useState({
     suppliers: null,
     products: null,
-    purchaseRequest: null
+    purchaseRequest: null,
   });
 
   const [formData, setFormData] = useState({
-    purchaseRequestId: '',
-    purchaseRequestDate: new Date().toISOString().split('T')[0],
-    purchaseType: 'Buy',
-    purchaseRequestStatus: 'Pending',
-    owner: '',
-    supplier: '',
-    description: ''
+    purchaseRequestId: "",
+    purchaseRequestDate: new Date().toISOString().split("T")[0],
+    purchaseType: "Buy",
+    purchaseRequestStatus: "Pending",
+    owner: "",
+    supplier: "",
+    description: "",
   });
 
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchTerm, setSearchTerm] = useState("");
   const [quantities, setQuantities] = useState({});
   const navigate = useNavigate();
 
   const [snackbar, setSnackbar] = useState({
     open: false,
-    message: '',
-    severity: 'success'
+    message: "",
+    severity: "success",
   });
 
   useEffect(() => {
     const fetchPurchaseRequest = async () => {
       try {
         const response = await fetch(`${API_URL}/purchase-requests/${id}`);
-        if (!response.ok) throw new Error('Failed to fetch purchase request');
+        if (!response.ok) throw new Error("Failed to fetch purchase request");
         const data = await response.json();
-        
+
         setFormData({
           purchaseRequestId: data.purchase_request_id,
-          purchaseRequestDate: data.purchase_request_date.split('T')[0],
+          purchaseRequestDate: data.purchase_request_date.split("T")[0],
           purchaseType: data.purchase_type,
           purchaseRequestStatus: data.purchase_request_status,
           owner: data.owner,
           supplier: data.supplier_id,
-          description: data.description
+          description: data.description,
         });
 
         // Set selected products and quantities
-        const selectedIds = data.selected_products.map(p => p.product_id);
+        const selectedIds = data.selected_products.map((p) => p.product_id);
         setSelectedProductIds(selectedIds);
-        
+
         const qtyObj = {};
-        data.selected_products.forEach(p => {
+        data.selected_products.forEach((p) => {
           qtyObj[p.product_id] = p.quantity;
         });
         setQuantities(qtyObj);
 
-        setLoading(prev => ({ ...prev, purchaseRequest: false }));
+        setLoading((prev) => ({ ...prev, purchaseRequest: false }));
       } catch (err) {
-        setError(prev => ({ ...prev, purchaseRequest: err.message }));
-        setLoading(prev => ({ ...prev, purchaseRequest: false }));
+        setError((prev) => ({ ...prev, purchaseRequest: err.message }));
+        setLoading((prev) => ({ ...prev, purchaseRequest: false }));
       }
     };
 
     const fetchSuppliers = async () => {
       try {
         const response = await fetch(`${API_URL}/supplier`);
-        if (!response.ok) throw new Error('Failed to fetch suppliers');
+        if (!response.ok) throw new Error("Failed to fetch suppliers");
         const data = await response.json();
         setSuppliers(data);
-        setLoading(prev => ({ ...prev, suppliers: false }));
+        setLoading((prev) => ({ ...prev, suppliers: false }));
       } catch (err) {
-        setError(prev => ({ ...prev, suppliers: err.message }));
-        setLoading(prev => ({ ...prev, suppliers: false }));
+        setError((prev) => ({ ...prev, suppliers: err.message }));
+        setLoading((prev) => ({ ...prev, suppliers: false }));
       }
     };
 
     const fetchProducts = async () => {
       try {
         const response = await fetch(`${API_URL}/product-templete`);
-        if (!response.ok) throw new Error('Failed to fetch products');
+        if (!response.ok) throw new Error("Failed to fetch products");
+
         const data = await response.json();
-        setProducts(data);
-        setLoading(prev => ({ ...prev, products: false }));
+
+        // ✅ Filter out products where product_category is "Assembled PC"
+        const filteredData = data.filter(
+          (product) => product.product_category !== "Assembled PC"
+        );
+
+        setProducts(filteredData);
+        setLoading((prev) => ({ ...prev, products: false }));
       } catch (err) {
-        setError(prev => ({ ...prev, products: err.message }));
-        setLoading(prev => ({ ...prev, products: false }));
+        setError((prev) => ({ ...prev, products: err.message }));
+        setLoading((prev) => ({ ...prev, products: false }));
       }
     };
 
@@ -111,13 +129,14 @@ const PurchaseRequestEdit = () => {
   }, [id]);
 
   const handleInputChange = (field, value) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+    setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
-  const filteredProducts = products.filter(product =>
-    product.product_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    product.model?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    product.description?.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredProducts = products.filter(
+    (product) =>
+      product.product_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      product.model?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      product.description?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const handleQtyChange = (id, value) => {
@@ -126,21 +145,24 @@ const PurchaseRequestEdit = () => {
   };
 
   const incrementQty = (id) => {
-    setQuantities(prev => ({ ...prev, [id]: (prev[id] || 0) + 1 }));
+    setQuantities((prev) => ({ ...prev, [id]: (prev[id] || 0) + 1 }));
   };
 
   const decrementQty = (id) => {
-    setQuantities(prev => ({ ...prev, [id]: Math.max(0, (prev[id] || 0) - 1) }));
+    setQuantities((prev) => ({
+      ...prev,
+      [id]: Math.max(0, (prev[id] || 0) - 1),
+    }));
   };
 
   const handleSubmit = async () => {
     const selectedProducts = products
-      .filter(p => selectedProductIds.includes(p.id))
-      .map(p => ({
+      .filter((p) => selectedProductIds.includes(p.id))
+      .map((p) => ({
         product_id: p.id,
         product_name: p.name,
         quantity: quantities[p.id] || 0,
-        unit_price: 0
+        unit_price: 0,
       }));
 
     const payload = {
@@ -151,27 +173,45 @@ const PurchaseRequestEdit = () => {
       owner: formData.owner,
       supplier_id: formData.supplier,
       description: formData.description,
-      selected_products: selectedProducts
+      selected_products: selectedProducts,
     };
 
     try {
-      const response = await fetch(`${API_URL}/purchase-requests/update/${id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
+      const response = await fetch(
+        `${API_URL}/purchase-requests/${id}`,
+        {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        }
+      );
 
       if (response.ok) {
-        setSnackbar({ open: true, message: 'Purchase request updated successfully!', severity: 'success' });
-        setTimeout(() => navigate('/dashboard/procurement/purchase-requests'), 1500);
+        setSnackbar({
+          open: true,
+          message: "Purchase request updated successfully!",
+          severity: "success",
+        });
+        setTimeout(
+          () => navigate("/dashboard/procurement/purchase-requests"),
+          1500
+        );
       } else {
         const error = await response.json();
         console.error(error);
-        setSnackbar({ open: true, message: 'Failed to update purchase request.', severity: 'error' });
+        setSnackbar({
+          open: true,
+          message: "Failed to update purchase request.",
+          severity: "error",
+        });
       }
     } catch (err) {
       console.error(err);
-      setSnackbar({ open: true, message: 'Error occurred during submission.', severity: 'error' });
+      setSnackbar({
+        open: true,
+        message: "Error occurred during submission.",
+        severity: "error",
+      });
     }
   };
 
@@ -184,7 +224,9 @@ const PurchaseRequestEdit = () => {
       <div style={{ padding: 20 }}>
         {error.suppliers && <p>Error loading suppliers: {error.suppliers}</p>}
         {error.products && <p>Error loading products: {error.products}</p>}
-        {error.purchaseRequest && <p>Error loading purchase request: {error.purchaseRequest}</p>}
+        {error.purchaseRequest && (
+          <p>Error loading purchase request: {error.purchaseRequest}</p>
+        )}
       </div>
     );
   }
@@ -192,20 +234,20 @@ const PurchaseRequestEdit = () => {
   return (
     <div style={containerStyle}>
       <Snackbar
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+        anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
         open={snackbar.open}
         autoHideDuration={3000}
-        onClose={() => setSnackbar(prev => ({ ...prev, open: false }))}
+        onClose={() => setSnackbar((prev) => ({ ...prev, open: false }))}
       >
         <Alert
-          onClose={() => setSnackbar(prev => ({ ...prev, open: false }))}
+          onClose={() => setSnackbar((prev) => ({ ...prev, open: false }))}
           severity={snackbar.severity}
-          sx={{ width: '100%' }}
+          sx={{ width: "100%" }}
         >
           {snackbar.message}
         </Alert>
       </Snackbar>
-    
+
       <div style={formContainerStyle}>
         {/* Purchase Request Details Section */}
         <div style={cardStyle}>
@@ -218,7 +260,9 @@ const PurchaseRequestEdit = () => {
               label="Purchase Request ID"
               placeholder="Enter Purchase Request ID"
               value={formData.purchaseRequestId}
-              onChange={(value) => handleInputChange('purchaseRequestId', value)}
+              onChange={(value) =>
+                handleInputChange("purchaseRequestId", value)
+              }
               disabled
             />
             <Field
@@ -226,14 +270,16 @@ const PurchaseRequestEdit = () => {
               type="date"
               placeholder="yyyy-mm-dd"
               value={formData.purchaseRequestDate}
-              onChange={(value) => handleInputChange('purchaseRequestDate', value)}
+              onChange={(value) =>
+                handleInputChange("purchaseRequestDate", value)
+              }
             />
             <Field
               label="Purchase Type"
               type="select"
               placeholder="Select Purchase Type"
               value={formData.purchaseType}
-              onChange={(value) => handleInputChange('purchaseType', value)}
+              onChange={(value) => handleInputChange("purchaseType", value)}
               required
             />
             <Field
@@ -241,14 +287,16 @@ const PurchaseRequestEdit = () => {
               type="select"
               placeholder="Select Status"
               value={formData.purchaseRequestStatus}
-              onChange={(value) => handleInputChange('purchaseRequestStatus', value)}
+              onChange={(value) =>
+                handleInputChange("purchaseRequestStatus", value)
+              }
               required
             />
             <Field
               label="Owner"
               placeholder="Enter Owner"
               value={formData.owner}
-              onChange={(value) => handleInputChange('owner', value)}
+              onChange={(value) => handleInputChange("owner", value)}
             />
           </div>
         </div>
@@ -258,29 +306,29 @@ const PurchaseRequestEdit = () => {
           <div style={cardHeaderContainerStyle}>
             <h3 style={cardHeaderStyle}>Select Supplier</h3>
           </div>
-          <div style={{ marginBottom: '1.5rem' }}>
+          <div style={{ marginBottom: "1.5rem" }}>
             <Field
               label="Select Supplier"
               type="select"
               placeholder="Select Supplier"
               value={formData.supplier}
-              onChange={(value) => handleInputChange('supplier', value)}
-              options={suppliers.map(supplier => ({
+              onChange={(value) => handleInputChange("supplier", value)}
+              options={suppliers.map((supplier) => ({
                 value: supplier.id,
-                label: supplier.supplier_name
+                label: supplier.supplier_name,
               }))}
             />
           </div>
           <div style={cardHeaderContainerStyle}>
             <h3 style={cardHeaderStyle}>Additional Information</h3>
           </div>
-          <div style={{ gridColumn: '1 / -1' }}>
+          <div style={{ gridColumn: "1 / -1" }}>
             <Field
               label="Description"
               placeholder="Enter Description"
               type="textarea"
               value={formData.description}
-              onChange={(value) => handleInputChange('description', value)}
+              onChange={(value) => handleInputChange("description", value)}
             />
           </div>
         </div>
@@ -291,24 +339,24 @@ const PurchaseRequestEdit = () => {
         <div style={cardHeaderContainerStyle}>
           <h3 style={cardHeaderStyle}>Selected Products</h3>
         </div>
-        <div style={{ marginBottom: '1.5rem' }}>
-          <button 
+        <div style={{ marginBottom: "1.5rem" }}>
+          <button
             onClick={() => setShowProductTable(!showProductTable)}
             style={{
-              padding: '0.75rem 1.5rem',
-              backgroundColor: showProductTable ? '#f3f4f6' : '#2563eb',
-              color: showProductTable ? '#374151' : 'white',
-              border: '1px solid #d1d5db',
-              borderRadius: '8px',
-              cursor: 'pointer',
-              fontSize: '0.875rem',
-              fontWeight: '500',
-              transition: 'all 0.2s ease',
-              outline: 'none',
-              marginBottom: '1rem',
+              padding: "0.75rem 1.5rem",
+              backgroundColor: showProductTable ? "#f3f4f6" : "#2563eb",
+              color: showProductTable ? "#374151" : "white",
+              border: "1px solid #d1d5db",
+              borderRadius: "8px",
+              cursor: "pointer",
+              fontSize: "0.875rem",
+              fontWeight: "500",
+              transition: "all 0.2s ease",
+              outline: "none",
+              marginBottom: "1rem",
             }}
           >
-            {showProductTable ? 'Hide Product List' : 'Edit Products'}
+            {showProductTable ? "Hide Product List" : "Edit Products"}
           </button>
 
           {showProductTable && (
@@ -323,22 +371,70 @@ const PurchaseRequestEdit = () => {
                 />
               </Box>
 
-              <TableContainer component={Paper}>
-                <Table size="small">
+              <TableContainer
+                component={Paper}
+                sx={{
+                  maxHeight: "400px", // or whatever height you prefer
+                  overflow: "auto",
+                  position: "relative",
+                }}
+              >
+                <Table size="small" stickyHeader>
                   <TableHead>
-                    <TableRow sx={{ backgroundColor: '#0d47a1' }}>
-                      <TableCell padding="checkbox" sx={{ color: '#fff' }}>
-                        <Checkbox sx={{ color: '#fff' }} />
+                    <TableRow sx={{ backgroundColor: "#0d47a1" }}>
+                      <TableCell
+                        padding="checkbox"
+                        sx={{ backgroundColor: "#0d47a1" }}
+                      >
+                        <Checkbox
+                          sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
+                        />
                       </TableCell>
-                      <TableCell sx={{ color: '#fff' }}>Product ID</TableCell>
-                      <TableCell sx={{ color: '#fff' }}>Product Name</TableCell>
-                      <TableCell sx={{ color: '#fff' }}>Brand</TableCell>
-                      <TableCell sx={{ color: '#fff' }}>Model</TableCell>
-                      <TableCell sx={{ color: '#fff' }}>Processor</TableCell>
-                      <TableCell sx={{ color: '#fff' }}>RAM</TableCell>
-                      <TableCell sx={{ color: '#fff' }}>Storage</TableCell>
-                      <TableCell sx={{ color: '#fff' }}>Graphics</TableCell>
-                      <TableCell sx={{ color: '#fff' }}>Quantity</TableCell>
+                      <TableCell
+                        sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
+                      >
+                        Product ID
+                      </TableCell>
+                      <TableCell
+                        sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
+                      >
+                        Product Name
+                      </TableCell>
+                      <TableCell
+                        sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
+                      >
+                        Brand
+                      </TableCell>
+                      <TableCell
+                        sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
+                      >
+                        Model
+                      </TableCell>
+                      <TableCell
+                        sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
+                      >
+                        Processor
+                      </TableCell>
+                      <TableCell
+                        sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
+                      >
+                        RAM
+                      </TableCell>
+                      <TableCell
+                        sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
+                      >
+                        Storage
+                      </TableCell>
+                      <TableCell
+                        sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
+                      >
+                        Graphics
+                      </TableCell>
+                      <TableCell
+                        sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
+                      >
+                        Quantity
+                      </TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
@@ -348,9 +444,9 @@ const PurchaseRequestEdit = () => {
                           <Checkbox
                             checked={selectedProductIds.includes(product.id)}
                             onChange={() => {
-                              setSelectedProductIds(prev =>
+                              setSelectedProductIds((prev) =>
                                 prev.includes(product.id)
-                                  ? prev.filter(id => id !== product.id)
+                                  ? prev.filter((id) => id !== product.id)
                                   : [...prev, product.id]
                               );
                             }}
@@ -366,17 +462,28 @@ const PurchaseRequestEdit = () => {
                         <TableCell>{product.graphics}</TableCell>
                         <TableCell>
                           <Box display="flex" alignItems="center">
-                            <IconButton size="small" onClick={() => decrementQty(product.id)}>
+                            <IconButton
+                              size="small"
+                              onClick={() => decrementQty(product.id)}
+                            >
                               <Remove fontSize="small" />
                             </IconButton>
                             <TextField
                               type="number"
                               size="small"
-                              value={quantities[product.id] || ''}
-                              onChange={(e) => handleQtyChange(product.id, e.target.value)}
-                              inputProps={{ min: 0, style: { width: 50, textAlign: 'center' } }}
+                              value={quantities[product.id] || ""}
+                              onChange={(e) =>
+                                handleQtyChange(product.id, e.target.value)
+                              }
+                              inputProps={{
+                                min: 0,
+                                style: { width: 50, textAlign: "center" },
+                              }}
                             />
-                            <IconButton size="small" onClick={() => incrementQty(product.id)}>
+                            <IconButton
+                              size="small"
+                              onClick={() => incrementQty(product.id)}
+                            >
                               <Add fontSize="small" />
                             </IconButton>
                           </Box>
@@ -393,19 +500,19 @@ const PurchaseRequestEdit = () => {
 
       {/* Action Buttons */}
       <div style={buttonContainerStyle}>
-        <button 
-          style={cancelBtnStyle} 
-          onClick={() => navigate('/dashboard/procurement/purchase-requests')}
-          onMouseEnter={(e) => e.target.style.backgroundColor = '#e5e7eb'} 
-          onMouseLeave={(e) => e.target.style.backgroundColor = '#f3f4f6'}
+        <button
+          style={cancelBtnStyle}
+          onClick={() => navigate("/dashboard/procurement/purchase-requests")}
+          onMouseEnter={(e) => (e.target.style.backgroundColor = "#e5e7eb")}
+          onMouseLeave={(e) => (e.target.style.backgroundColor = "#f3f4f6")}
         >
           Cancel
         </button>
         <button
           style={createBtnStyle}
           onClick={handleSubmit}
-          onMouseEnter={(e) => e.target.style.backgroundColor = '#1d4ed8'}
-          onMouseLeave={(e) => e.target.style.backgroundColor = '#2563eb'}
+          onMouseEnter={(e) => (e.target.style.backgroundColor = "#1d4ed8")}
+          onMouseLeave={(e) => (e.target.style.backgroundColor = "#2563eb")}
           disabled={!formData.supplier || selectedProductIds.length === 0}
         >
           Update Purchase Request
@@ -416,13 +523,22 @@ const PurchaseRequestEdit = () => {
 };
 
 // Field component and styles remain the same as in PurchaseRequestAdd.jsx
-const Field = ({ label, placeholder, type = 'text', required = false, value, onChange, options, disabled = false }) => (
+const Field = ({
+  label,
+  placeholder,
+  type = "text",
+  required = false,
+  value,
+  onChange,
+  options,
+  disabled = false,
+}) => (
   <div style={fieldContainerStyle}>
     <label style={labelStyle}>
       {label}
       {required && <span style={requiredStyle}>*</span>}
     </label>
-    {type === 'select' ? (
+    {type === "select" ? (
       <div style={selectWrapperStyle}>
         <select
           style={selectStyle}
@@ -446,15 +562,16 @@ const Field = ({ label, placeholder, type = 'text', required = false, value, onC
               <option value="Rejected">Rejected</option>
             </>
           )}
-          {label === "Select Supplier" && options?.map(option => (
-            <option key={option.value} value={option.value}>
-              {option.label}
-            </option>
-          ))}
+          {label === "Select Supplier" &&
+            options?.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
         </select>
         <div style={selectArrowStyle}>▼</div>
       </div>
-    ) : type === 'textarea' ? (
+    ) : type === "textarea" ? (
       <textarea
         placeholder={placeholder}
         style={textareaStyle}
@@ -468,7 +585,10 @@ const Field = ({ label, placeholder, type = 'text', required = false, value, onC
       <input
         type={type}
         placeholder={placeholder}
-        style={{ ...inputStyle, backgroundColor: disabled ? '#f3f4f6' : '#ffffff' }}
+        style={{
+          ...inputStyle,
+          backgroundColor: disabled ? "#f3f4f6" : "#ffffff",
+        }}
         value={value}
         onChange={(e) => onChange(e.target.value)}
         required={required}
@@ -480,167 +600,168 @@ const Field = ({ label, placeholder, type = 'text', required = false, value, onC
 
 // Styles (same as in PurchaseRequestAdd.jsx)
 const containerStyle = {
-  padding: '2rem',
-  fontFamily: '"Inter", "Segoe UI", -apple-system, BlinkMacSystemFont, sans-serif',
-  minHeight: '100vh',
+  padding: "2rem",
+  fontFamily:
+    '"Inter", "Segoe UI", -apple-system, BlinkMacSystemFont, sans-serif',
+  minHeight: "100vh",
   lineHeight: 1.6,
 };
 
 const formContainerStyle = {
-  display: 'grid',
-  gap: '1.5rem',
-  maxWidth: '1200px',
-  margin: '0 auto',
-  gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))',
+  display: "grid",
+  gap: "1.5rem",
+  maxWidth: "1200px",
+  margin: "0 auto",
+  gridTemplateColumns: "repeat(auto-fit, minmax(400px, 1fr))",
 };
 
 const cardStyle = {
-  backgroundColor: '#ffffff',
-  padding: '1.5rem',
-  borderRadius: '12px',
-  boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06)',
-  border: '1px solid #e2e8f0',
-  transition: 'box-shadow 0.2s ease',
+  backgroundColor: "#ffffff",
+  padding: "1.5rem",
+  borderRadius: "12px",
+  boxShadow: "0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06)",
+  border: "1px solid #e2e8f0",
+  transition: "box-shadow 0.2s ease",
 };
 
 const cardHeaderContainerStyle = {
-  display: 'flex',
-  alignItems: 'center',
-  marginBottom: '1.5rem',
-  paddingBottom: '1rem',
-  borderBottom: '1px solid #e2e8f0',
+  display: "flex",
+  alignItems: "center",
+  marginBottom: "1.5rem",
+  paddingBottom: "1rem",
+  borderBottom: "1px solid #e2e8f0",
 };
 
 const iconStyle = {
-  fontSize: '1.25rem',
-  marginRight: '0.75rem',
-  backgroundColor: '#f1f5f9',
-  padding: '0.5rem',
-  borderRadius: '8px',
+  fontSize: "1.25rem",
+  marginRight: "0.75rem",
+  backgroundColor: "#f1f5f9",
+  padding: "0.5rem",
+  borderRadius: "8px",
 };
 
 const cardHeaderStyle = {
-  fontSize: '1.125rem',
-  fontWeight: '600',
-  color: '#1e293b',
+  fontSize: "1.125rem",
+  fontWeight: "600",
+  color: "#1e293b",
   margin: 0,
 };
 
 const fieldsGridStyle = {
-  display: 'grid',
-  gap: '1rem',
-  gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
+  display: "grid",
+  gap: "1rem",
+  gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))",
 };
 
 const fieldContainerStyle = {
-  display: 'flex',
-  flexDirection: 'column',
+  display: "flex",
+  flexDirection: "column",
 };
 
 const labelStyle = {
-  display: 'block',
-  marginBottom: '0.5rem',
-  fontWeight: '500',
-  fontSize: '0.875rem',
-  color: '#374151',
-  letterSpacing: '0.025em',
+  display: "block",
+  marginBottom: "0.5rem",
+  fontWeight: "500",
+  fontSize: "0.875rem",
+  color: "#374151",
+  letterSpacing: "0.025em",
 };
 
 const requiredStyle = {
-  color: '#ef4444',
-  marginLeft: '0.25rem',
+  color: "#ef4444",
+  marginLeft: "0.25rem",
 };
 
 const inputStyle = {
-  width: '100%',
-  padding: '0.75rem',
-  borderRadius: '8px',
-  border: '1px solid #d1d5db',
-  fontSize: '0.875rem',
-  backgroundColor: '#ffffff',
-  transition: 'all 0.2s ease',
-  outline: 'none',
-  boxSizing: 'border-box',
+  width: "100%",
+  padding: "0.75rem",
+  borderRadius: "8px",
+  border: "1px solid #d1d5db",
+  fontSize: "0.875rem",
+  backgroundColor: "#ffffff",
+  transition: "all 0.2s ease",
+  outline: "none",
+  boxSizing: "border-box",
 };
 
 const selectWrapperStyle = {
-  position: 'relative',
-  width: '100%',
+  position: "relative",
+  width: "100%",
 };
 
 const selectStyle = {
-  width: '100%',
-  padding: '0.75rem',
-  paddingRight: '2.5rem',
-  borderRadius: '8px',
-  border: '1px solid #d1d5db',
-  fontSize: '0.875rem',
-  backgroundColor: '#ffffff',
-  appearance: 'none',
-  transition: 'all 0.2s ease',
-  outline: 'none',
-  boxSizing: 'border-box',
-  cursor: 'pointer',
+  width: "100%",
+  padding: "0.75rem",
+  paddingRight: "2.5rem",
+  borderRadius: "8px",
+  border: "1px solid #d1d5db",
+  fontSize: "0.875rem",
+  backgroundColor: "#ffffff",
+  appearance: "none",
+  transition: "all 0.2s ease",
+  outline: "none",
+  boxSizing: "border-box",
+  cursor: "pointer",
 };
 
 const selectArrowStyle = {
-  position: 'absolute',
-  right: '0.75rem',
-  top: '50%',
-  transform: 'translateY(-50%)',
-  pointerEvents: 'none',
-  fontSize: '0.75rem',
-  color: '#6b7280',
+  position: "absolute",
+  right: "0.75rem",
+  top: "50%",
+  transform: "translateY(-50%)",
+  pointerEvents: "none",
+  fontSize: "0.75rem",
+  color: "#6b7280",
 };
 
 const textareaStyle = {
-  width: '100%',
-  padding: '0.75rem',
-  borderRadius: '8px',
-  border: '1px solid #d1d5db',
-  fontSize: '0.875rem',
-  backgroundColor: '#ffffff',
-  transition: 'all 0.2s ease',
-  outline: 'none',
-  resize: 'vertical',
-  fontFamily: 'inherit',
-  boxSizing: 'border-box',
+  width: "100%",
+  padding: "0.75rem",
+  borderRadius: "8px",
+  border: "1px solid #d1d5db",
+  fontSize: "0.875rem",
+  backgroundColor: "#ffffff",
+  transition: "all 0.2s ease",
+  outline: "none",
+  resize: "vertical",
+  fontFamily: "inherit",
+  boxSizing: "border-box",
 };
 
 const buttonContainerStyle = {
-  display: 'flex',
-  justifyContent: 'flex-end',
-  gap: '0.75rem',
-  marginTop: '2rem',
-  maxWidth: '1200px',
-  margin: '2rem auto 0',
-  padding: '0 1.5rem',
+  display: "flex",
+  justifyContent: "flex-end",
+  gap: "0.75rem",
+  marginTop: "2rem",
+  maxWidth: "1200px",
+  margin: "2rem auto 0",
+  padding: "0 1.5rem",
 };
 
 const cancelBtnStyle = {
-  padding: '0.75rem 1.5rem',
-  backgroundColor: '#f3f4f6',
-  color: '#374151',
-  border: '1px solid #d1d5db',
-  borderRadius: '8px',
-  cursor: 'pointer',
-  fontSize: '0.875rem',
-  fontWeight: '500',
-  transition: 'all 0.2s ease',
-  outline: 'none',
+  padding: "0.75rem 1.5rem",
+  backgroundColor: "#f3f4f6",
+  color: "#374151",
+  border: "1px solid #d1d5db",
+  borderRadius: "8px",
+  cursor: "pointer",
+  fontSize: "0.875rem",
+  fontWeight: "500",
+  transition: "all 0.2s ease",
+  outline: "none",
 };
 
 const createBtnStyle = {
-  padding: '0.75rem 1.5rem',
-  backgroundColor: '#2563eb',
-  color: 'white',
-  border: 'none',
-  borderRadius: '8px',
-  cursor: 'pointer',
-  fontSize: '0.875rem',
-  fontWeight: '500',
-  transition: 'all 0.2s ease',
-  outline: 'none',
+  padding: "0.75rem 1.5rem",
+  backgroundColor: "#2563eb",
+  color: "white",
+  border: "none",
+  borderRadius: "8px",
+  cursor: "pointer",
+  fontSize: "0.875rem",
+  fontWeight: "500",
+  transition: "all 0.2s ease",
+  outline: "none",
 };
 
 export default PurchaseRequestEdit;

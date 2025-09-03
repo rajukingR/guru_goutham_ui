@@ -7,7 +7,7 @@ const OrdersTable = () => {
   const [data, setData] = useState([]);
 
   const columns = [
-    { id: "id", label: "S.No." },
+    { id: "s_id", label: "S.No." },
     { id: "order_id", label: "Order ID" },
     { id: "customer_name", label: "Customer Name" },
 
@@ -47,13 +47,10 @@ const OrdersTable = () => {
 
             // Combine first and last name from personalDetails
             const customerName =
-              item.personalDetails?.first_name &&
-              item.personalDetails?.last_name
-                ? `${item.personalDetails.first_name} ${item.personalDetails.last_name}`
-                : "N/A";
+              `${item.personalDetails?.first_name} ${item.personalDetails?.last_name}`;
 
             return {
-              id: index + 1,
+              s_id: index + 1,
               ...item,
               customer_name: customerName, // ✅ added
               total_order_value: formattedOrderValue,

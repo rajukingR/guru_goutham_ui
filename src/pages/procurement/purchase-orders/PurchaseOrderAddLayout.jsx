@@ -19,14 +19,13 @@ import { Add, Remove } from "@mui/icons-material";
 import { useNavigate } from "react-router-dom";
 
 const generateRandomId = () => {
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-  let randomPart = '';
+  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+  let randomPart = "";
   for (let i = 0; i < 5; i++) {
     randomPart += chars.charAt(Math.floor(Math.random() * chars.length));
   }
   return `PO-${randomPart}`;
 };
-
 
 const PurchaseOrderAddLayout = () => {
   const [purchaseQuotations, setPurchaseQuotations] = useState([]);
@@ -51,8 +50,6 @@ const PurchaseOrderAddLayout = () => {
     isSupplierLocked: false,
   });
 
-  
-
   const [selectedProductIds, setSelectedProductIds] = useState([]);
   const [quantities, setQuantities] = useState({});
   const [searchTerm, setSearchTerm] = useState("");
@@ -67,22 +64,25 @@ const PurchaseOrderAddLayout = () => {
     suppliers: "",
     products: "",
   });
+  const [errors, setErrors] = useState({
+    purchaseQuotation: "",
+    poStatus: "",
+    owner: "",
+    products: "",
+    quantities: {},
+  });
   const [snackbar, setSnackbar] = useState({
     open: false,
     message: "",
     severity: "success",
   });
-  useEffect(() => {
-  setFormData(prev => ({
-    ...prev,
-    purchaseOrderId: generateRandomId()
-  }));
-
-  // You can also include your fetch calls here if needed
-}, []);
-
 
   useEffect(() => {
+    setFormData((prev) => ({
+      ...prev,
+      purchaseOrderId: generateRandomId(),
+    }));
+
     const fetchData = async () => {
       try {
         // Fetch approved purchase quotations
@@ -104,7 +104,13 @@ const PurchaseOrderAddLayout = () => {
         const prodResponse = await fetch(`${API_URL}/product-templete`);
         if (!prodResponse.ok) throw new Error("Failed to fetch products");
         const prodData = await prodResponse.json();
-        setProducts(prodData);
+
+        // Filter out products with category 'Assembled PC'
+        const filteredProducts = prodData.filter(
+          (product) => product.product_category !== "Assembled PC"
+        );
+
+        setProducts(filteredProducts);
 
         setLoading({
           purchaseQuotations: false,
@@ -128,8 +134,40 @@ const PurchaseOrderAddLayout = () => {
     fetchData();
   }, []);
 
+  const validateField = (name, value) => {
+    let error = "";
+
+    switch (name) {
+      case "poStatus":
+        if (!value) error = "PO status is required";
+        break;
+      
+      case "products":
+        if (selectedProductIds.length === 0)
+          error = "At least one product must be selected";
+        break;
+      default:
+        break;
+    }
+
+    return error;
+  };
+
+  const validateQuantity = (productId, quantity) => {
+    if (
+      selectedProductIds.includes(productId) &&
+      (!quantity || quantity <= 0)
+    ) {
+      return "Quantity must be greater than 0";
+    }
+    return "";
+  };
+
   const handlePurchaseQuotationChange = (e) => {
     const selectedId = e.target.value;
+    const error = validateField("purchaseQuotation", selectedId);
+    setErrors((prev) => ({ ...prev, purchaseQuotation: error }));
+
     if (!selectedId) {
       setSelectedPurchaseQuotation(null);
       setFormData((prev) => ({
@@ -178,6 +216,8 @@ const PurchaseOrderAddLayout = () => {
   };
 
   const handleInputChange = (field, value) => {
+    const error = validateField(field, value);
+    setErrors((prev) => ({ ...prev, [field]: error }));
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
@@ -190,21 +230,95 @@ const PurchaseOrderAddLayout = () => {
 
   const handleQtyChange = (id, value) => {
     const qty = Math.max(0, parseInt(value) || 0);
+    const quantityError = validateQuantity(id, qty);
+
     setQuantities({ ...quantities, [id]: qty });
-  };
-
-  const incrementQty = (id) => {
-    setQuantities((prev) => ({ ...prev, [id]: (prev[id] || 0) + 1 }));
-  };
-
-  const decrementQty = (id) => {
-    setQuantities((prev) => ({
+    setErrors((prev) => ({
       ...prev,
-      [id]: Math.max(0, (prev[id] || 0) - 1),
+      quantities: {
+        ...prev.quantities,
+        [id]: quantityError,
+      },
     }));
   };
 
+  const incrementQty = (id) => {
+    const newQty = (quantities[id] || 0) + 1;
+    handleQtyChange(id, newQty);
+  };
+
+  const decrementQty = (id) => {
+    const newQty = Math.max(0, (quantities[id] || 0) - 1);
+    handleQtyChange(id, newQty);
+  };
+
+  const handleProductSelection = (productId) => {
+    const newSelected = selectedProductIds.includes(productId)
+      ? selectedProductIds.filter((id) => id !== productId)
+      : [...selectedProductIds, productId];
+
+    setSelectedProductIds(newSelected);
+
+    // Validate products selection
+    const productsError = validateField("products", newSelected);
+    setErrors((prev) => ({ ...prev, products: productsError }));
+
+    // Validate quantity for this product
+    if (newSelected.includes(productId)) {
+      const quantityError = validateQuantity(
+        productId,
+        quantities[productId] || 0
+      );
+      setErrors((prev) => ({
+        ...prev,
+        quantities: {
+          ...prev.quantities,
+          [productId]: quantityError,
+        },
+      }));
+    }
+  };
+
+  const validateForm = () => {
+    let isValid = true;
+    const newErrors = { ...errors };
+
+    // Validate required fields
+    const fieldsToValidate = ["purchaseQuotation", "poStatus", "owner"];
+    fieldsToValidate.forEach((field) => {
+      const error = validateField(field, formData[field]);
+      newErrors[field] = error;
+      if (error) isValid = false;
+    });
+
+    // Validate at least one product is selected
+    const productsError = validateField("products", selectedProductIds);
+    newErrors.products = productsError;
+    if (productsError) isValid = false;
+
+    // Validate quantities for selected products
+    const quantityErrors = {};
+    selectedProductIds.forEach((id) => {
+      const error = validateQuantity(id, quantities[id] || 0);
+      quantityErrors[id] = error;
+      if (error) isValid = false;
+    });
+    newErrors.quantities = quantityErrors;
+
+    setErrors(newErrors);
+    return isValid;
+  };
+
   const handleSubmit = async () => {
+    if (!validateForm()) {
+      setSnackbar({
+        open: true,
+        message: "Please fix all validation errors before submitting",
+        severity: "error",
+      });
+      return;
+    }
+
     try {
       const selectedProducts = selectedPurchaseQuotation.selected_products.map(
         (item) => ({
@@ -287,27 +401,29 @@ const PurchaseOrderAddLayout = () => {
               placeholder="Enter Purchase Order ID"
               value={formData.purchaseOrderId}
               onChange={(value) => handleInputChange("purchaseOrderId", value)}
+              disabled
             />
-           <Field
-  label="Purchase Quotation"
-  type="select"
-  placeholder="Select Purchase Quotation"
-  value={selectedPurchaseQuotation?.id || ""}
-  onChange={(value) =>
-    handlePurchaseQuotationChange({ target: { value } })
-  }
-  options={purchaseQuotations.map((q) => {
-    const supplier = suppliers.find(s => s.id === q.supplier_id);
-    const supplierName = supplier?.supplier_name || "Unknown Supplier";
+            <Field
+              label="Purchase Quotation"
+              type="select"
+              placeholder="Select Purchase Quotation"
+              value={selectedPurchaseQuotation?.id || ""}
+              onChange={(value) =>
+                handlePurchaseQuotationChange({ target: { value } })
+              }
+              options={purchaseQuotations.map((q) => {
+                const supplier = suppliers.find((s) => s.id === q.supplier_id);
+                const supplierName =
+                  supplier?.supplier_name || "Unknown Supplier";
 
-    return {
-      value: q.id,
-      label: `${q.purchase_quotation_id} - ${supplierName}`
-    };
-  })}
-/>
-
-
+                return {
+                  value: q.id,
+                  label: `${q.purchase_quotation_id} - ${supplierName}`,
+                };
+              })}
+              error={errors.purchaseQuotation}
+              required
+            />
             <Field
               label="Purchase Quotation ID"
               placeholder="Purchase Quotation ID"
@@ -348,13 +464,17 @@ const PurchaseOrderAddLayout = () => {
                 { value: "Approved", label: "Approved" },
                 { value: "Rejected", label: "Rejected" },
               ]}
+              error={errors.poStatus}
+              required
             />
-            <Field
+            {/* <Field
               label="Owner"
               placeholder="Enter Owner"
               value={formData.owner}
               onChange={(value) => handleInputChange("owner", value)}
-            />
+              error={errors.owner}
+              required
+            /> */}
             <Field
               label="Description"
               placeholder="Enter Description"
@@ -365,33 +485,23 @@ const PurchaseOrderAddLayout = () => {
             />
           </div>
         </div>
-
-        {/* Supplier Details Section */}
-        {/* <div style={cardStyle}>
-          <div style={cardHeaderContainerStyle}>
-            <div style={iconStyle}>📞</div>
-            <h3 style={cardHeaderStyle}>Supplier Details</h3>
-          </div>
-          <div style={fieldsGridStyle}>
-            <Field
-              label="Supplier"
-              type="text"
-              placeholder="Supplier Name"
-              value={
-                formData.supplierName || "Select a purchase quotation first"
-              }
-              disabled
-            />
-          </div>
-        </div> */}
-
-       
       </div>
 
       {/* Select Products Section */}
       <div style={cardStyle}>
         <div style={cardHeaderContainerStyle}>
           <h3 style={cardHeaderStyle}>Selected Products</h3>
+          {errors.products && (
+            <span
+              style={{
+                color: "#ef4444",
+                marginLeft: "1rem",
+                fontSize: "0.875rem",
+              }}
+            >
+              {errors.products}
+            </span>
+          )}
         </div>
         <div style={{ marginBottom: "1.5rem" }}>
           <button
@@ -413,7 +523,6 @@ const PurchaseOrderAddLayout = () => {
             {showProductTable ? "Hide Product List" : "Add Products"}
           </button>
 
-        
           {showProductTable && (
             <Box p={2}>
               <Box display="flex" gap={2} mb={2} alignItems="center">
@@ -426,13 +535,23 @@ const PurchaseOrderAddLayout = () => {
                 />
               </Box>
 
-              <TableContainer component={Paper}>
-                <Table size="small">
+              <TableContainer
+                component={Paper}
+                sx={{
+                  maxHeight: "400px", // or whatever height you prefer
+                  overflow: "auto",
+                  position: "relative",
+                }}
+              >
+                <Table size="small" stickyHeader>
                   <TableHead>
                     <TableRow sx={{ backgroundColor: "#0d47a1" }}>
-                      <TableCell padding="checkbox" sx={{ color: "#fff" }}>
+                      <TableCell
+                        padding="checkbox"
+                        sx={{ backgroundColor: "#0d47a1" }}
+                      >
                         <Checkbox
-                          sx={{ color: "#fff" }}
+                          sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
                           checked={
                             filteredProducts.length > 0 &&
                             filteredProducts.every((product) =>
@@ -471,14 +590,46 @@ const PurchaseOrderAddLayout = () => {
                           }}
                         />
                       </TableCell>
-                      <TableCell sx={{ color: "#fff" }}>Product Name</TableCell>
-                      <TableCell sx={{ color: "#fff" }}>Brand</TableCell>
-                      <TableCell sx={{ color: "#fff" }}>Model</TableCell>
-                      <TableCell sx={{ color: "#fff" }}>Processor</TableCell>
-                      <TableCell sx={{ color: "#fff" }}>RAM</TableCell>
-                      <TableCell sx={{ color: "#fff" }}>Storage</TableCell>
-                      <TableCell sx={{ color: "#fff" }}>Graphics</TableCell>
-                      <TableCell sx={{ color: "#fff" }}>Quantity</TableCell>
+                      <TableCell
+                        sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
+                      >
+                        Product Name
+                      </TableCell>
+                      <TableCell
+                        sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
+                      >
+                        Brand
+                      </TableCell>
+                      <TableCell
+                        sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
+                      >
+                        Model
+                      </TableCell>
+                      <TableCell
+                        sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
+                      >
+                        Processor
+                      </TableCell>
+                      <TableCell
+                        sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
+                      >
+                        RAM
+                      </TableCell>
+                      <TableCell
+                        sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
+                      >
+                        Storage
+                      </TableCell>
+                      <TableCell
+                        sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
+                      >
+                        Graphics
+                      </TableCell>
+                      <TableCell
+                        sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
+                      >
+                        Quantity
+                      </TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
@@ -487,13 +638,7 @@ const PurchaseOrderAddLayout = () => {
                         <TableCell padding="checkbox">
                           <Checkbox
                             checked={selectedProductIds.includes(product.id)}
-                            onChange={() => {
-                              setSelectedProductIds((prev) =>
-                                prev.includes(product.id)
-                                  ? prev.filter((id) => id !== product.id)
-                                  : [...prev, product.id]
-                              );
-                            }}
+                            onChange={() => handleProductSelection(product.id)}
                           />
                         </TableCell>
                         <TableCell>{product.product_name}</TableCell>
@@ -508,24 +653,39 @@ const PurchaseOrderAddLayout = () => {
                             <IconButton
                               size="small"
                               onClick={() => decrementQty(product.id)}
+                              disabled={
+                                !selectedProductIds.includes(product.id)
+                              }
                             >
                               <Remove fontSize="small" />
                             </IconButton>
                             <TextField
                               type="number"
                               size="small"
-                              value={quantities[product.id] || ""}
+                              value={
+                                selectedProductIds.includes(product.id)
+                                  ? quantities[product.id] || ""
+                                  : ""
+                              }
                               onChange={(e) =>
                                 handleQtyChange(product.id, e.target.value)
                               }
                               inputProps={{
-                                min: 0,
+                                min: 1,
                                 style: { width: 50, textAlign: "center" },
                               }}
+                              disabled={
+                                !selectedProductIds.includes(product.id)
+                              }
+                              error={!!errors.quantities[product.id]}
+                              helperText={errors.quantities[product.id]}
                             />
                             <IconButton
                               size="small"
                               onClick={() => incrementQty(product.id)}
+                              disabled={
+                                !selectedProductIds.includes(product.id)
+                              }
                             >
                               <Add fontSize="small" />
                             </IconButton>
@@ -543,9 +703,14 @@ const PurchaseOrderAddLayout = () => {
 
       {/* Action Buttons */}
       <div style={buttonContainerStyle}>
-        <button style={cancelBtnStyle}>Cancel</button>
+        <button
+          style={cancelBtnStyle}
+          onClick={() => navigate("/dashboard/procurement/purchase-orders")}
+        >
+          Cancel
+        </button>
         <button style={createBtnStyle} onClick={handleSubmit}>
-          Create
+          Create Purchase Order
         </button>
       </div>
     </div>
@@ -562,13 +727,21 @@ const Field = ({
   options = [],
   multiline = false,
   rows = 1,
+  error = "",
+  required = false,
 }) => (
   <div style={fieldContainerStyle}>
-    <label style={labelStyle}>{label}</label>
+    <label style={labelStyle}>
+      {label}
+      {required && <span style={{ color: "red" }}> *</span>}
+    </label>
     {type === "select" ? (
       <div style={selectWrapperStyle}>
         <select
-          style={selectStyle}
+          style={{
+            ...selectStyle,
+            ...(error ? errorInputStyle : {}),
+          }}
           value={value}
           onChange={(e) => onChange(e.target.value)}
           disabled={disabled}
@@ -586,7 +759,10 @@ const Field = ({
       <input
         type="date"
         placeholder={placeholder}
-        style={inputStyle}
+        style={{
+          ...inputStyle,
+          ...(error ? errorInputStyle : {}),
+        }}
         value={value}
         onChange={(e) => onChange(e.target.value)}
         disabled={disabled}
@@ -594,7 +770,11 @@ const Field = ({
     ) : multiline ? (
       <textarea
         placeholder={placeholder}
-        style={{ ...inputStyle, minHeight: `${rows * 24}px` }}
+        style={{
+          ...inputStyle,
+          minHeight: `${rows * 24}px`,
+          ...(error ? errorInputStyle : {}),
+        }}
         value={value}
         onChange={(e) => onChange(e.target.value)}
         disabled={disabled}
@@ -604,12 +784,17 @@ const Field = ({
       <input
         type={type}
         placeholder={placeholder}
-        style={inputStyle}
+        style={{
+          ...inputStyle,
+          ...(error ? errorInputStyle : {}),
+          ...(disabled ? disabledInputStyle : {}),
+        }}
         value={value}
         onChange={(e) => onChange(e.target.value)}
         disabled={disabled}
       />
     )}
+    {error && <div style={errorTextStyle}>{error}</div>}
   </div>
 );
 
@@ -690,6 +875,22 @@ const inputStyle = {
   fontSize: "0.875rem",
   backgroundColor: "#ffffff",
   fontFamily: "inherit",
+};
+
+const errorInputStyle = {
+  borderColor: "#ef4444",
+  backgroundColor: "#fef2f2",
+};
+
+const disabledInputStyle = {
+  backgroundColor: "#f3f4f6",
+  cursor: "not-allowed",
+};
+
+const errorTextStyle = {
+  color: "#ef4444",
+  fontSize: "0.75rem",
+  marginTop: "0.25rem",
 };
 
 const selectWrapperStyle = {

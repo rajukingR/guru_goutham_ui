@@ -55,7 +55,6 @@ const ProductsEditLayout = () => {
     cabinet: "",
     smps: "",
     ram_slots: "",
-    power: "",
     
     // Monitor specific
     screen_size: "",
@@ -63,7 +62,7 @@ const ProductsEditLayout = () => {
     // HDD specific
     capacity: "",
     speed: "",
-    
+    ssd_type: "",
     // RAM specific
     ramType: "",
     sizeGb: "",
@@ -164,7 +163,6 @@ const ProductsEditLayout = () => {
           cabinet: productData.cabinet || "",
           smps: productData.smps || "",
           ram_slots: productData.ram_slots || "",
-          power: productData.power || "",
           
           // Monitor
           screen_size: productData.screen_size || "",
@@ -172,7 +170,7 @@ const ProductsEditLayout = () => {
           // Storage
           capacity: productData.capacity || "",
           speed: productData.speed || "",
-          
+          ssd_type:productData.ssd_type || "",
           // RAM
           ramType: productData.ramType || "",
           sizeGb: productData.sizeGb || "",
@@ -291,73 +289,76 @@ const ProductsEditLayout = () => {
 
   // Handle form submission
   const handleSubmit = async (e) => {
-    e.preventDefault();
+  e.preventDefault();
 
-    if (parseFloat(formData.purchase_price) <= 0) {
-      showSnackbar("Please enter a valid purchase price", "error");
-      return;
+  if (parseFloat(formData.purchase_price) <= 0) {
+    showSnackbar("Please enter a valid purchase price", "error");
+    return;
+  }
+
+  setLoading(true);
+  setError(null);
+
+  try {
+    const formDataToSend = new FormData();
+
+    // ✅ Copy and set ram = sizeGb if category is RAM
+    const formDataCopy = { ...formData };
+    if (formDataCopy.product_category === "RAM") {
+      formDataCopy.ram = formDataCopy.sizeGb?.toString() || "";
     }
 
-    setLoading(true);
-    setError(null);
+    // ✅ Append all fields from updated copy
+    Object.entries(formDataCopy).forEach(([key, value]) => {
+      if (value === null || value === undefined) return;
 
-    try {
-      const formDataToSend = new FormData();
-
-      // Append all fields to FormData with proper value handling
-      Object.entries(formData).forEach(([key, value]) => {
-        // Skip null/undefined values
-        if (value === null || value === undefined) return;
-        
-        // Handle different value types appropriately
-        if (typeof value === 'boolean') {
-          formDataToSend.append(key, value ? '1' : '0');
-        } else if (value instanceof File) {
-          formDataToSend.append(key, value, value.name);
-        } else {
-          formDataToSend.append(key, value.toString());
-        }
-      });
-
-      // Submit the multipart/form-data request
-      const response = await axios.put(
-        `${API_URL}/product-templete/${id}`,
-        formDataToSend,
-        {
-          headers: {
-            "Content-Type": "multipart/form-data",
-          },
-        }
-      );
-
-      // Show success message
-      showSnackbar(response.data.message || "Product updated successfully!", "success");
-
-      // Navigate after delay
-      setTimeout(() => {
-        navigate("/dashboard/product_library");
-      }, 1500);
-
-    } catch (err) {
-      // Enhanced error handling
-      let errorMessage = "An error occurred while updating the product";
-      
-      if (err.response) {
-        // Server responded with error status
-        errorMessage = err.response.data.message || 
-                      err.response.data.error || 
-                      `Server error: ${err.response.status}`;
-      } else if (err.request) {
-        // Request was made but no response
-        errorMessage = "No response from server. Please check your connection.";
+      if (typeof value === "boolean") {
+        formDataToSend.append(key, value ? "1" : "0");
+      } else if (value instanceof File) {
+        formDataToSend.append(key, value, value.name);
+      } else {
+        formDataToSend.append(key, value.toString());
       }
-      
-      showSnackbar(errorMessage, "error");
-      console.error("Submission error:", err);
-    } finally {
-      setLoading(false);
+    });
+
+    // ✅ Submit update request
+    const response = await axios.put(
+      `${API_URL}/product-templete/${id}`,
+      formDataToSend,
+      {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      }
+    );
+
+    showSnackbar(
+      response.data.message || "Product updated successfully!",
+      "success"
+    );
+
+    setTimeout(() => {
+      navigate("/dashboard/product_library");
+    }, 1500);
+  } catch (err) {
+    let errorMessage = "An error occurred while updating the product";
+
+    if (err.response) {
+      errorMessage =
+        err.response.data.message ||
+        err.response.data.error ||
+        `Server error: ${err.response.status}`;
+    } else if (err.request) {
+      errorMessage = "No response from server. Please check your connection.";
     }
-  };
+
+    showSnackbar(errorMessage, "error");
+    console.error("Submission error:", err);
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   // Render different specification fields based on product category
   const renderSpecificationFields = () => {
@@ -647,6 +648,43 @@ const ProductsEditLayout = () => {
           </>
         );
 
+        case "SSD":
+  return (
+    <>
+      <Field
+        label="Storage Capacity"
+        name="capacity"
+        placeholder="Enter Storage Capacity (e.g., 512GB)"
+        value={formData.capacity}
+        onChange={handleChange}
+        required
+      />
+
+      <Field
+        label="SSD Type"
+        name="ssd_type"
+        type="select"
+        value={formData.ssd_type}
+        onChange={handleChange}
+        required
+      >
+        <option value="">Select SSD Type</option>
+        <option value="SATA">SATA</option>
+        <option value="M.2">M.2</option>
+        <option value="NVMe">NVMe</option>
+      </Field>
+
+      <Field
+        label="Read/Write Speed"
+        name="speed"
+        placeholder="Enter Speed (e.g., 3500 MB/s)"
+        value={formData.speed}
+        onChange={handleChange}
+      />
+    </>
+  );
+
+
       case "Processor":
         return (
           <div style={formContainerStyle}>
@@ -845,11 +883,11 @@ const ProductsEditLayout = () => {
                   required
                 >
                   <option value="">Select Size</option>
-                  <option value="4">4 GB</option>
-                  <option value="8">8 GB</option>
-                  <option value="16">16 GB</option>
-                  <option value="32">32 GB</option>
-                  <option value="64">64 GB</option>
+                  <option value="4GB">4 GB</option>
+                  <option value="8GB">8 GB</option>
+                  <option value="16GB">16 GB</option>
+                  <option value="32GB">32 GB</option>
+                  <option value="64GB">64 GB</option>
                 </Field>
 
                 <Field
@@ -884,9 +922,9 @@ const ProductsEditLayout = () => {
           <>
             <Field
               label="Power in Watts"
-              name="power"
+              name="smps"
               placeholder="Enter Power (e.g., 450W)"
-              value={formData.power}
+              value={formData.smps}
               onChange={handleChange}
               required
             />

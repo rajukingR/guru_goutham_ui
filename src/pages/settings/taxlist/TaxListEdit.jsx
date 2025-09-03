@@ -57,7 +57,7 @@ const TaxListEdit = () => {
         return;
       }
 
-      await axios.put(`${API_URL}/tax-list/update/${id}`, {
+      await axios.put(`${API_URL}/tax-list/${id}`, {
         tax_code: formData.taxCode,
         tax_name: formData.taxName,
         percentage: parseFloat(formData.percentage),

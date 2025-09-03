@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import {
   Table,
   TableBody,
@@ -62,6 +62,8 @@ const apiEndpoints = {
   clients: `${API_URL}/clients`,
   asset_modification_tracker: `${API_URL}/asset-modifications`,
   "dispatch-orders": `${API_URL}/dispatch-orders`,
+  "assembled-products": `${API_URL}/assembled-assets`,
+  "asset-updation": `${API_URL}/peripheral-assets`,
 };
 
 // Delivery Challan Dialog Component
@@ -348,26 +350,437 @@ const apiEndpoints = {
 //   );
 // };
 
+///25-08-2025
+
+// Goods Return Note Dialog Component
+// const DeliveryChallanDialog = ({ open, onClose, dcData }) => {
+//   if (!dcData) return null;
+
+//   const handleDownloadPDF = () => {
+//     const input = document.getElementById("delivery-challan-container");
+
+//     html2canvas(input, {
+//       scale: 2,
+//       logging: false,
+//       useCORS: true,
+//       allowTaint: true,
+//     }).then((canvas) => {
+//       const imgData = canvas.toDataURL("image/png");
+//       const pdf = new jsPDF("p", "mm", "a4");
+//       const imgWidth = 210;
+//       const imgHeight = (canvas.height * imgWidth) / canvas.width;
+
+//       pdf.addImage(imgData, "PNG", 0, 0, imgWidth, imgHeight);
+//       pdf.save(`delivery-challan-${dcData.dc_id}.pdf`);
+//     });
+//   };
+
+//   return (
+//     <Dialog open={open} onClose={onClose} maxWidth="lg" fullWidth>
+//       <DialogTitle>Delivery Challan Details</DialogTitle>
+//       <DialogContent>
+//         <div style={containerStyle}>
+//           <div id="delivery-challan-container" style={receiptContainerStyle}>
+//             {/* Header Color Bar */}
+//             <div style={headerBarStyle}></div>
+
+//             {/* Company Header */}
+//             <div style={companyHeaderStyle}>
+//               <div style={companyInfoContainerStyle}>
+//                 <div style={logoStyle}>
+//                   <img
+//                     src="/SORT-ICON.png"
+//                     alt="Company Logo"
+//                     style={{
+//                       width: "100%",
+//                       height: "100%",
+//                       objectFit: "contain",
+//                     }}
+//                   />
+//                 </div>
+//                 <div>
+//                   <div style={companyNameStyle}>
+//                     Guru Goutam Infotech Pvt. Ltd.
+//                   </div>
+//                   <div style={companyDetailsStyle}>
+//                     {/* CIN: U72200KA2008PTC047679 */}
+//                     <br />
+//                     {/* GST: {dcData.gst_number || "29AADCG2608Q1Z6"} */}
+//                   </div>
+//                 </div>
+//               </div>
+//               <div style={challanHeaderStyle}>
+//                 <div style={challanTitleStyle}>DELIVERY CHALLAN</div>
+//                 <div style={challanDetailsStyle}>
+//                   Challan No: {dcData.dc_id}
+//                   <br />
+//                   Challan Date:{" "}
+//                   {new Date(dcData.dc_date).toLocaleDateString("en-GB")}
+//                 </div>
+//               </div>
+//             </div>
+
+//             {/* Recipient Section */}
+//             <div style={recipientSectionStyle}>
+//               <div style={recipientContainerStyle}>
+//                 <div style={recipientAddressStyle}>
+//                   <div style={recipientLabelStyle}>To</div>
+//                   {dcData.shipping_name}
+//                   <br />
+//                   {dcData.street && `${dcData.street}, `}
+//                   {dcData.landmark && `${dcData.landmark}, `}
+//                   {dcData.city}, {dcData.state},
+//                   <br />
+//                   {dcData.country} - {dcData.pincode}
+//                 </div>
+//                 <div style={recipientDetailsGridStyle}>
+//                   {/* <div>
+//                     <div style={detailLabelStyle}>Customer Code :</div>
+//                     {dcData.customer_code}
+//                   </div> */}
+//                   <div>
+//                     <div style={detailLabelStyle}>Contact Person :</div>
+//                     {dcData.shipping_ordered_by}
+//                   </div>
+//                   {/* <div>
+//                     <div style={detailLabelStyle}>Received Person :</div>
+//                     {dcData.receiver_name}
+//                   </div> */}
+//                   <div>
+//                     <div style={detailLabelStyle}>Contact Number :</div>
+//                     {dcData.shipping_phone_number}
+//                   </div>
+//                   <div>
+//                     <div style={detailLabelStyle}>PO Number:</div>
+//                     {dcData.dc_id || "N/A"}
+//                   </div>
+//                   <div>
+//                     <div style={detailLabelStyle}>Delivered Person :</div>
+//                     {dcData.delivery_person_name}
+//                   </div>
+
+//                   <div>
+//                     <div style={detailLabelStyle}>Deliver Perso Number :</div>
+//                     {dcData.delivery_person_phone_number}
+//                   </div>
+//                   <div>
+//                     <div style={detailLabelStyle}>Vehicle Number :</div>
+//                     {dcData.vehicle_number}
+//                   </div>
+//                 </div>
+//               </div>
+//             </div>
+
+//             {/* Items Table */}
+//             <table style={tableStyle}>
+//               <thead>
+//                 <tr>
+//                   <th style={tableHeaderNoStyle}>NO.</th>
+//                   <th style={tableHeaderParticularsStyle}>Product Name</th>
+//                   <th style={tableHeaderQtyStyle}>QTY</th>
+//                 </tr>
+//               </thead>
+//               <tbody>
+//                 {dcData.items?.map((item, index) => (
+//                   <tr
+//                     key={item.id}
+//                     style={
+//                       index % 2 === 0 ? tableRowOddStyle : tableRowEvenStyle
+//                     }
+//                   >
+//                     <td style={tableCellCenterStyle}>{index + 1}</td>
+//                     <td style={tableCellStyle}>
+//                       <div
+//                         style={{
+//                           fontWeight: "bold",
+//                           fontSize: "14px",
+//                           color: "#000",
+//                         }}
+//                       >
+//                         {item.product_name}
+//                       </div>
+//                       <div
+//                         style={{
+//                           fontSize: "11px",
+//                           color: "#555",
+//                           marginTop: 4,
+//                           lineHeight: "1.4",
+//                         }}
+//                       >
+//                         <strong>Specifications:</strong> Brand:{" "}
+//                         {item.product?.brand}. Model: {item.product?.model}.
+//                         Processor: {item.product?.processor}. RAM:{" "}
+//                         {item.product?.ram}. Storage: {item.product?.storage}.
+//                         <br />
+//                         Disk Type: {item.product?.disk_type}. Graphics:{" "}
+//                         {item.product?.graphics}. OS: {item.product?.os}.
+//                       </div>
+//                       <br />
+//                       {item.device_ids?.length > 0 && (
+//                         <div style={itemTitleStyle}>
+//                           <strong>Asset IDs:</strong>{" "}
+//                           {item.device_ids.join(", ")}
+//                         </div>
+//                       )}
+//                     </td>
+
+//                     <td style={tableCellCenterStyle}>{item.quantity}</td>
+//                   </tr>
+//                 ))}
+//               </tbody>
+//             </table>
+
+//             {/* Footer Info */}
+//             <div style={footerInfoStyle}>
+//               <div style={taxDetailsStyle}>
+//                 {/* PAN No. &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;:{" "}
+//                 {dcData.pan_number}
+//                 <br />
+//                 GST No. &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;:{" "}
+//                 {dcData.gst_number} */}
+//               </div>
+
+//               <div style={totalContainerStyle}>
+//                 <div style={totalLabelStyle}>TOTAL QTY :</div>
+//                 <div style={totalValueStyle}>{dcData.totalQuantity}</div>
+//               </div>
+//             </div>
+
+//             {/* Not For Sale */}
+//             <div style={notForSaleStyle}>
+//               {dcData.type === "Rent"
+//                 ? "NOT FOR SALE - RETURNABLE BASIS ONLY"
+//                 : "FOR SALE"}
+//             </div>
+
+//             {/* Signature Section */}
+//             <div style={signatureSectionStyle}>
+//               <div style={leftSignatureAreaStyle}>
+//                 <div style={jurisdictionNoteStyle}>
+//                   Note: Subjected to Bengaluru Jurisdiction
+//                 </div>
+//                 <table style={signatureTableStyle}>
+//                   <tbody>
+//                     <tr>
+//                       <td style={signatureTableHeaderStyle}>
+//                         Delivery Address
+//                       </td>
+//                       <td style={signatureTableHeaderStyle}>
+//                         Receiver Date and Signature
+//                       </td>
+//                     </tr>
+//                     <tr>
+//                       <td style={signatureTableCellStyle}>
+//                         {dcData.shipping_name}
+//                         <br />
+//                         {dcData.street && `${dcData.street}, `}
+//                         {dcData.landmark && `${dcData.landmark}, `}
+//                         {dcData.city}, {dcData.state}
+//                         <br />
+//                         {dcData.country} - {dcData.pincode}
+//                       </td>
+//                       <td style={signatureTableCellStyle}></td>
+//                     </tr>
+//                   </tbody>
+//                 </table>
+//               </div>
+//               <div style={rightSignatureAreaStyle}>
+//                 <div style={companySignatureLabelStyle}>
+//                   For Guru Goutham Infotech Private Limited
+//                 </div>
+//                 <div style={signatureBoxStyle}>SD/-</div>
+//                 <div style={signatureDesignationStyle}>
+//                   Authorised Signatory
+//                 </div>
+//               </div>
+//             </div>
+
+//             {/* Company Footer */}
+//             <div style={companyFooterStyle}>
+//               <div style={footerAddressStyle}>
+//                 <span>📍</span>
+//                 <span>
+//                   No. 8, 2nd Cross, Diagonal Road, 3rd Block,
+//                   <br />
+//                   Jayanagar Bengaluru-560011.
+//                 </span>
+//               </div>
+//               <div style={footerContactStyle}>
+//                 <div style={footerContactItemStyle}>
+//                   <span>🌐</span>
+//                   <span>gurugoutam.com</span>
+//                 </div>
+//                 <div style={footerContactItemStyle}>
+//                   <span>📞</span>
+//                   <span>080-2242 9955, +91 9449 0789 55</span>
+//                 </div>
+//                 <div style={footerContactItemStyle}>
+//                   <span>✉️</span>
+//                   <span>info@gurugoutam.com</span>
+//                 </div>
+//               </div>
+//             </div>
+//           </div>
+//         </div>
+//       </DialogContent>
+//       <DialogActions>
+//         <Button onClick={onClose}>Close</Button>
+//         <Button onClick={handleDownloadPDF} variant="contained" color="primary">
+//           Download PDF
+//         </Button>
+//         <Button onClick={() => window.print()}>Print</Button>
+//       </DialogActions>
+//     </Dialog>
+//   );
+// };
+
 const DeliveryChallanDialog = ({ open, onClose, dcData }) => {
   if (!dcData) return null;
 
-  const handleDownloadPDF = () => {
-    const input = document.getElementById("delivery-challan-container");
+  // Handle PDF download
+  const handleDownloadPDF = async () => {
+    try {
+      // Wait for dialog to fully render
+      await new Promise((resolve) => setTimeout(resolve, 300));
 
-    html2canvas(input, {
-      scale: 2,
-      logging: false,
-      useCORS: true,
-      allowTaint: true,
-    }).then((canvas) => {
+      // Find the delivery challan element
+      const element = document.getElementById("delivery-challan-container");
+
+      if (!element) {
+        throw new Error("Could not find delivery challan element in DOM");
+      }
+
+      // Create a clone for PDF generation to avoid layout issues
+      const clone = element.cloneNode(true);
+      clone.style.position = "absolute";
+      clone.style.left = "-9999px";
+      clone.style.visibility = "visible";
+      clone.style.width = "210mm";
+      document.body.appendChild(clone);
+
+      const options = {
+        scale: 2,
+        logging: true,
+        useCORS: true,
+        scrollX: 0,
+        scrollY: 0,
+        windowWidth: clone.scrollWidth,
+        windowHeight: clone.scrollHeight,
+        backgroundColor: "#FFFFFF",
+      };
+
+      const canvas = await html2canvas(clone, options);
+      document.body.removeChild(clone);
+
       const imgData = canvas.toDataURL("image/png");
       const pdf = new jsPDF("p", "mm", "a4");
-      const imgWidth = 210;
-      const imgHeight = (canvas.height * imgWidth) / canvas.width;
 
-      pdf.addImage(imgData, "PNG", 0, 0, imgWidth, imgHeight);
+      const imgProps = pdf.getImageProperties(imgData);
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+
+      // Handle multi-page PDF
+      let heightLeft = pdfHeight;
+      let position = 0;
+      const pageHeight = pdf.internal.pageSize.getHeight();
+
+      pdf.addImage(imgData, "PNG", 0, position, pdfWidth, pdfHeight);
+      heightLeft -= pageHeight;
+
+      while (heightLeft >= 0) {
+        position = heightLeft - pdfHeight;
+        pdf.addPage();
+        pdf.addImage(imgData, "PNG", 0, position, pdfWidth, pdfHeight);
+        heightLeft -= pageHeight;
+      }
+
       pdf.save(`delivery-challan-${dcData.dc_id}.pdf`);
-    });
+    } catch (error) {
+      console.error("PDF Generation Error:", error);
+      alert(`Failed to generate PDF: ${error.message}`);
+    }
+  };
+
+  const handlePrint = () => {
+    const element = document.getElementById("delivery-challan-container");
+
+    if (!element) {
+      console.error("Print element not found");
+      alert("Could not find content to print");
+      return;
+    }
+
+    const printWindow = window.open("", "_blank");
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Delivery Challan - ${dcData.dc_id}</title>
+          <style>
+            @page { 
+              size: A4; 
+              margin: 0; 
+            }
+            body { 
+              margin: 0; 
+              padding: 0; 
+              font-family: Arial, sans-serif;
+            }
+            .print-container { 
+              width: 210mm; 
+              min-height: 297mm; 
+              padding: 10mm; 
+              box-sizing: border-box;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="print-container">
+            ${element.innerHTML}
+          </div>
+          <script>
+            window.onload = function() {
+              setTimeout(function() {
+                window.print();
+                window.close();
+              }, 300);
+            }
+          </script>
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
+  };
+
+  // Function to render accessories information
+  const renderAccessories = () => {
+    const accessories = [];
+    
+    // Add standard accessories if they are true
+    if (dcData.mouse) accessories.push("Mouse");
+    if (dcData.cable) accessories.push("Cable");
+    if (dcData.bag) accessories.push("Bag");
+    
+    // Add other accessories from the array
+    if (dcData.other_accessory && dcData.other_accessory.length > 0) {
+      accessories.push(...dcData.other_accessory);
+    }
+    
+    // Add "Others" if the others field is true but no specific accessories listed
+    if (dcData.others && accessories.length === 0) {
+      accessories.push("Others");
+    }
+    
+    return accessories.length > 0 ? (
+      <div style={accessoriesContainerStyle}>
+        <div style={accessoriesTitleStyle}>Accessories Included:</div>
+        <ul style={accessoriesListStyle}>
+          {accessories.map((item, index) => (
+            <li key={index} style={accessoriesListItemStyle}>{item}</li>
+          ))}
+        </ul>
+      </div>
+    ) : null;
   };
 
   return (
@@ -419,7 +832,7 @@ const DeliveryChallanDialog = ({ open, onClose, dcData }) => {
             <div style={recipientSectionStyle}>
               <div style={recipientContainerStyle}>
                 <div style={recipientAddressStyle}>
-                  <div style={recipientLabelStyle}>To</div>
+                  <div style={recipientLabelStyle}>Ship To</div>
                   {dcData.shipping_name}
                   <br />
                   {dcData.street && `${dcData.street}, `}
@@ -430,32 +843,25 @@ const DeliveryChallanDialog = ({ open, onClose, dcData }) => {
                 </div>
                 <div style={recipientDetailsGridStyle}>
                   <div>
-                    <div style={detailLabelStyle}>Customer Code :</div>
-                    {dcData.customer_code}
-                  </div>
-                  <div>
-                    <div style={detailLabelStyle}>Contact Person :</div>
-                    {dcData.shipping_ordered_by}
-                  </div>
-                  <div>
-                    <div style={detailLabelStyle}>Received Person :</div>
+                    <div style={detailLabelStyle}>Receiver Person :</div>
                     {dcData.receiver_name}
                   </div>
                   <div>
-                    <div style={detailLabelStyle}>Delivered Staff :</div>
-                    {dcData.delivery_person_name}
+                    <div style={detailLabelStyle}>Receiver Number :</div>
+                    {dcData.receiver_phone_number}
                   </div>
                   <div>
                     <div style={detailLabelStyle}>PO Number:</div>
                     {dcData.dc_id || "N/A"}
                   </div>
                   <div>
-                    <div style={detailLabelStyle}>Contact Number :</div>
-                    {dcData.shipping_phone_number}
+                    <div style={detailLabelStyle}>Delivered Person :</div>
+                    {dcData.delivery_person_name}
                   </div>
+
                   <div>
-                    <div style={detailLabelStyle}>Receiver Number :</div>
-                    {dcData.receiver_phone_number}
+                    <div style={detailLabelStyle}>Deliver Perso Number :</div>
+                    {dcData.delivery_person_phone_number}
                   </div>
                   <div>
                     <div style={detailLabelStyle}>Vehicle Number :</div>
@@ -523,6 +929,9 @@ const DeliveryChallanDialog = ({ open, onClose, dcData }) => {
                 ))}
               </tbody>
             </table>
+
+            {/* Accessories Section */}
+            {renderAccessories()}
 
             {/* Footer Info */}
             <div style={footerInfoStyle}>
@@ -622,33 +1031,148 @@ const DeliveryChallanDialog = ({ open, onClose, dcData }) => {
         <Button onClick={handleDownloadPDF} variant="contained" color="primary">
           Download PDF
         </Button>
-        <Button onClick={() => window.print()}>Print</Button>
+        <Button onClick={handlePrint}>Print</Button>
       </DialogActions>
     </Dialog>
   );
 };
 
+
 // Goods Return Note Dialog Component
 const GoodsReturnNoteDialog = ({ open, onClose, grnData }) => {
   if (!grnData) return null;
 
-  const handleDownloadPDF = () => {
-    const input = document.getElementById("grn-container");
+  // Handle PDF download
+  const handleDownloadPDF = async () => {
+    try {
+      // Wait for dialog to fully render
+      await new Promise((resolve) => setTimeout(resolve, 300));
 
-    html2canvas(input, {
-      scale: 2,
-      logging: false,
-      useCORS: true,
-      allowTaint: true,
-    }).then((canvas) => {
+      // Find the GRN container element
+      const element = document.getElementById("grn-container");
+
+      if (!element) {
+        throw new Error("Could not find GRN element in DOM");
+      }
+
+      // Create a clone for PDF generation to avoid layout issues
+      const clone = element.cloneNode(true);
+      clone.style.position = "absolute";
+      clone.style.left = "-9999px";
+      clone.style.visibility = "visible";
+      clone.style.width = "210mm";
+      document.body.appendChild(clone);
+
+      const options = {
+        scale: 2,
+        logging: true,
+        useCORS: true,
+        scrollX: 0,
+        scrollY: 0,
+        windowWidth: clone.scrollWidth,
+        windowHeight: clone.scrollHeight,
+        backgroundColor: "#FFFFFF",
+      };
+
+      const canvas = await html2canvas(clone, options);
+      document.body.removeChild(clone);
+
       const imgData = canvas.toDataURL("image/png");
       const pdf = new jsPDF("p", "mm", "a4");
-      const imgWidth = 210;
-      const imgHeight = (canvas.height * imgWidth) / canvas.width;
 
-      pdf.addImage(imgData, "PNG", 0, 0, imgWidth, imgHeight);
-      pdf.save(`goods-return-note-${grnData.grn_number}.pdf`);
-    });
+      const imgProps = pdf.getImageProperties(imgData);
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+
+      // Handle multi-page PDF
+      let heightLeft = pdfHeight;
+      let position = 0;
+      const pageHeight = pdf.internal.pageSize.getHeight();
+
+      pdf.addImage(imgData, "PNG", 0, position, pdfWidth, pdfHeight);
+      heightLeft -= pageHeight;
+
+      while (heightLeft >= 0) {
+        position = heightLeft - pdfHeight;
+        pdf.addPage();
+        pdf.addImage(imgData, "PNG", 0, position, pdfWidth, pdfHeight);
+        heightLeft -= pageHeight;
+      }
+
+      pdf.save(`goods-return-note-${grnData.credit_note_number || "GRN"}.pdf`);
+    } catch (error) {
+      console.error("PDF Generation Error:", error);
+      alert(`Failed to generate PDF: ${error.message}`);
+    }
+  };
+
+  const handlePrint = () => {
+    const element = document.getElementById("grn-container");
+
+    if (!element) {
+      console.error("Print element not found");
+      alert("Could not find the GRN content for printing");
+      return;
+    }
+
+    const printWindow = window.open("", "_blank");
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Goods Return Note - ${
+            grnData.credit_note_number || "GRN"
+          }</title>
+          <style>
+            @page { 
+              size: A4; 
+              margin: 10mm; 
+            }
+            body { 
+              margin: 0; 
+              padding: 0; 
+              font-family: Arial, sans-serif;
+              -webkit-print-color-adjust: exact;
+              print-color-adjust: exact;
+            }
+            .print-container { 
+              width: 190mm; 
+              min-height: 277mm; 
+              padding: 0;
+              box-sizing: border-box;
+            }
+            table {
+              width: 100%;
+              border-collapse: collapse;
+            }
+            th, td {
+              border: 1px solid #000;
+              padding: 8px;
+              text-align: left;
+            }
+            th {
+              background-color: #f0f0f0;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="print-container">
+            ${element.innerHTML}
+          </div>
+          <script>
+            window.onload = function() {
+              setTimeout(function() {
+                window.print();
+                setTimeout(function() {
+                  window.close();
+                }, 500);
+              }, 300);
+            }
+          </script>
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
   };
 
   return (
@@ -679,21 +1203,23 @@ const GoodsReturnNoteDialog = ({ open, onClose, grnData }) => {
                     Guru Goutam Infotech Pvt. Ltd.
                   </div>
                   <div style={companyDetailsStyle}>
-                    CIN: U72200KA2008PTC047679
+                    CIN: UT2200KA2008PTC047879
                     <br />
-                    GST: {grnData.gst_number || "29AADCG2608Q1Z6"}
+                    GST: {grnData.customer?.gst || "29AADCG2606Q1Z6"}
                   </div>
                 </div>
               </div>
               <div style={challanHeaderStyle}>
                 <div style={challanTitleStyle}>GOODS RETURN NOTE</div>
                 <div style={challanDetailsStyle}>
-                  GRN No: {grnData.grn_number}
+                  GRN No: {grnData.credit_note_number || "CN-9JGRRE"}
                   <br />
                   GRN Date:{" "}
-                  {new Date(grnData.grn_date).toLocaleDateString("en-GB")}
+                  {new Date(
+                    grnData.returned_date || "2025-11-11"
+                  ).toLocaleDateString("en-GB")}
                   <br />
-                  Order No: {grnData.dispatch_order_number}
+                  Order No: {grnData.dispatch_order_number || "DC-W428BK"}
                 </div>
               </div>
             </div>
@@ -702,41 +1228,43 @@ const GoodsReturnNoteDialog = ({ open, onClose, grnData }) => {
             <div style={recipientSectionStyle}>
               <div style={recipientContainerStyle}>
                 <div style={recipientAddressStyle}>
-                  <div style={recipientLabelStyle}>To</div>
-                  {grnData.company_name}
+                  <div style={recipientLabelStyle}>To:</div>
+                  {grnData.customer?.first_name} {grnData.customer?.last_name},
                   <br />
-                  {grnData.street && `${grnData.street}, `}
-                  {grnData.landmark && `${grnData.landmark}, `}
-                  {grnData.city}, {grnData.state}
+                  {grnData.customer?.address?.street &&
+                    `${grnData.customer.address.street}, `}
+                  {grnData.customer?.address?.city &&
+                    `${grnData.customer.address.city}, `}
+                  {grnData.customer?.address?.state &&
+                    `${grnData.customer.address.state}`}
                   <br />
-                  {grnData.country} - {grnData.pincode}
+                  {grnData.customer?.address?.country &&
+                    `${grnData.customer.address.country} - `}
+                  {grnData.customer?.address?.pincode}
                 </div>
                 <div style={recipientDetailsGridStyle}>
                   <div>
-                    <div style={detailLabelStyle}>Contact Person :</div>
-                    {grnData.informed_person_name}
+                    <div style={detailLabelStyle}>Contact Person:</div>
+                    {grnData.customer?.first_name} {grnData.customer?.last_name}
+                  </div>
+                  <div>
+                    <div style={detailLabelStyle}>Contact Number:</div>
+                    {grnData.customer?.phone_number}
                   </div>
 
                   <div>
-                    <div style={detailLabelStyle}>Collected By :</div>
-                    {grnData.returner_name}
+                    <div style={detailLabelStyle}>Collected Person Name:</div>
+                    {grnData.collected_person_name || "Not specified"}
                   </div>
 
                   <div>
                     <div style={detailLabelStyle}>Collected Person No:</div>
-                    {grnData.receiver_phone}
+                    {grnData.collected_person_no || "Not specified"}
                   </div>
+
                   <div>
-                    <div style={detailLabelStyle}>Invoice Number:</div>
-                    {grnData.invoice_number || "N/A"}
-                  </div>
-                  <div>
-                    <div style={detailLabelStyle}>Contact Number :</div>
-                    {grnData.phone_number}
-                  </div>
-                  <div>
-                    <div style={detailLabelStyle}>Vehicle Number :</div>
-                    {grnData.vehicle_number}
+                    <div style={detailLabelStyle}>Vehicle Number:</div>
+                    {grnData.vehicle_no || "Not specified"}
                   </div>
                 </div>
               </div>
@@ -760,7 +1288,7 @@ const GoodsReturnNoteDialog = ({ open, onClose, grnData }) => {
 
                   return (
                     <tr
-                      key={item.grn_item_id || index}
+                      key={item.id || index}
                       style={
                         index % 2 === 0 ? tableRowOddStyle : tableRowEvenStyle
                       }
@@ -786,14 +1314,14 @@ const GoodsReturnNoteDialog = ({ open, onClose, grnData }) => {
                           }}
                         >
                           <strong>Specifications:</strong> Brand:{" "}
-                          {item.product?.brand || "—"}, Model:{" "}
-                          {item.product?.model || "—"}, Processor:{" "}
+                          {item.product?.brand || "Dell"}, Model:{" "}
+                          {item.product?.model || "3420"}, Processor:{" "}
                           {item.product?.processor || "—"}, RAM:{" "}
-                          {item.product?.ram || "—"}, <br />
-                          Storage: {item.product?.storage || "—"}, Disk Type:{" "}
-                          {item.product?.disk_type || "—"}, Graphics:{" "}
-                          {item.product?.graphics || "—"}, OS:{" "}
-                          {item.product?.os || "—"}
+                          {item.product?.ram || "8GB DDR4"}, <br />
+                          Storage: {item.product?.storage || "250GB"}, Disk
+                          Type: {item.product?.disk_type || "SSD"}, Graphics:{" "}
+                          {item.product?.graphics || "No"}, OS:{" "}
+                          {item.product?.os || "Windows 11 Pro"}
                         </div>
                         <br />
 
@@ -814,10 +1342,10 @@ const GoodsReturnNoteDialog = ({ open, onClose, grnData }) => {
             <div style={footerInfoStyle}>
               <div style={taxDetailsStyle}>
                 PAN No. &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;:{" "}
-                {grnData.pan_number}
+                {grnData.customer?.pan_no || "FGHIJ6789L"}
                 <br />
                 GST No. &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;:{" "}
-                {grnData.gst_number}
+                {grnData.customer?.gst || "29AADCG2606Q1Z6"}
               </div>
 
               <div style={totalContainerStyle}>
@@ -830,7 +1358,8 @@ const GoodsReturnNoteDialog = ({ open, onClose, grnData }) => {
 
             {/* Description */}
             <div style={totalLabelStyle}>
-              <strong>Description:</strong> {grnData.description}
+              <strong>Description:</strong>{" "}
+              {grnData.description || "Goods return note"}
             </div>
 
             {/* Signature Section */}
@@ -849,13 +1378,19 @@ const GoodsReturnNoteDialog = ({ open, onClose, grnData }) => {
                     </tr>
                     <tr>
                       <td style={signatureTableCellStyle}>
-                        {grnData.company_name}
+                        {grnData.customer?.first_name}{" "}
+                        {grnData.customer?.last_name},
                         <br />
-                        {grnData.street && `${grnData.street}, `}
-                        {grnData.landmark && `${grnData.landmark}, `}
-                        {grnData.city}, {grnData.state}
+                        {grnData.customer?.address?.street &&
+                          `${grnData.customer.address.street}, `}
+                        {grnData.customer?.address?.city &&
+                          `${grnData.customer.address.city}, `}
+                        {grnData.customer?.address?.state &&
+                          `${grnData.customer.address.state}`}
                         <br />
-                        {grnData.country} - {grnData.pincode}
+                        {grnData.customer?.address?.country &&
+                          `${grnData.customer.address.country} - `}
+                        {grnData.customer?.address?.pincode}
                       </td>
                       <td style={signatureTableCellStyle}></td>
                     </tr>
@@ -906,7 +1441,411 @@ const GoodsReturnNoteDialog = ({ open, onClose, grnData }) => {
         <Button onClick={handleDownloadPDF} variant="contained" color="primary">
           Download PDF
         </Button>
-        <Button onClick={() => window.print()}>Print</Button>
+        <Button onClick={handlePrint} variant="contained" color="secondary">
+          Print
+        </Button>
+      </DialogActions>
+    </Dialog>
+  );
+};
+
+const PlainGoodsReturnNoteDialog = ({ open, onClose, grnData }) => {
+  if (!grnData) return null;
+
+  // Extract items from all challans
+  const allItems =
+    grnData.challans?.flatMap(
+      (challan) =>
+        challan.items?.map((item) => ({
+          ...item,
+          challanId: challan.dc_id,
+          challanDate: challan.dc_date,
+        })) || []
+    ) || [];
+
+  // Handle PDF download
+  const handleDownloadPDF = async () => {
+    try {
+      // Wait for dialog to fully render
+      await new Promise((resolve) => setTimeout(resolve, 300));
+
+      // Find the GRN container element
+      const element = document.getElementById("grn-container");
+
+      if (!element) {
+        throw new Error("Could not find GRN element in DOM");
+      }
+
+      // Create a clone for PDF generation to avoid layout issues
+      const clone = element.cloneNode(true);
+      clone.style.position = "absolute";
+      clone.style.left = "-9999px";
+      clone.style.visibility = "visible";
+      clone.style.width = "210mm";
+      document.body.appendChild(clone);
+
+      const options = {
+        scale: 2,
+        logging: true,
+        useCORS: true,
+        scrollX: 0,
+        scrollY: 0,
+        windowWidth: clone.scrollWidth,
+        windowHeight: clone.scrollHeight,
+        backgroundColor: "#FFFFFF",
+      };
+
+      const canvas = await html2canvas(clone, options);
+      document.body.removeChild(clone);
+
+      const imgData = canvas.toDataURL("image/png");
+      const pdf = new jsPDF("p", "mm", "a4");
+
+      const imgProps = pdf.getImageProperties(imgData);
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+
+      // Handle multi-page PDF
+      let heightLeft = pdfHeight;
+      let position = 0;
+      const pageHeight = pdf.internal.pageSize.getHeight();
+
+      pdf.addImage(imgData, "PNG", 0, position, pdfWidth, pdfHeight);
+      heightLeft -= pageHeight;
+
+      while (heightLeft >= 0) {
+        position = heightLeft - pdfHeight;
+        pdf.addPage();
+        pdf.addImage(imgData, "PNG", 0, position, pdfWidth, pdfHeight);
+        heightLeft -= pageHeight;
+      }
+
+      pdf.save(`goods-return-note-${grnData.credit_note_number || "GRN"}.pdf`);
+    } catch (error) {
+      console.error("PDF Generation Error:", error);
+      alert(`Failed to generate PDF: ${error.message}`);
+    }
+  };
+
+  const handlePrint = () => {
+    const element = document.getElementById("grn-container");
+
+    if (!element) {
+      console.error("Print element not found");
+      alert("Could not find the GRN content for printing");
+      return;
+    }
+
+    const printWindow = window.open("", "_blank");
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Goods Return Note - ${
+            grnData.credit_note_number || "GRN"
+          }</title>
+          <style>
+            @page { 
+              size: A4; 
+              margin: 10mm; 
+            }
+            body { 
+              margin: 0; 
+              padding: 0; 
+              font-family: Arial, sans-serif;
+              -webkit-print-color-adjust: exact;
+              print-color-adjust: exact;
+            }
+            .print-container { 
+              width: 190mm; 
+              min-height: 277mm; 
+              padding: 0;
+              box-sizing: border-box;
+            }
+            table {
+              width: 100%;
+              border-collapse: collapse;
+            }
+            th, td {
+              border: 1px solid #000;
+              padding: 8px;
+              text-align: left;
+            }
+            th {
+              background-color: #f0f0f0;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="print-container">
+            ${element.innerHTML}
+          </div>
+          <script>
+            window.onload = function() {
+              setTimeout(function() {
+                window.print();
+                setTimeout(function() {
+                  window.close();
+                }, 500);
+              }, 300);
+            }
+          </script>
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
+  };
+
+  return (
+    <Dialog open={open} onClose={onClose} maxWidth="lg" fullWidth>
+      <DialogTitle>Goods Return Note Details</DialogTitle>
+      <DialogContent>
+        <div style={containerStyle}>
+          <div id="grn-container" style={receiptContainerStyle}>
+            {/* Header Color Bar */}
+            <div style={headerBarStyle}></div>
+
+            {/* Company Header */}
+            <div style={companyHeaderStyle}>
+              <div style={companyInfoContainerStyle}>
+                <div style={logoStyle}>
+                  <img
+                    src="/SORT-ICON.png"
+                    alt="Company Logo"
+                    style={{
+                      width: "100%",
+                      height: "100%",
+                      objectFit: "contain",
+                    }}
+                  />
+                </div>
+                <div>
+                  <div style={companyNameStyle}>
+                    Guru Goutam Infotech Pvt. Ltd.
+                  </div>
+                  <div style={companyDetailsStyle}>
+                    CIN: UT2200KA2008PTC047879
+                    <br />
+                    GST: {grnData.customer?.gst || "29AADCG2606Q1Z6"}
+                  </div>
+                </div>
+              </div>
+              <div style={challanHeaderStyle}>
+                <div style={challanTitleStyle}>GOODS RETURN NOTE</div>
+                <div style={challanDetailsStyle}>
+                  GRN No: {grnData.credit_note_number || "CN-9JGRRE"}
+                  <br />
+                  GRN Date:{" "}
+                  {new Date(
+                    grnData.returned_date || "2025-11-11"
+                  ).toLocaleDateString("en-GB")}
+                  <br />
+                </div>
+              </div>
+            </div>
+
+            {/* Recipient Section */}
+            <div style={recipientSectionStyle}>
+              <div style={recipientContainerStyle}>
+                <div style={recipientAddressStyle}>
+                  <div style={recipientLabelStyle}>To:</div>
+                  {grnData.customer?.first_name} {grnData.customer?.last_name},
+                  <br />
+                  {grnData.customer?.address?.street &&
+                    `${grnData.customer.address.street}, `}
+                  {grnData.customer?.address?.city &&
+                    `${grnData.customer.address.city}, `}
+                  {grnData.customer?.address?.state &&
+                    `${grnData.customer.address.state}`}
+                  <br />
+                  {grnData.customer?.address?.country &&
+                    `${grnData.customer.address.country} - `}
+                  {grnData.customer?.address?.pincode}
+                </div>
+                <div style={recipientDetailsGridStyle}>
+                  <div>
+                    <div style={detailLabelStyle}>Contact Person:</div>
+                    {grnData.customer?.first_name} {grnData.customer?.last_name}
+                  </div>
+                  <div>
+                    <div style={detailLabelStyle}>Contact Number:</div>
+                    {grnData.customer?.phone_number}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Items Table */}
+            <table style={tableStyle}>
+              <thead>
+                <tr>
+                  <th style={tableHeaderNoStyle}>NO.</th>
+                  <th style={tableHeaderParticularsStyle}>Product Name</th>
+                </tr>
+              </thead>
+              <tbody>
+                {allItems
+                  .filter((item) => {
+                    const deviceIds =
+                      typeof item.device_ids === "string"
+                        ? JSON.parse(item.device_ids)
+                        : item.device_ids || [];
+                    return deviceIds.length > 0; // ✅ only include items with device_ids
+                  })
+                  .map((item, index) => {
+                    const deviceIds =
+                      typeof item.device_ids === "string"
+                        ? JSON.parse(item.device_ids)
+                        : item.device_ids || [];
+
+                    return (
+                      <tr
+                        key={item.id || index}
+                        style={
+                          index % 2 === 0 ? tableRowOddStyle : tableRowEvenStyle
+                        }
+                      >
+                        <td style={tableCellCenterStyle}>{index + 1}</td>
+                        <td style={tableCellStyle}>
+                          <div
+                            style={{
+                              fontWeight: "bold",
+                              fontSize: "14px",
+                              color: "#000",
+                            }}
+                          >
+                            {item.product_name}
+                          </div>
+
+                          <div
+                            style={{
+                              fontSize: "11px",
+                              color: "#555",
+                              marginTop: 4,
+                              lineHeight: "1.5",
+                            }}
+                          >
+                            <strong>Specifications:</strong> Brand:{" "}
+                            {item.product?.brand || "Dell"}, Model:{" "}
+                            {item.product?.model || "3420"}, Processor:{" "}
+                            {item.product?.processor || "—"}, RAM:{" "}
+                            {item.product?.ram || "8GB DDR4"}, <br />
+                            Storage: {item.product?.storage || "250GB"}, Disk
+                            Type: {item.product?.disk_type || "SSD"}, Graphics:{" "}
+                            {item.product?.graphics || "No"}, OS:{" "}
+                            {item.product?.os || "Windows 11 Pro"}
+                          </div>
+                          <br />
+
+                          <div style={itemTitleStyle}>
+                            <strong>Asset IDs:</strong> {deviceIds.join(", ")}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+              </tbody>
+            </table>
+
+            {/* Footer Info */}
+            <div style={footerInfoStyle}>
+              <div style={taxDetailsStyle}>
+                PAN No. &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;:{" "}
+                {grnData.customer?.pan_no || "FGHIJ6789L"}
+                <br />
+                GST No. &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;:{" "}
+                {grnData.customer?.gst || "29AADCG2606Q1Z6"}
+              </div>
+            </div>
+
+            {/* Description */}
+            <div style={totalLabelStyle}>
+              <strong>Description:</strong>{" "}
+              {grnData.description || "Goods return note"}
+            </div>
+
+            {/* Signature Section */}
+            <div style={signatureSectionStyle}>
+              <div style={leftSignatureAreaStyle}>
+                <div style={jurisdictionNoteStyle}>
+                  Note: Subjected to Bengaluru Jurisdiction
+                </div>
+                <table style={signatureTableStyle}>
+                  <tbody>
+                    <tr>
+                      <td style={signatureTableHeaderStyle}>Return Address</td>
+                      <td style={signatureTableHeaderStyle}>
+                        Receiver Date and Signature
+                      </td>
+                    </tr>
+                    <tr>
+                      <td style={signatureTableCellStyle}>
+                        {grnData.customer?.first_name}{" "}
+                        {grnData.customer?.last_name},
+                        <br />
+                        {grnData.customer?.address?.street &&
+                          `${grnData.customer.address.street}, `}
+                        {grnData.customer?.address?.city &&
+                          `${grnData.customer.address.city}, `}
+                        {grnData.customer?.address?.state &&
+                          `${grnData.customer.address.state}`}
+                        <br />
+                        {grnData.customer?.address?.country &&
+                          `${grnData.customer.address.country} - `}
+                        {grnData.customer?.address?.pincode}
+                      </td>
+                      <td style={signatureTableCellStyle}></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <div style={rightSignatureAreaStyle}>
+                <div style={companySignatureLabelStyle}>
+                  For Guru Goutham Infotech Private Limited
+                </div>
+                <div style={signatureBoxStyle}>SD/-</div>
+                <div style={signatureDesignationStyle}>
+                  Authorised Signatory
+                </div>
+              </div>
+            </div>
+
+            {/* Company Footer */}
+            <div style={companyFooterStyle}>
+              <div style={footerAddressStyle}>
+                <span>📍</span>
+                <span>
+                  No. 8, 2nd Cross, Diagonal Road, 3rd Block,
+                  <br />
+                  Jayanagar Bengaluru-560011.
+                </span>
+              </div>
+              <div style={footerContactStyle}>
+                <div style={footerContactItemStyle}>
+                  <span>🌐</span>
+                  <span>gurugoutam.com</span>
+                </div>
+                <div style={footerContactItemStyle}>
+                  <span>📞</span>
+                  <span>080-2242 9955, +91 9449 0789 55</span>
+                </div>
+                <div style={footerContactItemStyle}>
+                  <span>✉️</span>
+                  <span>info@gurugoutam.com</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={onClose}>Close</Button>
+        <Button onClick={handleDownloadPDF} variant="contained" color="primary">
+          Download PDF
+        </Button>
+        <Button onClick={handlePrint} variant="contained" color="secondary">
+          Print
+        </Button>
       </DialogActions>
     </Dialog>
   );
@@ -914,6 +1853,21 @@ const GoodsReturnNoteDialog = ({ open, onClose, grnData }) => {
 
 const CreditNoteDialog = ({ open, onClose, creditNoteData }) => {
   if (!creditNoteData) return null;
+
+  const isSameMonth = (date1, date2) => {
+    if (!date1 || !date2) return false;
+    const d1 = new Date(date1);
+    const d2 = new Date(date2);
+    return (
+      d1.getFullYear() === d2.getFullYear() && d1.getMonth() === d2.getMonth()
+    );
+  };
+
+  // Set the flag
+  const sameMonthFlag = isSameMonth(
+    creditNoteData.dc_date,
+    creditNoteData.returned_date
+  );
 
   // Helper functions
   const formatDate = (dateStr) => {
@@ -928,10 +1882,25 @@ const CreditNoteDialog = ({ open, onClose, creditNoteData }) => {
   // Calculate days between returned_date and rental_end_date
   const calculateDaysDifference = (returnedDate, rentalEndDate) => {
     if (!returnedDate || !rentalEndDate) return 0;
-    const returned = new Date(returnedDate);
-    const rentalEnd = new Date(rentalEndDate);
-    const diffTime = Math.abs(rentalEnd - returned);
-    return Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1; // Inclusive of both dates
+
+    const ret = new Date(returnedDate);
+    const end = new Date(rentalEndDate);
+
+    // Extract day, month, year
+    const retDay = ret.getDate();
+    const retMonth = ret.getMonth(); // 0-based
+    const retYear = ret.getFullYear();
+
+    const endDay = end.getDate();
+    const endMonth = end.getMonth();
+    const endYear = end.getFullYear();
+
+    // Convert to total "billing days" using 30-day months and 360-day years
+    const totalRetDays = retYear * 360 + retMonth * 30 + retDay;
+    const totalEndDays = endYear * 360 + endMonth * 30 + endDay;
+
+    // Inclusive difference (+1)
+    return Math.abs(totalEndDays - totalRetDays) + 1;
   };
 
   // Calculate item prices based on days difference
@@ -952,7 +1921,9 @@ const CreditNoteDialog = ({ open, onClose, creditNoteData }) => {
     );
 
     // Calculate days used (from 1st July to 20th July 2025 = 20 days)
-    const daysUsed = calculateDaysDifference(monthStartDate, returnedDate) - 1;
+    const daysUsed = sameMonthFlag
+      ? calculateDaysDifference(creditNoteData.dc_date, returnedDate)
+      : calculateDaysDifference(monthStartDate, returnedDate);
 
     // Calculate day difference
     const daysDifference = Math.ceil(
@@ -961,8 +1932,9 @@ const CreditNoteDialog = ({ open, onClose, creditNoteData }) => {
 
     return items.map((item) => {
       const unitPrice = parseFloat(item.unit_price || 0);
-      const dailyRate = unitPrice / 30;
-      const totalPrice = daysDifference * item.quantity * dailyRate;
+      const dailyRate = Math.round((unitPrice / 30) * 100) / 100;
+      const totalPrice =
+        Math.round(daysDifference * item.quantity * dailyRate * 100) / 100;
 
       return {
         ...item,
@@ -1014,23 +1986,119 @@ const CreditNoteDialog = ({ open, onClose, creditNoteData }) => {
     }).format(amount);
   };
 
-  const handleDownloadPDF = () => {
-    const input = document.getElementById("credit-note-container");
+  // Handle PDF download
+  const handleDownloadPDF = async () => {
+    try {
+      // Wait for dialog to fully render
+      await new Promise((resolve) => setTimeout(resolve, 300));
 
-    html2canvas(input, {
-      scale: 2,
-      logging: false,
-      useCORS: true,
-      allowTaint: true,
-    }).then((canvas) => {
+      // Find the credit note element
+      const element = document.getElementById("credit-note-container");
+
+      if (!element) {
+        throw new Error("Could not find credit note element in DOM");
+      }
+
+      // Create a clone for PDF generation to avoid layout issues
+      const clone = element.cloneNode(true);
+      clone.style.position = "absolute";
+      clone.style.left = "-9999px";
+      clone.style.visibility = "visible";
+      clone.style.width = "210mm";
+      document.body.appendChild(clone);
+
+      const options = {
+        scale: 2,
+        logging: true,
+        useCORS: true,
+        scrollX: 0,
+        scrollY: 0,
+        windowWidth: clone.scrollWidth,
+        windowHeight: clone.scrollHeight,
+        backgroundColor: "#FFFFFF",
+      };
+
+      const canvas = await html2canvas(clone, options);
+      document.body.removeChild(clone);
+
       const imgData = canvas.toDataURL("image/png");
       const pdf = new jsPDF("p", "mm", "a4");
-      const imgWidth = 210;
-      const imgHeight = (canvas.height * imgWidth) / canvas.width;
 
-      pdf.addImage(imgData, "PNG", 0, 0, imgWidth, imgHeight);
+      const imgProps = pdf.getImageProperties(imgData);
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+
+      // Handle multi-page PDF
+      let heightLeft = pdfHeight;
+      let position = 0;
+      const pageHeight = pdf.internal.pageSize.getHeight();
+
+      pdf.addImage(imgData, "PNG", 0, position, pdfWidth, pdfHeight);
+      heightLeft -= pageHeight;
+
+      while (heightLeft >= 0) {
+        position = heightLeft - pdfHeight;
+        pdf.addPage();
+        pdf.addImage(imgData, "PNG", 0, position, pdfWidth, pdfHeight);
+        heightLeft -= pageHeight;
+      }
+
       pdf.save(`credit-note-${creditNoteData.credit_note_number}.pdf`);
-    });
+    } catch (error) {
+      console.error("PDF Generation Error:", error);
+      alert(`Failed to generate PDF: ${error.message}`);
+    }
+  };
+
+  const handlePrint = () => {
+    const element = document.getElementById("credit-note-container");
+
+    if (!element) {
+      console.error("Print element not found");
+      alert("Could not find content to print");
+      return;
+    }
+
+    const printWindow = window.open("", "_blank");
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Credit Note - ${creditNoteData.credit_note_number}</title>
+          <style>
+            @page { 
+              size: A4; 
+              margin: 0; 
+            }
+            body { 
+              margin: 0; 
+              padding: 0; 
+              font-family: Arial, sans-serif;
+            }
+            .print-container { 
+              width: 210mm; 
+              min-height: 297mm; 
+              padding: 10mm; 
+              box-sizing: border-box;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="print-container">
+            ${element.innerHTML}
+          </div>
+          <script>
+            window.onload = function() {
+              setTimeout(function() {
+                window.print();
+                window.close();
+              }, 300);
+            }
+          </script>
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
   };
 
   return (
@@ -1216,8 +2284,8 @@ const CreditNoteDialog = ({ open, onClose, creditNoteData }) => {
                           <div>
                             <br />
                             Used for {item.daysUsed} days{" "}
-                            {formatDate(item.monthStartDate)} to{" "}
-                            {formatDate(item.returnedDate)}
+                            {formatDate(item.returnedDate)} to{" "}
+                            {formatDate(item.endOfMonth)}
                           </div>
                         </>
                       )}
@@ -1353,11 +2421,494 @@ const CreditNoteDialog = ({ open, onClose, creditNoteData }) => {
         <Button onClick={handleDownloadPDF} variant="contained" color="primary">
           Download PDF
         </Button>
-        <Button onClick={() => window.print()}>Print</Button>
+        <Button onClick={handlePrint}>Print</Button>
       </DialogActions>
     </Dialog>
   );
 };
+
+//25-08-2025
+
+// const CreditNoteDialog = ({ open, onClose, creditNoteData }) => {
+//   if (!creditNoteData) return null;
+
+//   const isSameMonth = (date1, date2) => {
+//     if (!date1 || !date2) return false;
+//     const d1 = new Date(date1);
+//     const d2 = new Date(date2);
+//     return (
+//       d1.getFullYear() === d2.getFullYear() && d1.getMonth() === d2.getMonth()
+//     );
+//   };
+
+//   // Set the flag
+//   const sameMonthFlag = isSameMonth(
+//     creditNoteData.dc_date,
+//     creditNoteData.returned_date
+//   );
+
+//   // Debug / output
+
+//   // Helper functions
+//   const formatDate = (dateStr) => {
+//     if (!dateStr) return "-";
+//     const date = new Date(dateStr);
+//     const day = String(date.getDate()).padStart(2, "0");
+//     const month = String(date.getMonth() + 1).padStart(2, "0");
+//     const year = date.getFullYear();
+//     return `${day}/${month}/${year}`;
+//   };
+
+//   // Calculate days between returned_date and rental_end_date
+//   const calculateDaysDifference = (returnedDate, rentalEndDate) => {
+//     if (!returnedDate || !rentalEndDate) return 0;
+
+//     const ret = new Date(returnedDate);
+//     const end = new Date(rentalEndDate);
+
+//     // Extract day, month, year
+//     const retDay = ret.getDate();
+//     const retMonth = ret.getMonth(); // 0-based
+//     const retYear = ret.getFullYear();
+
+//     const endDay = end.getDate();
+//     const endMonth = end.getMonth();
+//     const endYear = end.getFullYear();
+
+//     // Convert to total "billing days" using 30-day months and 360-day years
+//     const totalRetDays = retYear * 360 + retMonth * 30 + retDay;
+//     const totalEndDays = endYear * 360 + endMonth * 30 + endDay;
+
+//     // Inclusive difference (+1)
+//     return Math.abs(totalEndDays - totalRetDays) + 1;
+//   };
+
+//   // Calculate item prices based on days difference
+//   const calculateItemPrices = (items) => {
+//     const returnedDate = new Date(creditNoteData.returned_date);
+
+//     // Calculate end of returnedDate's month
+//     const endOfMonth = new Date(
+//       returnedDate.getFullYear(),
+//       returnedDate.getMonth() + 1,
+//       0
+//     );
+
+//     const monthStartDate = new Date(
+//       returnedDate.getFullYear(),
+//       returnedDate.getMonth(),
+//       1
+//     );
+
+//     // Calculate days used (from 1st July to 20th July 2025 = 20 days)
+//     const daysUsed = sameMonthFlag
+//       ? calculateDaysDifference(creditNoteData.dc_date, returnedDate)
+//       : calculateDaysDifference(monthStartDate, returnedDate);
+
+//     // Calculate day difference
+//     const daysDifference = Math.ceil(
+//       (endOfMonth - returnedDate) / (1000 * 60 * 60 * 24)
+//     );
+
+//     return items.map((item) => {
+//       const unitPrice = parseFloat(item.unit_price || 0);
+//       const dailyRate = unitPrice / 30;
+//       const totalPrice = daysDifference * item.quantity * dailyRate;
+
+//       return {
+//         ...item,
+//         days: daysDifference,
+//         daily_rate: dailyRate,
+//         total_price: totalPrice,
+//         daysUsed,
+//         monthStartDate,
+//         returnedDate,
+//         endOfMonth,
+//       };
+//     });
+//   };
+
+//   const itemsWithCalculatedPrices = calculateItemPrices(
+//     creditNoteData.items || []
+//   );
+
+//   // Calculate tax values (assuming 9% GST split into CGST and SGST)
+//   const subtotal = itemsWithCalculatedPrices.reduce(
+//     (sum, item) => sum + (item.total_price || 0),
+//     0
+//   );
+
+//   const cgstRate = 0.09; // 9%
+//   const sgstRate = 0.09; // 9%
+//   const cgst = subtotal * cgstRate;
+//   const sgst = subtotal * sgstRate;
+//   const totalTax = cgst + sgst;
+//   const grandTotal = subtotal + totalTax;
+
+//   // Format currency for Indian Rupees
+//   const formatINRCurrency = (amount) => {
+//     return new Intl.NumberFormat("en-IN", {
+//       style: "currency",
+//       currency: "INR",
+//       minimumFractionDigits: 2,
+//       maximumFractionDigits: 2,
+//     })
+//       .format(amount)
+//       .replace("₹", "₹ ");
+//   };
+
+//   // Format currency without symbol
+//   const formatINRCurrency1 = (amount) => {
+//     return new Intl.NumberFormat("en-IN", {
+//       minimumFractionDigits: 2,
+//       maximumFractionDigits: 2,
+//     }).format(amount);
+//   };
+
+//   const handleDownloadPDF = () => {
+//     const input = document.getElementById("credit-note-container");
+
+//     html2canvas(input, {
+//       scale: 2,
+//       logging: false,
+//       useCORS: true,
+//       allowTaint: true,
+//     }).then((canvas) => {
+//       const imgData = canvas.toDataURL("image/png");
+//       const pdf = new jsPDF("p", "mm", "a4");
+//       const imgWidth = 210;
+//       const imgHeight = (canvas.height * imgWidth) / canvas.width;
+
+//       pdf.addImage(imgData, "PNG", 0, 0, imgWidth, imgHeight);
+//       pdf.save(`credit-note-${creditNoteData.credit_note_number}.pdf`);
+//     });
+//   };
+
+//   return (
+//     <Dialog open={open} onClose={onClose} maxWidth="lg" fullWidth>
+//       <DialogTitle>Credit Note Details</DialogTitle>
+//       <DialogContent>
+//         <div style={containerStyle}>
+//           <div id="credit-note-container" style={receiptContainerStyle}>
+//             {/* Header Color Bar */}
+//             <div style={headerBarStyle}></div>
+
+//             {/* Company Header */}
+//             <div style={companyHeaderStyle}>
+//               <div style={companyInfoContainerStyle}>
+//                 <div style={logoStyle}>
+//                   <img
+//                     src="/SORT-ICON.png"
+//                     alt="Company Logo"
+//                     style={{
+//                       width: "100%",
+//                       height: "100%",
+//                       objectFit: "contain",
+//                     }}
+//                   />
+//                 </div>
+//                 <div>
+//                   <div style={companyNameStyle}>
+//                     Guru Goutam Infotech Pvt. Ltd.
+//                   </div>
+//                   <div style={companyDetailsStyle}>
+//                     CIN: U72200KA2008PTC047679
+//                     <br />
+//                     GST: {creditNoteData.customer?.gst || "29AADCG2608Q1Z6"}
+//                   </div>
+//                 </div>
+//               </div>
+//               <div style={challanHeaderStyle}>
+//                 <div style={challanTitleStyle}>CREDIT NOTE</div>
+//                 <div style={challanDetailsStyle}>
+//                   Credit Note No: {creditNoteData.credit_note_number}
+//                   <br />
+//                   Return Date:{" "}
+//                   {new Date(creditNoteData.returned_date).toLocaleDateString(
+//                     "en-GB"
+//                   )}
+//                   <br />
+//                 </div>
+//               </div>
+//             </div>
+
+//             {/* Recipient Section */}
+//             <div style={recipientSectionStyle}>
+//               <div style={recipientContainerStyle}>
+//                 <div style={recipientAddressStyle}>
+//                   <div style={recipientLabelStyle}>To</div>
+//                   {creditNoteData.customer_name}
+//                   <br />
+//                   {creditNoteData.customer?.company_name &&
+//                     `${creditNoteData.customer.company_name}, `}
+//                   {creditNoteData.customer?.address?.street &&
+//                     `${creditNoteData.customer.address.street}, `}
+//                   {creditNoteData.customer?.address?.city},{" "}
+//                   {creditNoteData.customer?.address?.state},
+//                   <br />
+//                   {creditNoteData.customer?.address?.country} -{" "}
+//                   {creditNoteData.customer?.address?.pincode}
+//                   <br />
+//                   <br />
+//                 </div>
+//                 <div style={recipientDetailsGridStyle}>
+//                   <div>
+//                     <div style={detailLabelStyle}>Contact No:</div>
+//                     {creditNoteData.customer?.phone_number}
+//                   </div>
+//                   <div>
+//                     <div style={detailLabelStyle}>PAN:</div>
+//                     {creditNoteData.pan ||
+//                       creditNoteData.customer?.pan_no ||
+//                       "N/A"}
+//                   </div>
+
+//                   <div>
+//                     <div style={detailLabelStyle}>Payment Type:</div>
+//                     {creditNoteData.payment_type}
+//                   </div>
+//                   <div>
+//                     <div style={detailLabelStyle}>Industry:</div>
+//                     {creditNoteData.industry}
+//                   </div>
+//                   <div>
+//                     <div style={detailLabelStyle}>Email:</div>
+//                     {creditNoteData.email}
+//                   </div>
+//                   <div>
+//                     <div style={detailLabelStyle}>Created By:</div>
+//                     {creditNoteData.created_by}
+//                   </div>
+//                 </div>
+//               </div>
+//             </div>
+
+//             <table style={tableStyle}>
+//               <thead>
+//                 <tr>
+//                   <th style={tableHeaderNoStyle}>NO.</th>
+//                   <th style={tableHeaderParticularsStyle}>Product Details</th>
+//                   <th style={tableHeaderQtyStyle}>QTY</th>
+//                   <th style={tableHeaderQtyStyle}>Days</th>
+//                   <th style={tableHeaderQtyStyle}>Daily Rate</th>
+//                   <th style={tableHeaderQtyStyle}>Total</th>
+//                 </tr>
+//               </thead>
+//               <tbody>
+//                 {itemsWithCalculatedPrices.map((item, index) => (
+//                   <tr
+//                     key={item.id}
+//                     style={
+//                       index % 2 === 0 ? tableRowOddStyle : tableRowEvenStyle
+//                     }
+//                   >
+//                     <td style={tableCellCenterStyle}>{index + 1}</td>
+//                     <td style={tableCellStyle}>
+//                       <div style={productNameStyle}>{item.product_name}</div>
+//                       <div
+//                         style={{
+//                           fontSize: "12px",
+//                           color: "#555",
+//                           textAlign: "justify",
+//                           lineHeight: "1.4",
+//                         }}
+//                       >
+//                         Specifications:{" "}
+//                         {item.product?.brand && (
+//                           <>
+//                             <strong>Brand:</strong> {item.product.brand}.{" "}
+//                           </>
+//                         )}
+//                         {item.product?.model && (
+//                           <>
+//                             <strong>Model:</strong> {item.product.model}.{" "}
+//                           </>
+//                         )}
+//                         {item.product?.processor && (
+//                           <>
+//                             <strong>Processor:</strong> {item.product.processor}
+//                             .{" "}
+//                           </>
+//                         )}
+//                         {item.product?.ram && (
+//                           <>
+//                             <strong>RAM:</strong> {item.product.ram}.{" "}
+//                           </>
+//                         )}
+//                         <br />
+//                         {item.product?.storage && (
+//                           <>
+//                             <strong>Storage:</strong> {item.product.storage}.{" "}
+//                           </>
+//                         )}
+//                         {item.product?.disk_type && (
+//                           <>
+//                             <strong>Disk Type:</strong> {item.product.disk_type}
+//                             .{" "}
+//                           </>
+//                         )}
+//                         {item.product?.graphics && (
+//                           <>
+//                             <strong>Graphics:</strong> {item.product.graphics}.{" "}
+//                           </>
+//                         )}
+//                         {item.product?.os && (
+//                           <>
+//                             <strong>OS:</strong> {item.product.os}.{" "}
+//                           </>
+//                         )}
+//                       </div>
+//                       {item.device_ids?.length > 0 && (
+//                         <>
+//                           <div style={itemTitleStyle}>
+//                             <br />
+//                             Asset IDs: {item.device_ids.join(", ")}
+//                           </div>
+//                           <div>
+//                             <br />
+//                             Used for {item.daysUsed} days{" "}
+//                             {formatDate(item.returnedDate)} to{" "}
+//                             {formatDate(item.endOfMonth)}
+//                           </div>
+//                         </>
+//                       )}
+//                     </td>
+//                     <td style={tableCellCenterStyle}>{item.quantity}</td>
+//                     <td style={tableCellCenterStyle}>{item.days}</td>
+//                     <td style={tableCellRightStyle}>
+//                       {formatINRCurrency1(item.daily_rate || 0)}
+//                     </td>
+//                     <td style={tableCellRightStyle}>
+//                       {formatINRCurrency1(item.total_price || 0)}
+//                     </td>
+//                   </tr>
+//                 ))}
+
+//                 {/* Total Row */}
+//                 <tr style={totalsRowStyle}>
+//                   <td colSpan={5} style={tableCellRightStyle}>
+//                     <strong>TOTAL</strong>
+//                   </td>
+//                   <td style={tableCellRightStyle}>
+//                     {formatINRCurrency1(subtotal)}
+//                   </td>
+//                 </tr>
+//               </tbody>
+//             </table>
+
+//             {/* Tax and Total Section */}
+//             <div style={taxTotalContainerStyle}>
+//               <div style={taxDetailsStyle}>
+//                 <div style={taxRowStyle}>
+//                   <span>Subtotal:</span>
+//                   <span>{formatINRCurrency1(subtotal)}</span>
+//                 </div>
+
+//                 <div style={taxRowStyle}>
+//                   <span>CGST @9%:</span>
+//                   <span>{formatINRCurrency1(cgst)}</span>
+//                 </div>
+//                 <div style={taxRowStyle}>
+//                   <span>SGST @9%:</span>
+//                   <span>{formatINRCurrency1(sgst)}</span>
+//                 </div>
+//                 <div style={taxRowTotalStyle}>
+//                   <span>Total Tax:</span>
+//                   <span>₹ {formatINRCurrency1(totalTax)}</span>
+//                 </div>
+
+//                 <div style={grandTotalStyle}>
+//                   <span>Grand Total:</span>
+//                   <span>₹ {formatINRCurrency1(grandTotal)}</span>
+//                 </div>
+//               </div>
+//             </div>
+
+//             {/* Bank Details Section */}
+//             <div style={bankDetailsContainerStyle}>
+//               <div style={bankDetailsTitleStyle}>Bank Details:</div>
+//               <div style={bankLineStyle}>
+//                 Guru Goutham Infotech Pvt. Ltd., HDFC Bank Ltd, Jayanagar Branch
+//               </div>
+//               <div style={bankLineStyle}>
+//                 Current A/c No: 50200066787843. &nbsp;&nbsp; IFSC Code:
+//                 HDFC0000261
+//               </div>
+
+//               <div style={amountWordsStyle}>
+//                 Amt. in Words: <span>{numberToWords(grandTotal)}</span>
+//               </div>
+
+//               <div style={jurisdictionNoteStyle}>
+//                 Note:{" "}
+//                 <span style={highlightTextStyle}>
+//                   Subject to Bengaluru Jurisdiction
+//                 </span>
+//               </div>
+//             </div>
+
+//             {/* Signature Section */}
+//             <div style={signatureSectionStyle}>
+//               {/* Left: Receiver Signature */}
+//               <div style={leftSignatureAreaStyle}>
+//                 <div style={companySignatureLabelStyle}></div>
+//                 <div style={signatureBoxStyle}></div>
+//                 <div style={signatureDesignationStyle}>
+//                   {" "}
+//                   Receiver Signature with Seal
+//                 </div>
+//               </div>
+
+//               {/* Right: Authorised Signatory */}
+//               <div style={rightSignatureAreaStyle}>
+//                 <div style={companySignatureLabelStyle}>
+//                   For Guru Goutham Infotech Private Limited
+//                 </div>
+//                 <div style={signatureBoxStyle}>SD/-</div>
+//                 <div style={signatureDesignationStyle}>
+//                   Authorised Signatory
+//                 </div>
+//               </div>
+//             </div>
+
+//             {/* Company Footer */}
+//             <div style={companyFooterStyle}>
+//               <div style={footerAddressStyle}>
+//                 <span>📍</span>
+//                 <span>
+//                   No. 8, 2nd Cross, Diagonal Road, 3rd Block,
+//                   <br />
+//                   Jayanagar Bengaluru-560011.
+//                 </span>
+//               </div>
+//               <div style={footerContactStyle}>
+//                 <div style={footerContactItemStyle}>
+//                   <span>🌐</span>
+//                   <span>gurugoutam.com</span>
+//                 </div>
+//                 <div style={footerContactItemStyle}>
+//                   <span>📞</span>
+//                   <span>080-2242 9955, +91 9449 0789 55</span>
+//                 </div>
+//                 <div style={footerContactItemStyle}>
+//                   <span>✉️</span>
+//                   <span>info@gurugoutam.com</span>
+//                 </div>
+//               </div>
+//             </div>
+//           </div>
+//         </div>
+//       </DialogContent>
+//       <DialogActions>
+//         <Button onClick={onClose}>Close</Button>
+//         <Button onClick={handleDownloadPDF} variant="contained" color="primary">
+//           Download PDF
+//         </Button>
+//         <Button onClick={() => window.print()}>Print</Button>
+//       </DialogActions>
+//     </Dialog>
+//   );
+// };
 
 const formatINRCurrency = (value) => {
   return new Intl.NumberFormat("en-IN", {
@@ -2417,15 +3968,85 @@ const InvoiceDialog = ({ open, onClose, invoiceData }) => {
   const invoiceType = invoiceData.type;
   const isBuyTransaction = invoiceData.transaction_type === "Buy";
   const isRentTransaction = invoiceData.transaction_type === "Rent";
+  const startDate = new Date(invoiceData.invoice_date);
   const invoiceDate = new Date(invoiceData.invoice_start_date);
   const paymentMode = invoiceData.payment_mode === "Postpaid";
   const isKarnataka = invoiceData.shippingDetail?.state === "Karnataka";
+
+  const dcDate123 = new Date(invoiceData.dc_date);
+  const invoiceDateOnly = new Date(invoiceData.invoice_date);
+
+  const sameMonth =
+    dcDate123.getMonth() === invoiceDateOnly.getMonth() &&
+    dcDate123.getFullYear() === invoiceDateOnly.getFullYear();
+
+  // Helper: same month & year check
+  const isSameMonthYear = (date1, date2) => {
+    return (
+      date1.getFullYear() === date2.getFullYear() &&
+      date1.getMonth() === date2.getMonth()
+    );
+  };
+
+  const hasSameMonthReturn =
+    // Check direct credit_notes array
+    invoiceData.credit_notes?.some((note) => {
+      if (!note.returned_date) return false;
+      return isSameMonthYear(
+        new Date(invoiceData.dc_date),
+        new Date(note.returned_date)
+      );
+    }) ||
+    // Check inside additional_delivery_challans
+    invoiceData.additional_delivery_challans?.some((challan) =>
+      challan.credit_notes?.some((note) => {
+        if (!note.returned_date) return false;
+        return isSameMonthYear(
+          new Date(challan.dc_date || invoiceData.dc_date),
+          new Date(note.returned_date)
+        );
+      })
+    ) ||
+    false;
+
+  const hasMonthDifference = invoiceData.credit_notes?.some((creditNote) => {
+    if (!creditNote.returned_date) return false;
+
+    const returnDate = new Date(creditNote.returned_date);
+    const monthDiff =
+      (invoiceDate.getFullYear() - returnDate.getFullYear()) * 12 +
+      (invoiceDate.getMonth() - returnDate.getMonth());
+
+    return monthDiff >= 1;
+  });
 
   // Date calculations
   const invoiceStartDate = new Date(invoiceData.invoice_start_date);
   const dcDate = new Date(invoiceData.dc_date);
   const invoiceEndDate = new Date(invoiceData.invoice_end_date);
   const dcPeriodEnd = new Date(dcDate.getFullYear(), dcDate.getMonth() + 1, 0);
+
+  const hasCreditNoteReturnedDate =
+    // Check direct credit_notes array
+    invoiceData.credit_notes?.some((note) => !!note.returned_date) ||
+    // Check each additional_delivery_challan's credit_notes
+    invoiceData.additional_delivery_challans?.some((challan) =>
+      challan.credit_notes?.some((note) => !!note.returned_date)
+    );
+
+  // Count all DC dates (main + additional)
+  function countAllDcDates(invoiceData) {
+    if (!invoiceData) return 0;
+
+    const mainDcCount = 1; // Always 1 main DC
+    const additionalDcsCount =
+      invoiceData.additional_delivery_challans?.length || 0;
+
+    return mainDcCount + additionalDcsCount;
+  }
+
+  // Usage:
+  const dcDatesCount = countAllDcDates(invoiceData);
 
   // Calculate month difference between invoice start date and DC date
   const monthDiff =
@@ -2447,12 +4068,14 @@ const InvoiceDialog = ({ open, onClose, invoiceData }) => {
       (invoiceStartDate.getMonth() - additionalChallanDate.getMonth());
   }
 
-  // Special case conditions
+  const hasSameMonthChallan =
+    hasAdditionalChallans && additionalChallanMonthDiff === 0;
+  const hasPrevMonthChallan =
+    hasAdditionalChallans && additionalChallanMonthDiff === 1;
   const specialCase =
     paymentMode &&
     monthDiff === 0 &&
-    hasAdditionalChallans &&
-    additionalChallanMonthDiff === 1;
+    (hasSameMonthChallan || hasPrevMonthChallan);
 
   // Only show DC period if exactly 0 or 1 month difference and not starting on 1st
   const showDcPeriod =
@@ -2468,78 +4091,196 @@ const InvoiceDialog = ({ open, onClose, invoiceData }) => {
     return `${day}/${month}/${year}`;
   };
 
+  // Utility: always 30 days per month, 360 days per year
   const calculateDays = (startDate, endDate) => {
     const start = new Date(startDate);
     const end = new Date(endDate);
-    const diffTime = end - start;
-    return Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1; // +1 to include both dates
+
+    let startDay = Math.min(start.getDate(), 30);
+    let endDay = Math.min(end.getDate(), 30);
+
+    // ✅ If endDate is last day of the month → treat as 30
+    const lastDayOfMonth = new Date(
+      end.getFullYear(),
+      end.getMonth() + 1,
+      0
+    ).getDate();
+    if (end.getDate() === lastDayOfMonth) {
+      endDay = 30;
+    }
+
+    const totalStartDays =
+      start.getFullYear() * 360 + start.getMonth() * 30 + startDay;
+    const totalEndDays = end.getFullYear() * 360 + end.getMonth() * 30 + endDay;
+
+    return totalEndDays - totalStartDays + 1;
   };
 
   const calculateReturnDays = (returnDate) => {
     const returnDateObj = new Date(returnDate);
-    if (monthDiff > 1) {
-      // If more than 1 month difference, calculate from start of month to return date
+
+    // Find the matching dc_date for this return
+    let matchedDcDate = null;
+
+    // Check main credit_notes
+    invoiceData.credit_notes?.forEach((note) => {
+      if (note.returned_date === returnDate) {
+        matchedDcDate = new Date(invoiceData.dc_date);
+      }
+    });
+
+    // Check additional_delivery_challans credit_notes
+    if (!matchedDcDate) {
+      invoiceData.additional_delivery_challans?.forEach((challan) => {
+        challan.credit_notes?.forEach((note) => {
+          if (note.returned_date === returnDate) {
+            matchedDcDate = new Date(challan.dc_date || invoiceData.dc_date);
+          }
+        });
+      });
+    }
+
+    // Fallback to invoice dc_date if no match found
+    if (!matchedDcDate) {
+      matchedDcDate = new Date(invoiceData.dc_date);
+    }
+
+    // Calculate days based on hasSameMonthReturn logic
+    if (hasSameMonthReturn) {
+      // Same month: calculate days between dc_date and return_date
+      const diffTime = Math.abs(returnDateObj - matchedDcDate);
+      return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    } else {
+      // Different month: calculate days from start of return month to return_date
       const startOfMonth = new Date(
         returnDateObj.getFullYear(),
         returnDateObj.getMonth(),
         1
       );
-      return calculateDays(startOfMonth, returnDateObj);
-    } else {
-      // Otherwise calculate from dc date to return date
-      return calculateDays(dcDate, returnDateObj);
+      const diffTime = Math.abs(returnDateObj - startOfMonth);
+      return Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1; // +1 to include both start and end
     }
   };
 
-  const calculateInvoiceItems = () => {
-    // Step 1: Preprocess returned devices from additional challans
-    const challanReturnsMap = {};
+  let finalCondition = false;
 
+  invoiceData.additional_delivery_challans?.forEach((challan) => {
+    const challanDate = new Date(challan.dc_date);
+    const mainDcDate = new Date(invoiceData.dc_date);
+    const invoiceStartDate = new Date(invoiceData.invoice_start_date);
+
+    const dcMonthDiff =
+      (mainDcDate.getFullYear() - challanDate.getFullYear()) * 12 +
+      (mainDcDate.getMonth() - challanDate.getMonth());
+
+    const isSameMonthBetweenDCs = dcMonthDiff === 0;
+
+    const dcToInvoiceMonthDiff =
+      (invoiceStartDate.getFullYear() - mainDcDate.getFullYear()) * 12 +
+      (invoiceStartDate.getMonth() - mainDcDate.getMonth());
+
+    if (isSameMonthBetweenDCs && dcToInvoiceMonthDiff === 1) {
+      finalCondition = true;
+    }
+  });
+
+  const calculateInvoiceItems = () => {
+    // Step 1: Preprocess returned devices from all sources (root and additional challans)
+    const allReturnsMap = {};
+
+    // Process root credit notes
+    invoiceData.credit_notes?.forEach((cn) => {
+      const returnedDate = new Date(cn.returned_date);
+      const dcDate = new Date(cn.dc_date || invoiceData.dc_date); // Use credit note's DC_DATE or fallback to main DC_DATE
+
+      cn.items?.forEach((ri) => {
+        const key = `${ri.product_id}`;
+        if (!allReturnsMap[key]) allReturnsMap[key] = [];
+
+        const returnedStartDate = new Date(
+          returnedDate.getFullYear(),
+          returnedDate.getMonth(),
+          1
+        );
+
+        // Pass both dates to calculate days used
+        const daysUsed = hasSameMonthReturn
+          ? calculateDays(dcDate, returnedDate)
+          : calculateDays(returnedStartDate, returnedDate);
+
+        const dailyRate = invoiceData.items?.find(
+          (item) => item.product_id === ri.product_id
+        )
+          ? Number(
+              invoiceData.items.find(
+                (item) => item.product_id === ri.product_id
+              ).unit_price
+            ) / 30
+          : 0;
+
+        allReturnsMap[key].push({
+          returnedDate,
+          daysUsed,
+          deviceIds: ri.device_ids,
+          amount: parseFloat(
+            (daysUsed * dailyRate * ri.device_ids.length).toFixed(2)
+          ),
+          source: "root",
+          dcDate: dcDate,
+        });
+      });
+    });
+
+    // Process additional delivery challans' credit notes
     invoiceData.additional_delivery_challans?.forEach((challan) => {
+      const challanDcDate = new Date(challan.dc_date);
+
       challan.credit_notes?.forEach((cn) => {
         const returnedDate = new Date(cn.returned_date);
 
         cn.items?.forEach((ri) => {
           const key = `${ri.product_id}`;
-          if (!challanReturnsMap[key]) challanReturnsMap[key] = [];
+          if (!allReturnsMap[key]) allReturnsMap[key] = [];
 
-          const startOfMonth = new Date(
+          const returnedStartDate = new Date(
             returnedDate.getFullYear(),
             returnedDate.getMonth(),
             1
           );
-          const daysUsed = calculateDays(startOfMonth, returnedDate);
-          const dailyRate = invoiceData.items?.find(
+
+          // Pass both dates to calculate days used
+          const daysUsed = hasSameMonthReturn
+            ? calculateDays(challanDcDate, returnedDate)
+            : calculateDays(returnedStartDate, returnedDate);
+
+          const dailyRate = challan.items?.find(
             (item) => item.product_id === ri.product_id
           )
             ? Number(
-                invoiceData.items.find(
-                  (item) => item.product_id === ri.product_id
-                ).unit_price
+                challan.items.find((item) => item.product_id === ri.product_id)
+                  .total_price
               ) / 30
             : 0;
 
-          challanReturnsMap[key].push({
+          allReturnsMap[key].push({
             returnedDate,
             daysUsed,
             deviceIds: ri.device_ids,
             amount: parseFloat(
               (daysUsed * dailyRate * ri.device_ids.length).toFixed(2)
             ),
+            source: "additional",
+            dcDate: challanDcDate,
           });
         });
       });
     });
 
-    // Step 2: Gather all returned device IDs (from root & additional)
-    const allReturnedDeviceIds = [
-      ...(invoiceData.credit_notes?.flatMap((cn) =>
-        cn.items.flatMap((ri) => ri.device_ids)
-      ) || []),
-      ...(Object.values(challanReturnsMap).flatMap((arr) =>
-        arr.flatMap((r) => r.deviceIds)
-      ) || []),
-    ];
+    // [Rest of the function remains the same...]
+    // Step 2: Gather all returned device IDs (from all sources)
+    const allReturnedDeviceIds = Object.values(allReturnsMap).flatMap((arr) =>
+      arr.flatMap((r) => r.deviceIds)
+    );
 
     // Step 3: Process main invoice items
     const mainItems =
@@ -2550,26 +4291,27 @@ const InvoiceDialog = ({ open, onClose, invoiceData }) => {
         const dailyRate = rate / 30;
         const originalDeviceIds = item.device_ids || [];
 
-        // For special case, calculate days from DC date to invoice end date
-        const days = specialCase
-          ? calculateDays(dcDate, invoiceEndDate)
-          : calculateDays(invoiceStartDate, invoiceEndDate);
+        let days;
+        if (specialCase) {
+          days = calculateDays(dcDate, invoiceEndDate);
+        } else if (sameMonth) {
+          days = calculateDays(dcDate, invoiceEndDate);
+        } else {
+          days = calculateDays(invoiceStartDate, invoiceEndDate);
+        }
 
-        const isFullMonth = days >= 28;
+        const isFullMonth = isBuyTransaction ? true : days >= 28;
 
-        const returnedItems =
-          invoiceData.credit_notes?.flatMap((cn) =>
-            cn.items
-              .filter((ri) => ri.product_id === item.product_id)
-              .map((ri) => ({
-                ...ri,
-                returned_date: cn.returned_date,
-              }))
+        // Get returns for this product from all sources
+        const returnedDevices =
+          allReturnsMap[item.product_id]?.filter(
+            (rd) => new Date(rd.returnedDate) <= invoiceEndDate
           ) || [];
 
-        const preInvoiceReturnedDeviceIds = returnedItems.flatMap((ri) =>
-          new Date(ri.returned_date) < invoiceStartDate ? ri.device_ids : []
-        );
+        // Filter out pre-invoice returns
+        const preInvoiceReturnedDeviceIds = returnedDevices
+          .filter((rd) => new Date(rd.returnedDate) < invoiceStartDate)
+          .flatMap((rd) => rd.deviceIds);
 
         const effectiveDeviceIds = originalDeviceIds.filter(
           (id) =>
@@ -2579,59 +4321,6 @@ const InvoiceDialog = ({ open, onClose, invoiceData }) => {
 
         const effectiveQty = effectiveDeviceIds.length;
         const dcDays = calculateDays(dcDate, dcPeriodEnd);
-
-        const grouped = {};
-
-        returnedItems.forEach((ri) => {
-          const returnedDate = new Date(ri.returned_date);
-          if (returnedDate <= invoiceEndDate) {
-            const daysUsed = calculateReturnDays(ri.returned_date);
-            const key = returnedDate.toISOString().split("T")[0];
-            if (!grouped[key]) {
-              grouped[key] = {
-                returnedDate,
-                daysUsed,
-                deviceIds: [],
-                unusedDays: dcDays - daysUsed,
-              };
-            }
-            grouped[key].deviceIds.push(...ri.device_ids);
-          }
-        });
-
-        const extraReturns =
-          challanReturnsMap[item.product_id]?.filter(
-            (er) => new Date(er.returnedDate) <= invoiceEndDate
-          ) || [];
-
-        extraReturns.forEach((er) => {
-          const key = er.returnedDate.toISOString().split("T")[0];
-          if (!grouped[key]) {
-            grouped[key] = {
-              returnedDate: er.returnedDate,
-              daysUsed: er.daysUsed,
-              deviceIds: [],
-              unusedDays: 0,
-            };
-          }
-          grouped[key].deviceIds.push(...er.deviceIds);
-          grouped[key].amount = (grouped[key].amount || 0) + er.amount;
-        });
-
-        const returnedDevices = Object.values(grouped).map((rd) => ({
-          ...rd,
-          amount:
-            rd.amount ||
-            parseFloat(
-              (rd.daysUsed * dailyRate * rd.deviceIds.length).toFixed(2)
-            ),
-        }));
-
-        const returnedQty = returnedDevices.reduce(
-          (sum, rd) => sum + rd.deviceIds.length,
-          0
-        );
-        const usedQty = effectiveQty - returnedQty;
 
         // Calculate amount based on payment mode
         let fullMonthAmount;
@@ -2658,13 +4347,33 @@ const InvoiceDialog = ({ open, onClose, invoiceData }) => {
             ? effectiveQty * dailyRate * dcDays
             : 0;
 
+        let description;
+
+        if (specialCase) {
+          days = calculateDays(dcDate, invoiceEndDate);
+          description = `Billing Start Date: ${formatDate(
+            dcDate
+          )} to ${formatDate(invoiceEndDate)}`;
+        } else if (sameMonth) {
+          days = calculateDays(dcDate, invoiceEndDate);
+          description = `Billing Start Date: ${formatDate(
+            dcDate
+          )} to ${formatDate(invoiceEndDate)}`;
+        } else {
+          days = calculateDays(invoiceStartDate, invoiceEndDate);
+          description = `Billing Start Date: ${formatDate(
+            invoiceStartDate
+          )} - Billing End Date: ${formatDate(invoiceEndDate)}`;
+        }
+
+        console.log(days,"kkkkkkkkkkkjjjjjjjjjjjjj");
+        
+
         return {
           ...item,
           originalDeviceIds,
           device_ids: effectiveDeviceIds,
           quantity: effectiveQty,
-          usedQty,
-          returnedQty,
           rate,
           dailyRate,
           days,
@@ -2673,189 +4382,800 @@ const InvoiceDialog = ({ open, onClose, invoiceData }) => {
           dcAmountBeforeReturns,
           returnedDevices,
           totalReturnedQtyAmount: returnedDevicesAmount,
-          description: specialCase
-            ? `Billing from DC Date: ${formatDate(dcDate)} to ${formatDate(
-                invoiceEndDate
-              )} (${days} days)`
-            : `Billing Start Date: ${formatDate(
-                invoiceStartDate
-              )} - Billing End Date: ${formatDate(
-                invoiceEndDate
-              )} (${days} days)`,
+          description,
           isFullMonth,
           isSpecialCase: specialCase,
         };
       }) || [];
 
     // Step 4: Process additional delivery challan items
-    // In the calculateInvoiceItems function, update the additionalItems processing:
     const additionalItems =
-      invoiceData.additional_delivery_challans?.flatMap((challan) =>
-        challan.items.map((item) => {
+      invoiceData.additional_delivery_challans?.flatMap((challan) => {
+        const challanDateObj = new Date(challan.dc_date);
+        const orderSaleDateObj = new Date(challan.order_sale_date);
+        const challanMonthStart = new Date(
+          orderSaleDateObj.getFullYear(),
+          orderSaleDateObj.getMonth(),
+          1
+        );
+
+        const invoiceStartDateObj = new Date(invoiceData.invoice_start_date);
+        const invoiceEndDateObj = new Date(invoiceData.invoice_end_date);
+
+        // Calculate month difference between challan date and invoice start
+        const monthDiff =
+          (invoiceStartDateObj.getFullYear() - challanDateObj.getFullYear()) *
+            12 +
+          (invoiceStartDateObj.getMonth() - challanDateObj.getMonth());
+
+        return challan.items.map((item) => {
           const quantity = Number(item.quantity) || 0;
           const unit_price =
             quantity > 0 ? Number(item.total_price) / quantity : 0;
+          const dailyRate = unit_price / 30;
+          const device_ids = item.device_ids || [];
 
-          // For special case, use full amount and set days to full month
-          const amount = specialCase
-            ? Number(item.total_price)
-            : Number(item.total_price) || 0;
+          let days,
+            amount,
+            description,
+            midMonthDays = 0;
 
-          const challanDateObj = new Date(challan.dc_date);
-          const challanMonthEnd = new Date(
-            challanDateObj.getFullYear(),
-            challanDateObj.getMonth() + 1,
-            0
-          );
+          // For items delivered in previous month
+          if (monthDiff === 1) {
+            const deliveryMonthEnd = new Date(
+              challanDateObj.getFullYear(),
+              challanDateObj.getMonth() + 1,
+              0
+            );
+            midMonthDays = calculateDays(challanDateObj, deliveryMonthEnd);
+            days = calculateDays(invoiceStartDateObj, invoiceEndDateObj);
+            amount =
+              quantity * dailyRate * midMonthDays + quantity * unit_price;
+            description = `Billing Start Date: ${formatDate(
+              invoiceStartDateObj
+            )} to ${formatDate(invoiceEndDate)}`;
+          }
+          // For items delivered in same month but not on 1st
+          else if (monthDiff === 0 && challanDateObj.getDate() !== 1) {
+            days = calculateDays(challanDateObj, invoiceEndDateObj);
+            midMonthDays = days;
+            amount = quantity * dailyRate * days;
+            description = `Billing Start Date: ${formatDate(
+              challan.dc_date
+            )} to ${formatDate(invoiceEndDate)}`;
+          }
+          // For full month items
 
-          // For special case, show full month days (31 for August)
-          const days = specialCase
-            ? calculateDays(
-                new Date(
-                  challanDateObj.getFullYear(),
-                  challanDateObj.getMonth(),
-                  1
-                ),
-                challanMonthEnd
-              )
-            : calculateDays(challan.dc_date, challanMonthEnd);
+          
+          else {
+            
+            if (paymentMode) {
+              if (challan.order_sale_date && isSameMonthYear(invoiceStartDateObj,orderSaleDateObj)) {
+                days = calculateDays(challanMonthStart, orderSaleDateObj);
+              } 
+            }
+            days = calculateDays(invoiceStartDateObj, invoiceEndDateObj);
 
-          const isFullMonth = days >= 28;
+            amount = quantity * unit_price;
+            description = `Billing Start Date123: ${formatDate(
+              invoiceStartDate
+            )} - Billing End Date: ${formatDate(invoiceEndDate)}`;
+          }
 
-          const productDetails = invoiceData.items?.find(
-            (mainItem) => mainItem.product_id === item.product_id
-          )?.productDetails;
+          // Get returns for this product from all sources
+          const returnedDevices =
+            allReturnsMap[item.product_id]?.filter(
+              (rd) =>
+                new Date(rd.returnedDate) <= invoiceEndDate &&
+                rd.source === "additional"
+            ) || [];
 
           return {
             ...item,
             isAdditionalChallan: true,
             challanNumber: challan.dc_id,
             challanDate: challan.dc_date,
-            device_ids: item.device_ids || [],
+            device_ids,
             quantity,
             unit_price,
             rate: unit_price,
-            amount: amount,
-            days: specialCase ? 31 : days, // Show full month days in special case
-            description: specialCase
-              ? `Additional Delivery Challan: ${challan.dc_id} (Full Amount)`
-              : `Additional Delivery Challan: ${challan.dc_id} (${formatDate(
-                  challan.dc_date
-                )}) - ${days} days`,
-            productDetails,
-            isFullMonth: true, // Always treat as full month in special case
+            dailyRate,
+            amount,
+            days,
+            midMonthDays,
+            description,
+            productDetails: item.product,
+            isFullMonth: days >= 28,
             isSpecialCase: specialCase,
+            isPrevMonthDelivery: monthDiff === 1,
+            shouldShowMidMonth:
+              monthDiff === 1 ||
+              (monthDiff === 0 && challanDateObj.getDate() !== 1),
+            returnedDevices,
           };
-        })
-      ) || [];
-
-    // In special case, don't group items
-    if (specialCase) {
-      return [...mainItems, ...additionalItems];
-    }
-
-    // Normal case - group items by product
-    const grouped = {};
-
-    [...mainItems, ...additionalItems].forEach((item) => {
-      const key = item.product_id;
-      if (!grouped[key]) {
-        grouped[key] = {
-          ...item,
-          allDeviceIds: [...(item.device_ids || [])],
-          allRows: [item],
-          isAdditional: item.isAdditionalChallan,
-          totalQuantity: item.quantity || 0,
-          totalAmount: item.amount || 0,
-          dcAmountBeforeReturns: item.dcAmountBeforeReturns || 0,
-          returnedDevices: [...(item.returnedDevices || [])],
-          totalReturnedQtyAmount: item.totalReturnedQtyAmount || 0,
-        };
-      } else {
-        grouped[key].allDeviceIds = [
-          ...grouped[key].allDeviceIds,
-          ...(item.device_ids || []),
-        ];
-        grouped[key].allRows.push(item);
-        grouped[key].totalQuantity += item.quantity || 0;
-        grouped[key].totalAmount += item.amount || 0;
-        grouped[key].dcAmountBeforeReturns += item.dcAmountBeforeReturns || 0;
-
-        // Merge returned devices without duplicates
-        const existingDeviceIds = new Set(
-          grouped[key].returnedDevices.flatMap((rd) => rd.deviceIds)
-        );
-
-        item.returnedDevices?.forEach((rd) => {
-          const newDeviceIds = rd.deviceIds.filter(
-            (id) => !existingDeviceIds.has(id)
-          );
-          if (newDeviceIds.length > 0) {
-            grouped[key].returnedDevices.push({
-              ...rd,
-              deviceIds: newDeviceIds,
-            });
-            grouped[key].totalReturnedQtyAmount += rd.amount;
-          }
         });
-      }
-    });
+      }) || [];
 
-    return Object.values(grouped);
+    return [...mainItems, ...additionalItems];
   };
 
   const items = calculateInvoiceItems();
 
-  // Calculate totals
-  const computedTotalAmount1 = items.reduce((total, item) => {
-    if (item.isSpecialCase) {
-      // For special case, just add the amount directly
-      return total + (item.amount || 0);
-    } else {
-      // For normal cases, use the existing logic
-      const mainAmount = paymentMode
-        ? item.totalAmount
-        : item.isFullMonth
-        ? item.rate * item.totalQuantity
-        : item.dailyRate * item.totalQuantity * item.days;
+  ///25-08-2025
 
-      const dcAmount = !paymentMode ? item.dcAmountBeforeReturns : 0;
-      const returnsAmount = paymentMode ? item.totalReturnedQtyAmount : 0;
+  let totalAmount = 0;
+  let rowCounter = 0;
 
-      return total + mainAmount + dcAmount - returnsAmount;
-    }
-  }, 0);
+  // Utility to merge device IDs without duplicates
+  const mergeDeviceIds = (items) => {
+    const allIds = items.flatMap((i) => i.device_ids || []);
+    return [...new Set(allIds)];
+  };
 
-  const computedPostpaidTotalAmount = items.reduce((total, item) => {
-    if (item.isSpecialCase) {
-      // Directly add special case amount
-      return total + (item.amount || 0);
-    } else {
-      // Main amount (for Postpaid always added, no subtraction)
-      const mainAmount = item.isFullMonth
-        ? item.rate * item.totalQuantity
-        : item.dailyRate * item.totalQuantity * item.days;
+  // Utility: safe count (prefer device_ids length if present, else quantity)
+  const getBaseCount = (item) =>
+    (item.device_ids?.length || 0) > 0
+      ? item.device_ids.length
+      : item.quantity || 0;
 
-      // Mid-month usage amount
-      const dcAmount = item.dcAmountBeforeReturns || 0;
+  // Utility: calculate amount consistently
+  const calculateAmount = (daysUsed, dailyRate, baseCount, monthlyRate) => {
+    const roundedRate = parseFloat(dailyRate.toFixed(2)); // 73.33
+    const rawAmount =
+      daysUsed === 30
+        ? monthlyRate * baseCount
+        : daysUsed * roundedRate * baseCount; // 3519.84
 
-      // Returned amount (included in Postpaid as ADDITION not subtraction)
-      const returnsAmount = item.totalReturnedQtyAmount || 0;
+    return parseFloat(rawAmount.toFixed(2));
+  };
 
-      return total + mainAmount + dcAmount + returnsAmount;
-    }
-  }, 0);
+  // Render product specifications
+  const renderSpecifications = (product) => {
+    if (!product) return null;
+    return (
+      <div
+        style={{
+          fontSize: "12px",
+          color: "#555",
+          textAlign: "justify",
+          lineHeight: "1.4",
+        }}
+      >
+        Specifications:{" "}
+        {product?.brand && (
+          <>
+            {" "}
+            <strong>Brand:</strong> {product.brand}.{" "}
+          </>
+        )}
+        {product?.model && (
+          <>
+            {" "}
+            <strong>Model:</strong> {product.model}.{" "}
+          </>
+        )}
+        {product?.processor && (
+          <>
+            {" "}
+            <strong>Processor:</strong> {product.processor}.{" "}
+          </>
+        )}
+        {product?.ram && (
+          <>
+            {" "}
+            <strong>RAM:</strong> {product.ram}.{" "}
+          </>
+        )}
+        {product?.storage && (
+          <>
+            {" "}
+            <strong>Storage:</strong> {product.storage}.{" "}
+          </>
+        )}
+        {product?.disk_type && (
+          <>
+            {" "}
+            <strong>Disk Type:</strong> {product.disk_type}.{" "}
+          </>
+        )}
+        {product?.graphics && (
+          <>
+            {" "}
+            <strong>Graphics:</strong> {product.graphics}.{" "}
+          </>
+        )}
+        {product?.os && (
+          <>
+            {" "}
+            <strong>OS:</strong> {product.os}.{" "}
+          </>
+        )}
+      </div>
+    );
+  };
 
-  const computedTotalAmount = paymentMode
-    ? computedPostpaidTotalAmount
-    : computedTotalAmount1;
+  // Check if a row should be displayed
+  const shouldShowRow = (item) => {
+    const hasReturnedDevices = item.returnedDevices?.some(
+      (rd) => rd.deviceIds?.length > 0
+    );
+    const deviceIdsLength = item.device_ids?.length || 0;
+    return (
+      (item.quantity > 0 && deviceIdsLength > 0) ||
+      item.isAdditionalChallan ||
+      hasReturnedDevices
+    );
+  };
 
-  const netAmount = computedTotalAmount;
-  const cgst = netAmount * 0.09;
-  const sgst = netAmount * 0.09;
-  const igst = isKarnataka ? 0 : netAmount * 0.18;
-  const totalTax = cgst + sgst + igst;
+  // Render main product row
+  const renderProductRow = (items, product, combinedDeviceIds) => {
+    const quantity = items.reduce((acc, i) => acc + (i.quantity || 0), 0);
+    if (quantity === 0 && combinedDeviceIds.length === 0) return null;
+
+    const firstItem = items[0];
+    const daysUsed = paymentMode? firstItem.days : firstItem.isFullMonth ? 30 : firstItem.days || 1;
+    const dailyRate = firstItem.dailyRate || firstItem.rate / 30;
+    const baseCount =
+      combinedDeviceIds.length > 0 ? combinedDeviceIds.length : quantity;
+    const amount = calculateAmount(
+      daysUsed,
+      dailyRate,
+      baseCount,
+      firstItem.rate
+    );
+
+    totalAmount += Number(amount) || 0;
+
+    return (
+      <tr style={++rowCounter % 2 === 0 ? tableRowEvenStyle : tableRowOddStyle}>
+        <td style={tableCellCenterStyle}>{rowCounter}</td>
+        <td style={tableCellStyle}>
+          <div style={itemTitleStyle}>{firstItem.product_name}</div>
+          {renderSpecifications(product)}
+          {combinedDeviceIds.length > 0 && (
+            <>
+              <br />
+              <div style={itemTitleStyle}>
+                Asset IDs: {combinedDeviceIds.join(", ")}
+              </div>
+            </>
+          )}
+          <br />
+
+          {invoiceData.transaction_type === "Rent" && (
+            <>
+              <div style={itemTitleStyle}>{firstItem.description}</div>
+            </>
+          )}
+        </td>
+        <td style={tableCellCenterStyle}>{baseCount}</td>
+        {invoiceData.transaction_type === "Rent" && (
+          <>
+            <td style={tableCellCenterStyle}>{daysUsed}</td>
+            <td style={tableCellCenterStyle}>{formatINRCurrency(dailyRate)}</td>
+          </>
+        )}
+        <td style={tableCellRightStyle}>{formatINRCurrency(firstItem.rate)}</td>
+        <td style={tableCellRightStyle}>{formatINRCurrency(amount)}</td>
+      </tr>
+    );
+  };
+
+  // Keep track of already-rendered Asset IDs globally for this invoice render
+  let renderedAssetIds = new Set();
+
+  const renderReturnedDeviceRow = (item, product, rd) => {
+    let deviceIds = [...new Set(rd.deviceIds || [])];
+    deviceIds = deviceIds.filter((id) => !renderedAssetIds.has(id));
+    deviceIds.forEach((id) => renderedAssetIds.add(id));
+
+    if (deviceIds.length === 0 && rd.quantity === 0) return null;
+
+    const daysUsed = rd.daysUsed || 1;
+    const baseCount = deviceIds.length > 0 ? deviceIds.length : rd.quantity;
+    const dailyRate = rd.dailyRate || item.dailyRate || item.rate / 30;
+    const amount = calculateAmount(daysUsed, dailyRate, baseCount);
+
+    totalAmount += Number(amount) || 0;
+
+    return (
+      <tr style={++rowCounter % 2 === 0 ? tableRowEvenStyle : tableRowOddStyle}>
+        <td style={tableCellCenterStyle}>{rowCounter}</td>
+        <td style={tableCellStyle}>
+          <div>
+            <strong>Returned Asset IDs:</strong> {deviceIds.join(", ")}
+          </div>
+          <br />
+          <div style={itemTitleStyle}>{item.product_name}</div>
+          {renderSpecifications(product)}
+          <br />
+          <div style={itemTitleStyle}>
+            Return Date: {formatDate(new Date(rd.returnedDate))}
+          </div>
+        </td>
+        <td style={tableCellCenterStyle}>{baseCount}</td>
+        {invoiceData.transaction_type === "Rent" && (
+          <>
+            <td style={tableCellCenterStyle}>{daysUsed}</td>
+            <td style={tableCellCenterStyle}>{formatINRCurrency(dailyRate)}</td>
+          </>
+        )}
+        <td style={tableCellRightStyle}></td>
+        <td style={tableCellRightStyle}>{formatINRCurrency(amount)}</td>
+      </tr>
+    );
+  };
+
+  // Determine mid-month billing
+  const shouldRenderMidMonth = (item) => {
+    const challanDate = item.isAdditionalChallan
+      ? new Date(item.challanDate)
+      : new Date(invoiceData.dc_date);
+    const invoiceStartDate = new Date(invoiceData.invoice_start_date);
+    const monthDiff =
+      (challanDate.getFullYear() - invoiceStartDate.getFullYear()) * 12 +
+      (challanDate.getMonth() - invoiceStartDate.getMonth());
+    return monthDiff === -1;
+  };
+
+  // Render mid-month row
+  const renderMidMonthRow = (item, product) => {
+    if (!shouldRenderMidMonth(item)) return null;
+    if (
+      item.quantity === 0 &&
+      (!item.device_ids || item.device_ids.length === 0)
+    )
+      return null;
+
+    const deviceIds = item.device_ids || [];
+    const baseCount = deviceIds.length > 0 ? deviceIds.length : item.quantity;
+
+    const challanDate = item.isAdditionalChallan
+      ? new Date(item.challanDate)
+      : new Date(invoiceData.dc_date);
+    const startDate = challanDate;
+    const endDate = new Date(
+      challanDate.getFullYear(),
+      challanDate.getMonth() + 1,
+      0
+    );
+
+    const daysUsed = calculateDays(startDate, endDate);
+    const dailyRate = item.dailyRate || item.rate / 30;
+    const amount = calculateAmount(daysUsed, dailyRate, baseCount);
+
+    totalAmount += Number(amount) || 0;
+
+    return (
+      <tr style={++rowCounter % 2 === 0 ? tableRowEvenStyle : tableRowOddStyle}>
+        <td style={tableCellCenterStyle}>{rowCounter}</td>
+        <td style={tableCellStyle}>
+          <div>
+            <strong>Mid-Month Usage:</strong>
+          </div>
+          <br />
+          <div style={itemTitleStyle}>{item.product_name}</div>
+          {renderSpecifications(product)}
+          {deviceIds.length > 0 && (
+            <div style={itemTitleStyle}>Asset IDs: {deviceIds.join(", ")}</div>
+          )}
+          <br />
+          <div style={itemTitleStyle}>
+            Billing Start Date: {formatDate(startDate)} to {formatDate(endDate)}
+          </div>
+        </td>
+        <td style={tableCellCenterStyle}>{baseCount}</td>
+        {invoiceData.transaction_type === "Rent" && (
+          <>
+            <td style={tableCellCenterStyle}>{daysUsed}</td>
+            <td style={tableCellCenterStyle}>{formatINRCurrency(dailyRate)}</td>
+          </>
+        )}
+        <td style={tableCellRightStyle}></td>
+        <td style={tableCellRightStyle}>{formatINRCurrency(amount)}</td>
+      </tr>
+    );
+  };
+
+  // 🔥 Main rendering loop
+  const rows = [];
+  const groupedItems = {};
+
+  items.forEach((item) => {
+    if (!shouldShowRow(item)) return;
+
+    // normalize calculation inputs
+    const daysUsed = item.isFullMonth ? 30 : item.days || 1;
+    const dailyRate = item.dailyRate || item.rate / 30;
+    const monthlyRate = item.rate;
+
+    // 🔑 Grouping key = product + billingPeriod + amount factors
+    const key = [
+      item.product_name,
+      item.billingPeriod || "full",
+      daysUsed,
+      dailyRate.toFixed(2),
+      monthlyRate,
+    ].join("_");
+
+    if (!groupedItems[key]) groupedItems[key] = [];
+    groupedItems[key].push(item);
+  });
+
+  Object.values(groupedItems).forEach((group) => {
+    const product = group[0].productDetails || group[0].product;
+    const combinedDeviceIds = mergeDeviceIds(group);
+
+    // Main row
+    const mainRow = renderProductRow(group, product, combinedDeviceIds);
+    if (mainRow) rows.push(mainRow);
+
+    // Mid-month + Returns
+    group.forEach((item) => {
+      if (!isBuyTransaction && !paymentMode && showDcPeriod) {
+        const isMidMonthItem = item.isAdditionalChallan
+          ? new Date(item.challanDate).getDate() !== 1
+          : item.dcAmountBeforeReturns > 0;
+        const midRow = isMidMonthItem ? renderMidMonthRow(item, product) : null;
+        if (midRow) rows.push(midRow);
+      }
+
+      item.returnedDevices?.forEach((rd) => {
+        const retRow = renderReturnedDeviceRow(item, product, rd);
+        if (retRow) rows.push(retRow);
+      });
+    });
+  });
+
+  // // 🔥 Main rendering loop
+  // const rows = [];
+  // const groupedItems = {};
+  // items.forEach((item) => {
+  //   if (!shouldShowRow(item)) return;
+  //   const key = `${item.product_name}_${item.billingPeriod || "full"}`;
+  //   if (!groupedItems[key]) groupedItems[key] = [];
+  //   groupedItems[key].push(item);
+  // });
+
+  // Object.values(groupedItems).forEach((group) => {
+  //   const product = group[0].productDetails || group[0].product;
+  //   const combinedDeviceIds = mergeDeviceIds(group);
+
+  //   // Main row
+  //   const mainRow = renderProductRow(group, product, combinedDeviceIds);
+  //   if (mainRow) rows.push(mainRow);
+
+  //   // Mid-month + Returns
+  //   group.forEach((item) => {
+  //     if (!isBuyTransaction && !paymentMode && showDcPeriod) {
+  //       const isMidMonthItem = item.isAdditionalChallan
+  //         ? new Date(item.challanDate).getDate() !== 1
+  //         : item.dcAmountBeforeReturns > 0;
+  //       const midRow = isMidMonthItem ? renderMidMonthRow(item, product) : null;
+  //       if (midRow) rows.push(midRow);
+  //     }
+
+  //     item.returnedDevices?.forEach((rd) => {
+  //       const retRow = renderReturnedDeviceRow(item, product, rd);
+  //       if (retRow) rows.push(retRow);
+  //     });
+  //   });
+  // });
+
+  // Taxes
+  const netAmount = totalAmount;
+  let cgst = isKarnataka ? netAmount * 0.09 : 0;
+  let sgst = isKarnataka ? netAmount * 0.09 : 0;
+  let igst = isKarnataka ? 0 : netAmount * 0.18;
+  let totalTax = cgst + sgst + igst;
   const grandTotal = netAmount + totalTax;
+
+  // let totalAmount = 0;
+  // let rowCounter = 0;
+
+  // // Utility to merge device IDs without duplicates
+  // const mergeDeviceIds = (items) => {
+  //   const allIds = items.flatMap((i) => i.device_ids || []);
+  //   return [...new Set(allIds)];
+  // };
+
+  // // Utility to sum quantities
+  // const sumQuantities = (items) =>
+  //   items.reduce((acc, i) => acc + (i.quantity || 0), 0);
+
+  // // Utility to sum amounts
+  // const sumAmounts = (items) =>
+  //   items.reduce((acc, i) => {
+  //     const amount = i.isFullMonth
+  //       ? i.rate * i.quantity
+  //       : i.dailyRate * i.quantity * (i.days || 1);
+  //     return acc + (Number(amount) || 0);
+  //   }, 0);
+
+  // // Render product specifications
+  // const renderSpecifications = (product) => {
+  //   if (!product) return null;
+  //   return (
+  //     <div
+  //       style={{
+  //         fontSize: "12px",
+  //         color: "#555",
+  //         textAlign: "justify",
+  //         lineHeight: "1.4",
+  //       }}
+  //     >
+  //       Specifications:{" "}
+  //       {product?.brand && (
+  //         <>
+  //           {" "}
+  //           <strong>Brand:</strong> {product.brand}.{" "}
+  //         </>
+  //       )}
+  //       {product?.model && (
+  //         <>
+  //           {" "}
+  //           <strong>Model:</strong> {product.model}.{" "}
+  //         </>
+  //       )}
+  //       {product?.processor && (
+  //         <>
+  //           {" "}
+  //           <strong>Processor:</strong> {product.processor}.{" "}
+  //         </>
+  //       )}
+  //       {product?.ram && (
+  //         <>
+  //           {" "}
+  //           <strong>RAM:</strong> {product.ram}.{" "}
+  //         </>
+  //       )}
+  //       {product?.storage && (
+  //         <>
+  //           {" "}
+  //           <strong>Storage:</strong> {product.storage}.{" "}
+  //         </>
+  //       )}
+  //       {product?.disk_type && (
+  //         <>
+  //           {" "}
+  //           <strong>Disk Type:</strong> {product.disk_type}.{" "}
+  //         </>
+  //       )}
+  //       {product?.graphics && (
+  //         <>
+  //           {" "}
+  //           <strong>Graphics:</strong> {product.graphics}.{" "}
+  //         </>
+  //       )}
+  //       {product?.os && (
+  //         <>
+  //           {" "}
+  //           <strong>OS:</strong> {product.os}.{" "}
+  //         </>
+  //       )}
+  //     </div>
+  //   );
+  // };
+
+  // // Check if a row should be displayed
+  // const shouldShowRow = (item) => {
+  //   const hasReturnedDevices = item.returnedDevices?.some(
+  //     (rd) => rd.deviceIds?.length > 0
+  //   );
+  //   const deviceIdsLength = item.device_ids?.length || 0;
+  //   return (
+  //     (item.quantity > 0 && deviceIdsLength > 0) ||
+  //     item.isAdditionalChallan ||
+  //     hasReturnedDevices
+  //   );
+  // };
+
+  // // Render main product row
+  // const renderProductRow = (items, product, combinedDeviceIds) => {
+  //   const quantity = sumQuantities(items);
+  //   // DON'T SHOW if quantity is 0 OR deviceIdsLength is 0
+  //   if (quantity === 0 || combinedDeviceIds.length === 0) return null;
+
+  //   const amount = sumAmounts(items);
+  //   totalAmount += Number(amount) || 0;
+
+  //   const firstItem = items[0];
+
+  //   return (
+  //     <tr style={++rowCounter % 2 === 0 ? tableRowEvenStyle : tableRowOddStyle}>
+  //       <td style={tableCellCenterStyle}>{rowCounter}</td>
+  //       <td style={tableCellStyle}>
+  //         <div style={itemTitleStyle}>{firstItem.product_name}</div>
+  //         {renderSpecifications(product)}
+  //         {combinedDeviceIds.length > 0 && (
+  //           <>
+  //             <br />
+  //             <div style={itemTitleStyle}>
+  //               Asset IDs: {combinedDeviceIds.join(", ")}
+  //             </div>
+  //           </>
+  //         )}
+  //         <br />
+  //         <div style={itemTitleStyle}>{firstItem.description}</div>
+  //       </td>
+  //       <td style={tableCellCenterStyle}>{quantity}</td>
+  //       {invoiceData.transaction_type === "Rent" && (
+  //         <>
+  //           <td style={tableCellCenterStyle}>{firstItem.days}</td>
+  //           <td style={tableCellCenterStyle}>
+  //             {formatINRCurrency(firstItem.dailyRate)}
+  //           </td>
+  //         </>
+  //       )}
+  //       <td style={tableCellRightStyle}>{formatINRCurrency(firstItem.rate)}</td>
+  //       <td style={tableCellRightStyle}>{formatINRCurrency(amount)}</td>
+  //     </tr>
+  //   );
+  // };
+
+  // // Keep track of already-rendered Asset IDs globally for this invoice render
+  // let renderedAssetIds = new Set();
+
+  // const renderReturnedDeviceRow = (item, product, rd) => {
+  //   // Ensure deviceIds is unique for this rd
+  //   let deviceIds = [...new Set(rd.deviceIds || [])];
+
+  //   // Filter out already-rendered IDs (avoid duplicates across rows)
+  //   deviceIds = deviceIds.filter((id) => !renderedAssetIds.has(id));
+
+  //   // Update global tracker
+  //   deviceIds.forEach((id) => renderedAssetIds.add(id));
+
+  //   // DON'T SHOW if no valid IDs left OR quantity is 0
+  //   if (deviceIds.length === 0 || rd.quantity === 0) return null;
+
+  //   const returnDate = new Date(rd.returnedDate);
+  //   totalAmount += Number(rd.amount) || 0;
+
+  //   return (
+  //     <tr style={++rowCounter % 2 === 0 ? tableRowEvenStyle : tableRowOddStyle}>
+  //       <td style={tableCellCenterStyle}>{rowCounter}</td>
+  //       <td style={tableCellStyle}>
+  //         <div>
+  //           <strong>Returned Asset IDs:</strong> {deviceIds.join(", ")}
+  //         </div>
+  //         <br />
+  //         <div style={itemTitleStyle}>{item.product_name}</div>
+  //         {renderSpecifications(product)}
+  //         <br />
+  //         <div style={itemTitleStyle}>
+  //           Return Date: {formatDate(returnDate)}
+  //         </div>
+  //       </td>
+  //       <td style={tableCellCenterStyle}>{deviceIds.length}</td>
+  //       {invoiceData.transaction_type === "Rent" && (
+  //         <>
+  //           <td style={tableCellCenterStyle}>{rd.daysUsed}</td>
+  //           <td style={tableCellCenterStyle}>
+  //             {formatINRCurrency(rd.amount / rd.daysUsed)}
+  //           </td>
+  //         </>
+  //       )}
+  //       <td style={tableCellRightStyle}></td>
+  //       <td style={tableCellRightStyle}>{formatINRCurrency(rd.amount)}</td>
+  //     </tr>
+  //   );
+  // };
+
+  // // Determine mid-month billing
+  // const shouldRenderMidMonth = (item) => {
+  //   const challanDate = item.isAdditionalChallan
+  //     ? new Date(item.challanDate)
+  //     : new Date(invoiceData.dc_date);
+  //   const invoiceStartDate = new Date(invoiceData.invoice_start_date);
+  //   const monthDiff =
+  //     (challanDate.getFullYear() - invoiceStartDate.getFullYear()) * 12 +
+  //     (challanDate.getMonth() - invoiceStartDate.getMonth());
+  //   return monthDiff === -1;
+  // };
+
+  // // Render mid-month row
+  // const renderMidMonthRow = (item, product) => {
+  //   if (!shouldRenderMidMonth(item)) return null;
+  //   // DON'T SHOW if quantity is 0 OR deviceIdsLength is 0
+  //   if (item.quantity === 0 || (item.device_ids?.length || 0) === 0)
+  //     return null;
+
+  //   const deviceIds = item.device_ids || [];
+  //   const quantity = item.quantity;
+
+  //   const challanDate = item.isAdditionalChallan
+  //     ? new Date(item.challanDate)
+  //     : new Date(invoiceData.dc_date);
+  //   const startDate = challanDate;
+  //   const endDate = new Date(
+  //     challanDate.getFullYear(),
+  //     challanDate.getMonth() + 1,
+  //     0
+  //   );
+  //   const daysUsed = calculateDays(startDate, endDate);
+
+  //   const amount = item.isAdditionalChallan
+  //     ? item.dailyRate * quantity * daysUsed
+  //     : item.dcAmountBeforeReturns;
+  //   totalAmount += Number(amount) || 0;
+
+  //   return (
+  //     <tr style={++rowCounter % 2 === 0 ? tableRowEvenStyle : tableRowOddStyle}>
+  //       <td style={tableCellCenterStyle}>{rowCounter}</td>
+  //       <td style={tableCellStyle}>
+  //         <div>
+  //           <strong>Mid-Month Usage:</strong>
+  //         </div>
+  //         <br />
+  //         <div style={itemTitleStyle}>{item.product_name}</div>
+  //         {renderSpecifications(product)}
+  //         {deviceIds.length > 0 && (
+  //           <div style={itemTitleStyle}>Asset IDs: {deviceIds.join(", ")}</div>
+  //         )}
+  //         <br />
+  //         <div style={itemTitleStyle}>
+  //           Billing Start Date: {formatDate(startDate)} to {formatDate(endDate)}
+  //         </div>
+  //       </td>
+  //       <td style={tableCellCenterStyle}>{quantity}</td>
+  //       {invoiceData.transaction_type === "Rent" && (
+  //         <>
+  //           <td style={tableCellCenterStyle}>{daysUsed}</td>
+  //           <td style={tableCellCenterStyle}>
+  //             {formatINRCurrency(item.dailyRate || item.rate / 30)}
+  //           </td>
+  //         </>
+  //       )}
+  //       <td style={tableCellRightStyle}></td>
+  //       <td style={tableCellRightStyle}>{formatINRCurrency(amount)}</td>
+  //     </tr>
+  //   );
+  // };
+
+  // // 🔥 Main rendering loop
+  // const rows = [];
+  // const groupedItems = {};
+  // items.forEach((item) => {
+  //   if (!shouldShowRow(item)) return;
+  //   const key = `${item.product_name}_${item.billingPeriod || "full"}`;
+  //   if (!groupedItems[key]) groupedItems[key] = [];
+  //   groupedItems[key].push(item);
+  // });
+
+  // Object.values(groupedItems).forEach((group) => {
+  //   const product = group[0].productDetails || group[0].product;
+  //   const combinedDeviceIds = mergeDeviceIds(group);
+
+  //   // Render main row
+  //   const mainRow = renderProductRow(group, product, combinedDeviceIds);
+  //   if (mainRow) rows.push(mainRow);
+
+  //   // Mid-month rows
+  //   group.forEach((item) => {
+  //     if (!isBuyTransaction && !paymentMode && showDcPeriod) {
+  //       const isMidMonthItem = item.isAdditionalChallan
+  //         ? new Date(item.challanDate).getDate() !== 1
+  //         : item.dcAmountBeforeReturns > 0;
+  //       const midRow = isMidMonthItem ? renderMidMonthRow(item, product) : null;
+  //       if (midRow) rows.push(midRow);
+  //     }
+
+  //     // Returned devices
+  //     item.returnedDevices?.forEach((rd) => {
+  //       const retRow = renderReturnedDeviceRow(item, product, rd);
+  //       if (retRow) rows.push(retRow);
+  //     });
+  //   });
+  // });
+
+  // // Taxes
+  // const netAmount = totalAmount;
+  // let cgst = isKarnataka ? netAmount * 0.09 : 0;
+  // let sgst = isKarnataka ? netAmount * 0.09 : 0;
+  // let igst = isKarnataka ? 0 : netAmount * 0.18;
+  // let totalTax = cgst + sgst + igst;
+  // const grandTotal = netAmount + totalTax;
 
   // Table rendering remains the same as your original code
   // Just make sure to conditionally show/hide sections based on paymentMode
@@ -2892,10 +5212,11 @@ const InvoiceDialog = ({ open, onClose, invoiceData }) => {
             <div style={challanDetailsStyle}>
               Invoice No: {invoiceData.invoice_number}
               <br />
-              Invoice Date:{" "}
+              Invoice Date: {formatDate(startDate)}
+              {/* Invoice Date:{" "}
               {paymentMode
                 ? formatDate(invoiceEndDate)
-                : formatDate(invoiceDate)}
+                : formatDate(invoiceDate)} */}
             </div>
           </div>
         </div>
@@ -2918,10 +5239,10 @@ const InvoiceDialog = ({ open, onClose, invoiceData }) => {
               {invoiceData.shippingDetail?.pincode}
             </div>
             <div style={recipientDetailsGridStyle}>
-              <div>
+              {/* <div>
                 <div style={detailLabelStyle}>Customer GST :</div>
                 {invoiceData.customer_gst_number}
-              </div>
+              </div> */}
               <div>
                 <div style={detailLabelStyle}>PAN Number :</div>
                 {invoiceData.pan_number}
@@ -2976,337 +5297,10 @@ const InvoiceDialog = ({ open, onClose, invoiceData }) => {
               <th style={tableHeaderRateStyle}>TOTAL</th>
             </tr>
           </thead>
-
           <tbody>
-            {(() => {
-              let rowCounter = 0; // Global counter for alternating row styles
-
-              // In special case, render items directly without grouping
-              if (specialCase) {
-                return items.map((item, index) => {
-                  const dailyRate = item.dailyRate || item.rate / 30;
-                  const product = item.productDetails || item.product;
-                  const isAdditional = item.isAdditionalChallan;
-
-                  const renderSpecifications = (product) => {
-                    if (!product) return null;
-                    return (
-                      <div
-                        style={{
-                          fontSize: "12px",
-                          color: "#555",
-                          textAlign: "justify",
-                          lineHeight: "1.4",
-                        }}
-                      >
-                        Specifications:{" "}
-                        {product?.brand && (
-                          <>
-                            <strong>Brand:</strong> {product.brand}.{" "}
-                          </>
-                        )}
-                        {product?.model && (
-                          <>
-                            <strong>Model:</strong> {product.model}.{" "}
-                          </>
-                        )}
-                        {product?.processor && (
-                          <>
-                            <strong>Processor:</strong> {product.processor}.{" "}
-                          </>
-                        )}
-                        {product?.ram && (
-                          <>
-                            <strong>RAM:</strong> {product.ram}.{" "}
-                          </>
-                        )}
-                        {product?.storage && (
-                          <>
-                            <strong>Storage:</strong> {product.storage}.{" "}
-                          </>
-                        )}
-                        {product?.disk_type && (
-                          <>
-                            <strong>Disk Type:</strong> {product.disk_type}.{" "}
-                          </>
-                        )}
-                        {product?.graphics && (
-                          <>
-                            <strong>Graphics:</strong> {product.graphics}.{" "}
-                          </>
-                        )}
-                        {product?.os && (
-                          <>
-                            <strong>OS:</strong> {product.os}.{" "}
-                          </>
-                        )}
-                      </div>
-                    );
-                  };
-
-                  return (
-                    <tr
-                      key={`item-${index}`}
-                      style={
-                        ++rowCounter % 2 === 0
-                          ? tableRowEvenStyle
-                          : tableRowOddStyle
-                      }
-                    >
-                      <td style={tableCellCenterStyle}>{index + 1}</td>
-                      <td style={tableCellStyle}>
-                        <div style={itemTitleStyle}>{item.product_name}</div>
-                        {renderSpecifications(product)}
-                        {item.device_ids.length > 0 && (
-                          <>
-                            <br />
-                            <div style={itemTitleStyle}>
-                              Asset IDs: {item.device_ids.join(", ")}
-                            </div>
-                          </>
-                        )}
-                        <br />
-                        <div style={itemTitleStyle}>{item.description}</div>
-                        {isAdditional && (
-                          <div style={itemTitleStyle}>
-                            Challan No: {item.challanNumber}
-                          </div>
-                        )}
-                      </td>
-                      <td style={tableCellCenterStyle}>{item.quantity}</td>
-                      {invoiceData.transaction_type === "Rent" && (
-                        <>
-                          <td style={tableCellCenterStyle}>{item.days}</td>
-                          <td style={tableCellCenterStyle}>
-                            {formatINRCurrency(dailyRate)}
-                          </td>
-                        </>
-                      )}
-                      <td style={tableCellRightStyle}>
-                        {formatINRCurrency(item.rate)}
-                      </td>
-                      <td style={tableCellRightStyle}>
-                        {formatINRCurrency(item.amount)}
-                      </td>
-                    </tr>
-                  );
-                });
-              }
-
-              // Normal case - render grouped items
-              return items.map((group, index) => {
-                const dailyRate = group.dailyRate || group.rate / 30;
-                const product = group.productDetails || group.product;
-                const isAdditional = group.isAdditional;
-                const days = group.days;
-
-                const renderSpecifications = (product) => {
-                  if (!product) return null;
-
-                  return (
-                    <div
-                      style={{
-                        fontSize: "12px",
-                        color: "#555",
-                        textAlign: "justify",
-                        lineHeight: "1.4",
-                      }}
-                    >
-                      Specifications:{" "}
-                      {product?.brand && (
-                        <>
-                          <strong>Brand:</strong> {product.brand}.{" "}
-                        </>
-                      )}
-                      {product?.model && (
-                        <>
-                          <strong>Model:</strong> {product.model}.{" "}
-                        </>
-                      )}
-                      {product?.processor && (
-                        <>
-                          <strong>Processor:</strong> {product.processor}.{" "}
-                        </>
-                      )}
-                      {product?.ram && (
-                        <>
-                          <strong>RAM:</strong> {product.ram}.{" "}
-                        </>
-                      )}
-                      {product?.storage && (
-                        <>
-                          <strong>Storage:</strong> {product.storage}.{" "}
-                        </>
-                      )}
-                      {product?.disk_type && (
-                        <>
-                          <strong>Disk Type:</strong> {product.disk_type}.{" "}
-                        </>
-                      )}
-                      {product?.graphics && (
-                        <>
-                          <strong>Graphics:</strong> {product.graphics}.{" "}
-                        </>
-                      )}
-                      {product?.os && (
-                        <>
-                          <strong>OS:</strong> {product.os}.{" "}
-                        </>
-                      )}
-                    </div>
-                  );
-                };
-
-                return (
-                  <React.Fragment key={`group-${index}`}>
-                    {/* Main Product Row */}
-                    <tr
-                      style={
-                        ++rowCounter % 2 === 0
-                          ? tableRowEvenStyle
-                          : tableRowOddStyle
-                      }
-                    >
-                      <td style={tableCellCenterStyle}>{index + 1}</td>
-                      <td style={tableCellStyle}>
-                        <div style={itemTitleStyle}>{group.product_name}</div>
-                        {renderSpecifications(product)}
-                        {group.allDeviceIds.length > 0 && (
-                          <>
-                            <br />
-                            <div style={itemTitleStyle}>
-                              Asset IDs: {group.allDeviceIds.join(", ")}
-                            </div>
-                          </>
-                        )}
-                        {!isAdditional && (
-                          <>
-                            <br />
-                            <div style={itemTitleStyle}>
-                              Billing Start Date: {formatDate(invoiceStartDate)}{" "}
-                              - Billing End Date: {formatDate(invoiceEndDate)}
-                            </div>
-                          </>
-                        )}
-                      </td>
-                      <td style={tableCellCenterStyle}>
-                        {group.totalQuantity}
-                      </td>
-                      {invoiceData.transaction_type === "Rent" && (
-                        <>
-                          <td style={tableCellCenterStyle}>{days}</td>
-                          <td style={tableCellCenterStyle}>
-                            {formatINRCurrency(dailyRate)}
-                          </td>
-                        </>
-                      )}
-
-                      <td style={tableCellRightStyle}>
-                        {formatINRCurrency(group.rate)}
-                      </td>
-                      <td style={tableCellRightStyle}>
-                        {group.isFullMonth ? (
-                          <>
-                            {formatINRCurrency(
-                              group.rate * group.totalQuantity
-                            )}
-                          </>
-                        ) : (
-                          <>
-                            {formatINRCurrency(
-                              group.dailyRate * group.totalQuantity * group.days
-                            )}
-                          </>
-                        )}
-                      </td>
-                    </tr>
-
-                    {/* Mid-Month Usage Rows */}
-                    {!isAdditional &&
-                      !isBuyTransaction &&
-                      showDcPeriod &&
-                      group.allRows.map((row, rowIndex) =>
-                        row.dcAmountBeforeReturns > 0 ? (
-                          <tr>
-                            <td style={tableCellCenterStyle}></td>
-                            <td style={tableCellStyle}>
-                              <div>
-                                <strong>Mid-Month Usage:</strong>
-                              </div>
-                              <br />
-                              <div style={itemTitleStyle}>
-                                {group.product_name}
-                              </div>
-                              {renderSpecifications(product)}
-                              <br />
-                              <div style={itemTitleStyle}>
-                                Asset IDs: {row.device_ids?.join(", ")}
-                              </div>
-                              <br />
-                              <div style={itemTitleStyle}>
-                                Billing Start Date: {formatDate(dcDate)} to{" "}
-                                {formatDate(dcPeriodEnd)}
-                              </div>
-                            </td>
-                            <td style={tableCellCenterStyle}>{row.quantity}</td>
-                            <td style={tableCellCenterStyle}>{row.dcDays}</td>
-                            <td style={tableCellCenterStyle}>
-                              {formatINRCurrency(dailyRate)}
-                            </td>
-                            <td style={tableCellRightStyle}></td>
-                            <td style={tableCellRightStyle}>
-                              {formatINRCurrency(row.dcAmountBeforeReturns)}
-                            </td>
-                          </tr>
-                        ) : null
-                      )}
-
-                    {paymentMode &&
-                      group.returnedDevices?.map((rd, rdIndex) => {
-                        const returnDate = new Date(rd.returnedDate);
-                        const startDate =
-                          monthDiff > 1
-                            ? new Date(
-                                returnDate.getFullYear(),
-                                returnDate.getMonth(),
-                                1
-                              )
-                            : dcDate;
-
-                        return (
-                          <tr key={`returned-${index}-${rdIndex}`}>
-                            <td style={tableCellCenterStyle}></td>
-                            <td style={tableCellStyle}>
-                              <div>
-                                <strong>Returned Asset IDs:</strong>{" "}
-                                {rd.deviceIds.join(", ")}
-                              </div>
-                              <br />
-                              <div style={itemTitleStyle}>
-                                {group.product_name}
-                              </div>
-                              {renderSpecifications(product)}
-                            </td>
-                            <td style={tableCellCenterStyle}>
-                              {rd.deviceIds.length}
-                            </td>
-                            <td style={tableCellCenterStyle}>{rd.daysUsed}</td>
-                            <td style={tableCellCenterStyle}>
-                              {formatINRCurrency(dailyRate)}
-                            </td>
-                            <td style={tableCellRightStyle}></td>
-                            <td style={tableCellRightStyle}>
-                              {formatINRCurrency(rd.amount)}
-                            </td>
-                          </tr>
-                        );
-                      })}
-                  </React.Fragment>
-                );
-              });
-            })()}
-
-            <tr style={totalsRowStyle}>
+            {rows}
+            {/* Add total row at the end */}
+            <tr key="total-row" style={totalsRowStyle}>
               <td
                 style={tableCellCenterStyle}
                 colSpan={invoiceData.transaction_type === "Rent" ? 6 : 4}
@@ -3314,7 +5308,7 @@ const InvoiceDialog = ({ open, onClose, invoiceData }) => {
                 <strong>TOTAL</strong>
               </td>
               <td style={tableCellRightStyle}>
-                {formatINRCurrency(computedTotalAmount)}
+                {formatINRCurrency(totalAmount)}
               </td>
             </tr>
           </tbody>
@@ -3325,17 +5319,21 @@ const InvoiceDialog = ({ open, onClose, invoiceData }) => {
           <div style={taxDetailsStyle}>
             <div style={taxRowStyle}>
               <span>Subtotal:</span>
-              <span>{formatINRCurrency(computedTotalAmount)}</span>
+              <span>{formatINRCurrency(totalAmount)}</span>
             </div>
 
-            <div style={taxRowStyle}>
-              <span>CGST @9%:</span>
-              <span>{formatINRCurrency(cgst)}</span>
-            </div>
-            <div style={taxRowStyle}>
-              <span>SGST @9%:</span>
-              <span>{formatINRCurrency(sgst)}</span>
-            </div>
+            {isKarnataka && (
+              <>
+                <div style={taxRowStyle}>
+                  <span>CGST @9%:</span>
+                  <span>{formatINRCurrency(cgst)}</span>
+                </div>
+                <div style={taxRowStyle}>
+                  <span>SGST @9%:</span>
+                  <span>{formatINRCurrency(sgst)}</span>
+                </div>
+              </>
+            )}
             {!isKarnataka && (
               <div style={taxRowStyle}>
                 <span>IGST @18%:</span>
@@ -3344,12 +5342,12 @@ const InvoiceDialog = ({ open, onClose, invoiceData }) => {
             )}
             <div style={taxRowTotalStyle}>
               <span>Total Tax:</span>
-              <span>{formatINRCurrency1(totalTax)}</span>
+              <span>{formatINRCurrency(totalTax)}</span>
             </div>
 
             <div style={grandTotalStyle}>
               <span>Grand Total:</span>
-              <span>{formatINRCurrency1(grandTotal)}</span>
+              <span>{formatINRCurrency(grandTotal)}</span>
             </div>
           </div>
         </div>
@@ -3654,18 +5652,33 @@ const DynamicTable = ({
 
   // Add this to your component where you manage the dialog state
   const [openGrnDialog, setOpenGrnDialog] = useState(false);
+  const [openPlainGrnDialog, setOpenGrnPlainDialog] = useState(false);
+
   const [selectedGrnRow, setSelectedGrnRow] = useState(null);
+  const [selectedPlainGrnRow, setSelectedPlainGrnRow] = useState(null);
+
   const [selectedCreditNoteRow, setSelectedCreditNoteRow] = useState(null);
   const [openCreditNoteDialog, setOpenCreditNoteDialog] = useState(false);
 
   const handleViewGRN = async (row) => {
     try {
-      const response = await axios.get(`${API_URL}/grns/${row.id}`);
-      console.log("GRN Data Response:", response.data);
+      const response = await axios.get(`${API_URL}/credit-notes/${row.id}`);
       setSelectedGrnRow(response.data);
       setOpenGrnDialog(true);
     } catch (error) {
       console.error("Error fetching GRN details:", error);
+    }
+  };
+
+  const handleViewPlainGRN = async (row) => {
+    try {
+      const response = await axios.get(
+        `${API_URL}/delivery-challans/customer-details/${row.id}`
+      );
+      setSelectedPlainGrnRow(response.data);
+      setOpenGrnPlainDialog(true);
+    } catch (error) {
+      console.error("Error fetching Plain GRN details:", error);
     }
   };
 
@@ -3770,6 +5783,40 @@ const DynamicTable = ({
     setOpenDeleteDialog(false);
   };
 
+  // Get button text based on table type
+  const getButtonText = () => {
+    switch (tableType) {
+      case "settings":
+        return "Add User";
+      case "crm":
+        return "Add Client";
+      case "assembled-products":
+        return "Create Assembled";
+      case "operations":
+        return "Add DC";
+      case "credit_notes":
+        return "Add Return Order";
+      case "job_description":
+        return "Add Job Description";
+      case "goodsreceipt":
+        return "Add Receipt";
+      case "purchase-orders":
+        return "Add Order";
+      case "po-quotations":
+        return "Add Quotation";
+      case "purchase-requests":
+        return "Add Request";
+      case "product_library":
+        return "Add Product";
+      case "product_categories":
+        return "Add Category";
+      case "asset-updation":
+        return "Add Asset"; // Specific text for asset updation
+      default:
+        return `Add ${tableType.charAt(0).toUpperCase() + tableType.slice(1)}`;
+    }
+  };
+
   return (
     <Box>
       {/* Search and Add Button */}
@@ -3788,32 +5835,45 @@ const DynamicTable = ({
         />
         {tableType !== "inventory" &&
           tableType !== "asset" &&
+          tableType !== "plain-grn" &&
+          tableType !== "wear-house" &&
+          tableType !== "client-place" &&
+          tableType !== "asset-modifications" &&
           tableType !== "credit-notes" && (
             <Button
               variant="contained"
               color="primary"
               onClick={() => navigate(`${location.pathname}/add`)}
+              sx={{
+                minWidth: "140px",
+                padding: "8px 16px",
+                fontWeight: "bold",
+                fontSize: "14px",
+                borderRadius: "6px",
+                boxShadow: "0 2px 4px rgba(0,0,0,0.2)",
+                textTransform: "none",
+                "&:hover": {
+                  boxShadow: "0 4px 8px rgba(0,0,0,0.3)",
+                  transform: "translateY(-1px)",
+                },
+                transition: "all 0.2s ease-in-out",
+              }}
             >
-              {tableType === "settings"
-                ? "Add User"
-                : tableType === "crm"
-                ? "Add Client"
-                : tableType === "operations"
-                ? "Add DC"
-                : tableType === "credit_notes"
-                ? "Add Return Order"
-                : tableType === "job_description"
-                ? "Add Job Description"
-                : `Add ${
-                    tableType.charAt(0).toUpperCase() + tableType.slice(1)
-                  }`}
+              {getButtonText()}
             </Button>
           )}
       </Box>
 
       {/* Table */}
-      <TableContainer component={Paper} sx={{ overflowX: "auto" }}>
-        <Table sx={{ minWidth: 600 }}>
+      <TableContainer
+        component={Paper}
+        sx={{
+          overflowX: "auto",
+          maxHeight: "calc(100vh - 200px)", // Adjust as needed
+          position: "relative",
+        }}
+      >
+        <Table stickyHeader sx={{ minWidth: 600 }}>
           <TableHead>
             <TableRow>
               {columns.map((column, index) => (
@@ -3841,8 +5901,11 @@ const DynamicTable = ({
                 "credit_notes",
                 "asset",
                 "invoices",
+                "wear-house",
                 "credit-notes",
                 "asset-modifications",
+                "asset-updation",
+                "client-place",
               ].includes(tableType) === false && (
                 <TableCell align="center" sx={{ fontWeight: "bold" }}>
                   Active Status
@@ -3867,9 +5930,22 @@ const DynamicTable = ({
                 </TableCell>
               )}
 
-              {["inventory", "asset", "grn", "credit-notes"].includes(
-                tableType
-              ) === false && (
+              {tableType === "plain-grn" && (
+                <TableCell align="center" sx={{ fontWeight: "bold" }}>
+                  View Plain GRN
+                </TableCell>
+              )}
+
+              {[
+                "inventory",
+                "asset",
+                "grn",
+                "credit-notes",
+                "invoices",
+                "client-place",
+                "wear-house",
+                "plain-grn",
+              ].includes(tableType) === false && (
                 <TableCell align="center" sx={{ fontWeight: "bold" }}>
                   Action
                 </TableCell>
@@ -3959,6 +6035,9 @@ const DynamicTable = ({
                     "asset-modifications",
                     "credit-notes",
                     "invoices",
+                    "client-place",
+                    "wear-house",
+                    "asset-updation",
                   ].includes(tableType) === false && (
                     <TableCell align="center">
                       <Button onClick={() => toggleStatus(rowIndex)}>
@@ -3978,7 +6057,7 @@ const DynamicTable = ({
                       <Button
                         onClick={() => handleViewInvoice(row, "current")}
                         sx={{ minWidth: "30px", p: 0 }}
-                        title="View Current Invoice"
+                        title="View Invoice"
                       >
                         <img
                           src={ViewDC}
@@ -4028,23 +6107,48 @@ const DynamicTable = ({
                   {["inventory"].includes(tableType) === false && (
                     <TableCell align="center">
                       <Box display="flex" justifyContent="center" gap={1}>
-                        {/* {tableType === "grn" && (
-                          <Button
-                            onClick={() => handleViewGRN(row)}
-                            sx={{ minWidth: "30px", p: 0 }}
-                          >
-                            <img
-                              src={ViewDC}
-                              alt="ViewDC"
-                              width="45"
-                              height="35"
-                            />
-                          </Button>
-                        )} */}
-
-                        {["asset", "credit-notes"].includes(tableType) ===
-                          false && (
+                        {tableType === "grn" && (
                           <>
+                            <Button
+                              onClick={() => handleViewGRN(row)}
+                              sx={{ minWidth: "30px", p: 0 }}
+                            >
+                              <img
+                                src={ViewDC}
+                                alt="ViewDC"
+                                width="45"
+                                height="35"
+                              />
+                            </Button>
+                          </>
+                        )}
+
+                        {tableType === "plain-grn" && (
+                          <>
+                            <Button
+                              onClick={() => handleViewPlainGRN(row)}
+                              sx={{ minWidth: "30px", p: 0 }}
+                            >
+                              <img
+                                src={ViewDC}
+                                alt="ViewDC"
+                                width="45"
+                                height="35"
+                              />
+                            </Button>
+                          </>
+                        )}
+
+                        {[
+                          "asset",
+                          "credit-notes",
+                          "client-place",
+                          "wear-house",
+                          "plain-grn",
+                          "invoices",
+                        ].includes(tableType) === false && (
+                          <>
+                            {/* Always show Edit if allowed */}
                             <Button
                               onClick={() => handleEdit(row)}
                               sx={{ minWidth: "30px", p: 0 }}
@@ -4056,17 +6160,21 @@ const DynamicTable = ({
                                 height="35"
                               />
                             </Button>
-                            <Button
-                              onClick={() => handleDeleteClick(row)}
-                              sx={{ minWidth: "30px", p: 0 }}
-                            >
-                              <img
-                                src={DeleteIcon}
-                                alt="Delete"
-                                width="45"
-                                height="35"
-                              />
-                            </Button>
+
+                            {/* Show Delete only if not asset-modifications */}
+                            {tableType !== "asset-modifications" && (
+                              <Button
+                                onClick={() => handleDeleteClick(row)}
+                                sx={{ minWidth: "30px", p: 0 }}
+                              >
+                                <img
+                                  src={DeleteIcon}
+                                  alt="Delete"
+                                  width="45"
+                                  height="35"
+                                />
+                              </Button>
+                            )}
                           </>
                         )}
                       </Box>
@@ -4145,11 +6253,46 @@ const DynamicTable = ({
         onClose={() => setOpenGrnDialog(false)}
         grnData={selectedGrnRow}
       />
+      <PlainGoodsReturnNoteDialog
+        open={openPlainGrnDialog}
+        onClose={() => setOpenGrnPlainDialog(false)}
+        grnData={selectedPlainGrnRow}
+      />
     </Box>
   );
 };
 
 // Styles (keep all your existing styles exactly as they are)
+
+
+
+// Add these styles to your existing styles
+const accessoriesContainerStyle = {
+  marginTop: "20px",
+  padding: "10px",
+  border: "1px solid #ddd",
+  borderRadius: "4px",
+  backgroundColor: "#f9f9f9"
+};
+
+const accessoriesTitleStyle = {
+  fontWeight: "bold",
+  marginBottom: "8px",
+  fontSize: "14px"
+};
+
+const accessoriesListStyle = {
+  margin: 0,
+  paddingLeft: "20px"
+};
+
+const accessoriesListItemStyle = {
+  fontSize: "13px",
+  marginBottom: "4px"
+};
+
+
+
 const containerStyle = {
   minHeight: "100vh",
   backgroundColor: "#f3f4f6",

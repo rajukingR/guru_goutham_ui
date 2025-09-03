@@ -7,11 +7,17 @@ import API_URL from "../../api/Api_url";
 const getStatusBadge = (status) => {
   switch (status) {
     case "Delivered":
-      return <span style={{ color: "green", fontWeight: "bold" }}>Delivered</span>;
+      return (
+        <span style={{ color: "green", fontWeight: "bold" }}>Delivered</span>
+      );
     case "Dispatched":
-      return <span style={{ color: "orange", fontWeight: "bold" }}>Dispatched</span>;
+      return (
+        <span style={{ color: "orange", fontWeight: "bold" }}>Dispatched</span>
+      );
     default:
-      return <span style={{ color: "orange", fontWeight: "bold" }}>Pending</span>;
+      return (
+        <span style={{ color: "orange", fontWeight: "bold" }}>Pending</span>
+      );
   }
 };
 
@@ -24,17 +30,16 @@ const DeliveryChallanTable = () => {
     { id: "dispatch_order_number", label: "Order Number" },
     // { id: "customer_code", label: "Customer Code" },
     { id: "dc_date", label: "Delivery Date" },
-        { id: "payment_type", label: "Pyament Type" },
+    { id: "payment_type", label: "Pyament Type" },
 
     { id: "shipping_name", label: "Customer Name" },
     { id: "city", label: "City" },
     { id: "vehicle_number", label: "Vehicle No." },
     { id: "delivery_person_name", label: "Delivery Person" },
-        { id: "delivery_person_phone_number", label: "Delivery Person No." },
+    { id: "delivery_person_phone_number", label: "Delivery Person No." },
 
     // { id: "receiver_name", label: "Receiver" },
-        { id: "dc_status", label: "Status" },
-
+    { id: "dc_status", label: "Status" },
   ];
 
   useEffect(() => {
@@ -52,7 +57,7 @@ const DeliveryChallanTable = () => {
           const formatted = response.data.map((item, index) => ({
             s_id: index + 1,
             ...item,
-                        payment_type: item.payment_type === "" ? "Buy": item.payment_type,
+            payment_type: item.payment_type === "" ? "Buy" : item.payment_type,
 
             dc_status: getStatusBadge(item.dc_status), // format status here
           }));

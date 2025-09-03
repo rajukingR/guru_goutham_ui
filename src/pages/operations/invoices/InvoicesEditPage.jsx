@@ -13,18 +13,13 @@ import {
   Paper,
   Snackbar,
   Alert,
-  Select,
-  MenuItem,
-  InputLabel,
-  FormControl,
-  Button,
   Typography,
 } from "@mui/material";
 import { Add, Remove } from "@mui/icons-material";
+import API_URL from "../../../api/Api_url";
 import { useNavigate, useParams } from "react-router-dom";
-import API_URL, { IMAGE_API_URL } from "../../../api/Api_url";
 
-// Styles (same as in your original code)
+// Reuse the same styles from InvoicesAddPage
 const containerStyle = {
   padding: "2rem",
   fontFamily:
@@ -211,87 +206,140 @@ const monthButtonStyle = (isSelected) => ({
   },
 });
 
-// Field component moved outside and memoized
 const Field = memo(
   ({
     label,
     name,
-    value,
-    onChange,
     placeholder,
     type = "text",
+    options = [],
+    required = false,
     readOnly = false,
+    disabled = false,
+    value,
+    onChange,
+    error,
+    children, // <-- keep children support also
+    ...props
   }) => (
     <div style={fieldContainerStyle}>
-      <label style={labelStyle}>{label}</label>
+      <label style={labelStyle}>
+        {label}
+        {required && <span style={requiredStyle}>*</span>}
+      </label>
+
       {type === "select" ? (
         <div style={selectWrapperStyle}>
           <select
-            style={selectStyle}
+            style={{
+              ...selectStyle,
+              borderColor: error ? "#ef4444" : "#d1d5db",
+            }}
             name={name}
             value={value}
             onChange={onChange}
-            disabled={readOnly}
+            disabled={disabled || readOnly}
+            {...props}
           >
-            <option value="" disabled>
-              {placeholder}
-            </option>
+            {placeholder && (
+              <option value="" disabled>
+                {placeholder}
+              </option>
+            )}
+
+            {/* Support both `options` and `children` */}
+            {options.length > 0
+              ? options.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))
+              : children}
           </select>
           <div style={selectArrowStyle}>▼</div>
         </div>
+      ) : type === "textarea" ? (
+        <textarea
+          name={name}
+          placeholder={placeholder}
+          style={{
+            ...textareaStyle,
+            borderColor: error ? "#ef4444" : "#d1d5db",
+          }}
+          rows={3}
+          readOnly={readOnly}
+          value={value}
+          onChange={onChange}
+          {...props}
+        />
       ) : type === "date" ? (
         <input
           type="date"
-          style={inputStyle}
           name={name}
+          placeholder={placeholder}
+          style={{
+            ...inputStyle,
+            borderColor: error ? "#ef4444" : "#d1d5db",
+          }}
           value={value}
           onChange={onChange}
-          disabled={readOnly}
+          readOnly={readOnly}
+          {...props}
+        />
+      ) : type === "checkbox" ? (
+        <input
+          type="checkbox"
+          name={name}
+          checked={value}
+          onChange={onChange}
+          style={checkboxStyle}
+          {...props}
         />
       ) : (
         <input
           type={type}
           name={name}
-          value={value}
-          onChange={onChange}
           placeholder={placeholder}
           style={{
             ...inputStyle,
             backgroundColor: readOnly ? "#f3f4f6" : "#ffffff",
+            borderColor: error ? "#ef4444" : "#d1d5db",
           }}
           readOnly={readOnly}
+          value={value}
+          onChange={onChange}
+          {...props}
         />
+      )}
+
+      {error && (
+        <Typography
+          variant="caption"
+          color="error"
+          style={{ marginTop: "4px" }}
+        >
+          {error}
+        </Typography>
       )}
     </div>
   )
 );
 
-// DateRangeSelector component moved outside and memoized
+// Reuse the DateRangeSelector component
 const DateRangeSelector = memo(
-  ({ selectedMonth, setSelectedMonth, dateRanges, setDateRanges, initialDates }) => {
+  ({ selectedMonth, setSelectedMonth, dateRanges, setDateRanges }) => {
     const [monthOffset, setMonthOffset] = useState(0);
 
-    // Format date to YYYY-MM-DD for input fields
     const formatDate = (date) => {
-      if (!date) return "";
-      const d = new Date(date);
-      const year = d.getFullYear();
-      const month = String(d.getMonth() + 1).padStart(2, "0");
-      const day = String(d.getDate()).padStart(2, "0");
+      const day = String(date.getDate()).padStart(2, "0");
+      const month = String(date.getMonth() + 1).padStart(2, "0");
+      const year = date.getFullYear();
       return `${year}-${month}-${day}`;
     };
 
-    // Format date to DD-MM-YYYY for display
-    const formatDisplayDate = (dateString) => {
-      if (!dateString) return "";
-      const [year, month, day] = dateString.split('-');
-      return `${day}-${month}-${year}`;
-    };
-
-    // Calculate dates based on month offset
     const calculateDates = useCallback(
       (offset) => {
-        const baseDate = initialDates?.invoiceStartDate ? new Date(initialDates.invoiceStartDate) : new Date();
+        const baseDate = new Date();
         const currentMonth = new Date(
           baseDate.getFullYear(),
           baseDate.getMonth() + offset,
@@ -328,31 +376,15 @@ const DateRangeSelector = memo(
           creditNoteEndDate: formatDate(prevEndDate),
         });
       },
-      [setDateRanges, initialDates]
+      [setDateRanges]
     );
 
-    // Initialize dates based on invoice data
     useEffect(() => {
-      if (initialDates?.invoiceStartDate) {
-        const invoiceDate = new Date(initialDates.invoiceStartDate);
-        const currentDate = new Date();
-        const monthDiff = invoiceDate.getMonth() - currentDate.getMonth() + 
-                         (12 * (invoiceDate.getFullYear() - currentDate.getFullYear()));
-        setMonthOffset(monthDiff);
-        setSelectedMonth(monthDiff === 0 ? "current" : 
-                        monthDiff < 0 ? "previous" : "next");
-        setDateRanges({
-          invoiceStartDate: initialDates.invoiceStartDate,
-          invoiceEndDate: initialDates.invoiceEndDate,
-          previousDeliveredStartDate: initialDates.previousDeliveredStartDate,
-          previousDeliveredEndDate: initialDates.previousDeliveredEndDate,
-          creditNoteStartDate: initialDates.creditNoteStartDate,
-          creditNoteEndDate: initialDates.creditNoteEndDate,
-        });
-      } else {
-        calculateDates(monthOffset);
+      calculateDates(monthOffset);
+      if (monthOffset === 0) {
+        setSelectedMonth("current");
       }
-    }, [initialDates, calculateDates, monthOffset, setSelectedMonth, setDateRanges]);
+    }, [monthOffset, calculateDates, setSelectedMonth]);
 
     const handleMonthChange = (type) => {
       if (type === "previous") {
@@ -425,12 +457,21 @@ const DateRangeSelector = memo(
   }
 );
 
+const formatINR = (number) =>
+  new Intl.NumberFormat("en-IN", {
+    style: "currency",
+    currency: "INR",
+    maximumFractionDigits: 2,
+  }).format(number || 0);
 
 const InvoicesEditPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
 
-  // Initialize form data with proper date handling
+  const [errors, setErrors] = useState({
+    dc_id: "",
+  });
+
   const [formData, setFormData] = useState({
     invoice_number: "",
     invoice_title: "",
@@ -481,7 +522,6 @@ const InvoicesEditPage = () => {
     message: "",
     severity: "info",
   });
-  const [isLoading, setIsLoading] = useState(true);
 
   const [returnQuantities, setReturnQuantities] = useState({});
   const [newQuantities, setNewQuantities] = useState({});
@@ -492,7 +532,6 @@ const InvoicesEditPage = () => {
   const [selectedReturnIds, setSelectedReturnIds] = useState({});
   const [selectedOrderId, setSelectedOrderId] = useState("");
 
-  // Initialize date ranges with proper structure
   const [dateRanges, setDateRanges] = useState({
     invoiceStartDate: "",
     invoiceEndDate: "",
@@ -502,64 +541,43 @@ const InvoicesEditPage = () => {
     creditNoteEndDate: "",
   });
 
-  const [initialDates, setInitialDates] = useState(null);
-
-  const calculateRentalPrice = useCallback((product, months = 0, days = 0) => {
-    const perDay = product.rent_price_per_day || 0;
-    const perMonth = product.rent_price_per_month || 0;
-    const rent6Months = product.rent_price_6_months || perMonth * 6;
-    const rent1Year = product.rent_price_1_year || perMonth * 12;
-
-    let price = 0;
-
-    if (months === 0 && days > 0) {
-      const dayCost = perDay * days;
-      price = days >= 30 && dayCost > perMonth ? perMonth : dayCost;
-    } else if (days === 0 && months > 0) {
-      if (months === 6) price = rent6Months;
-      else if (months === 12) price = rent1Year;
-      else price = perMonth * months;
-    } else if (months > 0 && days > 0) {
-      let monthPrice = 0;
-
-      if (months === 6) monthPrice = rent6Months;
-      else if (months === 12) monthPrice = rent1Year;
-      else monthPrice = perMonth * months;
-
-      price = monthPrice + perDay * days;
-    }
-
-    return price;
-  }, []);
-
-  // Fetch initial data
+  // Fetch invoice data to edit
   useEffect(() => {
-    const fetchData = async () => {
+    const fetchInvoiceData = async () => {
       try {
-        setIsLoading(true);
-        
-        // Fetch the invoice to edit
+        // Fetch the invoice data
         const invoiceResponse = await fetch(`${API_URL}/invoices/${id}`);
-        if (!invoiceResponse.ok) throw new Error("Failed to fetch invoice");
+        if (!invoiceResponse.ok) {
+          throw new Error("Failed to fetch invoice data");
+        }
         const invoiceData = await invoiceResponse.json();
 
-        // Fetch dispatch orders
-        const dispatchOrderResponse = await fetch(
-          `${API_URL}/dispatch-orders/approved-dc`
-        );
-        if (!dispatchOrderResponse.ok)
+        // Fetch other necessary data (products, tax types, etc.)
+        const [productsResponse, taxResponse, dispatchOrdersResponse] =
+          await Promise.all([
+            fetch(`${API_URL}/product-templete`),
+            fetch(`${API_URL}/tax-types`),
+            fetch(`${API_URL}/dispatch-orders/approved-dc`),
+          ]);
+
+        if (!productsResponse.ok) throw new Error("Failed to fetch products");
+        if (!taxResponse.ok) throw new Error("Failed to fetch tax types");
+        if (!dispatchOrdersResponse.ok)
           throw new Error("Failed to fetch dispatch orders");
-        const dispatchOrderData = await dispatchOrderResponse.json();
 
-        // Transform the dispatch orders data
-        const transformedOrders = dispatchOrderData.map((dispatchOrder) => {
+        const productsData = await productsResponse.json();
+        const taxData = await taxResponse.json();
+        const dispatchOrdersData = await dispatchOrdersResponse.json();
+
+        // Transform dispatch orders data
+        const transformedOrders = dispatchOrdersData.map((dispatchOrder) => {
           const dc = dispatchOrder.delivery_challans?.[0] || dispatchOrder;
-
           return {
             id: dispatchOrder.id,
             order_id: dispatchOrder.order_id,
             dc_id: dc.dc_id || dispatchOrder.dispatch_order_id,
-            dispatch_order_number: dc.dispatch_order_id,
+            dispatch_order_number:
+              dc.dispatch_order_id || dispatchOrder.dispatch_order_id,
             dc_date: dc.dc_date || dispatchOrder.dispatch_order_date,
             customer_code: dispatchOrder.customer_code,
             order_number: dispatchOrder.order_number,
@@ -593,7 +611,7 @@ const InvoicesEditPage = () => {
               product_id: item.product_id,
               product_name: item.product_name,
               quantity: item.quantity,
-              unit_price: parseFloat(item.unit_price),
+              unit_price: parseFloat(item.total_price) / item.quantity || 0,
               total_price: item.total_price,
               product: item.product,
               device_ids: item.device_ids || [],
@@ -607,93 +625,88 @@ const InvoicesEditPage = () => {
           };
         });
 
+        // Set the data
+        setProducts(productsData);
+        setTaxTypes(taxData);
         setOrders(transformedOrders);
 
-        // Fetch products
-        const prodResponse = await fetch(`${API_URL}/product-templete`);
-        if (!prodResponse.ok) throw new Error("Failed to fetch products");
-        const prodData = await prodResponse.json();
-        setProducts(prodData);
+        // Process the invoice data to populate the form
+        // Try multiple ways to find the matching order
+        let selectedOrder = null;
 
-        // Fetch tax types
-        const taxResponse = await fetch(`${API_URL}/tax-types`);
-        if (!taxResponse.ok) throw new Error("Failed to fetch tax types");
-        const taxData = await taxResponse.json();
-        setTaxTypes(taxData);
+        // First try to match by dispatch_order_number
+        if (invoiceData.dispatch_order_number) {
+          selectedOrder = transformedOrders.find(
+            (order) =>
+              order.dispatch_order_id === invoiceData.dispatch_order_number
+          );
+        }
 
-        // Set initial dates from the invoice data
-        setInitialDates({
-          invoiceStartDate: invoiceData.invoice_start_date || "",
-          invoiceEndDate: invoiceData.invoice_end_date || "",
-          previousDeliveredStartDate: invoiceData.previous_delivered_start_date || "",
-          previousDeliveredEndDate: invoiceData.previous_delivered_end_date || "",
-          creditNoteStartDate: invoiceData.credit_note_start_date || "",
-          creditNoteEndDate: invoiceData.credit_note_end_date || "",
-        });
+        // If not found, try by dc_id (database ID)
+        if (!selectedOrder && invoiceData.dc_id) {
+          selectedOrder = transformedOrders.find(
+            (order) => order.id === parseInt(invoiceData.dc_id)
+          );
+        }
 
-        // Set date ranges from the invoice data
-        setDateRanges({
-          invoiceStartDate: invoiceData.invoice_start_date || "",
-          invoiceEndDate: invoiceData.invoice_end_date || "",
-          previousDeliveredStartDate: invoiceData.previous_delivered_start_date || "",
-          previousDeliveredEndDate: invoiceData.previous_delivered_end_date || "",
-          creditNoteStartDate: invoiceData.credit_note_start_date || "",
-          creditNoteEndDate: invoiceData.credit_note_end_date || "",
-        });
+        // If still not found, try by dispatch_order_id field
+        if (!selectedOrder && invoiceData.dispatch_order_id) {
+          selectedOrder = transformedOrders.find(
+            (order) => order.id === parseInt(invoiceData.dispatch_order_id)
+          );
+        }
 
-        // Set form data from the fetched invoice
-        setFormData({
-          ...invoiceData,
-          invoice_date: invoiceData.invoice_date?.split("T")[0] || "",
-          invoice_due_date: invoiceData.invoice_due_date?.split("T")[0] || "",
-          dc_date: invoiceData.dc_date?.split("T")[0] || "",
-          purchase_order_date: invoiceData.purchase_order_date?.split("T")[0] || "",
-          shippingDetails: invoiceData.shippingDetail || {  // Note the change here
-    consignee_name: "",
-    country: "India",
-    state: "",
-    city: "",
-    street: "",
-    landmark: "",
-    pincode: "",
-    phone_number: "",
-    email: "",
-  },
-});
+        if (selectedOrder) {
+          setSelectedOrderId(selectedOrder.id.toString());
+          console.log("Found matching order:", selectedOrder);
+        } else {
+          console.warn(
+            "Could not find matching order for invoice:",
+            invoiceData
+          );
+          console.log("Available orders:", transformedOrders);
+        }
 
-        // Set selected products and quantities
-        const productIds = invoiceData.items?.map((item) => item.product_id) || [];
-        setSelectedProductIds(productIds);
-
+        // Set quantities and selected products
         const initialQuantities = {};
-        const initialReturnQuantities = {};
-        const initialNewQuantities = {};
-        const initialNewDeviceIds = {};
-        const initialReturnedDeviceIds = {};
-        const initialSelectedReturnIds = {};
-
-        invoiceData.items?.forEach((item) => {
+        const initialSelectedProductIds = [];
+        invoiceData.items.forEach((item) => {
           initialQuantities[item.product_id] = item.quantity;
-          initialReturnQuantities[item.product_id] = item.return_quantity || 0;
-          initialNewQuantities[item.product_id] = item.new_quantity || 0;
-          initialNewDeviceIds[item.product_id] = item.new_device_ids || [];
-          initialReturnedDeviceIds[item.product_id] = item.returned_device_ids || [];
-          initialSelectedReturnIds[item.product_id] = item.selected_return_id || "";
+          initialSelectedProductIds.push(item.product_id);
         });
 
         setQuantities(initialQuantities);
-        setReturnQuantities(initialReturnQuantities);
-        setNewQuantities(initialNewQuantities);
-        setNewDeviceIds(initialNewDeviceIds);
-        setReturnedDeviceIds(initialReturnedDeviceIds);
-        setSelectedReturnIds(initialSelectedReturnIds);
+        setSelectedProductIds(initialSelectedProductIds);
 
-        // Set selected order ID if available
-        if (invoiceData.dispatch_order_id) {
-          setSelectedOrderId(invoiceData.dispatch_order_id);
+        // Set form data
+        setFormData({
+          ...invoiceData,
+          shippingDetails: {
+            consignee_name: invoiceData.shippingDetail?.consignee_name || "",
+            country: invoiceData.shippingDetail?.country || "India",
+            state: invoiceData.shippingDetail?.state || "",
+            city: invoiceData.shippingDetail?.city || "",
+            street: invoiceData.shippingDetail?.street || "",
+            landmark: invoiceData.shippingDetail?.landmark || "",
+            pincode: invoiceData.shippingDetail?.pincode || "",
+            phone_number: invoiceData.shippingDetail?.phone_number || "",
+            email: invoiceData.shippingDetail?.email || "",
+          },
+        });
+
+        // Set date ranges if they exist in the invoice data
+        if (invoiceData.invoice_start_date) {
+          setDateRanges({
+            invoiceStartDate: invoiceData.invoice_start_date,
+            invoiceEndDate: invoiceData.invoice_end_date,
+            previousDeliveredStartDate:
+              invoiceData.previous_delivered_start_date || "",
+            previousDeliveredEndDate:
+              invoiceData.previous_delivered_end_date || "",
+            creditNoteStartDate: invoiceData.credit_note_start_date || "",
+            creditNoteEndDate: invoiceData.credit_note_end_date || "",
+          });
         }
-
-        setIsLoading(false);
       } catch (error) {
         console.error("Error fetching data:", error);
         setSnackbar({
@@ -701,103 +714,40 @@ const InvoicesEditPage = () => {
           message: "Error fetching data: " + error.message,
           severity: "error",
         });
-        setIsLoading(false);
       }
     };
 
-    fetchData();
+    fetchInvoiceData();
   }, [id]);
 
-  const handleReturnQtyChange = useCallback((productId, value) => {
-    setReturnQuantities((prev) => ({
-      ...prev,
-      [productId]: parseInt(value) || 0,
-    }));
+  // Reuse the same helper functions from InvoicesAddPage
+  const calculateRentalPrice = useCallback((product, months = 0, days = 0) => {
+    const perDay = product.rent_price_per_day || 0;
+    const perMonth = product.rent_price_per_month || 0;
+    const rent6Months = product.rent_price_6_months || perMonth * 6;
+    const rent1Year = product.rent_price_1_year || perMonth * 12;
+
+    let price = 0;
+
+    if (months === 0 && days > 0) {
+      const dayCost = perDay * days;
+      price = days >= 30 && dayCost > perMonth ? perMonth : dayCost;
+    } else if (days === 0 && months > 0) {
+      if (months === 6) price = rent6Months;
+      else if (months === 12) price = rent1Year;
+      else price = perMonth * months;
+    } else if (months > 0 && days > 0) {
+      let monthPrice = 0;
+
+      if (months === 6) monthPrice = rent6Months;
+      else if (months === 12) monthPrice = rent1Year;
+      else monthPrice = perMonth * months;
+
+      price = monthPrice + perDay * days;
+    }
+
+    return price;
   }, []);
-
-  const incrementReturnQty = useCallback((productId) => {
-    setReturnQuantities((prev) => ({
-      ...prev,
-      [productId]: (prev[productId] || 0) + 1,
-    }));
-  }, []);
-
-  const decrementReturnQty = useCallback((productId) => {
-    setReturnQuantities((prev) => ({
-      ...prev,
-      [productId]: Math.max((prev[productId] || 0) - 1, 0),
-    }));
-  }, []);
-
-  const handleNewDeviceCheckboxChange = (productId, deviceId, isChecked) => {
-    setNewDeviceIds((prev) => {
-      const currentSelected = prev[productId] || [];
-      let updatedSelected;
-
-      if (isChecked) {
-        if (currentSelected.length < (newQuantities[productId] || 0)) {
-          updatedSelected = [...currentSelected, deviceId];
-        } else {
-          return prev;
-        }
-      } else {
-        updatedSelected = currentSelected.filter((id) => id !== deviceId);
-      }
-
-      return {
-        ...prev,
-        [productId]: updatedSelected,
-      };
-    });
-  };
-
-  const handleReturnDeviceCheckboxChange = (productId, deviceId, isChecked) => {
-    setReturnedDeviceIds((prev) => {
-      const currentSelected = prev[productId] || [];
-      let updatedSelected;
-
-      if (isChecked) {
-        if (currentSelected.length < (returnQuantities[productId] || 0)) {
-          updatedSelected = [...currentSelected, deviceId];
-        } else {
-          return prev;
-        }
-      } else {
-        updatedSelected = currentSelected.filter((id) => id !== deviceId);
-      }
-
-      return {
-        ...prev,
-        [productId]: updatedSelected,
-      };
-    });
-  };
-
-  const handleNewQtyChange = useCallback((productId, value) => {
-    const updated = { ...newQuantities, [productId]: parseInt(value) || 0 };
-    setNewQuantities(updated);
-  }, []);
-
-  const incrementNewQty = useCallback((productId) => {
-    setNewQuantities((prev) => ({
-      ...prev,
-      [productId]: (prev[productId] || 0) + 1,
-    }));
-  }, []);
-
-  const decrementNewQty = useCallback((productId) => {
-    setNewQuantities((prev) => ({
-      ...prev,
-      [productId]: Math.max((prev[productId] || 0) - 1, 0),
-    }));
-  }, []);
-
-  const handleSelectReturnId = (productId, id) => {
-    setSelectedReturnIds((prev) => ({
-      ...prev,
-      [productId]: id,
-    }));
-  };
 
   const handleCustomerSelect = useCallback(
     (dispatchOrderId) => {
@@ -808,9 +758,10 @@ const InvoicesEditPage = () => {
 
       setSelectedOrderId(dispatchOrderId);
 
-      const customerId = selectedOrder.contact?.id || 
-                      selectedOrder.customer_code || 
-                      selectedOrder.dispatch_order?.customer_code;
+      const customerId =
+        selectedOrder.contact?.id ||
+        selectedOrder.customer_code ||
+        selectedOrder.dispatch_order?.customer_code;
 
       const dispatchOrderDate =
         selectedOrder.dispatch_order?.dispatch_order_date ||
@@ -871,7 +822,6 @@ const InvoicesEditPage = () => {
         return {
           product_id: product.id,
           product_name: product.product_name,
-          previous_quantity: quantity,
           quantity: quantity,
         };
       });
@@ -885,8 +835,8 @@ const InvoicesEditPage = () => {
       const totalTax = cgst + sgst;
       const totalAmount = amount + totalTax;
 
-      setFormData({
-        ...formData,
+      setFormData((prev) => ({
+        ...prev,
         customer_id: customerId || "",
         customer_name: `${personal?.first_name || ""}`,
         email: personal?.email || "",
@@ -914,7 +864,7 @@ const InvoicesEditPage = () => {
         total_amount: totalAmount,
         items: items,
         shippingDetails: {
-          ...formData.shippingDetails,
+          ...prev.shippingDetails,
           consignee_name: `${personal?.first_name || ""}`,
           country: address?.country || "India",
           state: address?.state || "",
@@ -924,79 +874,12 @@ const InvoicesEditPage = () => {
           phone_number: personal?.phone_number || "",
           email: personal?.email || "",
         },
-      });
+      }));
     },
-    [orders, products, taxTypes, formData, calculateRentalPrice]
+    [orders, products, taxTypes, calculateRentalPrice]
   );
 
-  const getRentalPrice = useCallback((product, months = 0, days = 0) => {
-    switch (months) {
-      case 1:
-        return product.rent_price_per_month;
-      case 6:
-        return product.rent_price_6_months;
-      case 12:
-        return product.rent_price_1_year;
-      default:
-        return product.rent_price_per_day * days;
-    }
-  }, []);
-
-  useEffect(() => {
-    if (selectedProductIds.length > 0) {
-      setShowProductTable(true);
-    }
-  }, [selectedProductIds]);
-
-  useEffect(() => {
-    const fetchLocationFromPincode = async () => {
-      const pincode = formData.shippingDetails.pincode;
-
-      if (pincode && pincode.length === 6) {
-        try {
-          const response = await fetch(
-            `https://api.postalpincode.in/pincode/${pincode}`
-          );
-          const data = await response.json();
-
-          if (data && data[0]?.Status === "Success") {
-            const postOffice = data[0].PostOffice[0];
-
-            setFormData((prev) => ({
-              ...prev,
-              shippingDetails: {
-                ...prev.shippingDetails,
-                city: postOffice.District,
-                state: postOffice.State,
-                country: "India",
-              },
-            }));
-          } else {
-            setSnackbar({
-              open: true,
-              message: "Could not find location for this pincode",
-              severity: "warning",
-            });
-          }
-        } catch (error) {
-          console.error("Error fetching location data:", error);
-          setSnackbar({
-            open: true,
-            message:
-              "Error fetching location data. Please check the pincode and try again.",
-            severity: "error",
-          });
-        }
-      }
-    };
-
-    const debounceTimer = setTimeout(() => {
-      fetchLocationFromPincode();
-    }, 500);
-
-    return () => clearTimeout(debounceTimer);
-  }, [formData.shippingDetails.pincode]);
-
+  // Reuse the same input handlers from InvoicesAddPage
   const handleInputChange = useCallback((e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({
@@ -1049,6 +932,53 @@ const InvoicesEditPage = () => {
     }));
   }, []);
 
+  const handleReturnQtyChange = useCallback((productId, value) => {
+    setReturnQuantities((prev) => ({
+      ...prev,
+      [productId]: parseInt(value) || 0,
+    }));
+  }, []);
+
+  const incrementReturnQty = useCallback((productId) => {
+    setReturnQuantities((prev) => ({
+      ...prev,
+      [productId]: (prev[productId] || 0) + 1,
+    }));
+  }, []);
+
+  const decrementReturnQty = useCallback((productId) => {
+    setReturnQuantities((prev) => ({
+      ...prev,
+      [productId]: Math.max((prev[productId] || 0) - 1, 0),
+    }));
+  }, []);
+
+  const handleNewQtyChange = useCallback((productId, value) => {
+    const updated = { ...newQuantities, [productId]: parseInt(value) || 0 };
+    setNewQuantities(updated);
+  }, []);
+
+  const incrementNewQty = useCallback((productId) => {
+    setNewQuantities((prev) => ({
+      ...prev,
+      [productId]: (prev[productId] || 0) + 1,
+    }));
+  }, []);
+
+  const decrementNewQty = useCallback((productId) => {
+    setNewQuantities((prev) => ({
+      ...prev,
+      [productId]: Math.max((prev[productId] || 0) - 1, 0),
+    }));
+  }, []);
+
+  const handleSelectReturnId = (productId, id) => {
+    setSelectedReturnIds((prev) => ({
+      ...prev,
+      [productId]: id,
+    }));
+  };
+
   const filteredProducts = products.filter(
     (product) =>
       product.product_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -1056,6 +986,7 @@ const InvoicesEditPage = () => {
       product.description?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  // Reuse the same totals calculation effect
   useEffect(() => {
     const calculateTotals = () => {
       const selectedProducts = products.filter((product) =>
@@ -1156,108 +1087,265 @@ const InvoicesEditPage = () => {
     formData.rental_duration,
     formData.rental_duration_days,
   ]);
-const handleSubmit = async (e) => {
-  e.preventDefault();
 
-  try {
-    const selectedOrder = orders.find(order => order.id === parseInt(selectedOrderId));
+  // // Handle form submission for editing
+  // const handleSubmit = async (e) => {
+  //   e.preventDefault();
 
-    // Prepare items with proper pricing
-    const itemsWithPricing = formData.items.map((item) => {
-      const product = products.find(p => p.id === item.product_id);
-      
-      let unit_price = parseFloat(product.rent_price_per_month) || 0;;
-      let total_price = parseFloat(product.purchase_price) || 0;;
+  //   // Validate form
+  //   let isValid = true;
+  //   const newErrors = {
+  //     dc_id: "",
+  //   };
 
-     
+  //   if (!selectedOrderId) {
+  //     newErrors.dc_id = "DC selection is required";
+  //     isValid = false;
+  //   }
 
-      return {
-        ...item,
-        order_id: productOrderMap[item.product_id] || "",
-        device_ids: returnedDeviceIds[item.product_id] || [],
-        new_device_ids: newDeviceIds[item.product_id] || [],
-        returned_device_ids: selectedReturnIds[item.product_id]
-          ? [selectedReturnIds[item.product_id]]
-          : [],
+  //   setErrors(newErrors);
+
+  //   if (!isValid) {
+  //     setSnackbar({
+  //       open: true,
+  //       message: "Please select a DC before submitting",
+  //       severity: "error",
+  //     });
+  //     return;
+  //   }
+
+  //   try {
+  //     const selectedOrder = orders.find(
+  //       (order) => order.id === parseInt(selectedOrderId)
+  //     );
+
+  //     const submissionData = {
+  //       ...formData,
+  //       customer_id: formData.customer_id || selectedOrder?.contact?.id || "",
+  //       dc_id: formData.dc_id,
+  //       dispatch_order_number:
+  //         formData.dispatch_order_number || formData.dispatch_order_id,
+  //       dc_date: formData.dc_date,
+  //       invoice_start_date: dateRanges.invoiceStartDate,
+  //       invoice_end_date: dateRanges.invoiceEndDate,
+  //       previous_delivered_start_date: dateRanges.previousDeliveredStartDate,
+  //       previous_delivered_end_date: dateRanges.previousDeliveredEndDate,
+  //       credit_note_start_date: dateRanges.creditNoteStartDate,
+  //       credit_note_end_date: dateRanges.creditNoteEndDate,
+  //       rental_duration: formData.rental_duration || "0",
+  //       rental_duration_days: formData.rental_duration_days || 0,
+  //       rental_duration_months: formData.rental_duration
+  //         ? parseInt(formData.rental_duration)
+  //         : 0,
+  //       payment_mode: formData.payment_type || "",
+  //       items: formData.items.map((item) => {
+  //         const product = products.find((p) => p.id === item.product_id);
+  //         const unit_price = product
+  //           ? product.offer_rent_price_per_month !== null &&
+  //             product.offer_rent_price_per_month !== ""
+  //             ? product.offer_rent_price_per_month
+  //             : product.rent_price_per_month
+  //           : 0;
+
+  //         const total_price = product
+  //           ? product.offer_purchase_price !== null &&
+  //             product.offer_purchase_price !== ""
+  //             ? product.offer_purchase_price
+  //             : product.purchase_price
+  //           : 0;
+
+  //         return {
+  //           ...item,
+  //           order_id: productOrderMap[item.product_id] || "",
+  //           device_ids: returnedDeviceIds[item.product_id] || [],
+  //           new_device_ids: newDeviceIds[item.product_id] || [],
+  //           returned_device_ids: selectedReturnIds[item.product_id]
+  //             ? [selectedReturnIds[item.product_id]]
+  //             : [],
+  //           rental_duration: formData.rental_duration || "0",
+  //           rental_duration_days: formData.rental_duration_days || 0,
+  //           rental_duration_months: formData.rental_duration
+  //             ? parseInt(formData.rental_duration)
+  //             : 0,
+  //           unit_price: unit_price,
+  //           total_price: total_price,
+  //         };
+  //       }),
+  //     };
+
+  //     const response = await fetch(`${API_URL}/invoices/${id}`, {
+  //       method: "PUT",
+  //       headers: {
+  //         "Content-Type": "application/json",
+  //       },
+  //       body: JSON.stringify(submissionData),
+  //     });
+
+  //     if (!response.ok) {
+  //       const errorData = await response.json();
+  //       throw new Error(errorData.message || "Failed to update invoice");
+  //     }
+
+  //     const result = await response.json();
+  //     setSnackbar({
+  //       open: true,
+  //       message: "Invoice updated successfully!",
+  //       severity: "success",
+  //     });
+
+  //     setTimeout(() => {
+  //       navigate("/dashboard/operations/invoices");
+  //     }, 1500);
+  //   } catch (error) {
+  //     console.error("Error updating invoice:", error);
+  //     setSnackbar({
+  //       open: true,
+  //       message: "Error updating invoice: " + error.message,
+  //       severity: "error",
+  //     });
+  //   }
+  // };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+
+    // Validate form
+    let isValid = true;
+    const newErrors = {
+      dc_id: "",
+    };
+
+    if (!selectedOrderId) {
+      newErrors.dc_id = "DC selection is required";
+      isValid = false;
+    }
+
+    setErrors(newErrors);
+
+    if (!isValid) {
+      setSnackbar({
+        open: true,
+        message: "Please select a DC before submitting",
+        severity: "error",
+      });
+      return;
+    }
+
+    try {
+      const selectedOrder = orders.find(
+        (order) => order.id === parseInt(selectedOrderId)
+      );
+
+      // Create a map of product prices from the dispatch order
+      const dispatchOrderProductPrices = {};
+      if (selectedOrder && selectedOrder.items) {
+        selectedOrder.items.forEach((item) => {
+          dispatchOrderProductPrices[item.product_id] = {
+            offer_purchase_price: item.offer_purchase_price || "0.00",
+            purchase_price: item.purchase_price || "0.00",
+            rent_price_per_month: item.rent_price_per_month || "0.00",
+            offer_rent_price_per_month:
+              item.offer_rent_price_per_month || "0.00",
+            total_price: item.total_price || "0.00",
+          };
+        });
+      }
+
+      const submissionData = {
+        ...formData,
+        customer_id: formData.customer_id || selectedOrder?.contact?.id || "",
+        dc_id: formData.dc_id,
+        dispatch_order_number:
+          formData.dispatch_order_number || formData.dispatch_order_id,
+        dc_date: formData.dc_date,
+        invoice_start_date: dateRanges.invoiceStartDate,
+        invoice_end_date: dateRanges.invoiceEndDate,
+        previous_delivered_start_date: dateRanges.previousDeliveredStartDate,
+        previous_delivered_end_date: dateRanges.previousDeliveredEndDate,
+        credit_note_start_date: dateRanges.creditNoteStartDate,
+        credit_note_end_date: dateRanges.creditNoteEndDate,
         rental_duration: formData.rental_duration || "0",
         rental_duration_days: formData.rental_duration_days || 0,
         rental_duration_months: formData.rental_duration
           ? parseInt(formData.rental_duration)
           : 0,
-        unit_price: unit_price, // Send as number, let backend handle formatting
-        total_price: total_price // Send as number, let backend handle formatting
+        payment_mode: formData.payment_type || "",
+        items: formData.items.map((item) => {
+          // Get prices from dispatch order instead of product template
+          const dispatchPrices =
+            dispatchOrderProductPrices[item.product_id] || {};
+
+          const offer_purchase_price =
+            parseFloat(dispatchPrices.offer_purchase_price) || 0;
+          const purchase_price = parseFloat(dispatchPrices.purchase_price) || 0;
+          const rent_price_per_month =
+            parseFloat(dispatchPrices.rent_price_per_month) || 0;
+          const offer_rent_price_per_month =
+            parseFloat(dispatchPrices.offer_rent_price_per_month) || 0;
+
+          // Simple price assignment as requested
+          const total_price =
+            offer_purchase_price === 0 ? purchase_price : offer_purchase_price;
+          const unit_price =
+            offer_rent_price_per_month === 0
+              ? rent_price_per_month
+              : offer_rent_price_per_month;
+
+          return {
+            ...item,
+            order_id: productOrderMap[item.product_id] || "",
+            device_ids: returnedDeviceIds[item.product_id] || [],
+            new_device_ids: newDeviceIds[item.product_id] || [],
+            returned_device_ids: selectedReturnIds[item.product_id]
+              ? [selectedReturnIds[item.product_id]]
+              : [],
+            rental_duration: formData.rental_duration || "0",
+            rental_duration_days: formData.rental_duration_days || 0,
+            rental_duration_months: formData.rental_duration
+              ? parseInt(formData.rental_duration)
+              : 0,
+            unit_price: unit_price,
+            total_price: total_price,
+            purchase_price: purchase_price,
+            offer_purchase_price: offer_purchase_price,
+            rent_price_per_month: rent_price_per_month,
+            offer_rent_price_per_month: offer_rent_price_per_month,
+          };
+        }),
       };
-    });
 
-    const submissionData = {
-      ...formData,
-      customer_id: formData.customer_id || (selectedOrder?.contact?.id || ""),
-      dc_id: formData.dc_id,
-      dispatch_order_number: formData.dispatch_order_number || formData.dispatch_order_id,
-      dc_date: formData.dc_date,
-      invoice_start_date: dateRanges.invoiceStartDate,
-      invoice_end_date: dateRanges.invoiceEndDate,
-      previous_delivered_start_date: dateRanges.previousDeliveredStartDate,
-      previous_delivered_end_date: dateRanges.previousDeliveredEndDate,
-      credit_note_start_date: dateRanges.creditNoteStartDate,
-      credit_note_end_date: dateRanges.creditNoteEndDate,
-      rental_duration: formData.rental_duration || "0",
-      rental_duration_days: formData.rental_duration_days || 0,
-      rental_duration_months: formData.rental_duration
-        ? parseInt(formData.rental_duration)
-        : 0,
-      payment_mode: formData.payment_type || "",
-      items: itemsWithPricing
-    };
+      const response = await fetch(`${API_URL}/invoices/${id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(submissionData),
+      });
 
-    const response = await fetch(`${API_URL}/invoices/${id}`, {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(submissionData),
-    });
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Failed to update invoice");
+      }
 
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.message || "Failed to update invoice");
+      const result = await response.json();
+      setSnackbar({
+        open: true,
+        message: "Invoice updated successfully!",
+        severity: "success",
+      });
+
+      setTimeout(() => {
+        navigate("/dashboard/operations/invoices");
+      }, 1500);
+    } catch (error) {
+      console.error("Error updating invoice:", error);
+      setSnackbar({
+        open: true,
+        message: "Error updating invoice: " + error.message,
+        severity: "error",
+      });
     }
-
-    const result = await response.json();
-    setSnackbar({
-      open: true,
-      message: "Invoice updated successfully!",
-      severity: "success",
-    });
-
-    setTimeout(() => {
-      navigate("/dashboard/operations/invoices");
-    }, 1500);
-  } catch (error) {
-    console.error("Error updating invoice:", error);
-    setSnackbar({
-      open: true,
-      message: "Error updating invoice: " + error.message,
-      severity: "error",
-    });
-  }
-};
-
-
-  const formatINR = (number) =>
-    new Intl.NumberFormat("en-IN", {
-      style: "currency",
-      currency: "INR",
-      maximumFractionDigits: 2,
-    }).format(number || 0);
-
-  if (isLoading) {
-    return (
-      <div style={containerStyle}>
-        <Typography variant="h6">Loading invoice data...</Typography>
-      </div>
-    );
-  }
+  };
 
   return (
     <div style={containerStyle}>
@@ -1279,7 +1367,7 @@ const handleSubmit = async (e) => {
       <div style={headerStyle}>
         <h1 style={titleStyle}>Edit Invoice</h1>
         <p style={subtitleStyle}>
-          Edit the details below for invoice: {formData.invoice_number}
+          Update the details below to edit the invoice
         </p>
       </div>
 
@@ -1300,13 +1388,6 @@ const handleSubmit = async (e) => {
                 placeholder="Enter Invoice Id"
                 readOnly
               />
-              <Field
-                label="Invoice Title"
-                name="invoice_title"
-                value={formData.invoice_title}
-                onChange={handleInputChange}
-                placeholder="Enter Invoice Title"
-              />
 
               <Field
                 label="Invoice Date"
@@ -1316,43 +1397,50 @@ const handleSubmit = async (e) => {
                 onChange={handleInputChange}
               />
 
-              <FormControl fullWidth size="small">
-                <InputLabel>Select Customer</InputLabel>
-                <Select
-                  value={selectedOrderId || ""}
-                  onChange={(e) => handleCustomerSelect(e.target.value)}
-                  label="Select Customer"
-                  displayEmpty
-                  inputProps={{ "aria-label": "Without label" }}
-                  style={inputStyle}
-                >
-                  {orders.map((order) => (
-                    <MenuItem key={order.id} value={order.id}>
-                      {order.dispatch_order_id} -{" "}
-                      {order.personalDetails?.first_name || ""}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
+              <Field
+                label="Select DC"
+                name="dc_id"
+                type="select"
+                value={selectedOrderId || ""}
+                onChange={(e) => {
+                  handleCustomerSelect(e.target.value);
+                  if (errors.dc_id) {
+                    setErrors({ ...errors, dc_id: "" });
+                  }
+                }}
+                placeholder="Select DC"
+                error={errors.dc_id}
+              >
+                <option value="" disabled>
+                  Select DC
+                </option>
+                {orders.map((order) => (
+                  <option key={order.id} value={order.id}>
+                    {order.dispatch_order_id} -{" "}
+                    {order.personalDetails?.first_name || ""}
+                  </option>
+                ))}
+              </Field>
 
               <Field
                 label="Transaction Type"
                 name="transaction_type"
+                type="select"
+                placeholder="Select Type"
                 value={formData.transaction_type}
                 onChange={(e) => {
                   handleInputChange(e);
                   if (e.target.value === "Buy") {
                     setFormData((prev) => ({
                       ...prev,
-                      payment_mode: "",
                       payment_type: "",
-                      rental_duration: "0",
-                      rental_duration_days: 0,
-                      rental_start_date: "",
-                      rental_end_date: "",
                     }));
                   }
                 }}
+                options={[
+                  { value: "Rent", label: "Rent" },
+                  { value: "Buy", label: "Buy" },
+                ]}
               />
 
               {formData.transaction_type === "Rent" && (
@@ -1360,8 +1448,9 @@ const handleSubmit = async (e) => {
                   <Field
                     label="Payment Mode"
                     name="payment_mode"
-                    value={formData.payment_type}
+                    value={formData.payment_mode}
                     onChange={handleInputChange}
+                    disabled
                   />
 
                   <div
@@ -1555,13 +1644,23 @@ const handleSubmit = async (e) => {
                   />
                 </Box>
 
-                <TableContainer component={Paper}>
-                  <Table size="small">
+                <TableContainer
+                  component={Paper}
+                  sx={{
+                    maxHeight: "400px",
+                    overflow: "auto",
+                    position: "relative",
+                  }}
+                >
+                  <Table size="small" stickyHeader>
                     <TableHead>
                       <TableRow sx={{ backgroundColor: "#0d47a1" }}>
-                        <TableCell padding="checkbox" sx={{ color: "#fff" }}>
+                        <TableCell
+                          padding="checkbox"
+                          sx={{ backgroundColor: "#0d47a1" }}
+                        >
                           <Checkbox
-                            sx={{ color: "#fff" }}
+                            sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
                             checked={
                               selectedProductIds.length ===
                                 filteredProducts.length &&
@@ -1592,17 +1691,20 @@ const handleSubmit = async (e) => {
                             }}
                           />
                         </TableCell>
-                        <TableCell sx={{ color: "#fff" }}>
+                        <TableCell
+                          sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
+                        >
                           Product Name
                         </TableCell>
-                        <TableCell sx={{ color: "#fff" }}>Brand</TableCell>
-                        <TableCell sx={{ color: "#fff" }}>
+                        <TableCell
+                          sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
+                        >
                           Specifications
                         </TableCell>
-                        <TableCell sx={{ color: "#fff" }}>Quantity</TableCell>
-
-                        <TableCell sx={{ color: "#fff" }}>
-                          Price for Durations
+                        <TableCell
+                          sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
+                        >
+                          Quantity
                         </TableCell>
                       </TableRow>
                     </TableHead>
@@ -1624,7 +1726,6 @@ const handleSubmit = async (e) => {
                               />
                             </TableCell>
                             <TableCell>{product.product_name}</TableCell>
-                            <TableCell>{product.brand}</TableCell>
                             <TableCell>
                               {[
                                 product.model,
@@ -1641,7 +1742,9 @@ const handleSubmit = async (e) => {
                                 <IconButton
                                   size="small"
                                   onClick={() => decrementQty(product.id)}
-                                  disabled
+                                  disabled={
+                                    !selectedProductIds.includes(product.id)
+                                  }
                                 >
                                   <Remove fontSize="small" />
                                 </IconButton>
@@ -1656,7 +1759,9 @@ const handleSubmit = async (e) => {
                                   onChange={(e) =>
                                     handleQtyChange(product.id, e.target.value)
                                   }
-                                  disabled
+                                  disabled={
+                                    !selectedProductIds.includes(product.id)
+                                  }
                                   inputProps={{
                                     min: 0,
                                     style: { width: 50, textAlign: "center" },
@@ -1665,18 +1770,13 @@ const handleSubmit = async (e) => {
                                 <IconButton
                                   size="small"
                                   onClick={() => incrementQty(product.id)}
-                                  disabled
+                                  disabled={
+                                    !selectedProductIds.includes(product.id)
+                                  }
                                 >
                                   <Add fontSize="small" />
-                                  
                                 </IconButton>
                               </Box>
-                            </TableCell>
-
-                            <TableCell>
-                              <>
-                                <div>Month: {product.rent_price_per_month}</div>
-                              </>
                             </TableCell>
                           </TableRow>
                         ))}
@@ -1693,9 +1793,9 @@ const handleSubmit = async (e) => {
           <button
             type="button"
             style={cancelBtnStyle}
-            onClick={() => navigate("/dashboard/operations/invoices")}
             onMouseEnter={(e) => (e.target.style.backgroundColor = "#e5e7eb")}
             onMouseLeave={(e) => (e.target.style.backgroundColor = "#f3f4f6")}
+            onClick={() => navigate("/dashboard/operations/invoices")}
           >
             Cancel
           </button>

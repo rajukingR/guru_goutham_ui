@@ -9,14 +9,15 @@ const SuppliersTable = () => {
   const columns = [
     { id: "s_id", label: "S.No." },
     { id: "supplier_code", label: "Supplier Code" },
-    { id: "supplier_name", label: "Name" },
+    { id: "supplier_name", label: "Supplier Name" },
     { id: "supplier_owner", label: "Owner" },
     { id: "gst_number", label: "GST No." },
-    { id: "registration_date", label: "Registration Date" },
-    { id: "introduced_by", label: "Introduced By" },
+        { id: "pan_number", label: "PAN No." },
+    // { id: "registration_date", label: "Registration Date" },
+    // { id: "introduced_by", label: "Introduced By" },
     { id: "address_summary", label: "Address" },
     { id: "bank_summary", label: "Bank Details" },
-    { id: "contacts_summary", label: "Contacts" },
+    // { id: "contacts_summary", label: "Contacts" },
   ];
 
   useEffect(() => {
@@ -33,6 +34,8 @@ const SuppliersTable = () => {
               ? `${supplier.bank.bank_name}, A/C: ${supplier.bank.account_number}`
               : "N/A";
 
+              const pan_number = supplier.bank.pan_number;
+
             const contacts = supplier.contacts?.length
               ? supplier.contacts.map((c) => `${c.contact_name} (${c.designation})`).join("; ")
               : "N/A";
@@ -43,6 +46,7 @@ const SuppliersTable = () => {
               address_summary: address,
               bank_summary: bank,
               contacts_summary: contacts,
+              pan_number: pan_number,
             };
           });
 

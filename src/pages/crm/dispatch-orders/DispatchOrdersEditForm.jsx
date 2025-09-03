@@ -14,8 +14,12 @@ import {
   Snackbar,
   Alert,
   Typography,
+  Dialog,
+  DialogContent,
+  DialogActions,
+  Button,
 } from "@mui/material";
-import { Add, Remove } from "@mui/icons-material";
+import { Add, Remove, Edit } from "@mui/icons-material";
 import { useNavigate, useParams } from "react-router-dom";
 import API_URL from "../../../api/Api_url";
 import { useInventory } from "../../../contexts/InventoryContext";
@@ -289,7 +293,6 @@ const fileUploadButton = {
   transition: "all 0.2s ease",
 };
 
-// Field component moved outside and memoized
 const Field = memo(
   ({
     label,
@@ -301,6 +304,7 @@ const Field = memo(
     readOnly = false,
     value,
     onChange,
+    error = "", // <-- Accept error prop
     ...props
   }) => (
     <div style={fieldContainerStyle}>
@@ -308,10 +312,14 @@ const Field = memo(
         {label}
         {required && <span style={requiredStyle}>*</span>}
       </label>
+
       {type === "select" ? (
         <div style={selectWrapperStyle}>
           <select
-            style={selectStyle}
+            style={{
+              ...selectStyle,
+              borderColor: error ? "red" : "#d1d5db",
+            }}
             name={name}
             value={value}
             onChange={onChange}
@@ -331,7 +339,10 @@ const Field = memo(
         <textarea
           name={name}
           placeholder={placeholder}
-          style={textareaStyle}
+          style={{
+            ...textareaStyle,
+            borderColor: error ? "red" : "#d1d5db",
+          }}
           rows={3}
           readOnly={readOnly}
           value={value}
@@ -343,21 +354,46 @@ const Field = memo(
           type="date"
           name={name}
           placeholder={placeholder}
-          style={inputStyle}
+          style={{
+            ...inputStyle,
+            borderColor: error ? "red" : "#d1d5db",
+          }}
           value={value}
           onChange={onChange}
           readOnly={readOnly}
           {...props}
         />
       ) : type === "checkbox" ? (
-        <input
-          type="checkbox"
-          name={name}
-          checked={value}
-          onChange={onChange}
-          style={checkboxStyle}
-          {...props}
-        />
+        <div style={checkboxContainerStyle}>
+          <label style={checkboxLabelStyle}>
+            <input
+              type="checkbox"
+              name={name}
+              checked={value}
+              onChange={onChange}
+              style={checkboxStyle}
+              {...props}
+            />
+            <div
+              style={{
+                ...checkboxCustomStyle,
+                backgroundColor: value ? "#2563eb" : "#ffffff",
+                borderColor: value ? "#2563eb" : "#d1d5db",
+              }}
+            >
+              {value && <span style={checkmarkStyle}>&#10003;</span>}
+            </div>
+            <div>
+              <span style={checkboxTextStyle}>
+                {label}
+                {required && <span style={requiredStyle}>*</span>}
+              </span>
+              {props.description && (
+                <span style={checkboxDescStyle}>{props.description}</span>
+              )}
+            </div>
+          </label>
+        </div>
       ) : (
         <input
           type={type}
@@ -366,6 +402,7 @@ const Field = memo(
           style={{
             ...inputStyle,
             backgroundColor: readOnly ? "#f3f4f6" : "#ffffff",
+            borderColor: error ? "red" : "#d1d5db",
           }}
           readOnly={readOnly}
           value={value}
@@ -373,27 +410,39 @@ const Field = memo(
           {...props}
         />
       )}
+
+      {/* Show error message */}
+      {error && (
+        <div style={{ color: "red", fontSize: "0.75rem", marginTop: "4px" }}>
+          {error}
+        </div>
+      )}
     </div>
   )
 );
-
 const DispatchOrdersEditForm = () => {
   const navigate = useNavigate();
   const { id } = useParams();
-  const { inventoryData } = useInventory();
   const [newQuantities, setNewQuantities] = useState({});
   const [selectedNewAssetIds, setSelectedNewAssetIds] = useState({});
   const [assetSearchTerms, setAssetSearchTerms] = useState({});
   const [addedDates, setAddedDates] = useState({});
-
+  const [approvedReceiptProducts, setApprovedReceiptProducts] = useState([]);
 
   const [showAssetSelection, setShowAssetSelection] = useState({});
 
-  
-
   const getAvailableQty = (productId) => {
-    const entry = inventoryData.find((item) => item.id === productId);
-    return entry ? entry.available_quantity : "N/A";
+    const entry = approvedReceiptProducts.find(
+      (item) => item.product_id === productId
+    );
+    return entry ? entry.available_quantity : 0;
+  };
+
+  const getAvailableAssetIds = (productId) => {
+    const entry = approvedReceiptProducts.find(
+      (item) => item.product_id === productId
+    );
+    return entry ? entry.available_asset_ids : [];
   };
 
   const [formData, setFormData] = useState({
@@ -405,17 +454,21 @@ const DispatchOrdersEditForm = () => {
     order_number: "",
     payment_type: "",
     dispatch_order_date: new Date().toISOString().split("T")[0],
-    dispatch_order_status: "Dispatched",
+    order_sale_date: "",
+    dispatch_order_status: "",
     dealer_reference: "",
     email: "",
     gst_number: "",
     pan_number: "",
     remarks: "",
     type: "",
+    convert_rent_to_sale: "",
     regular_dispatch_order: true,
     industry: "",
     shipping_ordered_by: "",
     shipping_phone_number: "",
+    peripheral_update: false,
+    is_direct_invoice: false,
     shipping_name: "",
     street: "",
     landmark: "",
@@ -426,31 +479,64 @@ const DispatchOrdersEditForm = () => {
     items: [],
   });
 
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editingProduct, setEditingProduct] = useState(null);
+  const [priceForm, setPriceForm] = useState({
+    purchase_price: "",
+    offer_purchase_price: "",
+  });
+
   // State for UI and data
   const [orders, setOrders] = useState([]);
+
+  const [dispatchOrderItems, setDispatchOrderItems] = useState([]);
+
   const [products, setProducts] = useState([]);
   const [selectedProductIds, setSelectedProductIds] = useState([]);
   const [quantities, setQuantities] = useState({});
   const [searchTerm, setSearchTerm] = useState("");
   const [showProductTable, setShowProductTable] = useState(false);
-  const [availableAssetIds, setAvailableAssetIds] = useState({});
   const [deviceIds, setDeviceIds] = useState({});
   const [deviceIdErrors, setDeviceIdErrors] = useState({});
   const [originalDeviceIds, setOriginalDeviceIds] = useState({});
   const [isLoading, setIsLoading] = useState(true);
-
+  const [productOfferPrices, setProductOfferPrices] = useState({});
 
   const [returnedQuantities, setReturnedQuantities] = useState({});
-const [selectedReturnedAssetIds, setSelectedReturnedAssetIds] = useState({});
-const [returnAssetSearchTerms, setReturnAssetSearchTerms] = useState({});
-const [returnedDates, setReturnedDates] = useState({});
-
+  const [selectedReturnedAssetIds, setSelectedReturnedAssetIds] = useState({});
+  const [returnAssetSearchTerms, setReturnAssetSearchTerms] = useState({});
+  const [returnedDates, setReturnedDates] = useState({});
+  const [productPrices, setProductPrices] = useState({});
 
   const [snackbar, setSnackbar] = useState({
     open: false,
     message: "",
     severity: "success",
   });
+
+  // Fetch approved receipt products on component mount
+  useEffect(() => {
+    const fetchApprovedReceiptProducts = async () => {
+      try {
+        const response = await fetch(
+          `${API_URL}/goods-receipts/approved-receipt-products`
+        );
+        if (!response.ok)
+          throw new Error("Failed to fetch approved receipt products");
+        const data = await response.json();
+        setApprovedReceiptProducts(data.products || []);
+      } catch (error) {
+        console.error("Error fetching approved receipt products:", error);
+        setSnackbar({
+          open: true,
+          message: "Error fetching approved receipt products: " + error.message,
+          severity: "error",
+        });
+      }
+    };
+
+    fetchApprovedReceiptProducts();
+  }, []);
 
   // Fetch dispatch order data on component mount
   useEffect(() => {
@@ -465,6 +551,7 @@ const [returnedDates, setReturnedDates] = useState({});
         if (!dispatchOrderResponse.ok)
           throw new Error("Failed to fetch dispatch order");
         const dispatchOrderData = await dispatchOrderResponse.json();
+        setDispatchOrderItems(dispatchOrderData.items || []);
 
         // Fetch orders
         const orderResponse = await fetch(`${API_URL}/orders/order-approved`);
@@ -481,22 +568,33 @@ const [returnedDates, setReturnedDates] = useState({});
         // Process dispatch order data
         const { items, ...orderDetails } = dispatchOrderData;
 
-        // Set available asset IDs for each product
-        const newAvailableAssetIds = {};
+        // Set device IDs for each product
         const newDeviceIds = {};
         const newOriginalDeviceIds = {};
 
+        // Initialize product prices from dispatch order items
+        const initialProductPrices = {};
+
         items.forEach((item) => {
-  const matchedOrder = orderData.find(o => o.id === parseInt(dispatchOrderData.order_id));
-  const matchedItem = matchedOrder?.items.find(i => i.product_id === item.product_id);
+          newDeviceIds[item.product_id] = item.device_ids || [];
+          newOriginalDeviceIds[item.product_id] = [...(item.device_ids || [])];
 
-  newAvailableAssetIds[item.product_id] = matchedItem?.available_asset_ids || [];
-  newDeviceIds[item.product_id] = item.device_ids || [];
-  newOriginalDeviceIds[item.product_id] = [...(item.device_ids || [])];
-});
+          // Store the prices from the dispatch order
+          initialProductPrices[item.product_id] = {
+            purchase_price: item.purchase_price || "",
+            offer_purchase_price: item.offer_purchase_price || "",
+            rent_price_per_month: item.rent_price_per_month || "",
+            offer_rent_price_per_month: item.offer_rent_price_per_month || "",
+          };
+        });
 
+        setProductPrices(initialProductPrices);
 
-        setAvailableAssetIds(newAvailableAssetIds);
+        items.forEach((item) => {
+          newDeviceIds[item.product_id] = item.device_ids || [];
+          newOriginalDeviceIds[item.product_id] = [...(item.device_ids || [])];
+        });
+
         setDeviceIds(newDeviceIds);
         setOriginalDeviceIds(newOriginalDeviceIds);
 
@@ -546,16 +644,13 @@ const [returnedDates, setReturnedDates] = useState({});
 
     const { personalDetails, address, items } = selectedOrder;
 
-    // Set available asset IDs for each product
-    const newAvailableAssetIds = {};
+    // Set device IDs for each product
     const newDeviceIds = {};
 
     items.forEach((item) => {
-      newAvailableAssetIds[item.product_id] = item.available_asset_ids || [];
       newDeviceIds[item.product_id] = item.device_ids || [];
     });
 
-    setAvailableAssetIds(newAvailableAssetIds);
     setDeviceIds(newDeviceIds);
 
     setFormData((prev) => ({
@@ -582,6 +677,10 @@ const [returnedDates, setReturnedDates] = useState({});
         quantity: item.requested_quantity,
         item_total_value: item.item_total_value,
         device_ids: item.device_ids || [],
+        offer_purchase_price: item.offer_purchase_price || 0,
+        offer_rent_price_per_month: item.offer_rent_price_per_month || 0,
+        purchase_price: item.purchase_price || 0,
+        rent_price_per_month: item.rent_price_per_month || 0,
       })),
     }));
 
@@ -643,6 +742,90 @@ const [returnedDates, setReturnedDates] = useState({});
 
     return () => clearTimeout(debounceTimer);
   }, [formData.pincode]);
+
+  const handleOpenEditDialog = (product) => {
+    // Find the dispatch order item for this product
+    const dispatchOrderItem = dispatchOrderItems.find(
+      (item) => item.product_id === product.id
+    );
+
+    if (dispatchOrderItem) {
+      setEditingProduct({
+        ...product,
+        ...dispatchOrderItem, // Include dispatch order specific data
+      });
+
+      setPriceForm({
+        purchase_price: dispatchOrderItem.purchase_price || "",
+        offer_purchase_price: dispatchOrderItem.offer_purchase_price || "",
+        rent_price_per_month: dispatchOrderItem.rent_price_per_month || "",
+        offer_rent_price_per_month:
+          dispatchOrderItem.offer_rent_price_per_month || "",
+      });
+    } else {
+      // Fallback to product template prices if dispatch order item not found
+      setEditingProduct(product);
+      setPriceForm({
+        purchase_price: product.purchase_price || "",
+        offer_purchase_price: product.offer_purchase_price || "",
+        rent_price_per_month: product.rent_price_per_month || "",
+        offer_rent_price_per_month: product.offer_rent_price_per_month || "",
+      });
+    }
+    setEditDialogOpen(true);
+  };
+
+  // Close edit dialog
+  const handleCloseEditDialog = () => {
+    setEditDialogOpen(false);
+    setEditingProduct(null);
+    setPriceForm({
+      purchase_price: "",
+      offer_purchase_price: "",
+      rent_price_per_month: "",
+      offer_rent_price_per_month: "",
+    });
+  };
+
+  // Handle price form change
+  const handlePriceFormChange = (field, value) => {
+    setPriceForm((prev) => ({
+      ...prev,
+      [field]: value,
+    }));
+  };
+
+  // Submit updated prices
+  // Replace handleUpdatePrices with this:
+// Replace the handleUpdatePrices function with this:
+const handleUpdatePrices = () => {
+  if (!editingProduct) return;
+
+  // Update both productPrices and productOfferPrices states
+  setProductPrices((prev) => ({
+    ...prev,
+    [editingProduct.product_id]: {
+      ...prev[editingProduct.product_id],
+      purchase_price: priceForm.purchase_price,
+      offer_purchase_price: priceForm.offer_purchase_price,
+      rent_price_per_month: priceForm.rent_price_per_month,
+      offer_rent_price_per_month: priceForm.offer_rent_price_per_month,
+    },
+  }));
+
+  setProductOfferPrices((prev) => ({
+    ...prev,
+    [editingProduct.id]: priceForm.offer_purchase_price,
+  }));
+
+  setSnackbar({
+    open: true,
+    message: "Prices updated successfully!",
+    severity: "success",
+  });
+
+  handleCloseEditDialog();
+};
 
   // Handle form field changes
   const handleInputChange = useCallback((e) => {
@@ -734,21 +917,52 @@ const [returnedDates, setReturnedDates] = useState({});
     }
 
     try {
-      // Prepare items data
+
+
+       // Find the selected order to get rental dates
+      const selectedOrder = orders.find(
+        (order) => order.id === parseInt(formData.order_id)
+      );
+
+      // Prepare rental period data if it's a rental order
+      const rentalPeriod =
+        formData.transaction_type === "Rent" && selectedOrder
+          ? {
+              rental_start_date: selectedOrder.rental_start_date,
+              rental_end_date: selectedOrder.rental_end_date,
+              rental_duration: selectedOrder.rental_duration,
+            }
+          : null;
+
+
+      // Prepare items data with updated prices
       const items = selectedProductIds.map((productId) => {
+
+         const orderItem = selectedOrder.items.find(
+          (item) => item.product_id === productId
+        );
+
         const product = products.find((p) => p.id === productId);
         const quantity = quantities[productId] || 1;
         const selectedDeviceIds = deviceIds[productId] || [];
+        const prices = productPrices[productId] || {};
 
+        // Calculate total price based on transaction type
         let total_price = 0;
-        if (formData.type === "Rent") {
-          const rentalDuration = 1;
+       if (formData.transaction_type === "Rent") {
+          const rentalDuration = selectedOrder?.rental_duration || 1;
           if (rentalDuration === 12) {
             total_price = product.rent_price_1_year * quantity;
           } else if (rentalDuration === 6) {
             total_price = product.rent_price_6_months * quantity;
           } else {
-            total_price = product.rent_price_per_month * quantity;
+            const monthlyPrice =
+              product?.offer_rent_price_per_month &&
+              product.offer_rent_price_per_month !== ""
+                ? Number(product.offer_rent_price_per_month)
+                : Number(product?.rent_price_per_month || 0);
+
+            total_price = monthlyPrice;
           }
         } else {
           total_price = product.purchase_price * quantity;
@@ -760,12 +974,27 @@ const [returnedDates, setReturnedDates] = useState({});
           quantity,
           total_price,
           device_ids: selectedDeviceIds,
+          purchase_price:
+            orderItem?.purchase_price || product.purchase_price || 0,
+          rent_price_per_month:
+            orderItem?.rent_price_per_month ||
+            product.rent_price_per_month ||
+            0,
+          offer_purchase_price:
+            orderItem?.offer_purchase_price ||
+            product.offer_purchase_price ||
+            0,
+          offer_rent_price_per_month:
+            orderItem?.offer_rent_price_per_month ||
+            product.offer_rent_price_per_month ||
+            0,
         };
       });
 
       const payload = {
         ...formData,
         type: formData.type,
+        convert_rent_to_sale: formData.convert_rent_to_sale,
         items,
       };
 
@@ -826,6 +1055,60 @@ const [returnedDates, setReturnedDates] = useState({});
         </Alert>
       </Snackbar>
 
+      {/* Price Edit Dialog */}
+      <Dialog open={editDialogOpen} onClose={handleCloseEditDialog}>
+        <DialogContent>
+          {editingProduct && (
+            <div style={formContainerStyle}>
+              {/* Quotation Information Section */}
+              <div style={cardStyle}>
+                <div style={cardHeaderContainerStyle}>
+                  <h3 style={cardHeaderStyle}>Edit Product Prices</h3>
+                </div>
+              </div>
+              <Field
+                label="Product Name"
+                value={editingProduct.product_name}
+                placeholder=""
+                disabled={true} // properly disables the field
+              />
+              <div style={fieldsGridStyle}>
+                {/* Product Name - Disabled */}
+
+                {/* Disabled - Actual Prices */}
+                <Field
+                  label="Purchase Price (₹)"
+                  type="number"
+                  value={priceForm.purchase_price}
+                  placeholder=""
+                  disabled={true}
+                />
+
+                {/* Editable - Offer Prices */}
+                <Field
+                  label="Offer Purchase Price (₹)"
+                  type="number"
+                  value={priceForm.offer_purchase_price || ""}
+                  onChange={(e) =>
+                    handlePriceFormChange(
+                      "offer_purchase_price",
+                      e.target.value
+                    )
+                  }
+                  placeholder=""
+                />
+              </div>
+            </div>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseEditDialog}>Cancel</Button>
+          <Button onClick={handleUpdatePrices} variant="contained">
+            Update Prices
+          </Button>
+        </DialogActions>
+      </Dialog>
+
       <div style={headerStyle}>
         <h1 style={titleStyle}>Edit Dispatch Order</h1>
       </div>
@@ -846,13 +1129,6 @@ const [returnedDates, setReturnedDates] = useState({});
                 value={formData.dispatch_order_id}
                 onChange={handleInputChange}
                 readOnly
-              />
-              <Field
-                label="Dispatch Order Title"
-                name="dispatch_order_title"
-                placeholder="Enter Dispatch Order Title"
-                value={formData.dispatch_order_title}
-                onChange={handleInputChange}
               />
               <Field
                 label="Order Details"
@@ -902,6 +1178,28 @@ const [returnedDates, setReturnedDates] = useState({});
                   { value: "Buy", label: "Buy" },
                 ]}
               />
+
+              <Field
+                label="Rent To Sale"
+                name="convert_rent_to_sale"
+                type="select"
+                placeholder="Select Type"
+                value={formData.convert_rent_to_sale}
+                onChange={(e) => {
+                  handleInputChange(e);
+                }}
+                options={[{ value: "Buy", label: "Buy" }]}
+              />
+
+              {formData.convert_rent_to_sale === "Buy" && (
+                <Field
+                  label="Sale Date"
+                  name="order_sale_date"
+                  type="date"
+                  value={formData.order_sale_date}
+                  onChange={handleInputChange}
+                />
+              )}
 
               {formData.type === "Rent" && (
                 <Field
@@ -1049,6 +1347,27 @@ const [returnedDates, setReturnedDates] = useState({});
                 readOnly
               />
             </div>
+            {/* Peripheral Update Checkbox */}
+            <div style={fieldContainerStyle}>
+              <Field
+                label="Peripheral Update Required"
+                name="peripheral_update"
+                type="checkbox"
+                value={formData.peripheral_update}
+                onChange={handleInputChange}
+                description="Check if this delivery includes peripheral updates"
+              />
+
+              {/* Direct Invoice Checkbox */}
+              <Field
+                label="Direct Invoice"
+                name="is_direct_invoice"
+                type="checkbox"
+                value={formData.is_direct_invoice}
+                onChange={handleInputChange}
+                description="Check if this is a direct invoice"
+              />
+            </div>
           </div>
         </div>
 
@@ -1091,13 +1410,23 @@ const [returnedDates, setReturnedDates] = useState({});
                   />
                 </Box>
 
-                <TableContainer component={Paper}>
-                  <Table size="small">
+                <TableContainer
+                  component={Paper}
+                  sx={{
+                    maxHeight: "400px", // or whatever height you prefer
+                    overflow: "auto",
+                    position: "relative",
+                  }}
+                >
+                  <Table size="small" stickyHeader>
                     <TableHead>
                       <TableRow sx={{ backgroundColor: "#0d47a1" }}>
-                        <TableCell padding="checkbox" sx={{ color: "#fff" }}>
+                        <TableCell
+                          padding="checkbox"
+                          sx={{ backgroundColor: "#0d47a1" }}
+                        >
                           <Checkbox
-                            sx={{ color: "#fff" }}
+                            sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
                             checked={
                               selectedProductIds.length ===
                                 filteredProducts.length &&
@@ -1128,38 +1457,63 @@ const [returnedDates, setReturnedDates] = useState({});
                             }}
                           />
                         </TableCell>
-                        <TableCell sx={{ color: "#fff" }}>
+                        <TableCell
+                          sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
+                        >
                           Product Name
                         </TableCell>
-                        <TableCell sx={{ color: "#fff" }}>Brand</TableCell>
-                        <TableCell sx={{ color: "#fff" }}>Model</TableCell>
-                        <TableCell sx={{ color: "#fff" }}>Processor</TableCell>
-                        <TableCell sx={{ color: "#fff" }}>RAM</TableCell>
-                        <TableCell sx={{ color: "#fff" }}>Storage</TableCell>
-                        <TableCell sx={{ color: "#fff" }}>Graphics</TableCell>
-                        <TableCell sx={{ color: "#fff" }}>
+                        <TableCell
+                          sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
+                        >
+                          Processor
+                        </TableCell>
+                        <TableCell
+                          sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
+                        >
+                          RAM
+                        </TableCell>
+                        <TableCell
+                          sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
+                        >
+                          Storage
+                        </TableCell>
+                        <TableCell
+                          sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
+                        >
+                          Graphics
+                        </TableCell>
+                        <TableCell
+                          sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
+                        >
                           Available Quantity
                         </TableCell>
 
-                        <TableCell sx={{ color: "#fff" }}>Quantity</TableCell>
-                        <TableCell sx={{ color: "#fff" }}>
+                        <TableCell
+                          sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
+                        >
+                          Quantity
+                        </TableCell>
+                        <TableCell
+                          sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
+                        >
                           Selected Asset IDs
                         </TableCell>
 
-                        {/* <TableCell sx={{ color: "#fff" }}>
-                          New Quantity
-                        </TableCell>
-                        <TableCell sx={{ color: "#fff" }}>
-                          Selected New Asset Ids
-                        </TableCell>
-                        <TableCell sx={{ color: "#fff" }}>
-                          Choose New Asset Ids
-                        </TableCell>
-                        <TableCell sx={{ color: "#fff" }}>
-                          Select Added date
-                        </TableCell> */}
+                        {formData.convert_rent_to_sale === "Buy" && (
+                          <>
+                            <TableCell
+                              sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
+                            >
+                              Price per Piece
+                            </TableCell>
 
-                        {/* <TableCell sx={{ color: "#fff" }}>Price</TableCell> */}
+                            <TableCell
+                              sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
+                            >
+                              Action
+                            </TableCell>
+                          </>
+                        )}
                       </TableRow>
                     </TableHead>
                     <TableBody>
@@ -1180,8 +1534,6 @@ const [returnedDates, setReturnedDates] = useState({});
                               />
                             </TableCell>
                             <TableCell>{product.product_name}</TableCell>
-                            <TableCell>{product.brand}</TableCell>
-                            <TableCell>{product.model}</TableCell>
                             <TableCell>{product.processor}</TableCell>
                             <TableCell>{product.ram}</TableCell>
                             <TableCell>{product.storage}</TableCell>
@@ -1203,445 +1555,44 @@ const [returnedDates, setReturnedDates] = useState({});
                             <TableCell>
                               {(deviceIds[product.id] || []).join(", ")}
                             </TableCell>
-                            {/* <TableCell>
-                              <TextField
-                                type="number"
-                                size="small"
-                                value={newQuantities[product.id] || ""}
-                                onChange={(e) =>
-                                  setNewQuantities({
-                                    ...newQuantities,
-                                    [product.id]: e.target.value,
-                                  })
-                                }
-                                inputProps={{
-                                  min: 0,
-                                  style: { width: 60, textAlign: "center" },
-                                }}
-                              />
-                            </TableCell>
 
-                            <TableCell>
-                              {(selectedNewAssetIds[product.id] || []).join(
-                                ", "
-                              )}
-                            </TableCell>
+                           {formData.convert_rent_to_sale === "Buy" && (
+  <>
+    <TableCell>
+      <div>
+        <strong>Purchase Price:</strong> ₹
+        {productPrices[product.id]?.purchase_price || 
+         product.purchase_price}
+      </div>
+      {productPrices[product.id]?.offer_purchase_price && (
+        <div>
+          <strong>Offer Price:</strong> ₹
+          {productPrices[product.id]?.offer_purchase_price}
+        </div>
+      )}
+    </TableCell>
 
-                            <TableCell>
-                              <TextField
-                                placeholder="Search New Asset ID"
-                                size="small"
-                                value={assetSearchTerms[product.id] || ""}
-                                onChange={(e) =>
-                                  setAssetSearchTerms({
-                                    ...assetSearchTerms,
-                                    [product.id]: e.target.value,
-                                  })
-                                }
-                                inputProps={{ style: { width: 150 } }}
-                              />
-                            </TableCell>
-
-                            <TableCell>
-                              <TextField
-                                type="date"
-                                size="small"
-                                value={addedDates[product.id] || ""}
-                                onChange={(e) =>
-                                  setAddedDates({
-                                    ...addedDates,
-                                    [product.id]: e.target.value,
-                                  })
-                                }
-                                InputLabelProps={{
-                                  shrink: true,
-                                }}
-                                inputProps={{ style: { width: 140 } }}
-                              />
-                            </TableCell> */}
-
-                            {/* <TableCell>
-                              {formData.type === "Rent" ? (
-                                <>
-                                  <div>
-                                    Month: {product.rent_price_per_month}
-                                  </div>
-                                </>
-                              ) : (
-                                product.purchase_price
-                              )}
-                            </TableCell> */}
+    <TableCell>
+      <IconButton
+        size="small"
+        onClick={() => handleOpenEditDialog(product)}
+        title="Edit Prices"
+        disabled={!selectedProductIds.includes(product.id)}
+        style={{
+          opacity: selectedProductIds.includes(product.id) ? 1 : 0.5,
+          cursor: selectedProductIds.includes(product.id) ? "pointer" : "not-allowed",
+        }}
+      >
+        <Edit fontSize="small" />
+      </IconButton>
+    </TableCell>
+  </>
+)}
                           </TableRow>
                         ))}
                     </TableBody>
                   </Table>
                 </TableContainer>
-
-{/* new table */}
-
-                 {/* <TableContainer component={Paper}>
-                  <Table size="small">
-                    <TableHead>
-                      <TableRow sx={{ backgroundColor: "#0d47a1" }}>
-                        <TableCell padding="checkbox" sx={{ color: "#fff" }}>
-                          <Checkbox
-                            sx={{ color: "#fff" }}
-                            checked={
-                              selectedProductIds.length ===
-                                filteredProducts.length &&
-                              filteredProducts.length > 0
-                            }
-                            indeterminate={
-                              selectedProductIds.length > 0 &&
-                              selectedProductIds.length <
-                                filteredProducts.length
-                            }
-                            onChange={() => {
-                              if (
-                                selectedProductIds.length ===
-                                filteredProducts.length
-                              ) {
-                                setSelectedProductIds([]);
-                              } else {
-                                const newQuantities = {};
-                                filteredProducts.forEach((product) => {
-                                  newQuantities[product.id] =
-                                    quantities[product.id] || 1;
-                                });
-                                setQuantities(newQuantities);
-                                setSelectedProductIds(
-                                  filteredProducts.map((product) => product.id)
-                                );
-                              }
-                            }}
-                          />
-                        </TableCell>
-                        <TableCell sx={{ color: "#fff" }}>
-                          Product Name
-                        </TableCell>
-                        <TableCell sx={{ color: "#fff" }}>Brand</TableCell>
-                        <TableCell sx={{ color: "#fff" }}>Model</TableCell>
-                        <TableCell sx={{ color: "#fff" }}>Processor</TableCell>
-                        <TableCell sx={{ color: "#fff" }}>RAM</TableCell>
-                        <TableCell sx={{ color: "#fff" }}>Storage</TableCell>
-                        <TableCell sx={{ color: "#fff" }}>Graphics</TableCell>
-                        <TableCell sx={{ color: "#fff" }}>
-                          Available Quantity
-                        </TableCell>
-
-                        <TableCell sx={{ color: "#fff" }}>Original Quantity</TableCell>
-                        <TableCell sx={{ color: "#fff" }}>
-                          Original Selected Asset IDs
-                        </TableCell>
-
-                        <TableCell sx={{ color: "#fff" }}>
-                          New Quantity
-                        </TableCell>
-                        <TableCell sx={{ color: "#fff" }}>
-                          Selected New Asset Ids
-                        </TableCell>
-                        <TableCell sx={{ color: "#fff" }}>
-                          Choose New Asset Ids
-                        </TableCell>
-                        <TableCell sx={{ color: "#fff" }}>
-                          Select Added date
-                        </TableCell>
-
-                        <TableCell sx={{ color: "#fff" }}>Price</TableCell>
-                        <TableCell sx={{ color: "#fff" }}>
-                          Return Quantity 
-                        </TableCell>
-                        <TableCell sx={{ color: "#fff" }}>
-                          Selected Return Asset Ids
-                        </TableCell>
-                        <TableCell sx={{ color: "#fff" }}>
-                          Choose Return Asset Ids
-                        </TableCell>
-                        <TableCell sx={{ color: "#fff" }}>
-                          Select Return date
-                        </TableCell>
-                      </TableRow>
-                    </TableHead>
-                    <TableBody>
-  {filteredProducts
-    .filter((product) => selectedProductIds.includes(product.id))
-    .map((product) => (
-      <TableRow key={product.id}>
-        <TableCell padding="checkbox">
-          <Checkbox
-            checked={selectedProductIds.includes(product.id)}
-            onChange={() => handleProductSelection(product.id)}
-          />
-        </TableCell>
-        <TableCell>{product.product_name}</TableCell>
-        <TableCell>{product.brand}</TableCell>
-        <TableCell>{product.model}</TableCell>
-        <TableCell>{product.processor}</TableCell>
-        <TableCell>{product.ram}</TableCell>
-        <TableCell>{product.storage}</TableCell>
-        <TableCell>{product.graphics}</TableCell>
-        <TableCell>{getAvailableQty(product.id)}</TableCell>
-
-        <TableCell>
-          <TextField
-            type="number"
-            size="small"
-            value={quantities[product.id] || ""}
-            disabled
-            inputProps={{
-              min: 0,
-              style: { width: 50, textAlign: "center" },
-            }}
-          />
-        </TableCell>
-
-        <TableCell>
-          {(deviceIds[product.id] || []).join(", ")}
-        </TableCell>
-
-        <TableCell>
-          <TextField
-            type="number"
-            size="small"
-            value={newQuantities[product.id] || ""}
-            onChange={(e) =>
-              setNewQuantities((prev) => ({
-                ...prev,
-                [product.id]: parseInt(e.target.value) || 0,
-              }))
-            }
-            inputProps={{
-              min: 0,
-              style: { width: 60, textAlign: "center" },
-            }}
-          />
-        </TableCell>
-
-        <TableCell>
-          {(selectedNewAssetIds[product.id] || []).join(", ")}
-        </TableCell>
-
-        <TableCell>
-          <Box display="flex" flexDirection="column" gap={1}>
-            <TextField
-              placeholder="Search New Asset ID"
-              size="small"
-              value={assetSearchTerms[product.id] || ""}
-              onChange={(e) =>
-                setAssetSearchTerms((prev) => ({
-                  ...prev,
-                  [product.id]: e.target.value,
-                }))
-              }
-              inputProps={{ style: { width: 150 } }}
-            />
-
-            {(assetSearchTerms[product.id] || "").trim() !== "" && (
-              <Box
-                sx={{
-                  maxHeight: 150,
-                  overflowY: "auto",
-                  border: "1px solid #e0e0e0",
-                  borderRadius: 1,
-                  p: 1,
-                }}
-              >
-                {(availableAssetIds[product.id] || [])
-                  .filter((id) =>
-                    id
-                      .toLowerCase()
-                      .includes((assetSearchTerms[product.id] || "").toLowerCase())
-                  )
-                  .map((assetId) => {
-                    const selected = selectedNewAssetIds[product.id] || [];
-                    const maxAllowed = newQuantities[product.id] || 0;
-                    const isSelected = selected.includes(assetId);
-
-                    return (
-                      <Box
-                        key={assetId}
-                        onClick={() => {
-                          const updated = [...selected];
-
-                          if (isSelected) {
-                            const index = updated.indexOf(assetId);
-                            if (index !== -1) updated.splice(index, 1);
-                          } else {
-                            if (updated.length >= maxAllowed) return; // Don't allow more
-                            updated.push(assetId);
-                          }
-
-                          setSelectedNewAssetIds((prev) => ({
-                            ...prev,
-                            [product.id]: updated,
-                          }));
-                        }}
-                        sx={{
-                          p: 0.5,
-                          cursor: "pointer",
-                          backgroundColor: isSelected ? "#e3f2fd" : "transparent",
-                          "&:hover": {
-                            backgroundColor: "#f5f5f5",
-                          },
-                        }}
-                      >
-                        {assetId}
-                      </Box>
-                    );
-                  })}
-              </Box>
-            )}
-
-            {selectedNewAssetIds[product.id]?.length > (newQuantities[product.id] || 0) && (
-              <Typography color="error" variant="caption">
-                Only {newQuantities[product.id]} asset ID(s) allowed.
-              </Typography>
-            )}
-          </Box>
-        </TableCell>
-
-        <TableCell>
-          <TextField
-            type="date"
-            size="small"
-            value={addedDates[product.id] || ""}
-            onChange={(e) =>
-              setAddedDates({
-                ...addedDates,
-                [product.id]: e.target.value,
-              })
-            }
-            InputLabelProps={{
-              shrink: true,
-            }}
-            inputProps={{ style: { width: 140 } }}
-          />
-        </TableCell>
-
-        <TableCell>
-          {formData.type === "Rent" ? (
-            <div>Month: {product.rent_price_per_month}</div>
-          ) : (
-            product.purchase_price
-          )}
-        </TableCell>
-      <TableCell>
-  <TextField
-    type="number"
-    size="small"
-    value={returnedQuantities[product.id] || ""}
-    onChange={(e) => {
-      const originalQty = quantities[product.id] || 0;
-      const newValue = Math.min(parseInt(e.target.value) || 0, originalQty);
-
-      setReturnedQuantities((prev) => ({
-        ...prev,
-        [product.id]: newValue,
-      }));
-    }}
-    inputProps={{
-      min: 0,
-      max: quantities[product.id] || 0, // ⛔ Prevent more than original
-      style: { width: 60, textAlign: "center" },
-    }}
-  />
-</TableCell>
-
-
-        <TableCell>
-          {(selectedReturnedAssetIds[product.id] || []).join(", ")}
-        </TableCell>
-
-        <TableCell>
-          <Box display="flex" flexDirection="column" gap={1}>
-            <TextField
-              placeholder="Search Returned Asset ID"
-              size="small"
-              value={returnAssetSearchTerms[product.id] || ""}
-              onChange={(e) =>
-                setReturnAssetSearchTerms((prev) => ({
-                  ...prev,
-                  [product.id]: e.target.value,
-                }))
-              }
-              inputProps={{ style: { width: 150 } }}
-            />
-
-            {(returnAssetSearchTerms[product.id] || "").trim() !== "" && (
-              <Box
-                sx={{
-                  maxHeight: 150,
-                  overflowY: "auto",
-                  border: "1px solid #e0e0e0",
-                  borderRadius: 1,
-                  p: 1,
-                }}
-              >
-                {(deviceIds[product.id] || [])
-                  .filter((id) =>
-                    id.toLowerCase().includes((returnAssetSearchTerms[product.id] || "").toLowerCase())
-                  )
-                  .map((assetId) => {
-                    const selected = selectedReturnedAssetIds[product.id] || [];
-                    const maxAllowed = returnedQuantities[product.id] || 0;
-                    const isSelected = selected.includes(assetId);
-
-                    return (
-                      <Box
-                        key={assetId}
-                        onClick={() => {
-                          const updated = [...selected];
-                          if (isSelected) {
-                            const index = updated.indexOf(assetId);
-                            if (index !== -1) updated.splice(index, 1);
-                          } else {
-                            if (updated.length >= maxAllowed) return;
-                            updated.push(assetId);
-                          }
-
-                          setSelectedReturnedAssetIds((prev) => ({
-                            ...prev,
-                            [product.id]: updated,
-                          }));
-                        }}
-                        sx={{
-                          p: 0.5,
-                          cursor: "pointer",
-                          backgroundColor: isSelected ? "#e3f2fd" : "transparent",
-                          "&:hover": { backgroundColor: "#f5f5f5" },
-                        }}
-                      >
-                        {assetId}
-                      </Box>
-                    );
-                  })}
-              </Box>
-            )}
-          </Box>
-        </TableCell>
-
-        <TableCell>
-          <TextField
-            type="date"
-            size="small"
-            value={returnedDates[product.id] || ""}
-            onChange={(e) =>
-              setReturnedDates((prev) => ({
-                ...prev,
-                [product.id]: e.target.value,
-              }))
-            }
-            InputLabelProps={{ shrink: true }}
-            inputProps={{ style: { width: 140 } }}
-          />
-        </TableCell>
-      </TableRow>
-    ))}
-</TableBody>
-
-                  </Table>
-                </TableContainer> */}
-
               </Box>
             )}
           </div>

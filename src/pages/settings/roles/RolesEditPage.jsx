@@ -68,7 +68,7 @@ const RolesEditPage = () => {
     setIsSubmitting(true);
     
     try {
-      await axios.put(`${API_URL}/roles/update/${id}`, {
+      await axios.put(`${API_URL}/roles/${id}`, {
         role_name: formData.roleName,
         description: formData.description,
         is_active: formData.activeStatus,

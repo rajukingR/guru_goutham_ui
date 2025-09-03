@@ -20,17 +20,15 @@ import {
 } from "@mui/material";
 import { Add, Remove } from "@mui/icons-material";
 import API_URL, { IMAGE_API_URL } from "../../../api/Api_url";
-
 import { useNavigate } from "react-router-dom";
 
 const generateLeadId = () => {
   const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
   let randomPart = "";
   for (let i = 0; i < 6; i++) {
-    // 6 characters for lead ID
     randomPart += chars.charAt(Math.floor(Math.random() * chars.length));
   }
-  return `LD-${randomPart}`; // LD- prefix for Lead
+  return `LD-${randomPart}`;
 };
 
 const LeadsLayoutAddPage = () => {
@@ -72,6 +70,13 @@ const LeadsLayoutAddPage = () => {
     paymentType: "",
   });
 
+  const [errors, setErrors] = useState({
+    transactionType: "",
+    selectedCustomer: "",
+    paymentType: "",
+    products: "",
+  });
+
   const [customers, setCustomers] = useState([]);
   const [products, setProducts] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
@@ -91,10 +96,11 @@ const LeadsLayoutAddPage = () => {
     message: "",
     severity: "success",
   });
+
   useEffect(() => {
     setFormData((prev) => ({
       ...prev,
-      leadId: generateLeadId(), // Auto-generate on component mount
+      leadId: generateLeadId(),
     }));
   }, []);
 
@@ -106,6 +112,52 @@ const LeadsLayoutAddPage = () => {
       }));
     }
   }, [LoginUserName]);
+
+  const validateForm = () => {
+    const newErrors = {
+      transactionType: "",
+      selectedCustomer: "",
+      paymentType: "",
+      products: "",
+    };
+    let isValid = true;
+
+    // Validate transaction type
+    if (!formData.transactionType) {
+      newErrors.transactionType = "Transaction type is required";
+      isValid = false;
+    }
+
+    // Validate customer selection
+    if (!formData.selectedCustomer) {
+      newErrors.selectedCustomer = "Customer selection is required";
+      isValid = false;
+    }
+
+    // Validate payment type if transaction is Rent
+    if (formData.transactionType === "Rent" && !formData.paymentType) {
+      newErrors.paymentType = "Payment type is required for rental";
+      isValid = false;
+    }
+
+    // Validate product selection and quantities
+    if (selectedProductIds.length === 0) {
+      newErrors.products = "At least one product must be selected";
+      isValid = false;
+    } else {
+      // Check if all selected products have quantity >= 1
+      for (const id of selectedProductIds) {
+        if (!quantities[id] || quantities[id] < 1) {
+          newErrors.products = "All selected products must have quantity ≥ 1";
+          isValid = false;
+          break;
+        }
+      }
+    }
+
+    setErrors(newErrors);
+    return isValid;
+  };
 
   // Fetch active contacts
   useEffect(() => {
@@ -184,10 +236,26 @@ const LeadsLayoutAddPage = () => {
         owner: selectedCustomer.owner || "",
       }));
     }
+    // Clear customer error when selection changes
+    if (errors.selectedCustomer) {
+      setErrors((prev) => ({ ...prev, selectedCustomer: "" }));
+    }
   };
 
   const handleInputChange = (field, value) => {
-    if (field === "rentalDuration") {
+    if (field === "transactionType") {
+      setFormData((prev) => ({ ...prev, [field]: value, paymentType: "" }));
+      // Clear transaction type error when changed
+      if (errors.transactionType) {
+        setErrors((prev) => ({ ...prev, transactionType: "" }));
+      }
+    } else if (field === "paymentType") {
+      setFormData((prev) => ({ ...prev, [field]: value }));
+      // Clear payment type error when changed
+      if (errors.paymentType) {
+        setErrors((prev) => ({ ...prev, paymentType: "" }));
+      }
+    } else if (field === "rentalDuration") {
       const months = Math.max(0, parseInt(value) || 0);
       setFormData((prev) => ({ ...prev, rentalDuration: months }));
     } else if (field === "rentalDurationDays") {
@@ -248,10 +316,18 @@ const LeadsLayoutAddPage = () => {
   const handleQtyChange = (id, value) => {
     const qty = Math.max(0, parseInt(value) || 0);
     setQuantities({ ...quantities, [id]: qty });
+    // Clear products error when quantity changes
+    if (errors.products) {
+      setErrors((prev) => ({ ...prev, products: "" }));
+    }
   };
 
   const incrementQty = (id) => {
     setQuantities((prev) => ({ ...prev, [id]: (prev[id] || 0) + 1 }));
+    // Clear products error when quantity changes
+    if (errors.products) {
+      setErrors((prev) => ({ ...prev, products: "" }));
+    }
   };
 
   const decrementQty = (id) => {
@@ -259,9 +335,34 @@ const LeadsLayoutAddPage = () => {
       ...prev,
       [id]: Math.max(0, (prev[id] || 0) - 1),
     }));
+    // Clear products error when quantity changes
+    if (errors.products) {
+      setErrors((prev) => ({ ...prev, products: "" }));
+    }
+  };
+
+  const handleProductSelection = (id) => {
+    setSelectedProductIds((prev) =>
+      prev.includes(id)
+        ? prev.filter((productId) => productId !== id)
+        : [...prev, id]
+    );
+    // Clear products error when selection changes
+    if (errors.products) {
+      setErrors((prev) => ({ ...prev, products: "" }));
+    }
   };
 
   const handleSubmit = async () => {
+    if (!validateForm()) {
+      setSnackbar({
+        open: true,
+        message: "Please fix the validation errors",
+        severity: "error",
+      });
+      return;
+    }
+
     if (
       parseInt(formData.rentalDuration) === 0 &&
       parseInt(formData.rentalDurationDays) < 1
@@ -322,8 +423,6 @@ const LeadsLayoutAddPage = () => {
       setTimeout(() => {
         navigate("/dashboard/crm/lead");
       }, 1500);
-
-      // Reset form or redirect as needed
     } catch (err) {
       setSnackbar({
         open: true,
@@ -370,12 +469,7 @@ const LeadsLayoutAddPage = () => {
               placeholder="Enter Lead ID"
               value={formData.leadId}
               onChange={(value) => handleInputChange("leadId", value)}
-            />
-            <Field
-              label="Lead Title"
-              placeholder="Enter Lead Title"
-              value={formData.leadTitle}
-              onChange={(value) => handleInputChange("leadTitle", value)}
+              disabled
             />
             <Field
               label="Transaction Type"
@@ -384,6 +478,8 @@ const LeadsLayoutAddPage = () => {
               value={formData.transactionType}
               onChange={(value) => handleInputChange("transactionType", value)}
               options={["Rent", "Buy"]}
+              required
+              error={errors.transactionType}
             />
             {formData.transactionType === "Rent" && (
               <Field
@@ -393,103 +489,10 @@ const LeadsLayoutAddPage = () => {
                 value={formData.paymentType}
                 onChange={(value) => handleInputChange("paymentType", value)}
                 options={["Prepaid", "Postpaid"]}
+                required
+                error={errors.paymentType}
               />
             )}
-
-            {/* <Field
-              label="Lead Status"
-              type="select"
-              placeholder="Select Lead Status"
-              value={formData.leadStatus}
-              onChange={(value) => handleInputChange("leadStatus", value)}
-              options={[
-                "New",
-                "Contacted",
-                "Qualified",
-                "Proposal Sent",
-                "Negotiation",
-                "Closed Won",
-                "Closed Lost",
-              ]}
-            /> */}
-            {/* <Field
-              label="Source of Enquiry"
-              type="select"
-              placeholder="Select Source of Enquiry"
-              value={formData.sourceOfEnquiry}
-              onChange={(value) => handleInputChange("sourceOfEnquiry", value)}
-              options={[
-                "Search Engine",
-                "Referral",
-                "Social Media",
-                "Email",
-                "Cold Call",
-                "Existing Customer",
-              ]}
-            /> */}
-            {/* <Field
-              label="Rental Duration (Months)"
-              placeholder="Enter Rental Duration"
-              value={formData.rentalDuration}
-              onChange={(value) => handleInputChange("rentalDuration", value)}
-              type="number"
-            />
-            <Field
-              label="Rental Duration (Days)"
-              placeholder="Enter Rental Duration in Days"
-              value={formData.rentalDurationDays}
-              onChange={(value) =>
-                handleInputChange("rentalDurationDays", value)
-              }
-              type="number"
-            />
-
-            <div style={{ gridColumn: "1 / -1" }}>
-              <LocalizationProvider dateAdapter={AdapterDateFns}>
-                <div style={dateFieldContainer}>
-                  <label style={labelStyle}>Rental Start Date</label>
-                  <DatePicker
-                    value={formData.rentalStartDate}
-                    onChange={(date) =>
-                      handleInputChange("rentalStartDate", date)
-                    }
-                    renderInput={({ inputRef, inputProps, InputProps }) => (
-                      <div style={dateInputWrapper}>
-                        <input
-                          ref={inputRef}
-                          {...inputProps}
-                          style={dateInputStyle}
-                        />
-                        {InputProps?.endAdornment}
-                      </div>
-                    )}
-                  />
-                </div>
-              </LocalizationProvider>
-            </div>
-            <div style={{ gridColumn: "1 / -1" }}>
-              <LocalizationProvider dateAdapter={AdapterDateFns}>
-                <div style={dateFieldContainer}>
-                  <label style={labelStyle}>Rental End Date</label>
-                  <DatePicker
-                    value={formData.rentalEndDate}
-                    onChange={(date) =>
-                      handleInputChange("rentalEndDate", date)
-                    }
-                    renderInput={({ inputRef, inputProps, InputProps }) => (
-                      <div style={dateInputWrapper}>
-                        <input
-                          ref={inputRef}
-                          {...inputProps}
-                          style={dateInputStyle}
-                        />
-                        {InputProps?.endAdornment}
-                      </div>
-                    )}
-                  />
-                </div>
-              </LocalizationProvider>
-            </div> */}
             <div style={{ gridColumn: "1 / -1" }}>
               <LocalizationProvider dateAdapter={AdapterDateFns}>
                 <div style={dateFieldContainer}>
@@ -550,6 +553,8 @@ const LeadsLayoutAddPage = () => {
                 value: customer.id.toString(),
                 label: `${customer.first_name} ${customer.last_name} (${customer.company_name})`,
               }))}
+              required
+              error={errors.selectedCustomer}
             />
             <Field
               label="Customer ID"
@@ -690,6 +695,11 @@ const LeadsLayoutAddPage = () => {
       <div style={cardStyle}>
         <div style={cardHeaderContainerStyle}>
           <h3 style={cardHeaderStyle}>Select Products</h3>
+          {errors.products && (
+            <div style={{ color: "#ef4444", marginLeft: "1rem" }}>
+              {errors.products}
+            </div>
+          )}
         </div>
         <div style={{ marginBottom: "1.5rem" }}>
           <button
@@ -723,21 +733,65 @@ const LeadsLayoutAddPage = () => {
                 />
               </Box>
 
-              <TableContainer component={Paper}>
-                <Table size="small">
+              <TableContainer
+                component={Paper}
+                sx={{
+                  maxHeight: "400px",
+                  overflow: "auto",
+                  position: "relative",
+                }}
+              >
+                <Table size="small" stickyHeader>
                   <TableHead>
                     <TableRow sx={{ backgroundColor: "#0d47a1" }}>
-                      <TableCell padding="checkbox" sx={{ color: "#fff" }}>
-                        <Checkbox sx={{ color: "#fff" }} />
+                      <TableCell
+                        padding="checkbox"
+                        sx={{ backgroundColor: "#0d47a1" }}
+                      >
+                        <Checkbox
+                          sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
+                        />
                       </TableCell>
-                      <TableCell sx={{ color: "#fff" }}>Product Name</TableCell>
-                      <TableCell sx={{ color: "#fff" }}>Brand</TableCell>
-                      <TableCell sx={{ color: "#fff" }}>Model</TableCell>
-                      <TableCell sx={{ color: "#fff" }}>Processor</TableCell>
-                      <TableCell sx={{ color: "#fff" }}>RAM</TableCell>
-                      <TableCell sx={{ color: "#fff" }}>Storage</TableCell>
-                      <TableCell sx={{ color: "#fff" }}>Graphics</TableCell>
-                      <TableCell sx={{ color: "#fff" }}>Quantity</TableCell>
+                      <TableCell
+                        sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
+                      >
+                        Product Name
+                      </TableCell>
+                      <TableCell
+                        sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
+                      >
+                        Brand
+                      </TableCell>
+                      <TableCell
+                        sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
+                      >
+                        Model
+                      </TableCell>
+                      <TableCell
+                        sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
+                      >
+                        Processor
+                      </TableCell>
+                      <TableCell
+                        sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
+                      >
+                        RAM
+                      </TableCell>
+                      <TableCell
+                        sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
+                      >
+                        Storage
+                      </TableCell>
+                      <TableCell
+                        sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
+                      >
+                        Graphics
+                      </TableCell>
+                      <TableCell
+                        sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
+                      >
+                        Quantity
+                      </TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
@@ -746,13 +800,7 @@ const LeadsLayoutAddPage = () => {
                         <TableCell padding="checkbox">
                           <Checkbox
                             checked={selectedProductIds.includes(product.id)}
-                            onChange={() => {
-                              setSelectedProductIds((prev) =>
-                                prev.includes(product.id)
-                                  ? prev.filter((id) => id !== product.id)
-                                  : [...prev, product.id]
-                              );
-                            }}
+                            onChange={() => handleProductSelection(product.id)}
                           />
                         </TableCell>
                         <TableCell>{product.product_name}</TableCell>
@@ -806,6 +854,7 @@ const LeadsLayoutAddPage = () => {
           style={cancelBtnStyle}
           onMouseEnter={(e) => (e.target.style.backgroundColor = "#e5e7eb")}
           onMouseLeave={(e) => (e.target.style.backgroundColor = "#f3f4f6")}
+          onClick={() => navigate("/dashboard/crm/lead")}
         >
           Cancel
         </button>
@@ -830,13 +879,22 @@ const Field = ({
   onChange,
   options = [],
   disabled = false,
+  required = false,
+  error = "",
 }) => (
   <div style={fieldContainerStyle}>
-    <label style={labelStyle}>{label}</label>
+    <label style={labelStyle}>
+      {label}
+      {required && <span style={requiredStyle}>*</span>}
+    </label>
     {type === "select" ? (
       <div style={selectWrapperStyle}>
         <select
-          style={{ ...selectStyle, opacity: disabled ? 0.7 : 1 }}
+          style={{
+            ...selectStyle,
+            opacity: disabled ? 0.7 : 1,
+            borderColor: error ? "#ef4444" : "#d1d5db",
+          }}
           value={value}
           onChange={(e) => onChange(e.target.value)}
           disabled={disabled}
@@ -859,7 +917,10 @@ const Field = ({
     ) : type === "textarea" ? (
       <textarea
         placeholder={placeholder}
-        style={textareaStyle}
+        style={{
+          ...textareaStyle,
+          borderColor: error ? "#ef4444" : "#d1d5db",
+        }}
         value={value}
         onChange={(e) => onChange(e.target.value)}
         rows={3}
@@ -869,7 +930,10 @@ const Field = ({
       <input
         type="date"
         placeholder={placeholder}
-        style={inputStyle}
+        style={{
+          ...inputStyle,
+          borderColor: error ? "#ef4444" : "#d1d5db",
+        }}
         value={value}
         onChange={(e) => onChange(e.target.value)}
         disabled={disabled}
@@ -878,15 +942,22 @@ const Field = ({
       <input
         type={type}
         placeholder={placeholder}
-        style={inputStyle}
+        style={{
+          ...inputStyle,
+          borderColor: error ? "#ef4444" : "#d1d5db",
+        }}
         value={value}
         onChange={(e) => onChange(e.target.value)}
         disabled={disabled}
       />
     )}
+    {error && (
+      <div style={{ color: "#ef4444", fontSize: "0.75rem", marginTop: "0.25rem" }}>
+        {error}
+      </div>
+    )}
   </div>
 );
-
 // Styles (same as in your original code)
 const containerStyle = {
   padding: "2rem",
@@ -901,6 +972,10 @@ const headerStyle = {
   maxWidth: "1400px",
 };
 
+const requiredStyle = {
+  color: "#ef4444",
+  marginLeft: "0.25rem",
+};
 const titleStyle = {
   fontSize: "2rem",
   fontWeight: "700",

@@ -216,6 +216,14 @@ const ContactsEditLayoutPage = () => {
 
             <div style={fieldsGridStyle}>
               <Field
+                label="Customer ID"
+                name="customer_id"
+                placeholder="Enter Customer ID"
+                value={formData.customer_id}
+                onChange={handleInputChange}
+                disabled
+              />
+              <Field
                 label="First Name"
                 name="first_name"
                 placeholder="Enter First Name"
@@ -258,22 +266,15 @@ const ContactsEditLayoutPage = () => {
                 onChange={handleInputChange}
               />
 
-              <Field
-                label="Customer ID"
-                name="customer_id"
-                placeholder="Enter Customer ID"
-                value={formData.customer_id}
-                onChange={handleInputChange}
-                disabled
-              />
+              
 
-              <Field
+              {/* <Field
                 label="Date"
                 type="date"
                 name="date"
                 value={formData.date}
                 onChange={handleInputChange}
-              />
+              /> */}
 
               <Field
                 label="Industry"
@@ -352,7 +353,7 @@ const ContactsEditLayoutPage = () => {
           <div style={cardStyle}>
             <div style={cardHeaderContainerStyle}>
               <div style={iconStyle}>🏦</div>
-              <h3 style={cardHeaderStyle}>Bank Details</h3>
+              <h3 style={cardHeaderStyle}>Other Details</h3>
             </div>
 
             <div style={fieldsGridStyle}>
@@ -362,6 +363,7 @@ const ContactsEditLayoutPage = () => {
                 placeholder="Enter GST"
                 value={formData.gst}
                 onChange={handleInputChange}
+                required
               />
 
               <Field
@@ -370,6 +372,7 @@ const ContactsEditLayoutPage = () => {
                 placeholder="Enter PAN No"
                 value={formData.pan_no}
                 onChange={handleInputChange}
+                required
               />
             </div>
           </div>

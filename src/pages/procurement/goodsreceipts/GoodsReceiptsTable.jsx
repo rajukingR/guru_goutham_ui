@@ -14,7 +14,7 @@ const GoodsReceiptsTable = () => {
 
     { id: "goods_receipt_date", label: "Receipt Date" },
     { id: "purchase_type", label: "Purchase Type" },
-    { id: "description", label: "Description" },
+    // { id: "description", label: "Description" },
     { id: "goods_receipt_status", label: "Status" },
 
   ];

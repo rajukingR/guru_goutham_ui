@@ -17,7 +17,7 @@ import EditIcon from "@mui/icons-material/Edit";
 import { CiLogout } from "react-icons/ci";
 import { useDispatch } from "react-redux";
 import { logout } from "../../redux_setup/slices/auth_slice/authSlice";
-import API_URL from "../../api/Api_url";
+import API_URL, { IMAGE_API_URL } from "../../api/Api_url";
 import { useSelector } from "react-redux";
 
 const ProfilePage = () => {
@@ -29,6 +29,7 @@ const ProfilePage = () => {
   const userToken = token;
 
   const [profileData, setProfileData] = useState(null);
+  const [imagePreview, setImagePreview] = useState("");
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -39,13 +40,18 @@ const ProfilePage = () => {
           }
         });
         setProfileData(response.data);
+        
+        // Set image preview if image exists in response
+        if (response.data.image) {
+          setImagePreview(`${IMAGE_API_URL}/${response.data.image}`);
+        }
       } catch (error) {
         console.error("Failed to fetch profile data:", error);
       }
     };
 
     fetchProfile();
-  }, [userId]);
+  }, [userId, userToken]);
 
   const handleEdit = () => {
     navigate(`/dashboard/profile/edit-profile/${userId}`);
@@ -93,12 +99,12 @@ const ProfilePage = () => {
               pb: 4,
               mt: -8
             }}>
-              <Avatar
-                src="/default-avatar.png"
+               <Avatar
+                src={imagePreview || "/default-avatar.png"}
                 sx={{ 
                   width: 120, 
                   height: 120, 
-                  border: "4px solid white",
+                  border: "2px solid #667eea",
                   boxShadow: "0 4px 12px rgba(0, 0, 0, 0.1)"
                 }}
               />

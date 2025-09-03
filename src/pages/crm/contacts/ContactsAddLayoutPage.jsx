@@ -3,18 +3,43 @@ import Snackbar from "@mui/material/Snackbar";
 import Alert from "@mui/material/Alert";
 import { useNavigate } from "react-router-dom";
 import { useSelector } from "react-redux";
-import API_URL from "../../../api/Api_url"
+import API_URL from "../../../api/Api_url";
 
+const generateCustomerId = () => {
+  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+  let randomPart = "";
+  for (let i = 0; i < 5; i++) {
+    randomPart += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return `CT-${randomPart}`;
+};
 
- const generateCustomerId = () => {
-    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-    let randomPart = '';
-    for (let i = 0; i < 5; i++) {
-      randomPart += chars.charAt(Math.floor(Math.random() * chars.length));
-    }
-    return `CT-${randomPart}`; // CT- prefix for Customer
-  };
+const validateEmail = (email) => {
+  const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return re.test(String(email).toLowerCase());
+};
 
+const validatePhone = (phone) => {
+  const re = /^[0-9]{10}$/;
+  return re.test(phone);
+};
+
+const validateGST = (gst) => {
+  if (!gst) return true; // Optional field
+  const re = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/;
+  return re.test(gst.toUpperCase());
+};
+
+const validatePAN = (pan) => {
+  if (!pan) return true; // Optional field
+  const re = /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/;
+  return re.test(pan.toUpperCase());
+};
+
+const validatePincode = (pincode) => {
+  const re = /^[1-9][0-9]{5}$/;
+  return re.test(pincode);
+};
 
 const ContactsAddLayoutPage = () => {
   const { user } = useSelector((state) => state.auth);
@@ -46,10 +71,23 @@ const ContactsAddLayoutPage = () => {
     status: "Inactive",
   });
 
+  const [errors, setErrors] = useState({
+    first_name: "",
+    last_name: "",
+    email: "",
+    phone_number: "",
+    company_name: "",
+    industry: "",
+    "address.street": "",
+    "address.pincode": "",
+    gst: "",
+    pan_no: "",
+  });
+
   useEffect(() => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      customer_id: generateCustomerId()
+      customer_id: generateCustomerId(),
     }));
   }, []);
 
@@ -68,10 +106,100 @@ const ContactsAddLayoutPage = () => {
     severity: "success",
   });
 
+  // Fix the checkbox handler
+  const handleStatusChange = (e) => {
+    handleInputChange("status", e.target.checked ? "Active" : "Inactive");
+  };
+
+  const validateField = (name, value) => {
+    let error = "";
+
+    switch (name) {
+      case "first_name":
+        if (!value.trim()) error = "First name is required";
+        else if (value.length > 50) error = "First name too long";
+        break;
+      case "last_name":
+        if (!value.trim()) error = "First name is required";
+        else if (value.length > 50) error = "Last name too long";
+        break;
+      case "email":
+        if (value && !validateEmail(value)) error = "Invalid email format";
+        break;
+      case "phone_number":
+        if (!value) error = "Phone number is required";
+        else if (!validatePhone(value))
+          error = "Invalid phone number (10 digits required)";
+        break;
+      case "company_name":
+        if (!value.trim()) error = "Company name is required";
+        break;
+      case "industry":
+        if (!value.trim()) error = "Industry is required";
+        break;
+      case "address.street":
+      case "address.city":
+      case "address.state":
+      case "address.country":
+      case "owner":
+      case "remarks":
+        // No validation needed for these fields
+        break;
+      case "address.pincode":
+        if (!value) error = "Pincode is required";
+        else if (!validatePincode(value))
+          error = "Invalid pincode (6 digits required)";
+        break;
+      case "gst":
+        if (!value) error = "GST is required";
+        else if (!validateGST(value)) error = "Invalid GST format";
+        break;
+      case "pan_no":
+        if (!value) error = "PAN number is required";
+        else if (!validatePAN(value)) error = "Invalid PAN format";
+        break;
+      default:
+        break;
+    }
+
+    return error;
+  };
+
+  const validateForm = () => {
+    const newErrors = {};
+    let isValid = true;
+
+    // Validate all fields
+    Object.keys(formData).forEach((key) => {
+      if (key === "address") {
+        Object.keys(formData.address).forEach((addrKey) => {
+          const fullKey = `address.${addrKey}`;
+          const error = validateField(fullKey, formData.address[addrKey]);
+          if (error) {
+            newErrors[fullKey] = error;
+            isValid = false;
+          }
+        });
+      } else {
+        const error = validateField(key, formData[key]);
+        if (error) {
+          newErrors[key] = error;
+          isValid = false;
+        }
+      }
+    });
+
+    setErrors(newErrors);
+    return isValid;
+  };
+
   // Fetch location data when pincode changes
   useEffect(() => {
     const fetchLocationData = async () => {
-      if (formData.address.pincode.length === 6) {
+      if (
+        formData.address.pincode.length === 6 &&
+        validatePincode(formData.address.pincode)
+      ) {
         try {
           const response = await fetch(
             `https://api.postalpincode.in/pincode/${formData.address.pincode}`
@@ -109,7 +237,13 @@ const ContactsAddLayoutPage = () => {
     };
     fetchLocationData();
   }, [formData.address.pincode]);
+
   const handleInputChange = (field, value) => {
+    // Clear error when field changes
+    if (errors[field]) {
+      setErrors((prev) => ({ ...prev, [field]: "" }));
+    }
+
     // Handle nested address fields
     if (field.includes("address.")) {
       const addressField = field.split(".")[1];
@@ -127,19 +261,27 @@ const ContactsAddLayoutPage = () => {
       }));
     }
   };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    if (!validateForm()) {
+      setSnackbar({
+        open: true,
+        message: "Please fix the errors in the form",
+        severity: "error",
+      });
+      return;
+    }
+
     try {
-      const response = await fetch(
-        `${API_URL}/contacts/create`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(formData),
-        }
-      );
+      const response = await fetch(`${API_URL}/contacts/create`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(formData),
+      });
       const data = await response.json();
       if (response.ok) {
         setSnackbar({
@@ -162,6 +304,7 @@ const ContactsAddLayoutPage = () => {
       });
     }
   };
+
   return (
     <div style={containerStyle}>
       <Snackbar
@@ -194,11 +337,20 @@ const ContactsAddLayoutPage = () => {
 
             <div style={fieldsGridStyle}>
               <Field
+                label="Customer ID"
+                name="customer_id"
+                placeholder="Enter Customer ID"
+                value={formData.customer_id}
+                onChange={handleInputChange}
+                disabled
+              />
+              <Field
                 label="First Name"
                 name="first_name"
                 placeholder="Enter First Name"
                 value={formData.first_name}
                 onChange={handleInputChange}
+                errors={errors} // Add this prop
                 required
               />
 
@@ -208,6 +360,8 @@ const ContactsAddLayoutPage = () => {
                 placeholder="Enter Last Name"
                 value={formData.last_name}
                 onChange={handleInputChange}
+                errors={errors} // Add this prop
+                required
               />
               <Field
                 label="Email ID"
@@ -224,6 +378,8 @@ const ContactsAddLayoutPage = () => {
                 placeholder="Enter Phone Number"
                 value={formData.phone_number}
                 onChange={handleInputChange}
+                errors={errors} // Add this prop
+                required
               />
               <Field
                 label="Company Name"
@@ -231,39 +387,19 @@ const ContactsAddLayoutPage = () => {
                 placeholder="Enter Company Name"
                 value={formData.company_name}
                 onChange={handleInputChange}
+                errors={errors} // Add this prop
+                required
               />
-              <Field
-                label="Customer ID"
-                name="customer_id"
-                placeholder="Enter Customer ID"
-                value={formData.customer_id}
-                onChange={handleInputChange}
-              />
-              <Field
-                label="Date"
-                type="date"
-                name="date"
-                value={formData.date}
-                onChange={handleInputChange}
-              />
+
               <Field
                 label="Industry"
                 name="industry"
                 placeholder="Enter Industry"
                 value={formData.industry}
                 onChange={handleInputChange}
+                errors={errors} // Add this prop
+                required
               />
-              {/* <Field
-                label="Payment Type"
-                name="payment_type"
-                type="select"
-                value={formData.payment_type}
-                onChange={handleInputChange}
-                options={[
-                  { value: "Prepaid", label: "Prepaid" },
-                  { value: "Postpaid", label: "Postpaid" },
-                ]}
-              /> */}
             </div>
           </div>
 
@@ -289,6 +425,8 @@ const ContactsAddLayoutPage = () => {
                 placeholder="Enter Pincode"
                 value={formData.address.pincode}
                 onChange={handleInputChange}
+                errors={errors} // Add this prop
+                required
               />
 
               <Field
@@ -321,24 +459,28 @@ const ContactsAddLayoutPage = () => {
           <div style={cardStyle}>
             <div style={cardHeaderContainerStyle}>
               <div style={iconStyle}>🏦</div>
-              <h3 style={cardHeaderStyle}>Bank Details</h3>
+              <h3 style={cardHeaderStyle}>Other Details</h3>
             </div>
 
             <div style={fieldsGridStyle}>
               <Field
                 label="GST"
                 name="gst"
-                placeholder="Enter GST"
+                placeholder="Enter GST (22AAAAA0000A1Z5)"
                 value={formData.gst}
                 onChange={handleInputChange}
+                required
+                errors={errors} // Add this prop
               />
 
               <Field
                 label="PAN No"
                 name="pan_no"
-                placeholder="Enter PAN No"
+                placeholder="Enter PAN No (AAAAA0000A)"
                 value={formData.pan_no}
                 onChange={handleInputChange}
+                required
+                errors={errors} // Add this prop
               />
             </div>
           </div>
@@ -395,12 +537,7 @@ const ContactsAddLayoutPage = () => {
                   type="checkbox"
                   style={checkboxStyle}
                   checked={formData.status === "Active"}
-                  onChange={(e) =>
-                    handleInputChange(
-                      "status",
-                      e.target.checked ? "Active" : "Inactive"
-                    )
-                  }
+                  onChange={handleStatusChange}
                 />
                 <div
                   style={{
@@ -410,12 +547,6 @@ const ContactsAddLayoutPage = () => {
                     borderColor:
                       formData.status === "Active" ? "#3b82f6" : "#d1d5db",
                   }}
-                  onClick={() =>
-                    handleInputChange(
-                      "status",
-                      formData.status === "Active" ? "Inactive" : "Active"
-                    )
-                  }
                 >
                   {formData.status === "Active" && (
                     <span style={checkmarkStyle}>✓</span>
@@ -457,7 +588,10 @@ const Field = ({
   onChange,
   disabled = false,
   options = [],
+  errors = {},
 }) => {
+  const error = errors[name];
+
   const handleFieldChange = (e) => {
     onChange(name, e.target.value);
   };
@@ -472,7 +606,10 @@ const Field = ({
         <textarea
           name={name}
           placeholder={placeholder}
-          style={textareaStyle}
+          style={{
+            ...textareaStyle,
+            borderColor: error ? "#ef4444" : "#d1d5db",
+          }}
           value={value}
           onChange={handleFieldChange}
           rows={3}
@@ -481,7 +618,10 @@ const Field = ({
       ) : type === "select" ? (
         <div style={selectWrapperStyle}>
           <select
-            style={selectStyle}
+            style={{
+              ...selectStyle,
+              borderColor: error ? "#ef4444" : "#d1d5db",
+            }}
             name={name}
             value={value}
             onChange={handleFieldChange}
@@ -500,11 +640,25 @@ const Field = ({
           type={type}
           name={name}
           placeholder={placeholder}
-          style={inputStyle}
+          style={{
+            ...inputStyle,
+            borderColor: error ? "#ef4444" : "#d1d5db",
+          }}
           value={value}
           onChange={handleFieldChange}
           disabled={disabled}
         />
+      )}
+      {error && (
+        <div
+          style={{
+            color: "#ef4444",
+            fontSize: "0.75rem",
+            marginTop: "0.25rem",
+          }}
+        >
+          {error}
+        </div>
       )}
     </div>
   );

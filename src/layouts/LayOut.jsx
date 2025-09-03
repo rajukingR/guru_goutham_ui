@@ -12,6 +12,11 @@ import {
   useMediaQuery,
   Menu,
   MenuItem,
+  Drawer,
+  List,
+  ListItem,
+  ListItemText,
+  Divider,
 } from "@mui/material";
 import MenuIcon from "@mui/icons-material/Menu";
 import { useTheme } from "@mui/material/styles";
@@ -21,6 +26,7 @@ import BackwardIcon from "../assets/logos/BackwordIcon.svg";
 import ForwardIcon from "../assets/logos/ForvordIcon.svg";
 import SettingIcon from "../assets/logos/SettingIcon.svg";
 import { useSelector } from "react-redux";
+import API_URL, { IMAGE_API_URL } from "../api/Api_url";
 
 const navItems = [
   { label: "Dashboard", path: "/dashboard" },
@@ -29,9 +35,6 @@ const navItems = [
   { label: "Inventory", path: "/dashboard/inventory" },
   { label: "CRM", path: "/dashboard/crm/client-list" },
   { label: "Operations", path: "/dashboard/operations" },
-  // { label: "Reports", path: "/dashboard/reports" },
-  // { label: "Users Performance", path: "/dashboard/users_performance" },
-  // { label: "Client", path: "/dashboard/client" },
 ];
 
 const LayOut = () => {
@@ -39,9 +42,11 @@ const LayOut = () => {
   const location = useLocation();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
+  const isSmallMobile = useMediaQuery(theme.breakpoints.down("sm"));
   const [selectedTab, setSelectedTab] = useState(0);
   const [menuAnchor, setMenuAnchor] = useState(null);
-  const [section, setSection] = useState(""); // Initialize empty or default section
+  const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
+  const [section, setSection] = useState("");
 
   const { user } = useSelector((state) => state.auth);
 
@@ -65,7 +70,6 @@ const LayOut = () => {
   };
 
   // Update selected tab on route change
-
   useEffect(() => {
     const currentIndex = navItems.findIndex(
       (item) => item.path === location.pathname
@@ -76,6 +80,9 @@ const LayOut = () => {
     } else if (currentIndex !== -1) {
       setSelectedTab(currentIndex);
     }
+
+    // Update the section whenever the location changes
+    setSection(getSection());
   }, [location.pathname]);
 
   const handleTabChange = (_, newValue) => {
@@ -94,14 +101,48 @@ const LayOut = () => {
     }
   };
 
-  // console.log(localStorage.getItem("user"));
+  const toggleMobileDrawer = (open) => () => {
+    setMobileDrawerOpen(open);
+  };
+
+  // Mobile navigation drawer - shows both main nav and sidebar items
+  const mobileDrawer = (
+    <Box sx={{ width: 280 }} role="presentation">
+      <List>
+        <ListItem>
+          <Typography variant="h6" sx={{ fontWeight: "bold" }}>
+            Navigation
+          </Typography>
+        </ListItem>
+        {navItems.map((item, index) => (
+          <ListItem
+            button
+            key={index}
+            onClick={() => {
+              navigate(item.path);
+              setMobileDrawerOpen(false);
+            }}
+            selected={location.pathname === item.path}
+          >
+            <ListItemText primary={item.label} />
+          </ListItem>
+        ))}
+      </List>
+      <Divider />
+
+      {/* Sidebar content for the current section */}
+      <Box sx={{ mt: 2 }}>
+        <Sidebar section={getSection()} isMobile={true} />
+      </Box>
+    </Box>
+  );
 
   return (
     <Box
       sx={{
         display: "flex",
         flexDirection: "column",
-        height: "100vh",
+        minHeight: "100vh",
         backgroundColor: "#F4F1FA",
       }}
     >
@@ -110,13 +151,18 @@ const LayOut = () => {
         position="fixed"
         sx={{
           width: "100%",
-          zIndex: 1300,
+          zIndex: theme.zIndex.drawer + 1,
           backgroundColor: "#FFFFFF",
           boxShadow: "none",
           borderBottom: "1px solid #ddd",
         }}
       >
-        <Toolbar sx={{ justifyContent: "space-between" }}>
+        <Toolbar
+          sx={{
+            justifyContent: "space-between",
+            padding: { xs: "0 8px", sm: "0 16px" },
+          }}
+        >
           {/* Left Navigation Buttons */}
           <Box display="flex" alignItems="center">
             <IconButton
@@ -125,6 +171,7 @@ const LayOut = () => {
                 borderRadius: "50%",
                 width: 40,
                 height: 40,
+                display: { xs: "none", sm: "flex" },
               }}
               onClick={() => navigate(-1)}
             >
@@ -143,6 +190,7 @@ const LayOut = () => {
                 width: 40,
                 height: 40,
                 ml: 1,
+                display: { xs: "none", sm: "flex" },
               }}
               onClick={() => navigate(1)}
             >
@@ -154,12 +202,23 @@ const LayOut = () => {
               />
             </IconButton>
 
-            <IconButton>
+            <IconButton
+              onClick={toggleMobileDrawer(true)}
+              sx={{ display: { xs: "flex", md: "none" }, mr: 1 }}
+            >
+              <MenuIcon />
+            </IconButton>
+
+            <IconButton sx={{ display: { xs: "none", sm: "flex" } }}>
               <Box
                 component="img"
                 src={NavLogo}
                 alt="Logo"
-                sx={{ maxWidth: 250, height: "auto", ml: 1 }}
+                sx={{
+                  maxWidth: { xs: 150, sm: 200, md: 250 },
+                  height: "auto",
+                  ml: { xs: 0, sm: 1 },
+                }}
               />
             </IconButton>
           </Box>
@@ -171,6 +230,14 @@ const LayOut = () => {
               onChange={handleTabChange}
               textColor="primary"
               indicatorColor="primary"
+              sx={{
+                maxWidth: { md: 500, lg: 600 },
+                "& .MuiTab-root": {
+                  minWidth: "auto",
+                  px: 1.5,
+                  fontSize: { md: "0.8rem", lg: "0.9rem" },
+                },
+              }}
             >
               {navItems.map((item, index) => (
                 <Tab
@@ -178,8 +245,7 @@ const LayOut = () => {
                   label={item.label}
                   sx={{
                     textTransform: "none",
-                    // fontWeight: selectedTab === index ? "bold" : "normal",
-                    fontWeight: "bold !important",
+                    fontWeight: "bold",
                   }}
                 />
               ))}
@@ -187,42 +253,23 @@ const LayOut = () => {
           )}
 
           {/* Right Side Icons */}
-          <Box display="flex" alignItems="left">
-            {/* Mobile Menu */}
-            {isMobile && (
-              <>
-                <IconButton onClick={handleMenuClick}>
-                  <MenuIcon />
-                </IconButton>
-                <Menu
-                  anchorEl={menuAnchor}
-                  open={Boolean(menuAnchor)}
-                  onClose={() => handleMenuClose(null)}
-                >
-                  {navItems.map((item, index) => (
-                    <MenuItem
-                      key={index}
-                      onClick={() => handleMenuClose(index)}
-                    >
-                      {item.label}
-                    </MenuItem>
-                  ))}
-                </Menu>
-              </>
-            )}
-
+          <Box display="flex" alignItems="center">
             {/* Settings Icon */}
             <IconButton
               onClick={() => {
-                setSection("settings"); // Set section to settings
-                navigate("/dashboard/settings/users"); // Navigate to settings page
+                setSection("settings");
+                navigate("/dashboard/settings/users");
               }}
+              size={isSmallMobile ? "small" : "medium"}
             >
               <Box
                 component="img"
                 src={SettingIcon}
                 alt="Settings"
-                sx={{ width: 35, height: 35, ml: 1 }}
+                sx={{
+                  width: { xs: 25, sm: 30, md: 35 },
+                  height: { xs: 25, sm: 30, md: 35 },
+                }}
               />
             </IconButton>
 
@@ -232,11 +279,33 @@ const LayOut = () => {
                 alignItems: "center",
                 gap: 1,
                 cursor: "pointer",
+                ml: 1,
               }}
               onClick={() => navigate("/dashboard/profile")}
             >
-              <Avatar src="https://via.placeholder.com/40" />
-              <Typography sx={{ color: "#171719" }}>
+              <Avatar
+                src={
+                  user.image
+                    ? `${IMAGE_API_URL}/${user.image}`
+                    : "https://via.placeholder.com/40"
+                }
+                alt={user.full_name}
+                sx={{
+                  width: { xs: 32, sm: 40 },
+                  height: { xs: 32, sm: 40 },
+                  border: "2px solid #667eea",
+                  "&:hover": {
+                    borderColor: "#764ba2",
+                  },
+                }}
+              />
+              <Typography
+                sx={{
+                  color: "#171719",
+                  display: { xs: "none", sm: "block" },
+                  fontSize: { sm: "0.9rem", md: "1rem" },
+                }}
+              >
                 {user.full_name}
               </Typography>
             </Box>
@@ -244,13 +313,37 @@ const LayOut = () => {
         </Toolbar>
       </AppBar>
 
+      {/* Mobile Navigation Drawer - Shows both main nav and sidebar items */}
+      <Drawer
+        anchor="left"
+        open={mobileDrawerOpen}
+        onClose={toggleMobileDrawer(false)}
+        sx={{
+          display: { xs: "block", md: "none" },
+          "& .MuiDrawer-paper": {
+            boxSizing: "border-box",
+            width: 280,
+          },
+        }}
+      >
+        {mobileDrawer}
+      </Drawer>
+
       <Toolbar />
 
       {/* Main Content with Sidebar */}
-      <Box sx={{ display: "flex", flex: 1, overflow: "hidden" }}>
+      <Box sx={{ display: "flex", flex: 1 }}>
+        {/* Show sidebar for all sections except dashboard */}
         {location.pathname !== "/dashboard" && (
           <Box
-            sx={{ position: "sticky", top: 0, height: "100vh", zIndex: 1200 }}
+            sx={{
+              display: { xs: "none", md: "block" },
+              position: "sticky",
+              top: 0,
+              height: "100vh",
+              zIndex: 1200,
+              flexShrink: 0,
+            }}
           >
             <Sidebar section={getSection()} />
           </Box>
@@ -259,9 +352,10 @@ const LayOut = () => {
           component="main"
           sx={{
             flexGrow: 1,
-            p: 3,
-            height: "calc(100vh - 64px)",
-            overflowY: "auto",
+            p: { xs: 2, sm: 3 },
+            minHeight: "calc(100vh - 64px)",
+            overflowY: "auto", // ✅ only Outlet scrolls
+            width: "100%",
           }}
         >
           <Outlet />
@@ -272,3 +366,292 @@ const LayOut = () => {
 };
 
 export default LayOut;
+
+// import React, { useState, useEffect } from "react";
+// import { useNavigate, useLocation, Outlet } from "react-router-dom";
+// import {
+//   AppBar,
+//   Toolbar,
+//   Typography,
+//   IconButton,
+//   Avatar,
+//   Box,
+//   Tabs,
+//   Tab,
+//   useMediaQuery,
+//   Menu,
+//   MenuItem,
+// } from "@mui/material";
+// import MenuIcon from "@mui/icons-material/Menu";
+// import { useTheme } from "@mui/material/styles";
+// import Sidebar from "../sidebar/Sidebar";
+// import NavLogo from "../assets/logos/guru-los.png";
+// import BackwardIcon from "../assets/logos/BackwordIcon.svg";
+// import ForwardIcon from "../assets/logos/ForvordIcon.svg";
+// import SettingIcon from "../assets/logos/SettingIcon.svg";
+// import { useSelector } from "react-redux";
+// import API_URL, { IMAGE_API_URL } from "../api/Api_url";
+
+// const navItems = [
+//   { label: "Dashboard", path: "/dashboard" },
+//   { label: "Product Library", path: "/dashboard/product_library" },
+//   { label: "Procurement", path: "/dashboard/procurement/supplier" },
+//   { label: "Inventory", path: "/dashboard/inventory" },
+//   { label: "CRM", path: "/dashboard/crm/client-list" },
+//   { label: "Operations", path: "/dashboard/operations" },
+//   // { label: "Reports", path: "/dashboard/reports" },
+//   // { label: "Users Performance", path: "/dashboard/users_performance" },
+//   // { label: "Client", path: "/dashboard/client" },
+// ];
+
+// const LayOut = () => {
+//   const navigate = useNavigate();
+//   const location = useLocation();
+//   const theme = useTheme();
+//   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
+//   const [selectedTab, setSelectedTab] = useState(0);
+//   const [menuAnchor, setMenuAnchor] = useState(null);
+//   const [section, setSection] = useState(""); // Initialize empty or default section
+
+//   const { user } = useSelector((state) => state.auth);
+
+//   // Function to determine which section the user is on
+//   const getSection = () => {
+//     if (location.pathname.includes("/dashboard/product_library"))
+//       return "product_library";
+//     if (location.pathname.includes("/dashboard/procurement"))
+//       return "procurement";
+//     if (location.pathname.includes("/dashboard/inventory")) return "inventory";
+//     if (location.pathname.includes("/dashboard/crm")) return "crm";
+//     if (location.pathname.includes("/dashboard/operations"))
+//       return "operations";
+//     if (location.pathname.includes("/dashboard/users_performance"))
+//       return "users_performance";
+//     if (location.pathname.includes("/dashboard/client")) return "client";
+//     if (location.pathname.includes("/dashboard/reports")) return "reports";
+//     if (location.pathname.includes("/dashboard/settings")) return "settings";
+
+//     return "dashboard";
+//   };
+
+//   // Update selected tab on route change
+
+//   useEffect(() => {
+//     const currentIndex = navItems.findIndex(
+//       (item) => item.path === location.pathname
+//     );
+
+//     if (location.pathname === "/dashboard/settings") {
+//       setSelectedTab(null);
+//     } else if (currentIndex !== -1) {
+//       setSelectedTab(currentIndex);
+//     }
+//   }, [location.pathname]);
+
+//   const handleTabChange = (_, newValue) => {
+//     setSelectedTab(newValue);
+//     navigate(navItems[newValue].path);
+//   };
+
+//   const handleMenuClick = (event) => {
+//     setMenuAnchor(event.currentTarget);
+//   };
+
+//   const handleMenuClose = (index) => {
+//     setMenuAnchor(null);
+//     if (index !== null) {
+//       navigate(navItems[index].path);
+//     }
+//   };
+
+//   // console.log(localStorage.getItem("user"));
+
+//   return (
+//     <Box
+//       sx={{
+//         display: "flex",
+//         flexDirection: "column",
+//         height: "100vh",
+//         backgroundColor: "#F4F1FA",
+//       }}
+//     >
+//       {/* AppBar for navigation */}
+//       <AppBar
+//         position="fixed"
+//         sx={{
+//           width: "100%",
+//           zIndex: 1300,
+//           backgroundColor: "#FFFFFF",
+//           boxShadow: "none",
+//           borderBottom: "1px solid #ddd",
+//         }}
+//       >
+//         <Toolbar sx={{ justifyContent: "space-between" }}>
+//           {/* Left Navigation Buttons */}
+//           <Box display="flex" alignItems="center">
+//             <IconButton
+//               sx={{
+//                 border: "1px solid #ddd",
+//                 borderRadius: "50%",
+//                 width: 40,
+//                 height: 40,
+//               }}
+//               onClick={() => navigate(-1)}
+//             >
+//               <Box
+//                 component="img"
+//                 src={BackwardIcon}
+//                 alt="Backward"
+//                 sx={{ width: 18, height: 18 }}
+//               />
+//             </IconButton>
+
+//             <IconButton
+//               sx={{
+//                 border: "1px solid #ddd",
+//                 borderRadius: "50%",
+//                 width: 40,
+//                 height: 40,
+//                 ml: 1,
+//               }}
+//               onClick={() => navigate(1)}
+//             >
+//               <Box
+//                 component="img"
+//                 src={ForwardIcon}
+//                 alt="Forward"
+//                 sx={{ width: 18, height: 18 }}
+//               />
+//             </IconButton>
+
+//             <IconButton>
+//               <Box
+//                 component="img"
+//                 src={NavLogo}
+//                 alt="Logo"
+//                 sx={{ maxWidth: 250, height: "auto", ml: 1 }}
+//               />
+//             </IconButton>
+//           </Box>
+
+//           {/* Desktop Navigation Tabs */}
+//           {!isMobile && (
+//             <Tabs
+//               value={selectedTab}
+//               onChange={handleTabChange}
+//               textColor="primary"
+//               indicatorColor="primary"
+//             >
+//               {navItems.map((item, index) => (
+//                 <Tab
+//                   key={index}
+//                   label={item.label}
+//                   sx={{
+//                     textTransform: "none",
+//                     // fontWeight: selectedTab === index ? "bold" : "normal",
+//                     fontWeight: "bold !important",
+//                   }}
+//                 />
+//               ))}
+//             </Tabs>
+//           )}
+
+//           {/* Right Side Icons */}
+//           <Box display="flex" alignItems="left">
+//             {/* Mobile Menu */}
+//             {isMobile && (
+//               <>
+//                 <IconButton onClick={handleMenuClick}>
+//                   <MenuIcon />
+//                 </IconButton>
+//                 <Menu
+//                   anchorEl={menuAnchor}
+//                   open={Boolean(menuAnchor)}
+//                   onClose={() => handleMenuClose(null)}
+//                 >
+//                   {navItems.map((item, index) => (
+//                     <MenuItem
+//                       key={index}
+//                       onClick={() => handleMenuClose(index)}
+//                     >
+//                       {item.label}
+//                     </MenuItem>
+//                   ))}
+//                 </Menu>
+//               </>
+//             )}
+
+//             {/* Settings Icon */}
+//             <IconButton
+//               onClick={() => {
+//                 setSection("settings"); // Set section to settings
+//                 navigate("/dashboard/settings/users"); // Navigate to settings page
+//               }}
+//             >
+//               <Box
+//                 component="img"
+//                 src={SettingIcon}
+//                 alt="Settings"
+//                 sx={{ width: 35, height: 35, ml: 1 }}
+//               />
+//             </IconButton>
+
+//             <Box
+//               sx={{
+//                 display: "flex",
+//                 alignItems: "center",
+//                 gap: 1,
+//                 cursor: "pointer",
+//               }}
+//               onClick={() => navigate("/dashboard/profile")}
+//             >
+//               <Avatar
+//                 src={
+//                   user.image
+//                     ? `${IMAGE_API_URL}/${user.image}`
+//                     : "https://via.placeholder.com/40"
+//                 }
+//                 alt={user.full_name}
+//                 sx={{
+//                   border: "2px solid #667eea",
+//                   "&:hover": {
+//                     borderColor: "#764ba2",
+//                   },
+//                 }}
+//               />{" "}
+//               <Typography sx={{ color: "#171719" }}>
+//                 {user.full_name}
+//               </Typography>
+//             </Box>
+//           </Box>
+//         </Toolbar>
+//       </AppBar>
+
+//       <Toolbar />
+
+//       {/* Main Content with Sidebar */}
+//       <Box sx={{ display: "flex", flex: 1, overflow: "hidden" }}>
+//         {location.pathname !== "/dashboard" && (
+//           <Box
+//             sx={{ position: "sticky", top: 0, height: "100vh", zIndex: 1200 }}
+//           >
+//             <Sidebar section={getSection()} />
+//           </Box>
+//         )}
+//         <Box
+//           component="main"
+//           sx={{
+//             flexGrow: 1,
+//             p: 3,
+//             height: "calc(100vh - 64px)",
+//             overflowY: "auto",
+//           }}
+//         >
+//           <Outlet />
+//         </Box>
+//       </Box>
+//     </Box>
+//   );
+// };
+
+// export default LayOut;

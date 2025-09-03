@@ -87,10 +87,12 @@ const CreaditNotesEditFormLayout = () => {
     const fetchData = async () => {
       try {
         // Fetch credit note data
-        const creditNoteResponse = await axios.get(`${API_URL}/credit-notes/${id}`);
+        const creditNoteResponse = await axios.get(
+          `${API_URL}/credit-notes/${id}`
+        );
         const creditNoteData = creditNoteResponse.data;
         setOriginalData(creditNoteData);
-        
+
         // Set form data from the fetched credit note
         setFormData({
           creditNoteNumber: creditNoteData.credit_note_number,
@@ -117,12 +119,12 @@ const CreaditNotesEditFormLayout = () => {
         });
 
         // Set selected products and quantities
-        const productIds = creditNoteData.items.map(item => item.product_id);
+        const productIds = creditNoteData.items.map((item) => item.product_id);
         setSelectedProductIds(productIds);
-        
+
         const qtyMap = {};
         const deviceIdMap = {};
-        creditNoteData.items.forEach(item => {
+        creditNoteData.items.forEach((item) => {
           qtyMap[item.product_id] = item.quantity;
           deviceIdMap[item.product_id] = item.device_ids || [];
         });
@@ -130,7 +132,9 @@ const CreaditNotesEditFormLayout = () => {
         setDeviceIds(deviceIdMap);
 
         // Fetch contacts
-        const contactResponse = await axios.get(`${API_URL}/contacts/delivered-contacts`);
+        const contactResponse = await axios.get(
+          `${API_URL}/contacts/delivered-contacts`
+        );
         setOrders(contactResponse.data);
 
         // Fetch products
@@ -145,10 +149,12 @@ const CreaditNotesEditFormLayout = () => {
           setDeliveryChallans(dcResponse.data);
 
           // Find and set the selected delivery challan
-          const selectedDC = dcResponse.data.find(dc => dc.id === creditNoteData.dc_id);
+          const selectedDC = dcResponse.data.find(
+            (dc) => dc.id === creditNoteData.dc_id
+          );
           if (selectedDC) {
             setSelectedOrder(selectedDC);
-            
+
             // Prepare available asset IDs
             const assetMap = {};
             selectedDC.items.forEach((item) => {
@@ -157,7 +163,6 @@ const CreaditNotesEditFormLayout = () => {
             setAvailableAssetIds(assetMap);
           }
         }
-
       } catch (error) {
         console.error("Error fetching data:", error);
         setSnackbarMessage("Error fetching data: " + error.message);
@@ -171,7 +176,10 @@ const CreaditNotesEditFormLayout = () => {
 
   // Fetch delivery challans when customer is selected
   useEffect(() => {
-    if (formData.customerId && formData.customerId !== originalData?.customer_id) {
+    if (
+      formData.customerId &&
+      formData.customerId !== originalData?.customer_id
+    ) {
       const fetchDeliveryChallans = async () => {
         try {
           const response = await axios.get(
@@ -230,7 +238,7 @@ const CreaditNotesEditFormLayout = () => {
         assetMap[item.product_id] = item.device_ids;
       });
       setAvailableAssetIds(assetMap);
-      
+
       // Reset selected products when DC changes
       setSelectedProductIds([]);
       setQuantities({});
@@ -631,7 +639,7 @@ const CreaditNotesEditFormLayout = () => {
               />
             </div>
 
-            <div style={fieldContainerStyle}>
+            {/* <div style={fieldContainerStyle}>
               <label style={labelStyle}>Title</label>
               <input
                 type="text"
@@ -641,7 +649,7 @@ const CreaditNotesEditFormLayout = () => {
                 value={formData.creditNoteTitle}
                 onChange={handleInputChange}
               />
-            </div>
+            </div> */}
 
             <div style={fieldContainerStyle}>
               <label style={labelStyle}>
@@ -868,7 +876,7 @@ const CreaditNotesEditFormLayout = () => {
               )}
             </div>
 
-            <div style={fieldContainerStyle}>
+            {/* <div style={fieldContainerStyle}>
               <label style={labelStyle}>Customer ID</label>
               <input
                 type="text"
@@ -879,7 +887,7 @@ const CreaditNotesEditFormLayout = () => {
                 onChange={handleInputChange}
                 disabled
               />
-            </div>
+            </div> */}
 
             <div style={fieldContainerStyle}>
               <label style={labelStyle}>Customer Name</label>
@@ -1018,13 +1026,23 @@ const CreaditNotesEditFormLayout = () => {
                   />
                 </Box>
 
-                <TableContainer component={Paper}>
-                  <Table size="small">
+                <TableContainer
+                  component={Paper}
+                  sx={{
+                    maxHeight: "400px", // or whatever height you prefer
+                    overflow: "auto",
+                    position: "relative",
+                  }}
+                >
+                  <Table size="small" stickyHeader>
                     <TableHead>
                       <TableRow sx={{ backgroundColor: "#0d47a1" }}>
-                        <TableCell padding="checkbox" sx={{ color: "#fff" }}>
+                        <TableCell
+                          padding="checkbox"
+                          sx={{ backgroundColor: "#0d47a1" }}
+                        >
                           <Checkbox
-                            sx={{ color: "#fff" }}
+                            sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
                             checked={
                               selectedProductIds.length ===
                                 filteredProducts.length &&
@@ -1059,18 +1077,56 @@ const CreaditNotesEditFormLayout = () => {
                             }}
                           />
                         </TableCell>
-                        <TableCell sx={{ color: "#fff" }}>
+                        <TableCell
+                          sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
+                        >
                           Product Name
                         </TableCell>
-                        <TableCell sx={{ color: "#fff" }}>Brand</TableCell>
-                        <TableCell sx={{ color: "#fff" }}>Model</TableCell>
-                        <TableCell sx={{ color: "#fff" }}>Processor</TableCell>
-                        <TableCell sx={{ color: "#fff" }}>RAM</TableCell>
-                        <TableCell sx={{ color: "#fff" }}>Storage</TableCell>
-                        <TableCell sx={{ color: "#fff" }}>Graphics</TableCell>
-                        <TableCell sx={{ color: "#fff" }}>DC Qty</TableCell>
-                        <TableCell sx={{ color: "#fff" }}>Credit Qty</TableCell>
-                        <TableCell sx={{ color: "#fff" }}>Asset IDs</TableCell>
+                        <TableCell
+                          sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
+                        >
+                          Brand
+                        </TableCell>
+                        <TableCell
+                          sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
+                        >
+                          Model
+                        </TableCell>
+                        <TableCell
+                          sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
+                        >
+                          Processor
+                        </TableCell>
+                        <TableCell
+                          sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
+                        >
+                          RAM
+                        </TableCell>
+                        <TableCell
+                          sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
+                        >
+                          Storage
+                        </TableCell>
+                        <TableCell
+                          sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
+                        >
+                          Graphics
+                        </TableCell>
+                        <TableCell
+                          sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
+                        >
+                          DC Qty
+                        </TableCell>
+                        <TableCell
+                          sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
+                        >
+                          Credit Qty
+                        </TableCell>
+                        <TableCell
+                          sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
+                        >
+                          Asset IDs
+                        </TableCell>
                       </TableRow>
                     </TableHead>
                     <TableBody>

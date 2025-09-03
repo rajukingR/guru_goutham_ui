@@ -8,68 +8,61 @@ const AssetTrackerOp = () => {
 
   const columns = [
     { id: "s_id", label: "S.No." },
-    { id: "asset_id", label: "Asset ID" },
+    { id: "parent_asset_id", label: "Parent Asset ID" },
     { id: "product_name", label: "Product Name" },
-    { id: "ram", label: "Old RAM" },
-    { id: "new_ram", label: "New RAM" },
-    { id: "new_ram_cost", label: "New RAM Cost", format: formatINR },
-    { id: "storage", label: "Old Storage" },
-    { id: "new_storage", label: "New Storage" },
-    { id: "new_storage_cost", label: "New Storage Cost", format: formatINR },
+    { id: "ram", label: "RAM" },
+    { id: "storage", label: "Storage" },
     { id: "processor", label: "Processor" },
-    { id: "os", label: "Operating System" },
-    { id: "graphics", label: "Graphics" },
-    { id: "brand", label: "Brand" },
-    { id: "model", label: "Model" },
-   
   ];
 
   useEffect(() => {
-    const fetchModifications = async () => {
+    const fetchPeripheral = async () => {
       try {
         const token = localStorage.getItem("token");
 
-        const response = await axios.get(`${API_URL}/asset-modification/asset-ids`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
+        const response = await axios.get(`${API_URL}/peripheral-assets`, {
+          headers: { Authorization: `Bearer ${token}` },
         });
 
-        console.log("API response:", response.data);
+        if (response.status === 200) {
+          const dataWithSno = response.data.map((item, index) => {
+            // Extract all RAM items and combine their specifications
+            const ramItems = item.items.filter(
+              (i) => i.product_category === "RAM"
+            );
+            const ramSpecs = ramItems.map(item => item.specifications).join(" + ");
+            
+            // Extract Storage items
+            const storageItems = item.items.filter(
+              (i) => i.product_category === "SSD" || i.product_category === "HDD"
+            );
+            const storageSpecs = storageItems.map(item => item.specifications).join(" + ");
+            
+            // Extract Processor
+            const processorItem = item.items.find(
+              (i) => i.product_category === "Processor"
+            );
 
-        // Handle both response.data or response.data.data
-        const rawData = Array.isArray(response.data)
-          ? response.data
-          : response.data?.data || [];
+            return {
+              s_id: index + 1,
+              ...item,
+              parent_asset_id: item.parent_asset_id,
+              product_name: item.product_name,
+              ram: ramSpecs || item.ram || "N/A",
+              storage: storageSpecs || item.storage || "N/A",
+              processor: processorItem ? processorItem.specifications : "N/A",
+            };
+          });
 
-        const formatted = rawData.map((item, index) => ({
-          s_id: index + 1,
-          ...item,
-        }));
-
-        setData(formatted);
+          setData(dataWithSno);
+        }
       } catch (error) {
-        console.error("Error fetching asset modifications:", error);
+        console.error("Error fetching peripheral:", error);
       }
     };
 
-    fetchModifications();
+    fetchPeripheral();
   }, []);
-
-  function formatDate(dateStr) {
-    if (!dateStr) return "-";
-    const date = new Date(dateStr);
-    return date.toLocaleDateString("en-IN");
-  }
-
-  function formatINR(value) {
-    if (!value || isNaN(value)) return "-";
-    return new Intl.NumberFormat("en-IN", {
-      style: "currency",
-      currency: "INR",
-      maximumFractionDigits: 2,
-    }).format(parseFloat(value));
-  }
 
   return (
     <div>

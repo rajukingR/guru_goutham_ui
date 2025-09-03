@@ -61,7 +61,7 @@ const ProductCategoriesEditPage = () => {
         is_active: formData.activeStatus,
       };
 
-      await axios.put(`${API_URL}/product-categories/update/${id}`, payload);
+      await axios.put(`${API_URL}/product-categories/${id}`, payload);
 
       setSnackbar({
         open: true,

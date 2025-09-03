@@ -15,6 +15,7 @@ const InvoicesTablePage = () => {
         // { id: "customer_id", label: "Customer ID" },
 
     { id: "invoice_date", label: "Invoice Date" },
+        { id: "transaction_type", label: "Paymenet Type" },
         { id: "payment_mode", label: "Paymenet Type" },
 
     { id: "email", label: "Email" },
@@ -41,7 +42,7 @@ const InvoicesTablePage = () => {
           const formatted = response.data.map((item, index) => ({
             s_id: index + 1,
             ...item,
-            payment_mode: item.payment_mode === "" ? "Buy": item.payment_mode,
+            // payment_mode: item.payment_mode === "" ? "Buy": item.payment_mode,
             status: item.approval_status === "Approved" ? "Active" : "Inactive",
           }));
           setData(formatted);

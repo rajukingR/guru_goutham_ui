@@ -1,7 +1,7 @@
 // src/contexts/InventoryContext.jsx
 import React, { createContext, useContext, useEffect, useState } from "react";
 import axios from "axios";
-import API_URL from "../api/Api_url"; // Update path if needed
+import API_URL from "../api/Api_url";
 
 const InventoryContext = createContext();
 
@@ -46,6 +46,7 @@ export const InventoryProvider = ({ children }) => {
       }
     };
 
+    // Fetch inventory once on mount
     fetchInventory();
   }, []);
 

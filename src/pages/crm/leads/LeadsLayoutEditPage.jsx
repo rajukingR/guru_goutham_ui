@@ -84,10 +84,9 @@ const LeadsLayoutEditPage = () => {
     severity: "success",
   });
 
-
   const formatDate = (date) => {
-  return date ? date.toISOString().split('T')[0] : null;
-};
+    return date ? date.toISOString().split("T")[0] : null;
+  };
 
   // Fetch lead data
   useEffect(() => {
@@ -96,10 +95,14 @@ const LeadsLayoutEditPage = () => {
         const response = await fetch(`${API_URL}/leads/${id}`);
         if (!response.ok) throw new Error("Failed to fetch lead data");
         const data = await response.json();
-        
+
         // Format dates properly
-        const rentalStartDate = data.rental_start_date ? new Date(data.rental_start_date) : null;
-        const rentalEndDate = data.rental_end_date ? new Date(data.rental_end_date) : null;
+        const rentalStartDate = data.rental_start_date
+          ? new Date(data.rental_start_date)
+          : null;
+        const rentalEndDate = data.rental_end_date
+          ? new Date(data.rental_end_date)
+          : null;
         const leadDate = data.lead_date ? new Date(data.lead_date) : new Date();
 
         setFormData({
@@ -138,9 +141,9 @@ const LeadsLayoutEditPage = () => {
 
         // Set selected products
         if (data.lead_products && data.lead_products.length > 0) {
-          const productIds = data.lead_products.map(p => p.product_id);
+          const productIds = data.lead_products.map((p) => p.product_id);
           const productQuantities = {};
-          data.lead_products.forEach(p => {
+          data.lead_products.forEach((p) => {
             productQuantities[p.product_id] = p.quantity;
           });
           setSelectedProductIds(productIds);
@@ -148,10 +151,10 @@ const LeadsLayoutEditPage = () => {
           setShowProductTable(true);
         }
 
-        setLoading(prev => ({ ...prev, lead: false }));
+        setLoading((prev) => ({ ...prev, lead: false }));
       } catch (err) {
-        setError(prev => ({ ...prev, lead: err.message }));
-        setLoading(prev => ({ ...prev, lead: false }));
+        setError((prev) => ({ ...prev, lead: err.message }));
+        setLoading((prev) => ({ ...prev, lead: false }));
         setSnackbar({
           open: true,
           message: "Failed to load lead data",
@@ -162,7 +165,6 @@ const LeadsLayoutEditPage = () => {
 
     fetchLeadData();
   }, [id]);
-
 
   // Fetch products
   useEffect(() => {
@@ -197,10 +199,10 @@ const LeadsLayoutEditPage = () => {
         if (!response.ok) throw new Error("Failed to fetch customers");
         const data = await response.json();
         setCustomers(data);
-        setLoading(prev => ({ ...prev, customers: false }));
+        setLoading((prev) => ({ ...prev, customers: false }));
       } catch (err) {
-        setError(prev => ({ ...prev, customers: err.message }));
-        setLoading(prev => ({ ...prev, customers: false }));
+        setError((prev) => ({ ...prev, customers: err.message }));
+        setLoading((prev) => ({ ...prev, customers: false }));
         setSnackbar({
           open: true,
           message: "Failed to load customers",
@@ -214,9 +216,11 @@ const LeadsLayoutEditPage = () => {
 
   // Handle customer selection
   const handleCustomerChange = (customerId) => {
-    const selectedCustomer = customers.find(c => c.id.toString() === customerId);
+    const selectedCustomer = customers.find(
+      (c) => c.id.toString() === customerId
+    );
     if (selectedCustomer) {
-      setFormData(prev => ({
+      setFormData((prev) => ({
         ...prev,
         selectedCustomer: customerId,
         customerId: selectedCustomer.customer_id || "",
@@ -239,7 +243,6 @@ const LeadsLayoutEditPage = () => {
       }));
     }
   };
-
 
   const handleInputChange = (field, value) => {
     if (field === "rentalDuration") {
@@ -316,85 +319,85 @@ const LeadsLayoutEditPage = () => {
     }));
   };
 
-const handleSubmit = async () => {
-  if (
-    parseInt(formData.rentalDuration) === 0 &&
-    parseInt(formData.rentalDurationDays) < 1
-  ) {
-    setSnackbar({
-      open: true,
-      message: "Please enter at least 1 rental day if months is 0.",
-      severity: "error",
-    });
-    return;
-  }
-
-  try {
-    const selectedProducts = selectedProductIds.map((id) => {
-      const product = products.find((p) => p.id === id);
-      return {
-        product_id: id,
-        product_name: product?.product_name || "",
-        quantity: quantities[id] || 1,
-      };
-    });
-
-    // Safely format dates that might be null
-    const formatDate = (date) => {
-      return date ? date.toISOString().split('T')[0] : null;
-    };
-
-    const payload = {
-      lead_id: formData.leadId,
-      lead_title: formData.leadTitle,
-      transaction_type: formData.transactionType,
-      payment_type: formData.paymentType,
-      lead_source: formData.leadStatus,
-      source_of_enquiry: formData.sourceOfEnquiry,
-      rental_duration_months: formData.rentalDuration || null,
-      rental_duration_days: formData.rentalDurationDays || null,
-      rental_start_date: formatDate(formData.rentalStartDate),
-      rental_end_date: formatDate(formData.rentalEndDate),
-      lead_date: formatDate(formData.leadDate),
-      owner: formData.owner,
-      remarks: formData.remarks,
-      lead_generated_by: formData.leadGeneratedBy,
-      is_active: formData.activeStatus,
-      contact_id: parseInt(formData.selectedCustomer),
-      selected_products: selectedProducts,
-    };
-
-    const response = await fetch(`${API_URL}/leads/${id}`, {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(payload),
-    });
-
-    const responseData = await response.json();
-
-    if (!response.ok) {
-      throw new Error(responseData.message || "Failed to update lead");
+  const handleSubmit = async () => {
+    if (
+      parseInt(formData.rentalDuration) === 0 &&
+      parseInt(formData.rentalDurationDays) < 1
+    ) {
+      setSnackbar({
+        open: true,
+        message: "Please enter at least 1 rental day if months is 0.",
+        severity: "error",
+      });
+      return;
     }
 
-    setSnackbar({
-      open: true,
-      message: responseData.message || "Lead updated successfully!",
-      severity: "success",
-    });
+    try {
+      const selectedProducts = selectedProductIds.map((id) => {
+        const product = products.find((p) => p.id === id);
+        return {
+          product_id: id,
+          product_name: product?.product_name || "",
+          quantity: quantities[id] || 1,
+        };
+      });
 
-    setTimeout(() => {
-      navigate("/dashboard/crm/lead");
-    }, 1500);
-  } catch (err) {
-    setSnackbar({
-      open: true,
-      message: err.message || "Failed to update lead",
-      severity: "error",
-    });
-  }
-};
+      // Safely format dates that might be null
+      const formatDate = (date) => {
+        return date ? date.toISOString().split("T")[0] : null;
+      };
+
+      const payload = {
+        lead_id: formData.leadId,
+        lead_title: formData.leadTitle,
+        transaction_type: formData.transactionType,
+        payment_type: formData.paymentType,
+        lead_source: formData.leadStatus,
+        source_of_enquiry: formData.sourceOfEnquiry,
+        rental_duration_months: formData.rentalDuration || null,
+        rental_duration_days: formData.rentalDurationDays || null,
+        rental_start_date: formatDate(formData.rentalStartDate),
+        rental_end_date: formatDate(formData.rentalEndDate),
+        lead_date: formatDate(formData.leadDate),
+        owner: formData.owner,
+        remarks: formData.remarks,
+        lead_generated_by: formData.leadGeneratedBy,
+        is_active: formData.activeStatus,
+        contact_id: parseInt(formData.selectedCustomer),
+        selected_products: selectedProducts,
+      };
+
+      const response = await fetch(`${API_URL}/leads/${id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
+
+      const responseData = await response.json();
+
+      if (!response.ok) {
+        throw new Error(responseData.message || "Failed to update lead");
+      }
+
+      setSnackbar({
+        open: true,
+        message: responseData.message || "Lead updated successfully!",
+        severity: "success",
+      });
+
+      setTimeout(() => {
+        navigate("/dashboard/crm/lead");
+      }, 1500);
+    } catch (err) {
+      setSnackbar({
+        open: true,
+        message: err.message || "Failed to update lead",
+        severity: "error",
+      });
+    }
+  };
 
   if (loading.lead) {
     return <div style={containerStyle}>Loading lead data...</div>;
@@ -439,12 +442,12 @@ const handleSubmit = async () => {
               onChange={(value) => handleInputChange("leadId", value)}
               disabled
             />
-            <Field
+            {/* <Field
               label="Lead Title"
               placeholder="Enter Lead Title"
               value={formData.leadTitle}
               onChange={(value) => handleInputChange("leadTitle", value)}
-            />
+            /> */}
             <Field
               label="Transaction Type"
               type="select"
@@ -508,128 +511,127 @@ const handleSubmit = async () => {
         </div>
 
         {/* Personal Details Section */}
-      <div style={cardStyle}>
-        <div style={cardHeaderContainerStyle}>
-          <div style={iconStyle}>👤</div>
-          <h3 style={cardHeaderStyle}>Personal Details</h3>
+        <div style={cardStyle}>
+          <div style={cardHeaderContainerStyle}>
+            <div style={iconStyle}>👤</div>
+            <h3 style={cardHeaderStyle}>Personal Details</h3>
+          </div>
+          <div style={fieldsGridStyle}>
+            <Field
+              label="Customer"
+              type="select"
+              placeholder="Select Customer"
+              value={formData.selectedCustomer}
+              onChange={handleCustomerChange}
+              options={customers.map((customer) => ({
+                value: customer.id.toString(),
+                label: `${customer.first_name} ${customer.last_name} (${customer.company_name})`,
+              }))}
+            />
+            <Field
+              label="Customer ID"
+              placeholder="Customer ID"
+              value={formData.customerId}
+              onChange={(value) => handleInputChange("customerId", value)}
+              disabled
+            />
+            <Field
+              label="First Name"
+              placeholder="First Name"
+              value={formData.firstName}
+              onChange={(value) => handleInputChange("firstName", value)}
+            />
+            <Field
+              label="Last Name"
+              placeholder="Last Name"
+              value={formData.lastName}
+              onChange={(value) => handleInputChange("lastName", value)}
+            />
+            <Field
+              label="Email"
+              placeholder="Email"
+              type="email"
+              value={formData.email}
+              onChange={(value) => handleInputChange("email", value)}
+            />
+            <Field
+              label="Phone Number"
+              placeholder="Phone Number"
+              value={formData.phoneNumber}
+              onChange={(value) => handleInputChange("phoneNumber", value)}
+            />
+            <Field
+              label="Company Name"
+              placeholder="Company Name"
+              value={formData.companyName}
+              onChange={(value) => handleInputChange("companyName", value)}
+            />
+            <Field
+              label="Industry"
+              placeholder="Industry"
+              value={formData.industry}
+              onChange={(value) => handleInputChange("industry", value)}
+            />
+            <Field
+              label="GST Number"
+              placeholder="GST Number"
+              value={formData.gst}
+              onChange={(value) => handleInputChange("gst", value)}
+            />
+            <Field
+              label="PAN Number"
+              placeholder="PAN Number"
+              value={formData.panNo}
+              onChange={(value) => handleInputChange("panNo", value)}
+            />
+          </div>
         </div>
-        <div style={fieldsGridStyle}>
-          <Field
-            label="Customer"
-            type="select"
-            placeholder="Select Customer"
-            value={formData.selectedCustomer}
-            onChange={handleCustomerChange}
-            options={customers.map((customer) => ({
-              value: customer.id.toString(),
-              label: `${customer.first_name} ${customer.last_name} (${customer.company_name})`,
-            }))}
-          />
-          <Field
-            label="Customer ID"
-            placeholder="Customer ID"
-            value={formData.customerId}
-            onChange={(value) => handleInputChange("customerId", value)}
-            disabled
-          />
-          <Field
-            label="First Name"
-            placeholder="First Name"
-            value={formData.firstName}
-            onChange={(value) => handleInputChange("firstName", value)}
-          />
-          <Field
-            label="Last Name"
-            placeholder="Last Name"
-            value={formData.lastName}
-            onChange={(value) => handleInputChange("lastName", value)}
-          />
-          <Field
-            label="Email"
-            placeholder="Email"
-            type="email"
-            value={formData.email}
-            onChange={(value) => handleInputChange("email", value)}
-          />
-          <Field
-            label="Phone Number"
-            placeholder="Phone Number"
-            value={formData.phoneNumber}
-            onChange={(value) => handleInputChange("phoneNumber", value)}
-          />
-          <Field
-            label="Company Name"
-            placeholder="Company Name"
-            value={formData.companyName}
-            onChange={(value) => handleInputChange("companyName", value)}
-          />
-          <Field
-            label="Industry"
-            placeholder="Industry"
-            value={formData.industry}
-            onChange={(value) => handleInputChange("industry", value)}
-          />
-          <Field
-            label="GST Number"
-            placeholder="GST Number"
-            value={formData.gst}
-            onChange={(value) => handleInputChange("gst", value)}
-          />
-          <Field
-            label="PAN Number"
-            placeholder="PAN Number"
-            value={formData.panNo}
-            onChange={(value) => handleInputChange("panNo", value)}
-          />
-        </div>
-      </div>
 
-      {/* Address Section */}
-      <div style={cardStyle}>
-        <div style={cardHeaderContainerStyle}>
-          <div style={iconStyle}>🏠</div>
-          <h3 style={cardHeaderStyle}>Address</h3>
+        {/* Address Section */}
+        <div style={cardStyle}>
+          <div style={cardHeaderContainerStyle}>
+            <div style={iconStyle}>🏠</div>
+            <h3 style={cardHeaderStyle}>Address</h3>
+          </div>
+          <div style={fieldsGridStyle}>
+            <Field
+              label="Street"
+              placeholder="Street"
+              value={formData.street}
+              onChange={(value) => handleInputChange("street", value)}
+            />
+            <Field
+              label="Landmark"
+              placeholder="Landmark"
+              value={formData.landmark}
+              onChange={(value) => handleInputChange("landmark", value)}
+            />
+            <Field
+              label="Pincode"
+              placeholder="Pincode"
+              value={formData.pincode}
+              onChange={(value) => handleInputChange("pincode", value)}
+            />
+            <Field
+              label="City"
+              placeholder="City"
+              value={formData.city}
+              onChange={(value) => handleInputChange("city", value)}
+            />
+            <Field
+              label="State"
+              placeholder="State"
+              value={formData.state}
+              onChange={(value) => handleInputChange("state", value)}
+            />
+            <Field
+              label="Country"
+              placeholder="Country"
+              value={formData.country}
+              onChange={(value) => handleInputChange("country", value)}
+            />
+          </div>
         </div>
-        <div style={fieldsGridStyle}>
-          <Field
-            label="Street"
-            placeholder="Street"
-            value={formData.street}
-            onChange={(value) => handleInputChange("street", value)}
-          />
-          <Field
-            label="Landmark"
-            placeholder="Landmark"
-            value={formData.landmark}
-            onChange={(value) => handleInputChange("landmark", value)}
-          />
-          <Field
-            label="Pincode"
-            placeholder="Pincode"
-            value={formData.pincode}
-            onChange={(value) => handleInputChange("pincode", value)}
-          />
-          <Field
-            label="City"
-            placeholder="City"
-            value={formData.city}
-            onChange={(value) => handleInputChange("city", value)}
-          />
-          <Field
-            label="State"
-            placeholder="State"
-            value={formData.state}
-            onChange={(value) => handleInputChange("state", value)}
-          />
-          <Field
-            label="Country"
-            placeholder="Country"
-            value={formData.country}
-            onChange={(value) => handleInputChange("country", value)}
-          />
-        </div>
-      </div>
-
 
         {/* Control Section */}
         <div style={cardStyle}>
@@ -698,21 +700,65 @@ const handleSubmit = async () => {
                 />
               </Box>
 
-              <TableContainer component={Paper}>
-                <Table size="small">
+              <TableContainer
+                component={Paper}
+                sx={{
+                  maxHeight: "400px", // or whatever height you prefer
+                  overflow: "auto",
+                  position: "relative",
+                }}
+              >
+                <Table size="small" stickyHeader>
                   <TableHead>
                     <TableRow sx={{ backgroundColor: "#0d47a1" }}>
-                      <TableCell padding="checkbox" sx={{ color: "#fff" }}>
-                        <Checkbox sx={{ color: "#fff" }} />
+                      <TableCell
+                        padding="checkbox"
+                        sx={{ backgroundColor: "#0d47a1" }}
+                      >
+                        <Checkbox
+                          sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
+                        />
                       </TableCell>
-                      <TableCell sx={{ color: "#fff" }}>Product Name</TableCell>
-                      <TableCell sx={{ color: "#fff" }}>Brand</TableCell>
-                      <TableCell sx={{ color: "#fff" }}>Model</TableCell>
-                      <TableCell sx={{ color: "#fff" }}>Processor</TableCell>
-                      <TableCell sx={{ color: "#fff" }}>RAM</TableCell>
-                      <TableCell sx={{ color: "#fff" }}>Storage</TableCell>
-                      <TableCell sx={{ color: "#fff" }}>Graphics</TableCell>
-                      <TableCell sx={{ color: "#fff" }}>Quantity</TableCell>
+                      <TableCell
+                        sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
+                      >
+                        Product Name
+                      </TableCell>
+                      <TableCell
+                        sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
+                      >
+                        Brand
+                      </TableCell>
+                      <TableCell
+                        sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
+                      >
+                        Model
+                      </TableCell>
+                      <TableCell
+                        sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
+                      >
+                        Processor
+                      </TableCell>
+                      <TableCell
+                        sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
+                      >
+                        RAM
+                      </TableCell>
+                      <TableCell
+                        sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
+                      >
+                        Storage
+                      </TableCell>
+                      <TableCell
+                        sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
+                      >
+                        Graphics
+                      </TableCell>
+                      <TableCell
+                        sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
+                      >
+                        Quantity
+                      </TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
