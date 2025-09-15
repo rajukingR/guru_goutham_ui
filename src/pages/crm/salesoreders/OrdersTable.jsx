@@ -2,10 +2,14 @@ import React, { useEffect, useState } from "react";
 import DynamicTable from "../../../components/table-format/DynamicTable";
 import axios from "axios";
 import API_URL, { IMAGE_API_URL } from "../../../api/Api_url";
+import { useSelector } from "react-redux";
 
 const OrdersTable = () => {
   const [data, setData] = useState([]);
 
+    const { user, token } = useSelector((state) => state.auth);
+  
+    const userToken = token;
   const columns = [
     { id: "s_id", label: "S.No." },
     { id: "order_id", label: "Order ID" },
@@ -32,7 +36,7 @@ const OrdersTable = () => {
 
         const response = await axios.get(`${API_URL}/orders`, {
           headers: {
-            Authorization: `Bearer ${token}`,
+            "Authorization": `Bearer ${userToken}`,
           },
         });
 
@@ -46,12 +50,17 @@ const OrdersTable = () => {
             }).format(item.total_order_value || 0);
 
             // Combine first and last name from personalDetails
-            const customerName =
-              `${item.personalDetails?.first_name} ${item.personalDetails?.last_name}`;
+            const customerName = `${item.personalDetails?.first_name} ${item.personalDetails?.last_name}`;
 
             return {
               s_id: index + 1,
               ...item,
+              transaction_type:
+                item.transaction_type === "Buy"
+                  ? "Sale"
+                  : item.transaction_type,
+              payment_type:
+                item.payment_type === "" ? "Sale" : item.payment_type,
               customer_name: customerName, // ✅ added
               total_order_value: formattedOrderValue,
             };
@@ -69,7 +78,7 @@ const OrdersTable = () => {
 
   return (
     <div>
-            <h2 style={{ marginBottom: "10px" }}>Orders List</h2>
+      <h2 style={{ marginBottom: "10px" }}>Orders List</h2>
 
       <DynamicTable columns={columns} data={data} />
     </div>

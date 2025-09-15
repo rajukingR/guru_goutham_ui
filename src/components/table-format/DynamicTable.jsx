@@ -33,7 +33,7 @@ import ViewDC from "../../assets/logos/ViewDC.png";
 import StatusOff from "../../assets/logos/turnoff.png";
 import StatusOn from "../../assets/logos/turnon.png";
 import API_URL from "../../api/Api_url";
-
+import { useSelector } from "react-redux";
 // API Endpoints Mapping
 const apiEndpoints = {
   settings: `${API_URL}/users`,
@@ -54,7 +54,7 @@ const apiEndpoints = {
   orders: `${API_URL}/orders`,
   contact_type: `${API_URL}/contact-types`,
   taxt_list: `${API_URL}/tax-list`,
-  Branch: `${API_URL}/branches`,
+  branches: `${API_URL}/branches`,
   users: `${API_URL}/users`,
   invoices: `${API_URL}/invoices`,
   grn: `${API_URL}/credit-notes`,
@@ -64,6 +64,9 @@ const apiEndpoints = {
   "dispatch-orders": `${API_URL}/dispatch-orders`,
   "assembled-products": `${API_URL}/assembled-assets`,
   "asset-updation": `${API_URL}/peripheral-assets`,
+  "courier-charges": `${API_URL}/courier-charges`,
+  service_maintenance: `${API_URL}/service-charges`,
+  swap: `${API_URL}/asset-swaps`,
 };
 
 // Delivery Challan Dialog Component
@@ -643,11 +646,11 @@ const DeliveryChallanDialog = ({ open, onClose, dcData }) => {
       // Wait for dialog to fully render
       await new Promise((resolve) => setTimeout(resolve, 300));
 
-      // Find the delivery challan element
+      // Find the delivery-challan container element
       const element = document.getElementById("delivery-challan-container");
 
       if (!element) {
-        throw new Error("Could not find delivery challan element in DOM");
+        throw new Error("Could not find delivery-challan element in DOM");
       }
 
       // Create a clone for PDF generation to avoid layout issues
@@ -694,7 +697,7 @@ const DeliveryChallanDialog = ({ open, onClose, dcData }) => {
         heightLeft -= pageHeight;
       }
 
-      pdf.save(`delivery-challan-${dcData.dc_id}.pdf`);
+      pdf.save(`delivery-challan-${dcData.dc_id || "DC"}.pdf`);
     } catch (error) {
       console.error("PDF Generation Error:", error);
       alert(`Failed to generate PDF: ${error.message}`);
@@ -706,7 +709,7 @@ const DeliveryChallanDialog = ({ open, onClose, dcData }) => {
 
     if (!element) {
       console.error("Print element not found");
-      alert("Could not find content to print");
+      alert("Could not find the delivery-challan content for printing");
       return;
     }
 
@@ -715,22 +718,36 @@ const DeliveryChallanDialog = ({ open, onClose, dcData }) => {
       <!DOCTYPE html>
       <html>
         <head>
-          <title>Delivery Challan - ${dcData.dc_id}</title>
+          <title>Delivery-Challan - ${dcData.dc_id || "DC"}</title>
           <style>
             @page { 
               size: A4; 
-              margin: 0; 
+              margin: 10mm; 
             }
             body { 
               margin: 0; 
               padding: 0; 
               font-family: Arial, sans-serif;
+              -webkit-print-color-adjust: exact;
+              print-color-adjust: exact;
             }
             .print-container { 
-              width: 210mm; 
-              min-height: 297mm; 
-              padding: 10mm; 
+              width: 190mm; 
+              min-height: 277mm; 
+              padding: 0;
               box-sizing: border-box;
+            }
+            table {
+              width: 100%;
+              border-collapse: collapse;
+            }
+            th, td {
+              border: 1px solid #000;
+              padding: 8px;
+              text-align: left;
+            }
+            th {
+              background-color: #f0f0f0;
             }
           </style>
         </head>
@@ -742,7 +759,9 @@ const DeliveryChallanDialog = ({ open, onClose, dcData }) => {
             window.onload = function() {
               setTimeout(function() {
                 window.print();
-                window.close();
+                setTimeout(function() {
+                  window.close();
+                }, 500);
               }, 300);
             }
           </script>
@@ -755,28 +774,30 @@ const DeliveryChallanDialog = ({ open, onClose, dcData }) => {
   // Function to render accessories information
   const renderAccessories = () => {
     const accessories = [];
-    
+
     // Add standard accessories if they are true
     if (dcData.mouse) accessories.push("Mouse");
     if (dcData.cable) accessories.push("Cable");
     if (dcData.bag) accessories.push("Bag");
-    
+
     // Add other accessories from the array
     if (dcData.other_accessory && dcData.other_accessory.length > 0) {
       accessories.push(...dcData.other_accessory);
     }
-    
+
     // Add "Others" if the others field is true but no specific accessories listed
     if (dcData.others && accessories.length === 0) {
       accessories.push("Others");
     }
-    
+
     return accessories.length > 0 ? (
       <div style={accessoriesContainerStyle}>
         <div style={accessoriesTitleStyle}>Accessories Included:</div>
         <ul style={accessoriesListStyle}>
           {accessories.map((item, index) => (
-            <li key={index} style={accessoriesListItemStyle}>{item}</li>
+            <li key={index} style={accessoriesListItemStyle}>
+              {item}
+            </li>
           ))}
         </ul>
       </div>
@@ -1031,12 +1052,448 @@ const DeliveryChallanDialog = ({ open, onClose, dcData }) => {
         <Button onClick={handleDownloadPDF} variant="contained" color="primary">
           Download PDF
         </Button>
-        <Button onClick={handlePrint}>Print</Button>
+        <Button onClick={handlePrint} variant="contained" color="secondary">
+          Print
+        </Button>
       </DialogActions>
     </Dialog>
   );
 };
 
+const QuotationDialog = ({ open, onClose, quotationData }) => {
+  if (!quotationData) return null;
+
+  // Handle PDF download
+  const handleDownloadPDF = async () => {
+    try {
+      // Wait for dialog to fully render
+      await new Promise((resolve) => setTimeout(resolve, 300));
+
+      // Find the quotation container element
+      const element = document.getElementById("quotation-container");
+
+      if (!element) {
+        throw new Error("Could not find quotation element in DOM");
+      }
+
+      // Create a clone for PDF generation to avoid layout issues
+      const clone = element.cloneNode(true);
+      clone.style.position = "absolute";
+      clone.style.left = "-9999px";
+      clone.style.visibility = "visible";
+      clone.style.width = "210mm";
+      document.body.appendChild(clone);
+
+      const options = {
+        scale: 2,
+        logging: true,
+        useCORS: true,
+        scrollX: 0,
+        scrollY: 0,
+        windowWidth: clone.scrollWidth,
+        windowHeight: clone.scrollHeight,
+        backgroundColor: "#FFFFFF",
+      };
+
+      const canvas = await html2canvas(clone, options);
+      document.body.removeChild(clone);
+
+      const imgData = canvas.toDataURL("image/png");
+      const pdf = new jsPDF("p", "mm", "a4");
+
+      const imgProps = pdf.getImageProperties(imgData);
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+
+      // Handle multi-page PDF
+      let heightLeft = pdfHeight;
+      let position = 0;
+      const pageHeight = pdf.internal.pageSize.getHeight();
+
+      pdf.addImage(imgData, "PNG", 0, position, pdfWidth, pdfHeight);
+      heightLeft -= pageHeight;
+
+      while (heightLeft >= 0) {
+        position = heightLeft - pdfHeight;
+        pdf.addPage();
+        pdf.addImage(imgData, "PNG", 0, position, pdfWidth, pdfHeight);
+        heightLeft -= pageHeight;
+      }
+
+      pdf.save(`quotation-${quotationData.quotation_id || "QI"}.pdf`);
+    } catch (error) {
+      console.error("PDF Generation Error:", error);
+      alert(`Failed to generate PDF: ${error.message}`);
+    }
+  };
+
+  const handlePrint = () => {
+    const element = document.getElementById("quotation-container");
+
+    if (!element) {
+      console.error("Print element not found");
+      alert("Could not find the invoice content for printing");
+      return;
+    }
+
+    const printWindow = window.open("", "_blank");
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Quotation - ${quotationData.quotation_id || "QI"}</title>
+          <style>
+            @page { 
+              size: A4; 
+              margin: 10mm; 
+            }
+            body { 
+              margin: 0; 
+              padding: 0; 
+              font-family: Arial, sans-serif;
+              -webkit-print-color-adjust: exact;
+              print-color-adjust: exact;
+            }
+            .print-container { 
+              width: 190mm; 
+              min-height: 277mm; 
+              padding: 0;
+              box-sizing: border-box;
+            }
+            table {
+              width: 100%;
+              border-collapse: collapse;
+            }
+            th, td {
+              border: 1px solid #000;
+              padding: 8px;
+              text-align: left;
+            }
+            th {
+              background-color: #f0f0f0;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="print-container">
+            ${element.innerHTML}
+          </div>
+          <script>
+            window.onload = function() {
+              setTimeout(function() {
+                window.print();
+                setTimeout(function() {
+                  window.close();
+                }, 500);
+              }, 300);
+            }
+          </script>
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
+  };
+
+  // Calculate total quantity
+  const totalQuantity = quotationData.items?.reduce((total, item) => {
+    return total + (item.quotation_quantity || 0);
+  }, 0);
+
+  return (
+    <Dialog open={open} onClose={onClose} maxWidth="lg" fullWidth>
+      <DialogTitle>Quotation Details</DialogTitle>
+      <DialogContent>
+        <div style={containerStyle}>
+          <div id="quotation-container" style={receiptContainerStyle}>
+            {/* Header Color Bar */}
+            <div style={headerBarStyle}></div>
+
+            {/* Company Header */}
+            <div style={companyHeaderStyle}>
+              <div style={companyInfoContainerStyle}>
+                <div style={logoStyle}>
+                  <img
+                    src="/SORT-ICON.png"
+                    alt="Company Logo"
+                    style={{
+                      width: "100%",
+                      height: "100%",
+                      objectFit: "contain",
+                    }}
+                  />
+                </div>
+                <div>
+                  <div style={companyNameStyle}>
+                    Guru Goutam Infotech Pvt. Ltd.
+                  </div>
+                  <div style={companyDetailsStyle}>
+                    CIN: U72200KA2008PTC047679
+                    <br />
+                    GST: 29AADCG2608Q1Z6
+                  </div>
+                </div>
+              </div>
+              <div style={challanHeaderStyle}>
+                <div style={challanTitleStyle}>QUOTATION</div>
+                <div style={challanDetailsStyle}>
+                  Quotation No: {quotationData.quotation_id}
+                  <br />
+                  Quotation Date:{" "}
+                  {new Date(quotationData.quotation_date).toLocaleDateString(
+                    "en-GB"
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Recipient Section */}
+            <div style={recipientSectionStyle}>
+              <div style={recipientContainerStyle}>
+                <div style={recipientAddressStyle}>
+                  <div style={recipientLabelStyle}>Ship To</div>
+                  {quotationData.customer_first_name}{" "}
+                  {quotationData.customer_last_name}
+                  <br />
+                  {quotationData.customer?.company_name && (
+                    <>
+                      {quotationData.customer.company_name}
+                      <br />
+                    </>
+                  )}
+                  {quotationData.customer.address.street &&
+                    `${quotationData.customer.address.street}, `}
+                  {quotationData.customer.address.city},<br />{" "}
+                  {quotationData.customer.address.state},
+                  <br />
+                  {quotationData.customer.address.country} -{" "}
+                  {quotationData.customer.address.pincode}.
+                </div>
+                <div style={recipientDetailsGridStyle}>
+                  <div>
+                    <div style={detailLabelStyle}>Receiver Person :</div>
+                    {quotationData.customer.first_name}{" "}
+                    {quotationData.customer.last_name}
+                  </div>
+                  <div>
+                    <div style={detailLabelStyle}>Receiver Number :</div>
+                    {quotationData.customer.phone_number}
+                  </div>
+                  {/* <div>
+                    <div style={detailLabelStyle}>PO Number:</div>
+                    {quotationData.dc_id || "N/A"}
+                  </div>
+                  <div>
+                    <div style={detailLabelStyle}>Delivered Person :</div>
+                    {quotationData.delivery_person_name}
+                  </div>
+
+                  <div>
+                    <div style={detailLabelStyle}>Deliver Perso Number :</div>
+                    {quotationData.delivery_person_phone_number}
+                  </div>
+                  <div>
+                    <div style={detailLabelStyle}>Vehicle Number :</div>
+                    {quotationData.vehicle_number}
+                  </div> */}
+                </div>
+              </div>
+            </div>
+
+            {/* Items Table */}
+            <table style={tableStyle}>
+              <thead>
+                <tr>
+                  <th style={tableHeaderNoStyle}>NO.</th>
+                  <th style={tableHeaderParticularsStyle}>Product Details</th>
+                  <th style={tableHeaderParticularsStyle}>
+                    {quotationData.transaction_type === "Rent"
+                      ? "Price Per Month"
+                      : "Purchase Price"}
+                  </th>
+                  <th style={tableHeaderQtyStyle}>QTY</th>
+                </tr>
+              </thead>
+              <tbody>
+                {quotationData.items?.map((item, index) => {
+                  // Select base price & offer price
+                  const basePrice =
+                    quotationData.transaction_type === "Buy"
+                      ? parseFloat(item.purchase_price)
+                      : parseFloat(item.rent_price_per_month);
+
+                  const offerPrice =
+                    quotationData.transaction_type === "Buy"
+                      ? parseFloat(item.offer_purchase_price)
+                      : parseFloat(item.offer_rent_price_per_month);
+
+                  // Use offer price if not zero, otherwise normal price
+                  const finalPrice = offerPrice > 0 ? offerPrice : basePrice;
+
+                  const total = finalPrice * item.quotation_quantity;
+
+                  return (
+                    <tr
+                      key={item.id}
+                      style={
+                        index % 2 === 0 ? tableRowOddStyle : tableRowEvenStyle
+                      }
+                    >
+                      <td style={tableCellCenterStyle}>{index + 1}</td>
+                      <td style={tableCellStyle}>
+                        <div
+                          style={{
+                            fontWeight: "bold",
+                            fontSize: "14px",
+                            color: "#000",
+                          }}
+                        >
+                          {item.product_name}
+                        </div>
+                        <div
+                          style={{
+                            fontSize: "11px",
+                            color: "#555",
+                            marginTop: 4,
+                            lineHeight: "1.4",
+                          }}
+                        >
+                          <strong>Specifications:</strong> Brand:{" "}
+                          {item.product?.brand}. Model: {item.product?.model}.
+                          Processor: {item.product?.processor}. RAM:{" "}
+                          {item.product?.ram}. Storage: {item.product?.storage}.
+                          <br />
+                          Disk Type: {item.product?.disk_type}. Graphics:{" "}
+                          {item.product?.graphics}. OS: {item.product?.os}.
+                        </div>
+                        <br />
+                      </td>
+
+                      {/* Price Cell */}
+                      <td style={tableCellStyle}>{finalPrice.toFixed(2)}</td>
+
+                      {/* Quantity Cell */}
+                      <td style={tableCellCenterStyle}>
+                        {item.quotation_quantity}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+
+            {/* Footer Info */}
+            <div style={footerInfoStyle}>
+              <div style={taxDetailsStyle}>
+                {/* PAN No. &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;:{" "}
+                {dcData.pan_number}
+                <br />
+                GST No. &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;:{" "}
+                {dcData.gst_number} */}
+              </div>
+
+              <div style={totalContainerStyle}>
+                <div style={totalLabelStyle}>TOTAL QTY :</div>
+                <div style={totalValueStyle}>
+                  {quotationData.items?.reduce(
+                    (sum, item) => sum + (item.quotation_quantity || 0),
+                    0
+                  )}
+                </div>{" "}
+              </div>
+            </div>
+
+            {/* Not For Sale */}
+            <div style={notForSaleStyle}>
+              {quotationData.transaction_type === "Rent"
+                ? "NOT FOR SALE - RETURNABLE BASIS ONLY"
+                : "FOR SALE"}
+            </div>
+
+            {/* Signature Section */}
+            <div style={signatureSectionStyle}>
+              <div style={leftSignatureAreaStyle}>
+                <div style={jurisdictionNoteStyle}>
+                  Note: Subjected to Bengaluru Jurisdiction
+                </div>
+                <table style={signatureTableStyle}>
+                  <tbody>
+                    <tr>
+                      <td style={signatureTableHeaderStyle}>
+                        Quotation Address
+                      </td>
+                      <td style={signatureTableHeaderStyle}>
+                        Receiver Date and Signature
+                      </td>
+                    </tr>
+                    <tr>
+                      <td style={signatureTableCellStyle}>
+                        {quotationData.customer_first_name}{" "}
+                        {quotationData.customer_last_name},
+                        <br />
+                        {quotationData.customer.address.street &&
+                          `${quotationData.customer.address.street}, `}
+                        {quotationData.customer.address.city},{" "}
+                        {quotationData.customer.address.state}
+                        <br />
+                        {quotationData.customer.address.country} -{" "}
+                        {quotationData.customer.address.pincode}.
+                      </td>
+                      <td style={signatureTableCellStyle}></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <div style={rightSignatureAreaStyle}>
+                <div style={companySignatureLabelStyle}>
+                  For Guru Goutham Infotech Private Limited
+                </div>
+                <div style={signatureBoxStyle}>SD/-</div>
+                <div style={signatureDesignationStyle}>
+                  Authorised Signatory
+                </div>
+              </div>
+            </div>
+
+            {/* Company Footer */}
+            <div style={companyFooterStyle}>
+              <div style={footerAddressStyle}>
+                <span>📍</span>
+                <span>
+                  No. 8, 2nd Cross, Diagonal Road, 3rd Block,
+                  <br />
+                  Jayanagar Bengaluru-560011.
+                </span>
+              </div>
+              <div style={footerContactStyle}>
+                <div style={footerContactItemStyle}>
+                  <span>🌐</span>
+                  <span>gurugoutam.com</span>
+                </div>
+                <div style={footerContactItemStyle}>
+                  <span>📞</span>
+                  <span>080-2242 9955, +91 9449 0789 55</span>
+                </div>
+                <div style={footerContactItemStyle}>
+                  <span>✉️</span>
+                  <span>info@gurugoutam.com</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={onClose}>Close</Button>
+        <Button onClick={handleDownloadPDF} variant="contained" color="primary">
+          Download PDF
+        </Button>
+        <Button onClick={handlePrint} variant="contained" color="secondary">
+          Print
+        </Button>
+      </DialogActions>
+    </Dialog>
+  );
+};
 
 // Goods Return Note Dialog Component
 const GoodsReturnNoteDialog = ({ open, onClose, grnData }) => {
@@ -1121,7 +1578,7 @@ const GoodsReturnNoteDialog = ({ open, onClose, grnData }) => {
       <html>
         <head>
           <title>Goods Return Note - ${
-            grnData.credit_note_number || "GRN"
+            grnData.credit_note_number || "CN-9JGRRE"
           }</title>
           <style>
             @page { 
@@ -1542,7 +1999,7 @@ const PlainGoodsReturnNoteDialog = ({ open, onClose, grnData }) => {
       <html>
         <head>
           <title>Goods Return Note - ${
-            grnData.credit_note_number || "GRN"
+            grnData.credit_note_number || "CN-9JGRRE"
           }</title>
           <style>
             @page { 
@@ -1635,10 +2092,7 @@ const PlainGoodsReturnNoteDialog = ({ open, onClose, grnData }) => {
                 <div style={challanDetailsStyle}>
                   GRN No: {grnData.credit_note_number || "CN-9JGRRE"}
                   <br />
-                  GRN Date:{" "}
-                  {new Date(
-                    grnData.returned_date || "2025-11-11"
-                  ).toLocaleDateString("en-GB")}
+                  GRN Date: {new Date().toLocaleDateString("en-GB")}
                   <br />
                 </div>
               </div>
@@ -1879,14 +2333,13 @@ const CreditNoteDialog = ({ open, onClose, creditNoteData }) => {
     return `${day}/${month}/${year}`;
   };
 
-  // Calculate days between returned_date and rental_end_date
+  // Calculate days between returned_date and rental_end_date using 30-day months
   const calculateDaysDifference = (returnedDate, rentalEndDate) => {
     if (!returnedDate || !rentalEndDate) return 0;
 
     const ret = new Date(returnedDate);
     const end = new Date(rentalEndDate);
 
-    // Extract day, month, year
     const retDay = ret.getDate();
     const retMonth = ret.getMonth(); // 0-based
     const retYear = ret.getFullYear();
@@ -1926,9 +2379,7 @@ const CreditNoteDialog = ({ open, onClose, creditNoteData }) => {
       : calculateDaysDifference(monthStartDate, returnedDate);
 
     // Calculate day difference
-    const daysDifference = Math.ceil(
-      (endOfMonth - returnedDate) / (1000 * 60 * 60 * 24)
-    );
+    const daysDifference = calculateDaysDifference(returnedDate, endOfMonth);
 
     return items.map((item) => {
       const unitPrice = parseFloat(item.unit_price || 0);
@@ -1992,7 +2443,7 @@ const CreditNoteDialog = ({ open, onClose, creditNoteData }) => {
       // Wait for dialog to fully render
       await new Promise((resolve) => setTimeout(resolve, 300));
 
-      // Find the credit note element
+      // Find the credit note container element
       const element = document.getElementById("credit-note-container");
 
       if (!element) {
@@ -2043,7 +2494,7 @@ const CreditNoteDialog = ({ open, onClose, creditNoteData }) => {
         heightLeft -= pageHeight;
       }
 
-      pdf.save(`credit-note-${creditNoteData.credit_note_number}.pdf`);
+      pdf.save(`credit-note-${creditNoteData.credit_note_number || "CN"}.pdf`);
     } catch (error) {
       console.error("PDF Generation Error:", error);
       alert(`Failed to generate PDF: ${error.message}`);
@@ -2055,7 +2506,7 @@ const CreditNoteDialog = ({ open, onClose, creditNoteData }) => {
 
     if (!element) {
       console.error("Print element not found");
-      alert("Could not find content to print");
+      alert("Could not find the credit note content for printing");
       return;
     }
 
@@ -2064,22 +2515,38 @@ const CreditNoteDialog = ({ open, onClose, creditNoteData }) => {
       <!DOCTYPE html>
       <html>
         <head>
-          <title>Credit Note - ${creditNoteData.credit_note_number}</title>
+          <title>Credit Note - ${
+            creditNoteData.credit_note_number || "CN"
+          }</title>
           <style>
             @page { 
               size: A4; 
-              margin: 0; 
+              margin: 10mm; 
             }
             body { 
               margin: 0; 
               padding: 0; 
               font-family: Arial, sans-serif;
+              -webkit-print-color-adjust: exact;
+              print-color-adjust: exact;
             }
             .print-container { 
-              width: 210mm; 
-              min-height: 297mm; 
-              padding: 10mm; 
+              width: 190mm; 
+              min-height: 277mm; 
+              padding: 0;
               box-sizing: border-box;
+            }
+            table {
+              width: 100%;
+              border-collapse: collapse;
+            }
+            th, td {
+              border: 1px solid #000;
+              padding: 8px;
+              text-align: left;
+            }
+            th {
+              background-color: #f0f0f0;
             }
           </style>
         </head>
@@ -2091,7 +2558,9 @@ const CreditNoteDialog = ({ open, onClose, creditNoteData }) => {
             window.onload = function() {
               setTimeout(function() {
                 window.print();
-                window.close();
+                setTimeout(function() {
+                  window.close();
+                }, 500);
               }, 300);
             }
           </script>
@@ -2140,9 +2609,20 @@ const CreditNoteDialog = ({ open, onClose, creditNoteData }) => {
                 <div style={challanDetailsStyle}>
                   Credit Note No: {creditNoteData.credit_note_number}
                   <br />
-                  Return Date:{" "}
-                  {new Date(creditNoteData.returned_date).toLocaleDateString(
-                    "en-GB"
+                  {creditNoteData.transaction_type === "Asset Swap" ? (
+                    <>
+                      Scrap Date:{" "}
+                      {new Date(
+                        creditNoteData.returned_date
+                      ).toLocaleDateString("en-GB")}
+                    </>
+                  ) : (
+                    <>
+                      Return Date:{" "}
+                      {new Date(
+                        creditNoteData.returned_date
+                      ).toLocaleDateString("en-GB")}
+                    </>
                   )}
                   <br />
                 </div>
@@ -2180,10 +2660,10 @@ const CreditNoteDialog = ({ open, onClose, creditNoteData }) => {
                       "N/A"}
                   </div>
 
-                  <div>
+                  {/* <div>
                     <div style={detailLabelStyle}>Payment Type:</div>
                     {creditNoteData.payment_type}
-                  </div>
+                  </div> */}
                   <div>
                     <div style={detailLabelStyle}>Industry:</div>
                     {creditNoteData.industry}
@@ -2192,10 +2672,10 @@ const CreditNoteDialog = ({ open, onClose, creditNoteData }) => {
                     <div style={detailLabelStyle}>Email:</div>
                     {creditNoteData.email}
                   </div>
-                  <div>
+                  {/* <div>
                     <div style={detailLabelStyle}>Created By:</div>
                     {creditNoteData.created_by}
-                  </div>
+                  </div> */}
                 </div>
               </div>
             </div>
@@ -2345,11 +2825,11 @@ const CreditNoteDialog = ({ open, onClose, creditNoteData }) => {
             <div style={bankDetailsContainerStyle}>
               <div style={bankDetailsTitleStyle}>Bank Details:</div>
               <div style={bankLineStyle}>
-                Guru Goutham Infotech Pvt. Ltd., HDFC Bank Ltd, Jayanagar Branch
+                Guru Goutham Infotech Pvt. Ltd., HDFC Bank Ltd, Jayanagar
+                Branch.
               </div>
               <div style={bankLineStyle}>
-                Current A/c No: 50200066787843. &nbsp;&nbsp; IFSC Code:
-                HDFC0000261
+                Current A/c No: 50200066787843, IFSC Code: HDFC0000261
               </div>
 
               <div style={amountWordsStyle}>
@@ -2421,7 +2901,9 @@ const CreditNoteDialog = ({ open, onClose, creditNoteData }) => {
         <Button onClick={handleDownloadPDF} variant="contained" color="primary">
           Download PDF
         </Button>
-        <Button onClick={handlePrint}>Print</Button>
+        <Button onClick={handlePrint} variant="contained" color="secondary">
+          Print
+        </Button>
       </DialogActions>
     </Dialog>
   );
@@ -3723,7 +4205,7 @@ const capitalize = (text) =>
 //             Guru Goutham Infotech Pvt. Ltd., HDFC Bank Ltd, Jayanagar Branch
 //           </div>
 //           <div style={bankLineStyle}>
-//             Current A/c No: 50200066787843. &nbsp;&nbsp; IFSC Code: HDFC0000261
+//             Current A/c No: 50200066787843. &nbsp;&nbsp; IFSC Code: HDFC0000261.
 //           </div>
 
 //           <div style={amountWordsStyle}>
@@ -4187,11 +4669,12 @@ const InvoiceDialog = ({ open, onClose, invoiceData }) => {
   const calculateInvoiceItems = () => {
     // Step 1: Preprocess returned devices from all sources (root and additional challans)
     const allReturnsMap = {};
+    const allSwapsMap = {}; // New map for asset swaps
 
     // Process root credit notes
     invoiceData.credit_notes?.forEach((cn) => {
       const returnedDate = new Date(cn.returned_date);
-      const dcDate = new Date(cn.dc_date || invoiceData.dc_date); // Use credit note's DC_DATE or fallback to main DC_DATE
+      const dcDate = new Date(cn.dc_date || invoiceData.dc_date);
 
       cn.items?.forEach((ri) => {
         const key = `${ri.product_id}`;
@@ -4203,7 +4686,6 @@ const InvoiceDialog = ({ open, onClose, invoiceData }) => {
           1
         );
 
-        // Pass both dates to calculate days used
         const daysUsed = hasSameMonthReturn
           ? calculateDays(dcDate, returnedDate)
           : calculateDays(returnedStartDate, returnedDate);
@@ -4231,6 +4713,48 @@ const InvoiceDialog = ({ open, onClose, invoiceData }) => {
       });
     });
 
+    // Process asset swaps (similar to credit notes)
+    invoiceData.asset_swaps?.forEach((swap) => {
+      const swappedDate = new Date(swap.swapped_on);
+      const dcDate = new Date(invoiceData.dc_date); // Use main invoice DC date
+
+      const key = `${swap.product_id}`;
+      if (!allSwapsMap[key]) allSwapsMap[key] = [];
+
+      const swappedStartDate = new Date(
+        swappedDate.getFullYear(),
+        swappedDate.getMonth(),
+        1
+      );
+
+      const sameMonth = isSameMonthYear(dcDate, swappedDate);
+
+      const daysUsed = sameMonth
+        ? calculateDays(dcDate, swappedDate)
+        : calculateDays(swappedStartDate, swappedDate);
+
+      const dailyRate = invoiceData.items?.find(
+        (item) => item.product_id === swap.product_id
+      )
+        ? Number(
+            invoiceData.items.find(
+              (item) => item.product_id === swap.product_id
+            ).unit_price
+          ) / 30
+        : 0;
+
+      allSwapsMap[key].push({
+        swappedDate,
+        daysUsed,
+        deviceIds: [swap.asset_id], // Single device per swap
+        amount: parseFloat((daysUsed * dailyRate).toFixed(2)),
+        source: "root",
+        dcDate: dcDate,
+        reason: swap.reason,
+        newDeviceIds: swap.new_device_ids || [], // If you have new device IDs
+      });
+    });
+
     // Process additional delivery challans' credit notes
     invoiceData.additional_delivery_challans?.forEach((challan) => {
       const challanDcDate = new Date(challan.dc_date);
@@ -4248,7 +4772,6 @@ const InvoiceDialog = ({ open, onClose, invoiceData }) => {
             1
           );
 
-          // Pass both dates to calculate days used
           const daysUsed = hasSameMonthReturn
             ? calculateDays(challanDcDate, returnedDate)
             : calculateDays(returnedStartDate, returnedDate);
@@ -4258,13 +4781,14 @@ const InvoiceDialog = ({ open, onClose, invoiceData }) => {
           )
             ? Number(
                 challan.items.find((item) => item.product_id === ri.product_id)
-                  .total_price
+                  .unit_price
               ) / 30
             : 0;
 
           allReturnsMap[key].push({
             returnedDate,
             daysUsed,
+            dailyRate,
             deviceIds: ri.device_ids,
             amount: parseFloat(
               (daysUsed * dailyRate * ri.device_ids.length).toFixed(2)
@@ -4274,12 +4798,54 @@ const InvoiceDialog = ({ open, onClose, invoiceData }) => {
           });
         });
       });
+
+      // Process additional delivery challans' asset swaps if they exist
+      challan.asset_swaps?.forEach((swap) => {
+        const swappedDate = new Date(swap.swapped_on);
+
+        const key = `${swap.product_id}`;
+        if (!allSwapsMap[key]) allSwapsMap[key] = [];
+
+        const swappedStartDate = new Date(
+          swappedDate.getFullYear(),
+          swappedDate.getMonth(),
+          1
+        );
+
+        const daysUsed = hasSameMonthReturn
+          ? calculateDays(challanDcDate, swappedDate)
+          : calculateDays(swappedStartDate, swappedDate);
+
+        const dailyRate = challan.items?.find(
+          (item) => item.product_id === swap.product_id
+        )
+          ? Number(
+              challan.items.find((item) => item.product_id === swap.product_id)
+                .unit_price
+            ) / 30
+          : 0;
+
+        allSwapsMap[key].push({
+          swappedDate,
+          daysUsed,
+          deviceIds: [swap.asset_id],
+          amount: parseFloat((daysUsed * dailyRate).toFixed(2)),
+          source: "additional",
+          dcDate: challanDcDate,
+          reason: swap.reason,
+          newDeviceIds: swap.new_device_ids || [],
+        });
+      });
     });
 
-    // [Rest of the function remains the same...]
     // Step 2: Gather all returned device IDs (from all sources)
     const allReturnedDeviceIds = Object.values(allReturnsMap).flatMap((arr) =>
       arr.flatMap((r) => r.deviceIds)
+    );
+
+    // Gather all swapped device IDs (from all sources)
+    const allSwappedDeviceIds = Object.values(allSwapsMap).flatMap((arr) =>
+      arr.flatMap((s) => s.deviceIds)
     );
 
     // Step 3: Process main invoice items
@@ -4289,7 +4855,13 @@ const InvoiceDialog = ({ open, onClose, invoiceData }) => {
           ? Number(item.total_price) || 0
           : Number(item.unit_price) || 0;
         const dailyRate = rate / 30;
+
         const originalDeviceIds = item.device_ids || [];
+        const hasDeviceIds = originalDeviceIds.length > 0;
+
+        const baseQuantity = hasDeviceIds
+          ? originalDeviceIds.length
+          : item.quantity || 0;
 
         let days;
         if (specialCase) {
@@ -4308,30 +4880,60 @@ const InvoiceDialog = ({ open, onClose, invoiceData }) => {
             (rd) => new Date(rd.returnedDate) <= invoiceEndDate
           ) || [];
 
+        // Get swaps for this product from all sources
+        const swappedDevices =
+          allSwapsMap[item.product_id]?.filter(
+            (sd) => new Date(sd.swappedDate) <= invoiceEndDate
+          ) || [];
+
         // Filter out pre-invoice returns
         const preInvoiceReturnedDeviceIds = returnedDevices
           .filter((rd) => new Date(rd.returnedDate) < invoiceStartDate)
           .flatMap((rd) => rd.deviceIds);
 
-        const effectiveDeviceIds = originalDeviceIds.filter(
-          (id) =>
-            !preInvoiceReturnedDeviceIds.includes(id) &&
-            !allReturnedDeviceIds.includes(id)
-        );
+        // Filter out pre-invoice swaps
+        const preInvoiceSwappedDeviceIds = swappedDevices
+          .filter((sd) => new Date(sd.swappedDate) < invoiceStartDate)
+          .flatMap((sd) => sd.deviceIds);
 
-        const effectiveQty = effectiveDeviceIds.length;
+        let effectiveDeviceIds = [];
+        let effectiveQty = baseQuantity;
+
+        if (hasDeviceIds) {
+          effectiveDeviceIds = originalDeviceIds.filter(
+            (id) =>
+              !preInvoiceReturnedDeviceIds.includes(id) &&
+              !preInvoiceSwappedDeviceIds.includes(id) &&
+              !allReturnedDeviceIds.includes(id) &&
+              !allSwappedDeviceIds.includes(id)
+          );
+          effectiveQty = effectiveDeviceIds.length;
+        } else {
+          // For direct invoices: subtract returned quantities
+          const totalReturnedQty = returnedDevices.reduce(
+            (sum, rd) => sum + (rd.quantity || 0),
+            0
+          );
+          const totalSwappedQty = swappedDevices.reduce(
+            (sum, sd) => sum + (sd.quantity || 0),
+            0
+          );
+          effectiveQty = Math.max(
+            0,
+            baseQuantity - totalReturnedQty - totalSwappedQty
+          );
+        }
+
         const dcDays = calculateDays(dcDate, dcPeriodEnd);
 
         // Calculate amount based on payment mode
         let fullMonthAmount;
         if (paymentMode) {
-          // For Postpaid, calculate based on actual usage (full period minus returns)
           fullMonthAmount = effectiveQty * rate;
           if (!isFullMonth) {
             fullMonthAmount = effectiveQty * dailyRate * days;
           }
         } else {
-          // For Prepaid, calculate full amount (returns will be handled separately)
           fullMonthAmount = isFullMonth
             ? effectiveQty * rate
             : effectiveQty * dailyRate * days;
@@ -4339,6 +4941,11 @@ const InvoiceDialog = ({ open, onClose, invoiceData }) => {
 
         const returnedDevicesAmount = returnedDevices.reduce(
           (sum, rd) => sum + rd.amount,
+          0
+        );
+
+        const swappedDevicesAmount = swappedDevices.reduce(
+          (sum, sd) => sum + sd.amount,
           0
         );
 
@@ -4366,9 +4973,6 @@ const InvoiceDialog = ({ open, onClose, invoiceData }) => {
           )} - Billing End Date: ${formatDate(invoiceEndDate)}`;
         }
 
-        console.log(days,"kkkkkkkkkkkjjjjjjjjjjjjj");
-        
-
         return {
           ...item,
           originalDeviceIds,
@@ -4381,7 +4985,8 @@ const InvoiceDialog = ({ open, onClose, invoiceData }) => {
           amount: fullMonthAmount,
           dcAmountBeforeReturns,
           returnedDevices,
-          totalReturnedQtyAmount: returnedDevicesAmount,
+          swappedDevices, // Add swapped devices to the item
+          totalReturnedQtyAmount: returnedDevicesAmount + swappedDevicesAmount,
           description,
           isFullMonth,
           isSpecialCase: specialCase,
@@ -4402,7 +5007,6 @@ const InvoiceDialog = ({ open, onClose, invoiceData }) => {
         const invoiceStartDateObj = new Date(invoiceData.invoice_start_date);
         const invoiceEndDateObj = new Date(invoiceData.invoice_end_date);
 
-        // Calculate month difference between challan date and invoice start
         const monthDiff =
           (invoiceStartDateObj.getFullYear() - challanDateObj.getFullYear()) *
             12 +
@@ -4410,8 +5014,8 @@ const InvoiceDialog = ({ open, onClose, invoiceData }) => {
 
         return challan.items.map((item) => {
           const quantity = Number(item.quantity) || 0;
-          const unit_price =
-            quantity > 0 ? Number(item.total_price) / quantity : 0;
+          const unit_price = quantity > 0 ? Number(item.unit_price) : 0;
+
           const dailyRate = unit_price / 30;
           const device_ids = item.device_ids || [];
 
@@ -4420,7 +5024,6 @@ const InvoiceDialog = ({ open, onClose, invoiceData }) => {
             description,
             midMonthDays = 0;
 
-          // For items delivered in previous month
           if (monthDiff === 1) {
             const deliveryMonthEnd = new Date(
               challanDateObj.getFullYear(),
@@ -4434,30 +5037,26 @@ const InvoiceDialog = ({ open, onClose, invoiceData }) => {
             description = `Billing Start Date: ${formatDate(
               invoiceStartDateObj
             )} to ${formatDate(invoiceEndDate)}`;
-          }
-          // For items delivered in same month but not on 1st
-          else if (monthDiff === 0 && challanDateObj.getDate() !== 1) {
+          } else if (monthDiff === 0 && challanDateObj.getDate() !== 1) {
             days = calculateDays(challanDateObj, invoiceEndDateObj);
-            midMonthDays = days;
+
             amount = quantity * dailyRate * days;
             description = `Billing Start Date: ${formatDate(
               challan.dc_date
             )} to ${formatDate(invoiceEndDate)}`;
-          }
-          // For full month items
-
-          
-          else {
-            
+          } else {
             if (paymentMode) {
-              if (challan.order_sale_date && isSameMonthYear(invoiceStartDateObj,orderSaleDateObj)) {
+              if (
+                challan.order_sale_date &&
+                isSameMonthYear(invoiceStartDateObj, orderSaleDateObj)
+              ) {
                 days = calculateDays(challanMonthStart, orderSaleDateObj);
-              } 
+              }
             }
             days = calculateDays(invoiceStartDateObj, invoiceEndDateObj);
 
             amount = quantity * unit_price;
-            description = `Billing Start Date123: ${formatDate(
+            description = `Billing Start Date: ${formatDate(
               invoiceStartDate
             )} - Billing End Date: ${formatDate(invoiceEndDate)}`;
           }
@@ -4468,6 +5067,14 @@ const InvoiceDialog = ({ open, onClose, invoiceData }) => {
               (rd) =>
                 new Date(rd.returnedDate) <= invoiceEndDate &&
                 rd.source === "additional"
+            ) || [];
+
+          // Get swaps for this product from all sources
+          const swappedDevices =
+            allSwapsMap[item.product_id]?.filter(
+              (sd) =>
+                new Date(sd.swappedDate) <= invoiceEndDate &&
+                sd.source === "additional"
             ) || [];
 
           return {
@@ -4492,6 +5099,7 @@ const InvoiceDialog = ({ open, onClose, invoiceData }) => {
               monthDiff === 1 ||
               (monthDiff === 0 && challanDateObj.getDate() !== 1),
             returnedDevices,
+            swappedDevices, // Add swapped devices to additional items
           };
         });
       }) || [];
@@ -4506,26 +5114,22 @@ const InvoiceDialog = ({ open, onClose, invoiceData }) => {
   let totalAmount = 0;
   let rowCounter = 0;
 
+  // Keep track of already-rendered Asset IDs globally for this invoice render
+  let renderedAssetIds = new Set();
+
   // Utility to merge device IDs without duplicates
   const mergeDeviceIds = (items) => {
     const allIds = items.flatMap((i) => i.device_ids || []);
     return [...new Set(allIds)];
   };
 
-  // Utility: safe count (prefer device_ids length if present, else quantity)
-  const getBaseCount = (item) =>
-    (item.device_ids?.length || 0) > 0
-      ? item.device_ids.length
-      : item.quantity || 0;
-
   // Utility: calculate amount consistently
   const calculateAmount = (daysUsed, dailyRate, baseCount, monthlyRate) => {
-    const roundedRate = parseFloat(dailyRate.toFixed(2)); // 73.33
+    const roundedRate = parseFloat(dailyRate.toFixed(2));
     const rawAmount =
       daysUsed === 30
         ? monthlyRate * baseCount
-        : daysUsed * roundedRate * baseCount; // 3519.84
-
+        : daysUsed * roundedRate * baseCount;
     return parseFloat(rawAmount.toFixed(2));
   };
 
@@ -4595,25 +5199,32 @@ const InvoiceDialog = ({ open, onClose, invoiceData }) => {
   };
 
   // Check if a row should be displayed
+  // Check if a row should be displayed (updated)
   const shouldShowRow = (item) => {
     const hasReturnedDevices = item.returnedDevices?.some(
-      (rd) => rd.deviceIds?.length > 0
+      (rd) => rd.deviceIds?.length > 0 || rd.quantity > 0
     );
-    const deviceIdsLength = item.device_ids?.length || 0;
+    const hasSwappedDevices = item.swappedDevices?.some(
+      (sd) => sd.deviceIds?.length > 0
+    );
     return (
-      (item.quantity > 0 && deviceIdsLength > 0) ||
+      item.quantity > 0 ||
       item.isAdditionalChallan ||
-      hasReturnedDevices
+      hasReturnedDevices ||
+      hasSwappedDevices
     );
   };
-
   // Render main product row
   const renderProductRow = (items, product, combinedDeviceIds) => {
     const quantity = items.reduce((acc, i) => acc + (i.quantity || 0), 0);
     if (quantity === 0 && combinedDeviceIds.length === 0) return null;
 
     const firstItem = items[0];
-    const daysUsed = paymentMode? firstItem.days : firstItem.isFullMonth ? 30 : firstItem.days || 1;
+    const daysUsed = paymentMode
+      ? firstItem.days
+      : firstItem.isFullMonth
+      ? 30
+      : firstItem.days || 1;
     const dailyRate = firstItem.dailyRate || firstItem.rate / 30;
     const baseCount =
       combinedDeviceIds.length > 0 ? combinedDeviceIds.length : quantity;
@@ -4661,15 +5272,48 @@ const InvoiceDialog = ({ open, onClose, invoiceData }) => {
     );
   };
 
-  // Keep track of already-rendered Asset IDs globally for this invoice render
-  let renderedAssetIds = new Set();
+  const shouldRenderMidMonth = (item, isAdditionalChallan = false) => {
+    // If it's an additional challan, NEVER show mid-month data
+    if (isAdditionalChallan) {
+      return false;
+    }
+
+    // For main invoice items only
+    const challanDate = new Date(invoiceData.dc_date);
+    const invoiceStartDate = new Date(invoiceData.invoice_start_date);
+
+    // Make sure we're comparing dates correctly (set to first of month)
+    const challanMonth = new Date(
+      challanDate.getFullYear(),
+      challanDate.getMonth(),
+      1
+    );
+    const invoiceMonth = new Date(
+      invoiceStartDate.getFullYear(),
+      invoiceStartDate.getMonth(),
+      1
+    );
+
+    // Calculate month difference
+    const monthDiff =
+      (invoiceMonth.getFullYear() - challanMonth.getFullYear()) * 12 +
+      (invoiceMonth.getMonth() - challanMonth.getMonth());
+
+    // Should be exactly 1 month difference
+    if (monthDiff !== 1) return false;
+
+    // Main invoice rule - only show mid-month for first invoice creation
+    return invoiceData.times_created_in_invoice === 1;
+  };
 
   const renderReturnedDeviceRow = (item, product, rd) => {
-    let deviceIds = [...new Set(rd.deviceIds || [])];
-    deviceIds = deviceIds.filter((id) => !renderedAssetIds.has(id));
-    deviceIds.forEach((id) => renderedAssetIds.add(id));
+    if (!paymentMode && !shouldRenderMidMonth(item)) return null;
 
-    if (deviceIds.length === 0 && rd.quantity === 0) return null;
+    let deviceIds = [...new Set((rd.deviceIds || []).map((id) => id.trim()))];
+    deviceIds = deviceIds.filter((id) => !renderedAssetIds.has(id));
+    if (deviceIds.length === 0) return null; // stop duplicate rows
+
+    deviceIds.forEach((id) => renderedAssetIds.add(id));
 
     const daysUsed = rd.daysUsed || 1;
     const baseCount = deviceIds.length > 0 ? deviceIds.length : rd.quantity;
@@ -4682,12 +5326,12 @@ const InvoiceDialog = ({ open, onClose, invoiceData }) => {
       <tr style={++rowCounter % 2 === 0 ? tableRowEvenStyle : tableRowOddStyle}>
         <td style={tableCellCenterStyle}>{rowCounter}</td>
         <td style={tableCellStyle}>
+          <div style={itemTitleStyle}>{item.product_name}</div>
+          {renderSpecifications(product)}
+          <br />
           <div>
             <strong>Returned Asset IDs:</strong> {deviceIds.join(", ")}
           </div>
-          <br />
-          <div style={itemTitleStyle}>{item.product_name}</div>
-          {renderSpecifications(product)}
           <br />
           <div style={itemTitleStyle}>
             Return Date: {formatDate(new Date(rd.returnedDate))}
@@ -4706,19 +5350,197 @@ const InvoiceDialog = ({ open, onClose, invoiceData }) => {
     );
   };
 
-  // Determine mid-month billing
-  const shouldRenderMidMonth = (item) => {
-    const challanDate = item.isAdditionalChallan
-      ? new Date(item.challanDate)
-      : new Date(invoiceData.dc_date);
-    const invoiceStartDate = new Date(invoiceData.invoice_start_date);
-    const monthDiff =
-      (challanDate.getFullYear() - invoiceStartDate.getFullYear()) * 12 +
-      (challanDate.getMonth() - invoiceStartDate.getMonth());
-    return monthDiff === -1;
+  // Render swapped device row
+  const renderSwappedDeviceRow = (item, product, sd) => {
+    if (!paymentMode && !shouldRenderMidMonth(item)) {
+      return null;
+    }
+
+    let deviceIds = [...new Set(sd.deviceIds || [])];
+    deviceIds = deviceIds.filter((id) => !renderedAssetIds.has(id));
+    deviceIds.forEach((id) => renderedAssetIds.add(id));
+
+    if (deviceIds.length === 0) return null;
+
+    const daysUsed = sd.daysUsed || 1;
+    const baseCount = deviceIds.length;
+    const dailyRate = sd.dailyRate || item.dailyRate || item.rate / 30;
+    const amount = calculateAmount(daysUsed, dailyRate, baseCount, item.rate);
+
+    totalAmount += Number(amount) || 0;
+
+    return (
+      <tr style={++rowCounter % 2 === 0 ? tableRowEvenStyle : tableRowOddStyle}>
+        <td style={tableCellCenterStyle}>{rowCounter}</td>
+        <td style={tableCellStyle}>
+          <div style={itemTitleStyle}>{item.product_name}</div>
+          {renderSpecifications(product)}
+          <br />
+          <div>
+            <strong>Swapped Asset IDs:</strong> {deviceIds.join(", ")}
+          </div>
+
+          <br />
+          <div style={itemTitleStyle}>
+            Swap Date: {formatDate(new Date(sd.swappedDate))}
+            {sd.reason && (
+              <div>
+                <strong>Reason:</strong> {sd.reason}
+              </div>
+            )}
+          </div>
+        </td>
+        <td style={tableCellCenterStyle}>{baseCount}</td>
+        {invoiceData.transaction_type === "Rent" && (
+          <>
+            <td style={tableCellCenterStyle}>{daysUsed}</td>
+            <td style={tableCellCenterStyle}>{formatINRCurrency(dailyRate)}</td>
+          </>
+        )}
+        <td style={tableCellRightStyle}></td>
+        <td style={tableCellRightStyle}>{formatINRCurrency(amount)}</td>
+      </tr>
+    );
   };
 
+  ////08-09-25
+
+  // // Determine mid-month billing
+  // const shouldRenderMidMonth = (item) => {
+  //   const challanDate = item.isAdditionalChallan
+  //     ? new Date(item.challanDate)
+  //     : new Date(invoiceData.dc_date);
+  //   const invoiceStartDate = new Date(invoiceData.invoice_start_date);
+  //   const monthDiff =
+  //     (challanDate.getFullYear() - invoiceStartDate.getFullYear()) * 12 +
+  //     (challanDate.getMonth() - invoiceStartDate.getMonth());
+  //   return monthDiff === -1;
+  // };
+
+  // // Render mid-month row
+  // const renderMidMonthRow = (item, product) => {
+  //   if (!shouldRenderMidMonth(item)) return null;
+  //   if (
+  //     item.quantity === 0 &&
+  //     (!item.device_ids || item.device_ids.length === 0)
+  //   )
+  //     return null;
+
+  //   const deviceIds = item.device_ids || [];
+  //   const baseCount = deviceIds.length > 0 ? deviceIds.length : item.quantity;
+
+  //   const challanDate = item.isAdditionalChallan
+  //     ? new Date(item.challanDate)
+  //     : new Date(invoiceData.dc_date);
+  //   const startDate = challanDate;
+  //   const endDate = new Date(
+  //     challanDate.getFullYear(),
+  //     challanDate.getMonth() + 1,
+  //     0
+  //   );
+
+  //   const daysUsed = calculateDays(startDate, endDate);
+  //   const dailyRate = item.dailyRate || item.rate / 30;
+  //   const amount = calculateAmount(daysUsed, dailyRate, baseCount);
+
+  //   totalAmount += Number(amount) || 0;
+
+  //   return (
+  //     <tr style={++rowCounter % 2 === 0 ? tableRowEvenStyle : tableRowOddStyle}>
+  //       <td style={tableCellCenterStyle}>{rowCounter}</td>
+  //       <td style={tableCellStyle}>
+  //         <div>
+  //           <strong>Mid-Month Usage:</strong>
+  //         </div>
+  //         <br />
+  //         <div style={itemTitleStyle}>{item.product_name}</div>
+  //         {renderSpecifications(product)}
+  //         {deviceIds.length > 0 && (
+  //           <div style={itemTitleStyle}>Asset IDs: {deviceIds.join(", ")}</div>
+  //         )}
+  //         <br />
+  //         <div style={itemTitleStyle}>
+  //           Billing Start Date: {formatDate(startDate)} to {formatDate(endDate)}
+  //         </div>
+  //       </td>
+  //       <td style={tableCellCenterStyle}>{baseCount}</td>
+  //       {invoiceData.transaction_type === "Rent" && (
+  //         <>
+  //           <td style={tableCellCenterStyle}>{daysUsed}</td>
+  //           <td style={tableCellCenterStyle}>{formatINRCurrency(dailyRate)}</td>
+  //         </>
+  //       )}
+  //       <td style={tableCellRightStyle}></td>
+  //       <td style={tableCellRightStyle}>{formatINRCurrency(amount)}</td>
+  //     </tr>
+  //   );
+  // };
+
+  // // 🔥 Main rendering loop
+  // const rows = [];
+  // const groupedItems = {};
+
+  // items.forEach((item) => {
+  //   if (!shouldShowRow(item)) return;
+
+  //   // normalize calculation inputs
+  //   const daysUsed = item.isFullMonth ? 30 : item.days || 1;
+  //   const dailyRate = item.dailyRate || item.rate / 30;
+  //   const monthlyRate = item.rate;
+
+  //   // 🔑 Grouping key = product + billingPeriod + amount factors
+  //   const key = [
+  //     item.product_name,
+  //     item.billingPeriod || "full",
+  //     daysUsed,
+  //     dailyRate.toFixed(2),
+  //     monthlyRate,
+  //   ].join("_");
+
+  //   if (!groupedItems[key]) groupedItems[key] = [];
+  //   groupedItems[key].push(item);
+  // });
+
+  // Object.values(groupedItems).forEach((group) => {
+  //   const product = group[0].productDetails || group[0].product;
+  //   const combinedDeviceIds = mergeDeviceIds(group);
+
+  //   // Main row
+  //   const mainRow = renderProductRow(group, product, combinedDeviceIds);
+  //   if (mainRow) rows.push(mainRow);
+
+  //   // Mid-month + Returns + Swaps
+  //   group.forEach((item) => {
+  //     if (!isBuyTransaction && !paymentMode && showDcPeriod) {
+  //       const isMidMonthItem = item.isAdditionalChallan
+  //         ? new Date(item.challanDate).getDate() !== 1
+  //         : item.dcAmountBeforeReturns > 0;
+  //       const midRow = isMidMonthItem ? renderMidMonthRow(item, product) : null;
+  //       if (midRow) rows.push(midRow);
+  //     }
+
+  //     // Returned devices
+  //     item.returnedDevices?.forEach((rd) => {
+  //       const retRow = renderReturnedDeviceRow(item, product, rd);
+  //       if (retRow) rows.push(retRow);
+  //     });
+
+  //     // Swapped devices - NEWLY ADDED
+  //     item.swappedDevices?.forEach((sd) => {
+  //       const swapRow = renderSwappedDeviceRow(item, product, sd);
+  //       if (swapRow) rows.push(swapRow);
+  //     });
+  //   });
+  // });
+
+  // -----------------------------
+  // Determine if mid-month billing row should be shown
+  // -----------------------------
+
+  // -----------------------------
   // Render mid-month row
+  // -----------------------------
+
   const renderMidMonthRow = (item, product) => {
     if (!shouldRenderMidMonth(item)) return null;
     if (
@@ -4739,6 +5561,21 @@ const InvoiceDialog = ({ open, onClose, invoiceData }) => {
       challanDate.getMonth() + 1,
       0
     );
+
+    const invoiceStartDate = new Date(invoiceData.invoice_start_date);
+
+    // Helper to check if two dates are within 1 month
+    const isWithinOneMonth = (d1, d2) => {
+      const diff =
+        (d2.getFullYear() - d1.getFullYear()) * 12 +
+        (d2.getMonth() - d1.getMonth());
+      return diff === 0 || diff === 1;
+    };
+
+    // 🚫 If not within 1 month → skip
+    if (!isWithinOneMonth(startDate, invoiceStartDate)) {
+      return null;
+    }
 
     const daysUsed = calculateDays(startDate, endDate);
     const dailyRate = item.dailyRate || item.rate / 30;
@@ -4777,19 +5614,20 @@ const InvoiceDialog = ({ open, onClose, invoiceData }) => {
     );
   };
 
+  // -----------------------------
   // 🔥 Main rendering loop
+  // -----------------------------
   const rows = [];
   const groupedItems = {};
 
+  // Group items
   items.forEach((item) => {
     if (!shouldShowRow(item)) return;
 
-    // normalize calculation inputs
     const daysUsed = item.isFullMonth ? 30 : item.days || 1;
     const dailyRate = item.dailyRate || item.rate / 30;
     const monthlyRate = item.rate;
 
-    // 🔑 Grouping key = product + billingPeriod + amount factors
     const key = [
       item.product_name,
       item.billingPeriod || "full",
@@ -4802,6 +5640,7 @@ const InvoiceDialog = ({ open, onClose, invoiceData }) => {
     groupedItems[key].push(item);
   });
 
+  // Render grouped items
   Object.values(groupedItems).forEach((group) => {
     const product = group[0].productDetails || group[0].product;
     const combinedDeviceIds = mergeDeviceIds(group);
@@ -4810,19 +5649,23 @@ const InvoiceDialog = ({ open, onClose, invoiceData }) => {
     const mainRow = renderProductRow(group, product, combinedDeviceIds);
     if (mainRow) rows.push(mainRow);
 
-    // Mid-month + Returns
+    // Mid-month + Returns + Swaps
     group.forEach((item) => {
       if (!isBuyTransaction && !paymentMode && showDcPeriod) {
-        const isMidMonthItem = item.isAdditionalChallan
-          ? new Date(item.challanDate).getDate() !== 1
-          : item.dcAmountBeforeReturns > 0;
-        const midRow = isMidMonthItem ? renderMidMonthRow(item, product) : null;
+        const midRow = renderMidMonthRow(item, product);
         if (midRow) rows.push(midRow);
       }
 
+      // Returned devices
       item.returnedDevices?.forEach((rd) => {
         const retRow = renderReturnedDeviceRow(item, product, rd);
         if (retRow) rows.push(retRow);
+      });
+
+      // Swapped devices
+      item.swappedDevices?.forEach((sd) => {
+        const swapRow = renderSwappedDeviceRow(item, product, sd);
+        if (swapRow) rows.push(swapRow);
       });
     });
   });
@@ -5251,10 +6094,13 @@ const InvoiceDialog = ({ open, onClose, invoiceData }) => {
                 <div style={detailLabelStyle}>Order Number :</div>
                 {invoiceData.dispatch_order_number}
               </div>
-              <div>
-                <div style={detailLabelStyle}>DC Date :</div>
-                {invoiceData.dc_date}
-              </div>
+              {invoiceData.dc_date !== null && (
+                <div>
+                  <div style={detailLabelStyle}>DC Date :</div>
+                  {invoiceData.dc_date}
+                </div>
+              )}
+
               <div>
                 <div style={detailLabelStyle}>Email :</div>
                 {invoiceData.email}
@@ -5356,10 +6202,10 @@ const InvoiceDialog = ({ open, onClose, invoiceData }) => {
         <div style={bankDetailsContainerStyle}>
           <div style={bankDetailsTitleStyle}>Bank Details:</div>
           <div style={bankLineStyle}>
-            Guru Goutham Infotech Pvt. Ltd., HDFC Bank Ltd, Jayanagar Branch
+            Guru Goutham Infotech Pvt. Ltd., HDFC Bank Ltd, Jayanagar Branch.
           </div>
           <div style={bankLineStyle}>
-            Current A/c No: 50200066787843. &nbsp;&nbsp; IFSC Code: HDFC0000261
+            Current A/c No: 50200066787843, IFSC Code: HDFC0000261.
           </div>
 
           <div style={amountWordsStyle}>
@@ -5425,16 +6271,13 @@ const InvoiceDialog = ({ open, onClose, invoiceData }) => {
     );
   };
 
-  // Handle PDF download
   const handleDownloadPDF = async () => {
     try {
       // Wait for dialog to fully render
       await new Promise((resolve) => setTimeout(resolve, 300));
 
-      // Try multiple selectors to find the invoice element
-      const element =
-        document.getElementById("invoice-current-month-invoice") ||
-        document.querySelector(".MuiDialog-paper .invoice-container");
+      // Find the invoice container element
+      const element = document.getElementById("invoice-current-month-invoice");
 
       if (!element) {
         throw new Error("Could not find invoice element in DOM");
@@ -5484,7 +6327,7 @@ const InvoiceDialog = ({ open, onClose, invoiceData }) => {
         heightLeft -= pageHeight;
       }
 
-      pdf.save(`invoice-${invoiceData.invoice_number}.pdf`);
+      pdf.save(`invoice-${invoiceData.invoice_number || "INV"}.pdf`);
     } catch (error) {
       console.error("PDF Generation Error:", error);
       alert(`Failed to generate PDF: ${error.message}`);
@@ -5496,6 +6339,7 @@ const InvoiceDialog = ({ open, onClose, invoiceData }) => {
 
     if (!element) {
       console.error("Print element not found");
+      alert("Could not find the invoice content for printing");
       return;
     }
 
@@ -5504,15 +6348,36 @@ const InvoiceDialog = ({ open, onClose, invoiceData }) => {
       <!DOCTYPE html>
       <html>
         <head>
-          <title>Current Month Invoice</title>
+          <title>Invoice - ${invoiceData.invoice_number || "INV"}</title>
           <style>
-            @page { size: A4; margin: 0; }
-            body { margin: 0; padding: 0; }
+            @page { 
+              size: A4; 
+              margin: 10mm; 
+            }
+            body { 
+              margin: 0; 
+              padding: 0; 
+              font-family: Arial, sans-serif;
+              -webkit-print-color-adjust: exact;
+              print-color-adjust: exact;
+            }
             .print-container { 
-              width: 210mm; 
-              min-height: 297mm; 
-              padding: 10mm; 
+              width: 190mm; 
+              min-height: 277mm; 
+              padding: 0;
               box-sizing: border-box;
+            }
+            table {
+              width: 100%;
+              border-collapse: collapse;
+            }
+            th, td {
+              border: 1px solid #000;
+              padding: 8px;
+              text-align: left;
+            }
+            th {
+              background-color: #f0f0f0;
             }
           </style>
         </head>
@@ -5524,7 +6389,9 @@ const InvoiceDialog = ({ open, onClose, invoiceData }) => {
             window.onload = function() {
               setTimeout(function() {
                 window.print();
-                window.close();
+                setTimeout(function() {
+                  window.close();
+                }, 500);
               }, 300);
             }
           </script>
@@ -5549,13 +6416,13 @@ const InvoiceDialog = ({ open, onClose, invoiceData }) => {
     >
       <DialogTitle>Invoice</DialogTitle>
       <DialogContent>
-        <div style={{ padding: "20px" }}>{renderInvoice()}</div>
+        <div style={{ padding: "20px" }} id="invoice-current-month-invoice">
+          {renderInvoice()}
+        </div>
       </DialogContent>
       <DialogActions>
         <Button onClick={onClose}>Close</Button>
-        <Button onClick={handlePrint} variant="contained" color="secondary">
-          Print
-        </Button>
+
         <Button
           onClick={handleDownloadPDF}
           variant="contained"
@@ -5563,6 +6430,922 @@ const InvoiceDialog = ({ open, onClose, invoiceData }) => {
           style={{ marginLeft: "10px" }}
         >
           Download PDF
+        </Button>
+        <Button onClick={handlePrint} variant="contained" color="secondary">
+          Print
+        </Button>
+      </DialogActions>
+    </Dialog>
+  );
+};
+
+const CourierInvoiceDialog = ({ open, onClose, courierData }) => {
+  if (!courierData) return null;
+
+  // ✅ Check if all states are Karnataka
+  const isOnlyKarnataka = courierData?.addresses?.every(
+    (address) => address.state === "Karnataka"
+  );
+
+  let cgst = 0,
+    sgst = 0,
+    igst = 0;
+
+  courierData.addresses?.forEach((addr) => {
+    const price = Number(addr.courier_charges_price) || 0;
+
+    if (addr.state?.toLowerCase() === "karnataka") {
+      cgst += price * 0.09;
+      sgst += price * 0.09;
+    } else {
+      igst += price * 0.18;
+    }
+  });
+
+  const netAmount = courierData.addresses?.reduce(
+    (sum, addr) => sum + (Number(addr.courier_charges_price) || 0),
+    0
+  );
+  const totalTax = cgst + sgst + igst;
+  const grandTotal = netAmount + totalTax;
+
+  // Handle PDF download
+  const handleDownloadPDF = async () => {
+    try {
+      // Wait for dialog to fully render
+      await new Promise((resolve) => setTimeout(resolve, 300));
+
+      // Find the invoice container element
+      const element = document.getElementById("courier-invoice-container");
+
+      if (!element) {
+        throw new Error("Could not find invoice element in DOM");
+      }
+
+      // Create a clone for PDF generation to avoid layout issues
+      const clone = element.cloneNode(true);
+      clone.style.position = "absolute";
+      clone.style.left = "-9999px";
+      clone.style.visibility = "visible";
+      clone.style.width = "210mm";
+      document.body.appendChild(clone);
+
+      const options = {
+        scale: 2,
+        logging: true,
+        useCORS: true,
+        scrollX: 0,
+        scrollY: 0,
+        windowWidth: clone.scrollWidth,
+        windowHeight: clone.scrollHeight,
+        backgroundColor: "#FFFFFF",
+      };
+
+      const canvas = await html2canvas(clone, options);
+      document.body.removeChild(clone);
+
+      const imgData = canvas.toDataURL("image/png");
+      const pdf = new jsPDF("p", "mm", "a4");
+
+      const imgProps = pdf.getImageProperties(imgData);
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+
+      // Handle multi-page PDF
+      let heightLeft = pdfHeight;
+      let position = 0;
+      const pageHeight = pdf.internal.pageSize.getHeight();
+
+      pdf.addImage(imgData, "PNG", 0, position, pdfWidth, pdfHeight);
+      heightLeft -= pageHeight;
+
+      while (heightLeft >= 0) {
+        position = heightLeft - pdfHeight;
+        pdf.addPage();
+        pdf.addImage(imgData, "PNG", 0, position, pdfWidth, pdfHeight);
+        heightLeft -= pageHeight;
+      }
+
+      pdf.save(`courier-invoice-${courierData.service_number || "CI"}.pdf`);
+    } catch (error) {
+      console.error("PDF Generation Error:", error);
+      alert(`Failed to generate PDF: ${error.message}`);
+    }
+  };
+
+  const handlePrint = () => {
+    const element = document.getElementById("courier-invoice-container");
+
+    if (!element) {
+      console.error("Print element not found");
+      alert("Could not find the invoice content for printing");
+      return;
+    }
+
+    const printWindow = window.open("", "_blank");
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Courier Invoice - ${courierData.service_number || "CI"}</title>
+          <style>
+            @page { 
+              size: A4; 
+              margin: 10mm; 
+            }
+            body { 
+              margin: 0; 
+              padding: 0; 
+              font-family: Arial, sans-serif;
+              -webkit-print-color-adjust: exact;
+              print-color-adjust: exact;
+            }
+            .print-container { 
+              width: 190mm; 
+              min-height: 277mm; 
+              padding: 0;
+              box-sizing: border-box;
+            }
+            table {
+              width: 100%;
+              border-collapse: collapse;
+            }
+            th, td {
+              border: 1px solid #000;
+              padding: 8px;
+              text-align: left;
+            }
+            th {
+              background-color: #f0f0f0;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="print-container">
+            ${element.innerHTML}
+          </div>
+          <script>
+            window.onload = function() {
+              setTimeout(function() {
+                window.print();
+                setTimeout(function() {
+                  window.close();
+                }, 500);
+              }, 300);
+            }
+          </script>
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
+  };
+
+  return (
+    <Dialog open={open} onClose={onClose} maxWidth="lg" fullWidth>
+      <DialogTitle>Courier Invoice Details</DialogTitle>
+      <DialogContent>
+        <div style={containerStyle}>
+          <div id="courier-invoice-container" style={receiptContainerStyle}>
+            {/* Header Color Bar */}
+            <div style={headerBarStyle}></div>
+
+            {/* Company Header */}
+            <div style={companyHeaderStyle}>
+              <div style={companyInfoContainerStyle}>
+                <div style={logoStyle}>
+                  <img
+                    src="/SORT-ICON.png"
+                    alt="Company Logo"
+                    style={{
+                      width: "100%",
+                      height: "100%",
+                      objectFit: "contain",
+                    }}
+                  />
+                </div>
+                <div>
+                  <div style={companyNameStyle}>
+                    Guru Goutam Infotech Pvt. Ltd.
+                  </div>
+                  <div style={companyDetailsStyle}>
+                    CIN: UT2200KA2008PTC047879
+                    <br />
+                    GST: {courierData.customer?.gst}
+                  </div>
+                </div>
+              </div>
+              <div style={challanHeaderStyle}>
+                <div style={challanTitleStyle}>COURIER INVOICE</div>
+                <div style={challanDetailsStyle}>
+                  Invoice No: {courierData.invoice_number}
+                  <br />
+                  Courier No: {courierData.service_number}
+                  <br />
+                  Courier Date:{" "}
+                  {new Date(courierData.service_date).toLocaleDateString(
+                    "en-GB"
+                  )}
+                  <br />
+                </div>
+              </div>
+            </div>
+
+            {/* Recipient Section */}
+            <div style={recipientSectionStyle}>
+              <div style={recipientContainerStyle}>
+                <div style={recipientAddressStyle}>
+                  <div style={recipientLabelStyle}>Bill To:</div>
+                  {courierData.customer?.first_name}{" "}
+                  {courierData.customer?.last_name},
+                  <br />
+                  {courierData.customer?.company_name && (
+                    <>
+                      {courierData.customer.company_name}
+                      <br />
+                    </>
+                  )}
+                  {courierData.customer?.address?.street &&
+                    `${courierData.customer.address.street}, `}
+                  {courierData.customer?.address?.city &&
+                    `${courierData.customer.address.city}, `}
+                  {courierData.customer?.address?.state &&
+                    `${courierData.customer.address.state}`}
+                  <br />
+                  {courierData.customer?.address?.country &&
+                    `${courierData.customer.address.country} - `}
+                  {courierData.customer?.address?.pincode}
+                </div>
+                <div style={recipientDetailsGridStyle}>
+                  <div>
+                    <div style={detailLabelStyle}>Contact Person:</div>
+                    {courierData.customer?.first_name}{" "}
+                    {courierData.customer?.last_name}
+                  </div>
+                  <div>
+                    <div style={detailLabelStyle}>Contact Number:</div>
+                    {courierData.customer?.phone_number}
+                  </div>
+                  <div>
+                    <div style={detailLabelStyle}>Customer ID:</div>
+                    {courierData.customer?.customer_id}
+                  </div>
+                  <div>
+                    <div style={detailLabelStyle}>Industry:</div>
+                    {courierData.customer?.industry}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <table style={tableStyle}>
+              <thead>
+                <tr>
+                  <th style={tableHeaderNoStyle}>NO.</th>
+                  <th style={tableHeaderParticularsStyle}>PARTICULARS</th>
+                  <th style={tableHeaderQtyStyle}>QTY</th>
+                  <th style={tableHeaderQtyStyle}>RATE</th>
+                  <th style={tableHeaderQtyStyle}>AMOUNT</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td
+                    colSpan={4}
+                    style={{
+                      ...tableCellStyle,
+                      fontWeight: "bold",
+                      fontStyle: "italic",
+                    }}
+                  >
+                    <div style={{ fontWeight: "bold" }}>
+                      Laptop Courier Charges:
+                    </div>
+                  </td>
+                </tr>
+
+                {courierData.addresses &&
+                  courierData.addresses.map((address, index) => (
+                    <tr
+                      key={index}
+                      style={
+                        index % 2 === 0 ? tableRowOddStyle : tableRowEvenStyle
+                      }
+                    >
+                      <td style={tableCellCenterStyle}>{index + 1}</td>
+                      <td style={tableCellStyle}>
+                        <div style={{ fontStyle: "italic" }}>
+                          {address.courier_description} to {address.city}{" "}
+                          {address.district} {address.state} {address.pincode}
+                        </div>
+                      </td>
+                      <td style={tableCellRightStyle}>1</td>
+                      <td style={tableCellRightStyle}>
+                        ₹{address.courier_charges_price || "0"}
+                      </td>
+                      <td style={tableCellRightStyle}>
+                        ₹{address.courier_charges_price || "0"}
+                      </td>
+                    </tr>
+                  ))}
+
+                {/* ✅ Total Row */}
+                <tr key="total-row" style={totalsRowStyle}>
+                  <td style={tableCellCenterStyle} colSpan={4}>
+                    <strong>TOTAL</strong>
+                  </td>
+                  <td style={tableCellRightStyle}>
+                    <strong>₹{netAmount}</strong>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+
+            {/* Tax and Total Section */}
+            <div style={taxTotalContainerStyle}>
+              <div style={taxDetailsStyle}>
+                <div style={taxRowStyle}>
+                  <span>Subtotal:</span>
+                  <span>{formatINRCurrency(netAmount)}</span>
+                </div>
+
+                <div style={taxRowStyle}>
+                  <span>CGST @9%:</span>
+                  <span>{formatINRCurrency(cgst)}</span>
+                </div>
+                <div style={taxRowStyle}>
+                  <span>SGST @9%:</span>
+                  <span>{formatINRCurrency(sgst)}</span>
+                </div>
+
+                {!isOnlyKarnataka && (
+                  <div style={taxRowStyle}>
+                    <span>IGST @18%:</span>
+                    <span>{formatINRCurrency(igst)}</span>
+                  </div>
+                )}
+
+                <div style={taxRowTotalStyle}>
+                  <span>Total Tax:</span>
+                  <span>{formatINRCurrency(totalTax)}</span>
+                </div>
+
+                <div style={grandTotalStyle}>
+                  <span>Grand Total:</span>
+                  <span>{formatINRCurrency(grandTotal)}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Bank Details Section */}
+            <div style={bankDetailsContainerStyle}>
+              <div style={bankDetailsTitleStyle}>Bank Details:</div>
+              <div style={bankLineStyle}>
+                Guru Goutham Infotech Pvt. Ltd., HDFC Bank Ltd, Jayanagar
+                Branch.
+              </div>
+              <div style={bankLineStyle}>
+                Current A/c No: 50200066787843, IFSC Code: HDFC0000261.
+              </div>
+
+              <div style={amountWordsStyle}>
+                Amt. in Words: <span>{numberToWords(grandTotal)}</span>
+              </div>
+
+              <div style={jurisdictionNoteStyle}>
+                Note:{" "}
+                <span style={highlightTextStyle}>
+                  Subject to Bengaluru Jurisdiction
+                </span>
+              </div>
+            </div>
+
+            {/* Footer Info */}
+            {/* <div style={footerInfoStyle}>
+              <div style={taxDetailsStyle}>
+                PAN No. &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;:{" "}
+                {courierData.customer?.pan_no || "FGHIJ6789L"}
+                <br />
+                GST No. &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;:{" "}
+                {courierData.customer?.gst || "29AADCG2606Q1Z6"}
+              </div>
+            </div> */}
+
+            {/* Description */}
+            {/* <div style={totalLabelStyle}>
+              <strong>Remarks:</strong>{" "}
+              {courierData.customer?.remarks || "Courier invoice"}
+            </div> */}
+
+            <div style={signatureSectionStyle}>
+              {/* Left: Receiver Signature */}
+              <div style={leftSignatureAreaStyle}>
+                <div style={companySignatureLabelStyle}></div>
+                <div style={signatureBoxStyle}></div>
+                <div style={signatureDesignationStyle}>
+                  {" "}
+                  Receiver Signature with Seal
+                </div>
+              </div>
+
+              {/* Right: Authorised Signatory */}
+              <div style={rightSignatureAreaStyle}>
+                <div style={companySignatureLabelStyle}>
+                  For Guru Goutham Infotech Private Limited
+                </div>
+                <div style={signatureBoxStyle}>SD/-</div>
+                <div style={signatureDesignationStyle}>
+                  Authorised Signatory
+                </div>
+              </div>
+            </div>
+
+            {/* Company Footer */}
+            <div style={companyFooterStyle}>
+              <div style={footerAddressStyle}>
+                <span>📍</span>
+                <span>
+                  No. 8, 2nd Cross, Diagonal Road, 3rd Block,
+                  <br />
+                  Jayanagar Bengaluru-560011.
+                </span>
+              </div>
+              <div style={footerContactStyle}>
+                <div style={footerContactItemStyle}>
+                  <span>🌐</span>
+                  <span>gurugoutam.com</span>
+                </div>
+                <div style={footerContactItemStyle}>
+                  <span>📞</span>
+                  <span>080-2242 9955, +91 9449 0789 55</span>
+                </div>
+                <div style={footerContactItemStyle}>
+                  <span>✉️</span>
+                  <span>info@gurugoutam.com</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={onClose}>Close</Button>
+        <Button onClick={handleDownloadPDF} variant="contained" color="primary">
+          Download PDF
+        </Button>
+        <Button onClick={handlePrint} variant="contained" color="secondary">
+          Print
+        </Button>
+      </DialogActions>
+    </Dialog>
+  );
+};
+
+const ServiceInvoiceDialog = ({ open, onClose, serviceData }) => {
+  if (!serviceData) return null;
+
+  // ✅ Check if all states are Karnataka
+  const isOnlyKarnataka = serviceData?.addresses?.every(
+    (address) => address.state === "Karnataka"
+  );
+
+  let cgst = 0,
+    sgst = 0,
+    igst = 0;
+
+  serviceData.addresses?.forEach((addr) => {
+    const price = Number(addr.courier_charges_price) || 0;
+
+    if (addr.state?.toLowerCase() === "karnataka") {
+      cgst += price * 0.09;
+      sgst += price * 0.09;
+    } else {
+      igst += price * 0.18;
+    }
+  });
+
+  const netAmount = serviceData.addresses?.reduce(
+    (sum, addr) => sum + (Number(addr.courier_charges_price) || 0),
+    0
+  );
+
+  const totalTax = cgst + sgst + igst;
+  const grandTotal = netAmount + totalTax;
+
+  // Handle PDF download
+  const handleDownloadPDF = async () => {
+    try {
+      // Wait for dialog to fully render
+      await new Promise((resolve) => setTimeout(resolve, 300));
+
+      // Find the invoice container element
+      const element = document.getElementById("service-invoice-container");
+
+      if (!element) {
+        throw new Error("Could not find invoice element in DOM");
+      }
+
+      // Create a clone for PDF generation to avoid layout issues
+      const clone = element.cloneNode(true);
+      clone.style.position = "absolute";
+      clone.style.left = "-9999px";
+      clone.style.visibility = "visible";
+      clone.style.width = "210mm";
+      document.body.appendChild(clone);
+
+      const options = {
+        scale: 2,
+        logging: true,
+        useCORS: true,
+        scrollX: 0,
+        scrollY: 0,
+        windowWidth: clone.scrollWidth,
+        windowHeight: clone.scrollHeight,
+        backgroundColor: "#FFFFFF",
+      };
+
+      const canvas = await html2canvas(clone, options);
+      document.body.removeChild(clone);
+
+      const imgData = canvas.toDataURL("image/png");
+      const pdf = new jsPDF("p", "mm", "a4");
+
+      const imgProps = pdf.getImageProperties(imgData);
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+
+      // Handle multi-page PDF
+      let heightLeft = pdfHeight;
+      let position = 0;
+      const pageHeight = pdf.internal.pageSize.getHeight();
+
+      pdf.addImage(imgData, "PNG", 0, position, pdfWidth, pdfHeight);
+      heightLeft -= pageHeight;
+
+      while (heightLeft >= 0) {
+        position = heightLeft - pdfHeight;
+        pdf.addPage();
+        pdf.addImage(imgData, "PNG", 0, position, pdfWidth, pdfHeight);
+        heightLeft -= pageHeight;
+      }
+
+      pdf.save(`service-invoice-${serviceData.service_number || "SI"}.pdf`);
+    } catch (error) {
+      console.error("PDF Generation Error:", error);
+      alert(`Failed to generate PDF: ${error.message}`);
+    }
+  };
+
+  const handlePrint = () => {
+    const element = document.getElementById("service-invoice-container");
+
+    if (!element) {
+      console.error("Print element not found");
+      alert("Could not find the invoice content for printing");
+      return;
+    }
+
+    const printWindow = window.open("", "_blank");
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Service Invoice - ${serviceData.service_number || "SI"}</title>
+          <style>
+            @page { 
+              size: A4; 
+              margin: 10mm; 
+            }
+            body { 
+              margin: 0; 
+              padding: 0; 
+              font-family: Arial, sans-serif;
+              -webkit-print-color-adjust: exact;
+              print-color-adjust: exact;
+            }
+            .print-container { 
+              width: 190mm; 
+              min-height: 277mm; 
+              padding: 0;
+              box-sizing: border-box;
+            }
+            table {
+              width: 100%;
+              border-collapse: collapse;
+            }
+            th, td {
+              border: 1px solid #000;
+              padding: 8px;
+              text-align: left;
+            }
+            th {
+              background-color: #f0f0f0;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="print-container">
+            ${element.innerHTML}
+          </div>
+          <script>
+            window.onload = function() {
+              setTimeout(function() {
+                window.print();
+                setTimeout(function() {
+                  window.close();
+                }, 500);
+              }, 300);
+            }
+          </script>
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
+  };
+
+  return (
+    <Dialog open={open} onClose={onClose} maxWidth="lg" fullWidth>
+      <DialogTitle>Service Invoice Details</DialogTitle>
+      <DialogContent>
+        <div style={containerStyle}>
+          <div id="service-invoice-container" style={receiptContainerStyle}>
+            {/* Header Color Bar */}
+            <div style={headerBarStyle}></div>
+
+            {/* Company Header */}
+            <div style={companyHeaderStyle}>
+              <div style={companyInfoContainerStyle}>
+                <div style={logoStyle}>
+                  <img
+                    src="/SORT-ICON.png"
+                    alt="Company Logo"
+                    style={{
+                      width: "100%",
+                      height: "100%",
+                      objectFit: "contain",
+                    }}
+                  />
+                </div>
+                <div>
+                  <div style={companyNameStyle}>
+                    Guru Goutam Infotech Pvt. Ltd.
+                  </div>
+                  <div style={companyDetailsStyle}>
+                    CIN: UT2200KA2008PTC047879
+                    <br />
+                    GST: {serviceData.customer?.gst}
+                  </div>
+                </div>
+              </div>
+              <div style={challanHeaderStyle}>
+                <div style={challanTitleStyle}>SERVICE INVOICE</div>
+                <div style={challanDetailsStyle}>
+                  Invoice No: {serviceData.invoice_number}
+                  <br />
+                  Service No: {serviceData.service_number}
+                  <br />
+                  Service Date:{" "}
+                  {new Date(serviceData.service_date).toLocaleDateString(
+                    "en-GB"
+                  )}
+                  <br />
+                </div>
+              </div>
+            </div>
+
+            {/* Recipient Section */}
+            <div style={recipientSectionStyle}>
+              <div style={recipientContainerStyle}>
+                <div style={recipientAddressStyle}>
+                  <div style={recipientLabelStyle}>Bill To:</div>
+                  {serviceData.customer?.first_name}{" "}
+                  {serviceData.customer?.last_name},
+                  <br />
+                  {serviceData.customer?.company_name && (
+                    <>
+                      {serviceData.customer.company_name}
+                      <br />
+                    </>
+                  )}
+                  {serviceData.customer?.address?.street &&
+                    `${serviceData.customer.address.street}, `}
+                  {serviceData.customer?.address?.city &&
+                    `${serviceData.customer.address.city}, `}
+                  {serviceData.customer?.address?.state &&
+                    `${serviceData.customer.address.state}`}
+                  <br />
+                  {serviceData.customer?.address?.country &&
+                    `${serviceData.customer.address.country} - `}
+                  {serviceData.customer?.address?.pincode}
+                </div>
+                <div style={recipientDetailsGridStyle}>
+                  <div>
+                    <div style={detailLabelStyle}>Contact Person:</div>
+                    {serviceData.customer?.first_name}{" "}
+                    {serviceData.customer?.last_name}
+                  </div>
+                  <div>
+                    <div style={detailLabelStyle}>Contact Number:</div>
+                    {serviceData.customer?.phone_number}
+                  </div>
+                  <div>
+                    <div style={detailLabelStyle}>Customer ID:</div>
+                    {serviceData.customer?.customer_id}
+                  </div>
+                  <div>
+                    <div style={detailLabelStyle}>Industry:</div>
+                    {serviceData.customer?.industry}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <table style={tableStyle}>
+              <thead>
+                <tr>
+                  <th style={tableHeaderNoStyle}>NO.</th>
+                  <th style={tableHeaderParticularsStyle}>PARTICULARS</th>
+                  <th style={tableHeaderQtyStyle}>QTY</th>
+                  <th style={tableHeaderQtyStyle}>RATE</th>
+                  <th style={tableHeaderQtyStyle}>AMOUNT</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td
+                    colSpan={4}
+                    style={{
+                      ...tableCellStyle,
+                      fontWeight: "bold",
+                      fontStyle: "italic",
+                    }}
+                  >
+                    Service and Maintenance Charges:
+                  </td>
+                </tr>
+
+                {serviceData.addresses &&
+                  serviceData.addresses.map((address, index) => (
+                    <tr
+                      key={index}
+                      style={
+                        index % 2 === 0 ? tableRowOddStyle : tableRowEvenStyle
+                      }
+                    >
+                      <td style={tableCellCenterStyle}>{index + 1}</td>
+                      <td style={tableCellStyle}>
+                        {address.city}, {address.district}, {address.state} -{" "}
+                        {address.pincode}
+                      </td>
+                      <td style={tableCellRightStyle}>1</td>
+                      <td style={tableCellRightStyle}>
+                        ₹{address.courier_charges_price || "0"}
+                      </td>
+                      <td style={tableCellRightStyle}>
+                        ₹{address.courier_charges_price || "0"}
+                      </td>
+                    </tr>
+                  ))}
+
+                {/* ✅ Total Row */}
+                <tr key="total-row" style={totalsRowStyle}>
+                  <td style={tableCellCenterStyle} colSpan={4}>
+                    <strong>TOTAL</strong>
+                  </td>
+                  <td style={tableCellRightStyle}>
+                    <strong>₹{netAmount}</strong>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+
+            {/* Tax and Total Section */}
+            <div style={taxTotalContainerStyle}>
+              <div style={taxDetailsStyle}>
+                <div style={taxRowStyle}>
+                  <span>Subtotal:</span>
+                  <span>{formatINRCurrency(netAmount)}</span>
+                </div>
+
+                <div style={taxRowStyle}>
+                  <span>CGST @9%:</span>
+                  <span>{formatINRCurrency(cgst)}</span>
+                </div>
+                <div style={taxRowStyle}>
+                  <span>SGST @9%:</span>
+                  <span>{formatINRCurrency(sgst)}</span>
+                </div>
+
+                {!isOnlyKarnataka && (
+                  <div style={taxRowStyle}>
+                    <span>IGST @18%:</span>
+                    <span>{formatINRCurrency(igst)}</span>
+                  </div>
+                )}
+
+                <div style={taxRowTotalStyle}>
+                  <span>Total Tax:</span>
+                  <span>{formatINRCurrency(totalTax)}</span>
+                </div>
+
+                <div style={grandTotalStyle}>
+                  <span>Grand Total:</span>
+                  <span>{formatINRCurrency(grandTotal)}</span>
+                </div>
+              </div>
+            </div>
+
+            <div style={bankDetailsContainerStyle}>
+              <div style={bankDetailsTitleStyle}>Bank Details:</div>
+              <div style={bankLineStyle}>
+                Guru Goutham Infotech Pvt. Ltd., HDFC Bank Ltd, Jayanagar
+                Branch.
+              </div>
+              <div style={bankLineStyle}>
+                Current A/c No: 50200066787843, IFSC Code: HDFC0000261.
+              </div>
+
+              <div style={amountWordsStyle}>
+                Amt. in Words: <span>{numberToWords(grandTotal)}</span>
+              </div>
+
+              <div style={jurisdictionNoteStyle}>
+                Note:{" "}
+                <span style={highlightTextStyle}>
+                  Subject to Bengaluru Jurisdiction
+                </span>
+              </div>
+            </div>
+
+            {/* Footer Info */}
+            {/* <div style={footerInfoStyle}>
+              <div style={taxDetailsStyle}>
+                PAN No. &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;:{" "}
+                {serviceData.customer?.pan_no || "FGHIJ6789L"}
+                <br />
+                GST No. &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;:{" "}
+                {serviceData.customer?.gst || "29AADCG2606Q1Z6"}
+              </div>
+            </div> */}
+
+            {/* Signature Section */}
+            <div style={signatureSectionStyle}>
+              {/* Left: Receiver Signature */}
+              <div style={leftSignatureAreaStyle}>
+                <div style={companySignatureLabelStyle}></div>
+                <div style={signatureBoxStyle}></div>
+                <div style={signatureDesignationStyle}>
+                  {" "}
+                  Receiver Signature with Seal
+                </div>
+              </div>
+
+              {/* Right: Authorised Signatory */}
+              <div style={rightSignatureAreaStyle}>
+                <div style={companySignatureLabelStyle}>
+                  For Guru Goutham Infotech Private Limited
+                </div>
+                <div style={signatureBoxStyle}>SD/-</div>
+                <div style={signatureDesignationStyle}>
+                  Authorised Signatory
+                </div>
+              </div>
+            </div>
+
+            {/* Company Footer */}
+            <div style={companyFooterStyle}>
+              <div style={footerAddressStyle}>
+                <span>📍</span>
+                <span>
+                  No. 8, 2nd Cross, Diagonal Road, 3rd Block,
+                  <br />
+                  Jayanagar Bengaluru-560011.
+                </span>
+              </div>
+              <div style={footerContactStyle}>
+                <div style={footerContactItemStyle}>
+                  <span>🌐</span>
+                  <span>gurugoutam.com</span>
+                </div>
+                <div style={footerContactItemStyle}>
+                  <span>📞</span>
+                  <span>080-2242 9955, +91 9449 0789 55</span>
+                </div>
+                <div style={footerContactItemStyle}>
+                  <span>✉️</span>
+                  <span>info@gurugoutam.com</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={onClose}>Close</Button>
+        <Button onClick={handleDownloadPDF} variant="contained" color="primary">
+          Download PDF
+        </Button>
+        <Button onClick={handlePrint} variant="contained" color="secondary">
+          Print
         </Button>
       </DialogActions>
     </Dialog>
@@ -5579,6 +7362,10 @@ const DynamicTable = ({
   const tableType = location.pathname.split("/").pop();
   const deleteApiUrl = apiEndpoints[tableType];
 
+  const { user, token } = useSelector((state) => state.auth);
+
+  const userToken = token;
+
   const [data, setData] = useState([]);
   const [status, setStatus] = useState([]);
   const [page, setPage] = useState(1);
@@ -5587,6 +7374,8 @@ const DynamicTable = ({
   const [selectedRow, setSelectedRow] = useState(null);
   const [openViewDialog, setOpenViewDialog] = useState(false);
   const [selectedDCRow, setSelectedDCRow] = useState(null);
+  const [openViewQuotationDialog, setOpenViewQuotationDialog] = useState(false);
+  const [selectedQuotationRow, setSelectedQuotationRow] = useState(null);
   // Then in your DynamicTable component, add the state and handler for the invoice dialog:
   const [openInvoiceDialog, setOpenInvoiceDialog] = useState(false);
   const [selectedInvoiceRow, setSelectedInvoiceRow] = useState(null);
@@ -5604,7 +7393,6 @@ const DynamicTable = ({
     setStatus((prevStatus) => {
       const updatedStatus = [...prevStatus];
       updatedStatus[index] = !updatedStatus[index];
-      console.log("Toggled Status:", updatedStatus);
       return updatedStatus;
     });
   };
@@ -5632,7 +7420,6 @@ const DynamicTable = ({
   };
 
   const handleDeleteClick = (row) => {
-    console.log("Selected Row for Deletion:", row);
     setSelectedRow(row);
     setOpenDeleteDialog(true);
   };
@@ -5640,11 +7427,29 @@ const DynamicTable = ({
   const handleViewDC = async (row) => {
     try {
       const response = await axios.get(
-        `${API_URL}/delivery-challans/${row.id}`
+        `${API_URL}/delivery-challans/${row.id}`,
+        {
+          headers: {
+            "Authorization": `Bearer ${userToken}`,
+          },
+        }
       );
-      console.log("DC Data Response:", response.data);
       setSelectedDCRow(response.data);
       setOpenViewDialog(true);
+    } catch (error) {
+      console.error("Error fetching DC details:", error);
+    }
+  };
+
+  const handleViewQuotation = async (row) => {
+    try {
+      const response = await axios.get(`${API_URL}/quotations/${row.id}`, {
+        headers: {
+          "Authorization": `Bearer ${userToken}`,
+        },
+      });
+      setSelectedQuotationRow(response.data);
+      setOpenViewQuotationDialog(true);
     } catch (error) {
       console.error("Error fetching DC details:", error);
     }
@@ -5653,16 +7458,29 @@ const DynamicTable = ({
   // Add this to your component where you manage the dialog state
   const [openGrnDialog, setOpenGrnDialog] = useState(false);
   const [openPlainGrnDialog, setOpenGrnPlainDialog] = useState(false);
+  const [openCourierChargesDialog, setOpenCourierChargesDialog] =
+    useState(false);
 
   const [selectedGrnRow, setSelectedGrnRow] = useState(null);
   const [selectedPlainGrnRow, setSelectedPlainGrnRow] = useState(null);
+  const [selectedCourierChargesRow, setSelectedCourierChargesRow] =
+    useState(null);
+
+  const [openserviceChargesDialog, setOpenserviceChargesDialog] =
+    useState(false);
+  const [selectedServiceChargesRow, setSelectedServiceChargesRow] =
+    useState(null);
 
   const [selectedCreditNoteRow, setSelectedCreditNoteRow] = useState(null);
   const [openCreditNoteDialog, setOpenCreditNoteDialog] = useState(false);
 
   const handleViewGRN = async (row) => {
     try {
-      const response = await axios.get(`${API_URL}/credit-notes/${row.id}`);
+      const response = await axios.get(`${API_URL}/credit-notes/${row.id}`, {
+        headers: {
+          "Authorization": `Bearer ${userToken}`,
+        },
+      });
       setSelectedGrnRow(response.data);
       setOpenGrnDialog(true);
     } catch (error) {
@@ -5673,7 +7491,12 @@ const DynamicTable = ({
   const handleViewPlainGRN = async (row) => {
     try {
       const response = await axios.get(
-        `${API_URL}/delivery-challans/customer-details/${row.id}`
+        `${API_URL}/delivery-challans/customer-details/${row.id}`,
+        {
+          headers: {
+            "Authorization": `Bearer ${userToken}`,
+          },
+        }
       );
       setSelectedPlainGrnRow(response.data);
       setOpenGrnPlainDialog(true);
@@ -5682,9 +7505,41 @@ const DynamicTable = ({
     }
   };
 
+  const handleViewCourierInvoice = async (row) => {
+    try {
+      const response = await axios.get(`${API_URL}/courier-charges/${row.id}`, {
+        headers: {
+          "Authorization": `Bearer ${userToken}`,
+        },
+      });
+      setSelectedCourierChargesRow(response.data);
+      setOpenCourierChargesDialog(true);
+    } catch (error) {
+      console.error("Error fetching courier-charges details:", error);
+    }
+  };
+
+  const handleViewServriceInvoice = async (row) => {
+    try {
+      const response = await axios.get(`${API_URL}/service-charges/${row.id}`, {
+        headers: {
+          "Authorization": `Bearer ${userToken}`,
+        },
+      });
+      setSelectedServiceChargesRow(response.data);
+      setOpenserviceChargesDialog(true);
+    } catch (error) {
+      console.error("Error fetching service-charges details:", error);
+    }
+  };
+
   const handleViewCreditNote = async (row, type = "credit") => {
     try {
-      const response = await axios.get(`${API_URL}/credit-notes/${row.id}`);
+      const response = await axios.get(`${API_URL}/credit-notes/${row.id}`, {
+        headers: {
+          "Authorization": `Bearer ${userToken}`,
+        },
+      });
       const creditNoteWithType = {
         ...response.data,
         type,
@@ -5702,7 +7557,11 @@ const DynamicTable = ({
   // Fetch invoice data
   const handleViewInvoice = async (row, type = "current") => {
     try {
-      const response = await axios.get(`${API_URL}/invoices/${row.id}`);
+      const response = await axios.get(`${API_URL}/invoices/${row.id}`, {
+        headers: {
+          "Authorization": `Bearer ${userToken}`,
+        },
+      });
       const invoiceWithType = {
         ...response.data,
         type,
@@ -5762,14 +7621,13 @@ const DynamicTable = ({
     if (selectedRow && deleteApiUrl) {
       try {
         const response = await fetch(`${deleteApiUrl}/${selectedRow.id}`, {
-          method: "DELETE",
           headers: {
-            "Content-Type": "application/json",
+            "Authorization": `Bearer ${userToken}`,
           },
+          method: "DELETE",
         });
 
         if (response.ok) {
-          console.log(`Deleted ID: ${selectedRow.id} from ${tableType}`);
           setData((prevData) =>
             prevData.filter((row) => row.id !== selectedRow.id)
           );
@@ -5796,6 +7654,10 @@ const DynamicTable = ({
         return "Add DC";
       case "credit_notes":
         return "Add Return Order";
+      case "courier-charges":
+        return "Create Courier Invoice";
+      case "service_maintenance":
+        return "Create Service Invoice";
       case "job_description":
         return "Add Job Description";
       case "goodsreceipt":
@@ -5906,6 +7768,9 @@ const DynamicTable = ({
                 "asset-modifications",
                 "asset-updation",
                 "client-place",
+                "courier-charges",
+                "service_maintenance",
+                "swap",
               ].includes(tableType) === false && (
                 <TableCell align="center" sx={{ fontWeight: "bold" }}>
                   Active Status
@@ -5918,9 +7783,27 @@ const DynamicTable = ({
                 </TableCell>
               )}
 
+              {tableType === "courier-charges" && (
+                <TableCell align="center" sx={{ fontWeight: "bold" }}>
+                  View Courier Invoice
+                </TableCell>
+              )}
+
+              {tableType === "service_maintenance" && (
+                <TableCell align="center" sx={{ fontWeight: "bold" }}>
+                  View Service Invoice
+                </TableCell>
+              )}
+
               {tableType === "operations" && (
                 <TableCell align="center" sx={{ fontWeight: "bold" }}>
                   View DC
+                </TableCell>
+              )}
+
+              {tableType === "quotations" && (
+                <TableCell align="center" sx={{ fontWeight: "bold" }}>
+                  View Quotation
                 </TableCell>
               )}
 
@@ -5936,10 +7819,15 @@ const DynamicTable = ({
                 </TableCell>
               )}
 
+              {tableType === "grn" && (
+                <TableCell align="center" sx={{ fontWeight: "bold" }}>
+                  View GRN
+                </TableCell>
+              )}
+
               {[
                 "inventory",
                 "asset",
-                "grn",
                 "credit-notes",
                 "invoices",
                 "client-place",
@@ -6038,6 +7926,9 @@ const DynamicTable = ({
                     "client-place",
                     "wear-house",
                     "asset-updation",
+                    "courier-charges",
+                    "service_maintenance",
+                    "swap",
                   ].includes(tableType) === false && (
                     <TableCell align="center">
                       <Button onClick={() => toggleStatus(rowIndex)}>
@@ -6056,6 +7947,43 @@ const DynamicTable = ({
                     <TableCell align="center">
                       <Button
                         onClick={() => handleViewInvoice(row, "current")}
+                        sx={{ minWidth: "30px", p: 0 }}
+                        title="View Invoice"
+                      >
+                        <img
+                          src={ViewDC}
+                          alt="View Current"
+                          width="45"
+                          height="35"
+                        />
+                      </Button>
+                    </TableCell>
+                  )}
+
+                  {/* service maintenance */}
+                  {tableType === "courier-charges" && (
+                    <TableCell align="center">
+                      <Button
+                        onClick={() => handleViewCourierInvoice(row, "current")}
+                        sx={{ minWidth: "30px", p: 0 }}
+                        title="View Invoice"
+                      >
+                        <img
+                          src={ViewDC}
+                          alt="View Current"
+                          width="45"
+                          height="35"
+                        />
+                      </Button>
+                    </TableCell>
+                  )}
+
+                  {tableType === "service_maintenance" && (
+                    <TableCell align="center">
+                      <Button
+                        onClick={() =>
+                          handleViewServriceInvoice(row, "current")
+                        }
                         sx={{ minWidth: "30px", p: 0 }}
                         title="View Invoice"
                       >
@@ -6103,26 +8031,40 @@ const DynamicTable = ({
                     </TableCell>
                   )}
 
+                  {/* View DC for operations */}
+                  {tableType === "quotations" && (
+                    <TableCell align="center">
+                      <Button
+                        onClick={() => handleViewQuotation(row)}
+                        sx={{ minWidth: "30px", p: 0 }}
+                      >
+                        <img src={ViewDC} alt="ViewDC" width="45" height="35" />
+                      </Button>
+                    </TableCell>
+                  )}
+
+                  {tableType === "grn" && (
+                    <>
+                      <TableCell align="center">
+                        <Button
+                          onClick={() => handleViewGRN(row)}
+                          sx={{ minWidth: "30px", p: 0 }}
+                        >
+                          <img
+                            src={ViewDC}
+                            alt="ViewDC"
+                            width="45"
+                            height="35"
+                          />
+                        </Button>
+                      </TableCell>
+                    </>
+                  )}
+
                   {/* Action Buttons */}
                   {["inventory"].includes(tableType) === false && (
                     <TableCell align="center">
                       <Box display="flex" justifyContent="center" gap={1}>
-                        {tableType === "grn" && (
-                          <>
-                            <Button
-                              onClick={() => handleViewGRN(row)}
-                              sx={{ minWidth: "30px", p: 0 }}
-                            >
-                              <img
-                                src={ViewDC}
-                                alt="ViewDC"
-                                width="45"
-                                height="35"
-                              />
-                            </Button>
-                          </>
-                        )}
-
                         {tableType === "plain-grn" && (
                           <>
                             <Button
@@ -6145,7 +8087,6 @@ const DynamicTable = ({
                           "client-place",
                           "wear-house",
                           "plain-grn",
-                          "invoices",
                         ].includes(tableType) === false && (
                           <>
                             {/* Always show Edit if allowed */}
@@ -6217,8 +8158,8 @@ const DynamicTable = ({
         <DialogTitle>Confirm Deletion</DialogTitle>
         <DialogContent>
           <DialogContentText>
-            Are you sure you want to delete{" "}
-            <b>{selectedRow ? selectedRow[columns[1]?.id] : "this record"}</b>?
+            Are you sure you want to delete?{" "}
+            <b>{selectedRow ? selectedRow[columns[1]?.id] : "this record"}</b>
           </DialogContentText>
         </DialogContent>
         <DialogActions>
@@ -6237,6 +8178,13 @@ const DynamicTable = ({
         onClose={() => setOpenViewDialog(false)}
         dcData={selectedDCRow}
       />
+
+      <QuotationDialog
+        open={openViewQuotationDialog}
+        onClose={() => setOpenViewQuotationDialog(false)}
+        quotationData={selectedQuotationRow}
+      />
+
       <InvoiceDialog
         open={openInvoiceDialog}
         onClose={() => setOpenInvoiceDialog(false)}
@@ -6258,13 +8206,23 @@ const DynamicTable = ({
         onClose={() => setOpenGrnPlainDialog(false)}
         grnData={selectedPlainGrnRow}
       />
+
+      <ServiceInvoiceDialog
+        open={openserviceChargesDialog}
+        onClose={() => setOpenserviceChargesDialog(false)}
+        serviceData={selectedServiceChargesRow}
+      />
+
+      <CourierInvoiceDialog
+        open={openCourierChargesDialog}
+        onClose={() => setOpenCourierChargesDialog(false)}
+        courierData={selectedCourierChargesRow}
+      />
     </Box>
   );
 };
 
 // Styles (keep all your existing styles exactly as they are)
-
-
 
 // Add these styles to your existing styles
 const accessoriesContainerStyle = {
@@ -6272,26 +8230,24 @@ const accessoriesContainerStyle = {
   padding: "10px",
   border: "1px solid #ddd",
   borderRadius: "4px",
-  backgroundColor: "#f9f9f9"
+  backgroundColor: "#f9f9f9",
 };
 
 const accessoriesTitleStyle = {
   fontWeight: "bold",
   marginBottom: "8px",
-  fontSize: "14px"
+  fontSize: "14px",
 };
 
 const accessoriesListStyle = {
   margin: 0,
-  paddingLeft: "20px"
+  paddingLeft: "20px",
 };
 
 const accessoriesListItemStyle = {
   fontSize: "13px",
-  marginBottom: "4px"
+  marginBottom: "4px",
 };
-
-
 
 const containerStyle = {
   minHeight: "100vh",

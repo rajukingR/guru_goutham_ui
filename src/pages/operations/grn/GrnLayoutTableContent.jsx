@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import axios from "axios";
 import DynamicTable from "../../../components/table-format/DynamicTable";
 import API_URL, { IMAGE_API_URL } from "../../../api/Api_url";
+import { useSelector } from "react-redux";
 
 const getGrnStatusBadge = (status) => {
   switch (status) {
@@ -22,6 +23,11 @@ const getGrnStatusBadge = (status) => {
 
 const GrnLayoutTableContent = () => {
   const [data, setData] = useState([]);
+
+
+    const { user, token } = useSelector((state) => state.auth);
+  
+    const userToken = token;
 
   const columns = [
     { id: "s_id", label: "S.No." },
@@ -44,7 +50,13 @@ const GrnLayoutTableContent = () => {
   useEffect(() => {
     const fetchGrns = async () => {
       try {
-        const response = await axios.get(`${API_URL}/grns`);
+        const token = localStorage.getItem("token");
+
+        const response = await axios.get(`${API_URL}/grns`, {
+          headers: {
+            "Authorization": `Bearer ${userToken}`,
+          },
+        });
         if (response.status === 200) {
           const formattedData = response.data.map((item, index) => ({
             s_id: index + 1,

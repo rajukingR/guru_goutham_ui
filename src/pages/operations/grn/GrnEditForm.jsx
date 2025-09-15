@@ -22,6 +22,7 @@ import {
 } from "@mui/material";
 import { Add, Remove } from "@mui/icons-material";
 import API_URL, { IMAGE_API_URL } from "../../../api/Api_url";
+import { useSelector } from "react-redux";
 
 // === Reusable Components ===
 const Field = ({
@@ -73,9 +74,13 @@ const Field = ({
 
 // === Main Component ===
 const GrnEditForm = () => {
+  const { user, token } = useSelector((state) => state.auth);
+
+  const userToken = token;
+
   const { id } = useParams();
   const navigate = useNavigate();
-const [useGrnPhone, setUseGrnPhone] = useState(true);
+  const [useGrnPhone, setUseGrnPhone] = useState(true);
 
   const [formData, setFormData] = useState({
     grnId: "",
@@ -127,7 +132,11 @@ const [useGrnPhone, setUseGrnPhone] = useState(true);
     const fetchData = async () => {
       try {
         // Fetch GRN data
-        const grnResponse = await fetch(`${API_URL}/goods-return-notes/${id}`);
+        const grnResponse = await fetch(`${API_URL}/goods-return-notes/${id}`, {
+          headers: {
+            "Authorization": `Bearer ${userToken}`,
+          },
+        });
         if (!grnResponse.ok) throw new Error("Failed to fetch GRN data");
         const grnData = await grnResponse.json();
 
@@ -180,7 +189,12 @@ const [useGrnPhone, setUseGrnPhone] = useState(true);
 
         // Fetch delivery challans
         const challansResponse = await fetch(
-          `${API_URL}/delivery-challans/approved-delivery-challan`
+          `${API_URL}/delivery-challans/approved-delivery-challan`,
+          {
+            headers: {
+              "Authorization": `Bearer ${userToken}`,
+            },
+          }
         );
         if (!challansResponse.ok)
           throw new Error("Failed to fetch delivery challans");
@@ -199,16 +213,19 @@ const [useGrnPhone, setUseGrnPhone] = useState(true);
         }
 
         // Set selected delivery challan if exists
-       if (grnData.delivery_challan_id) {
-  const selected = challansData.find(
-    (challan) => challan.id === grnData.delivery_challan_id
-  );
-  setSelectedChallan(selected);
-}
-
+        if (grnData.delivery_challan_id) {
+          const selected = challansData.find(
+            (challan) => challan.id === grnData.delivery_challan_id
+          );
+          setSelectedChallan(selected);
+        }
 
         // Fetch products
-        const prodResponse = await fetch(`${API_URL}/product-templete`);
+        const prodResponse = await fetch(`${API_URL}/product-templete`, {
+          headers: {
+            "Authorization": `Bearer ${userToken}`,
+          },
+        });
         if (!prodResponse.ok) throw new Error("Failed to fetch products");
         const prodData = await prodResponse.json();
         setProducts(prodData);
@@ -242,47 +259,76 @@ const [useGrnPhone, setUseGrnPhone] = useState(true);
     product.product_name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-const handleCustomerSelect = (challanId) => {
-  const selected = deliveryChallans.find((challan) => challan.id === challanId);
-  if (selected) {
-    setSelectedChallan(selected);
+  const handleCustomerSelect = (challanId) => {
+    const selected = deliveryChallans.find(
+      (challan) => challan.id === challanId
+    );
+    if (selected) {
+      setSelectedChallan(selected);
 
-    setFormData((prev) => ({
-      ...prev,
-      customerId: selected.client_details?.id || prev.customerId,
-      customer: selected.client_details?.name || selected.customer_name || prev.customer,
-      email: selected.email || selected.client_details?.email || prev.email,
-      gstNumber: selected.gst_number || prev.gstNumber,
-      pan: selected.pan_number || prev.pan,
-      companyName: selected.company_name || selected.client_details?.company_name || prev.companyName,
-      pincode: selected.pincode || selected.shipping_address?.pincode || prev.pincode,
-      country: selected.country || selected.shipping_address?.country || prev.country,
-      state: selected.state || selected.shipping_address?.state || prev.state,
-      city: selected.city || selected.shipping_address?.city || prev.city,
-      street: selected.street || selected.shipping_address?.street || prev.street,
-      landmark: selected.landmark || selected.shipping_address?.landmark || prev.landmark,
-      informedPersonName: selected.informed_person_name || selected.shipping_name || prev.informedPersonName,
-      informedPersonPhone: selected.informed_person_phone || selected.shipping_phone_number || prev.informedPersonPhone,
-      returnerName: selected.returner_name || selected.delivery_person_name || prev.returnerName,
-      returnerPhone: selected.returner_phone || selected.delivery_person_phone_number || prev.returnerPhone,
-      receiverName: selected.receiver_name || prev.receiverName,
-      receiverPhone: selected.receiver_phone || prev.receiverPhone,
-      vehicleNumber: selected.vehicle_number || prev.vehicleNumber
-    }));
+      setFormData((prev) => ({
+        ...prev,
+        customerId: selected.client_details?.id || prev.customerId,
+        customer:
+          selected.client_details?.name ||
+          selected.customer_name ||
+          prev.customer,
+        email: selected.email || selected.client_details?.email || prev.email,
+        gstNumber: selected.gst_number || prev.gstNumber,
+        pan: selected.pan_number || prev.pan,
+        companyName:
+          selected.company_name ||
+          selected.client_details?.company_name ||
+          prev.companyName,
+        pincode:
+          selected.pincode ||
+          selected.shipping_address?.pincode ||
+          prev.pincode,
+        country:
+          selected.country ||
+          selected.shipping_address?.country ||
+          prev.country,
+        state: selected.state || selected.shipping_address?.state || prev.state,
+        city: selected.city || selected.shipping_address?.city || prev.city,
+        street:
+          selected.street || selected.shipping_address?.street || prev.street,
+        landmark:
+          selected.landmark ||
+          selected.shipping_address?.landmark ||
+          prev.landmark,
+        informedPersonName:
+          selected.informed_person_name ||
+          selected.shipping_name ||
+          prev.informedPersonName,
+        informedPersonPhone:
+          selected.informed_person_phone ||
+          selected.shipping_phone_number ||
+          prev.informedPersonPhone,
+        returnerName:
+          selected.returner_name ||
+          selected.delivery_person_name ||
+          prev.returnerName,
+        returnerPhone:
+          selected.returner_phone ||
+          selected.delivery_person_phone_number ||
+          prev.returnerPhone,
+        receiverName: selected.receiver_name || prev.receiverName,
+        receiverPhone: selected.receiver_phone || prev.receiverPhone,
+        vehicleNumber: selected.vehicle_number || prev.vehicleNumber,
+      }));
 
-    // Update products from selected delivery challan
-    if (selected.items) {
-      const productIds = selected.items.map((item) => item.product_id);
-      const newQuantities = {};
-      selected.items.forEach((item) => {
-        newQuantities[item.product_id] = item.quantity || 1;
-      });
-      setSelectedProductIds(productIds);
-      setQuantities(newQuantities);
+      // Update products from selected delivery challan
+      if (selected.items) {
+        const productIds = selected.items.map((item) => item.product_id);
+        const newQuantities = {};
+        selected.items.forEach((item) => {
+          newQuantities[item.product_id] = item.quantity || 1;
+        });
+        setSelectedProductIds(productIds);
+        setQuantities(newQuantities);
+      }
     }
-  }
-};
-
+  };
 
   // ... rest of the component code remains the same ...
 
@@ -388,7 +434,12 @@ const handleCustomerSelect = (challanId) => {
     try {
       const response = await axios.put(
         `${API_URL}/goods-return-notes/${id}`,
-        payload
+        payload,
+        {
+          headers: {
+            "Authorization": `Bearer ${userToken}`,
+          },
+        }
       );
       setSnackbar({
         open: true,
@@ -431,22 +482,21 @@ const handleCustomerSelect = (challanId) => {
               value={formData.grnTitle}
               onChange={(v) => handleInputChange("grnTitle", v)}
             />
-            
 
-           <Field
-  label="Select Delivery Challan"
-  name="deliveryChallan"
-  type="select"
-  placeholder="Select Delivery Challan"
-  value={selectedChallan?.id || ""} // initially blank
-  onChange={(name, value) => handleCustomerSelect(Number(value))}
-  options={deliveryChallans.map((challan) => ({
-    value: challan.id,
-    label: `${challan.dc_id} - ${challan.client_details?.first_name || ''} ${challan.client_details?.last_name || ''}`,
-  }))}
-/>
-
-
+            <Field
+              label="Select Delivery Challan"
+              name="deliveryChallan"
+              type="select"
+              placeholder="Select Delivery Challan"
+              value={selectedChallan?.id || ""} // initially blank
+              onChange={(name, value) => handleCustomerSelect(Number(value))}
+              options={deliveryChallans.map((challan) => ({
+                value: challan.id,
+                label: `${challan.dc_id} - ${
+                  challan.client_details?.first_name || ""
+                } ${challan.client_details?.last_name || ""}`,
+              }))}
+            />
 
             <Field
               label="Customer ID"
@@ -461,16 +511,22 @@ const handleCustomerSelect = (challanId) => {
               value={formData.email}
               onChange={(v) => handleInputChange("email", v)}
             />
-          <Field
-  label="Phone No"
-  type="tel"
-  placeholder="Enter Phone"
-  value={useGrnPhone ? formData.phone : (selectedChallan?.client_details?.phone_number || selectedChallan?.phone_number || formData.phone)}
-  onChange={(v) => {
-    handleInputChange("phone", v);
-    setUseGrnPhone(false);
-  }}
-/>
+            <Field
+              label="Phone No"
+              type="tel"
+              placeholder="Enter Phone"
+              value={
+                useGrnPhone
+                  ? formData.phone
+                  : selectedChallan?.client_details?.phone_number ||
+                    selectedChallan?.phone_number ||
+                    formData.phone
+              }
+              onChange={(v) => {
+                handleInputChange("phone", v);
+                setUseGrnPhone(false);
+              }}
+            />
             <Field
               label="GRN Date"
               type="date"

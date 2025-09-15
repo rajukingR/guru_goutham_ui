@@ -4,7 +4,7 @@ import API_URL, { IMAGE_API_URL } from "../../../api/Api_url";
 import Snackbar from "@mui/material/Snackbar";
 import MuiAlert from "@mui/material/Alert";
 import { useNavigate, useParams } from "react-router-dom";
-
+import { useSelector } from "react-redux";
 // Add this Alert component (optional but recommended for better styling)
 const Alert = React.forwardRef(function Alert(props, ref) {
   return <MuiAlert elevation={6} ref={ref} variant="filled" {...props} />;
@@ -13,6 +13,10 @@ const Alert = React.forwardRef(function Alert(props, ref) {
 const ProductsEditLayout = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+
+  const { user, token } = useSelector((state) => state.auth);
+
+  const userToken = token;
 
   // State for form data
   const [formData, setFormData] = useState({
@@ -29,7 +33,7 @@ const ProductsEditLayout = () => {
     stock_location: "",
     description: "",
     hsn_code: "",
-    
+
     // Specifications - common
     ram: "",
     ram_speed: "",
@@ -42,23 +46,23 @@ const ProductsEditLayout = () => {
     graphics: "",
     os: "",
     display_size: "",
-    
+
     // Laptop specific
     mouse: false,
     keyboard: false,
     dvd: false,
     speaker: false,
     webcam: false,
-    
+
     // Desktop specific
     motherboard: "",
     cabinet: "",
     smps: "",
     ram_slots: "",
-    
+
     // Monitor specific
     screen_size: "",
-    
+
     // HDD specific
     capacity: "",
     speed: "",
@@ -68,7 +72,7 @@ const ProductsEditLayout = () => {
     sizeGb: "",
     frequencyMhz: "",
     manufacturer: "",
-    
+
     // Price fields
     purchase_price: "",
     rent_percent_per_day: 0,
@@ -79,7 +83,7 @@ const ProductsEditLayout = () => {
     rent_price_6_months: "",
     rent_percent_1_year: 0,
     rent_price_1_year: "",
-    
+
     // Status
     is_active: true,
   });
@@ -106,12 +110,29 @@ const ProductsEditLayout = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [brandsRes, categoriesRes, stockLocationRes, productRes] = await Promise.all([
-          axios.get(`${API_URL}/product-brands/active`),
-          axios.get(`${API_URL}/product-categories/active`),
-          axios.get(`${API_URL}/stock-location/active-stock-location`),
-          axios.get(`${API_URL}/product-templete/${id}`),
-        ]);
+        const [brandsRes, categoriesRes, stockLocationRes, productRes] =
+          await Promise.all([
+            axios.get(`${API_URL}/product-brands/active`, {
+              headers: {
+                "Authorization": `Bearer ${userToken}`,
+              },
+            }),
+            axios.get(`${API_URL}/product-categories/active`, {
+              headers: {
+                "Authorization": `Bearer ${userToken}`,
+              },
+            }),
+            axios.get(`${API_URL}/stock-location/active-stock-location`, {
+              headers: {
+                "Authorization": `Bearer ${userToken}`,
+              },
+            }),
+            axios.get(`${API_URL}/product-templete/${id}`, {
+              headers: {
+                "Authorization": `Bearer ${userToken}`,
+              },
+            }),
+          ]);
 
         setBrands(brandsRes.data);
         setCategories(categoriesRes.data);
@@ -137,7 +158,7 @@ const ProductsEditLayout = () => {
           stock_location: productData.stock_location || "",
           description: productData.description || "",
           hsn_code: productData.hsn_code || "",
-          
+
           // Specifications
           ram: productData.ram || "",
           ram_speed: productData.ram_speed || "",
@@ -150,33 +171,33 @@ const ProductsEditLayout = () => {
           graphics: productData.graphics || "",
           os: productData.os || "",
           display_size: productData.display_size || "",
-          
+
           // Accessories
           mouse: productData.mouse || false,
           keyboard: productData.keyboard || false,
           dvd: productData.dvd || false,
           speaker: productData.speaker || false,
           webcam: productData.webcam || false,
-          
+
           // Desktop components
           motherboard: productData.motherboard || "",
           cabinet: productData.cabinet || "",
           smps: productData.smps || "",
           ram_slots: productData.ram_slots || "",
-          
+
           // Monitor
           screen_size: productData.screen_size || "",
-          
+
           // Storage
           capacity: productData.capacity || "",
           speed: productData.speed || "",
-          ssd_type:productData.ssd_type || "",
+          ssd_type: productData.ssd_type || "",
           // RAM
           ramType: productData.ramType || "",
           sizeGb: productData.sizeGb || "",
           frequencyMhz: productData.frequencyMhz || "",
           manufacturer: productData.manufacturer || "",
-          
+
           // Price fields
           purchase_price: productData.purchase_price || "",
           rent_percent_per_day: productData.rent_percent_per_day || 0,
@@ -187,7 +208,7 @@ const ProductsEditLayout = () => {
           rent_price_6_months: productData.rent_price_6_months || "",
           rent_percent_1_year: productData.rent_percent_1_year || 0,
           rent_price_1_year: productData.rent_price_1_year || "",
-          
+
           // Status
           is_active: productData.is_active || true,
         });
@@ -204,11 +225,11 @@ const ProductsEditLayout = () => {
     };
 
     fetchData();
-  }, [id]);
+  }, [id, userToken]); // Added userToken as dependency
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
-    
+
     if (name === "maxSpeed" || name === "speed") {
       const floatValue = parseFloat(value);
       if (floatValue > 10) {
@@ -289,76 +310,75 @@ const ProductsEditLayout = () => {
 
   // Handle form submission
   const handleSubmit = async (e) => {
-  e.preventDefault();
+    e.preventDefault();
 
-  if (parseFloat(formData.purchase_price) <= 0) {
-    showSnackbar("Please enter a valid purchase price", "error");
-    return;
-  }
-
-  setLoading(true);
-  setError(null);
-
-  try {
-    const formDataToSend = new FormData();
-
-    // ✅ Copy and set ram = sizeGb if category is RAM
-    const formDataCopy = { ...formData };
-    if (formDataCopy.product_category === "RAM") {
-      formDataCopy.ram = formDataCopy.sizeGb?.toString() || "";
+    if (parseFloat(formData.purchase_price) <= 0) {
+      showSnackbar("Please enter a valid purchase price", "error");
+      return;
     }
 
-    // ✅ Append all fields from updated copy
-    Object.entries(formDataCopy).forEach(([key, value]) => {
-      if (value === null || value === undefined) return;
+    setLoading(true);
+    setError(null);
 
-      if (typeof value === "boolean") {
-        formDataToSend.append(key, value ? "1" : "0");
-      } else if (value instanceof File) {
-        formDataToSend.append(key, value, value.name);
-      } else {
-        formDataToSend.append(key, value.toString());
+    try {
+      const formDataToSend = new FormData();
+
+      // ✅ Copy and set ram = sizeGb if category is RAM
+      const formDataCopy = { ...formData };
+      if (formDataCopy.product_category === "RAM") {
+        formDataCopy.ram = formDataCopy.sizeGb?.toString() || "";
       }
-    });
 
-    // ✅ Submit update request
-    const response = await axios.put(
-      `${API_URL}/product-templete/${id}`,
-      formDataToSend,
-      {
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
+      // ✅ Append all fields from updated copy
+      Object.entries(formDataCopy).forEach(([key, value]) => {
+        if (value === null || value === undefined) return;
+
+        if (typeof value === "boolean") {
+          formDataToSend.append(key, value ? "1" : "0");
+        } else if (value instanceof File) {
+          formDataToSend.append(key, value, value.name);
+        } else {
+          formDataToSend.append(key, value.toString());
+        }
+      });
+
+      // ✅ Submit update request
+      const response = await axios.put(
+        `${API_URL}/product-templete/${id}`,
+        formDataToSend,
+        {
+          headers: {
+            "Authorization": `Bearer ${userToken}`,
+          },
+        }
+      );
+
+      showSnackbar(
+        response.data.message || "Product updated successfully!",
+        "success"
+      );
+
+      setTimeout(() => {
+        navigate("/dashboard/product_library");
+      }, 1500);
+    } catch (err) {
+      let errorMessage = "An error occurred while updating the product";
+
+      if (err.response) {
+        errorMessage =
+          err.response.data.message ||
+          err.response.data.error ||
+          `Server error: ${err.response.status}`;
+      } else if (err.request) {
+        errorMessage = "No response from server. Please check your connection.";
       }
-    );
 
-    showSnackbar(
-      response.data.message || "Product updated successfully!",
-      "success"
-    );
-
-    setTimeout(() => {
-      navigate("/dashboard/product_library");
-    }, 1500);
-  } catch (err) {
-    let errorMessage = "An error occurred while updating the product";
-
-    if (err.response) {
-      errorMessage =
-        err.response.data.message ||
-        err.response.data.error ||
-        `Server error: ${err.response.status}`;
-    } else if (err.request) {
-      errorMessage = "No response from server. Please check your connection.";
+      showSnackbar(errorMessage, "error");
+      console.error("Submission error:", err);
+    } finally {
+      setLoading(false);
     }
-
-    showSnackbar(errorMessage, "error");
-    console.error("Submission error:", err);
-  } finally {
-    setLoading(false);
-  }
-};
-
+  };
 
   // Render different specification fields based on product category
   const renderSpecificationFields = () => {
@@ -366,11 +386,13 @@ const ProductsEditLayout = () => {
       case "Laptops":
         return (
           <>
-            <div style={{
-              display: "grid",
-              gridTemplateColumns: "1fr 1fr",
-              gap: "16px",
-            }}>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "1fr 1fr",
+                gap: "16px",
+              }}
+            >
               <Field
                 label="Display Size"
                 name="display_size"
@@ -395,7 +417,6 @@ const ProductsEditLayout = () => {
                 placeholder="Enter Processor Speed (GHz)"
                 value={formData.processor_speed}
                 onChange={handleChange}
-                required
               />
 
               <Field
@@ -404,15 +425,16 @@ const ProductsEditLayout = () => {
                 placeholder="Enter Generation"
                 value={formData.generation}
                 onChange={handleChange}
-                required
               />
             </div>
 
-            <div style={{
-              display: "grid",
-              gridTemplateColumns: "1fr 1fr",
-              gap: "16px",
-            }}>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "1fr 1fr",
+                gap: "16px",
+              }}
+            >
               <Field
                 label="RAM"
                 name="ram"
@@ -455,18 +477,19 @@ const ProductsEditLayout = () => {
               required
             />
 
-            <div style={{
-              display: "grid",
-              gridTemplateColumns: "1fr 1fr",
-              gap: "16px",
-            }}>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "1fr 1fr",
+                gap: "16px",
+              }}
+            >
               <Field
                 label="GPU"
                 name="graphics"
                 placeholder="Enter Graphics Card"
                 value={formData.graphics}
                 onChange={handleChange}
-                required
               />
 
               <Field
@@ -493,11 +516,13 @@ const ProductsEditLayout = () => {
       case "Branded Desktops":
         return (
           <>
-            <div style={{
-              display: "grid",
-              gridTemplateColumns: "1fr 1fr",
-              gap: "16px",
-            }}>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "1fr 1fr",
+                gap: "16px",
+              }}
+            >
               <Field
                 label="Processor Model"
                 name="processor"
@@ -573,18 +598,19 @@ const ProductsEditLayout = () => {
               <option value="NVMe SSD">NVMe SSD</option>
             </Field>
 
-            <div style={{
-              display: "grid",
-              gridTemplateColumns: "1fr 1fr",
-              gap: "16px",
-            }}>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "1fr 1fr",
+                gap: "16px",
+              }}
+            >
               <Field
                 label="GPU"
                 name="graphics"
                 placeholder="Enter GPU"
                 value={formData.graphics}
                 onChange={handleChange}
-                required
               />
 
               <Field
@@ -648,42 +674,41 @@ const ProductsEditLayout = () => {
           </>
         );
 
-        case "SSD":
-  return (
-    <>
-      <Field
-        label="Storage Capacity"
-        name="capacity"
-        placeholder="Enter Storage Capacity (e.g., 512GB)"
-        value={formData.capacity}
-        onChange={handleChange}
-        required
-      />
+      case "SSD":
+        return (
+          <>
+            <Field
+              label="Storage Capacity"
+              name="capacity"
+              placeholder="Enter Storage Capacity (e.g., 512GB)"
+              value={formData.capacity}
+              onChange={handleChange}
+              required
+            />
 
-      <Field
-        label="SSD Type"
-        name="ssd_type"
-        type="select"
-        value={formData.ssd_type}
-        onChange={handleChange}
-        required
-      >
-        <option value="">Select SSD Type</option>
-        <option value="SATA">SATA</option>
-        <option value="M.2">M.2</option>
-        <option value="NVMe">NVMe</option>
-      </Field>
+            <Field
+              label="SSD Type"
+              name="ssd_type"
+              type="select"
+              value={formData.ssd_type}
+              onChange={handleChange}
+              required
+            >
+              <option value="">Select SSD Type</option>
+              <option value="SATA">SATA</option>
+              <option value="M.2">M.2</option>
+              <option value="NVMe">NVMe</option>
+            </Field>
 
-      <Field
-        label="Read/Write Speed"
-        name="speed"
-        placeholder="Enter Speed (e.g., 3500 MB/s)"
-        value={formData.speed}
-        onChange={handleChange}
-      />
-    </>
-  );
-
+            <Field
+              label="Read/Write Speed"
+              name="speed"
+              placeholder="Enter Speed (e.g., 3500 MB/s)"
+              value={formData.speed}
+              onChange={handleChange}
+            />
+          </>
+        );
 
       case "Processor":
         return (
@@ -717,11 +742,13 @@ const ProductsEditLayout = () => {
       case "Assembled Desktop":
         return (
           <>
-            <div style={{
-              display: "grid",
-              gridTemplateColumns: "1fr 1fr",
-              gap: "16px",
-            }}>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "1fr 1fr",
+                gap: "16px",
+              }}
+            >
               <Field
                 label="Processor Model"
                 name="processor"
@@ -811,7 +838,6 @@ const ProductsEditLayout = () => {
                 placeholder="Enter GPU"
                 value={formData.graphics}
                 onChange={handleChange}
-                required
               />
 
               <Field
@@ -902,7 +928,7 @@ const ProductsEditLayout = () => {
             </div>
           </div>
         );
-       
+
       case "GPU":
         return (
           <>
@@ -912,11 +938,10 @@ const ProductsEditLayout = () => {
               placeholder="Enter Speed (e.g., 6Gbps)"
               value={formData.speed}
               onChange={handleChange}
-              required
             />
           </>
         );
-      
+
       case "SMPS":
         return (
           <>
@@ -930,7 +955,7 @@ const ProductsEditLayout = () => {
             />
           </>
         );
-      
+
       case "Cabinet":
         return (
           <>
@@ -958,7 +983,7 @@ const ProductsEditLayout = () => {
             />
           </>
         );
-      
+
       default:
         return null;
     }
@@ -1163,6 +1188,8 @@ const ProductsEditLayout = () => {
         </div>
 
         {/* Right Column - Price Details */}
+
+        {/* Right Column - Price Details */}
         <div style={cardStyle}>
           <div style={cardHeaderContainerStyle}>
             <div style={iconStyle}>💰</div>
@@ -1180,59 +1207,52 @@ const ProductsEditLayout = () => {
               required
             />
 
-            {[
-              {
-                label: "Per Month",
-                percent: "rent_percent_per_month",
-                price: "rent_price_per_month",
-              },
-            ].map(({ label, percent, price }) => (
-              <div
-                key={label}
-                style={{ display: "flex", gap: "1rem", alignItems: "flex-end" }}
-              >
-                <div style={{ flex: 1 }}>
-                  <Field
-                    label={`Rent Percent ${label}`}
-                    type="select"
-                    name={percent}
-                    value={formData[percent]}
-                    onChange={handlePriceChange}
-                    required
-                  >
-                    <option value="0">0%</option>
-                    <option value="1">1%</option>
-                    <option value="2">2%</option>
-                    <option value="3">3%</option>
-                    <option value="4">4%</option>
-                    <option value="5">5%</option>
-                    <option value="8">8%</option>
-                    <option value="10">10%</option>
-                    <option value="15">15%</option>
-                    <option value="18">18%</option>
-                    <option value="20">20%</option>
-                    <option value="25">25%</option>
-                    <option value="30">30%</option>
-                    <option value="35">35%</option>
-                    <option value="40">40%</option>
-                    <option value="45">45%</option>
-                    <option value="50">50%</option>
-                    <option value="60">60%</option>
-                    <option value="65">65%</option>
-                    <option value="70">70%</option>
-                  </Field>
+            {/* Rent Percentage Slider for Per Month */}
+            <div style={{ gridColumn: "1 / -1", marginTop: "1rem" }}>
+              <label style={labelStyle}>
+                Rent Percent Per Month
+                <span style={requiredStyle}>*</span>
+              </label>
+
+              <div style={sliderContainerStyle}>
+                <input
+                  type="range"
+                  min="0"
+                  max="70"
+                  step="1"
+                  name="rent_percent_per_month"
+                  value={formData.rent_percent_per_month}
+                  onChange={handlePriceChange}
+                  style={sliderStyle}
+                />
+
+                <div style={sliderValueContainerStyle}>
+                  <span style={sliderValueStyle}>
+                    {formData.rent_percent_per_month}%
+                  </span>
                 </div>
-                <div style={{ flex: 1 }}>
-                  <Field
-                    label=" "
-                    type="text"
-                    name={price}
-                    value={`₹${formData[price]}/-`}
-                    readOnly
-                  />
+
+                <div style={sliderTicksContainerStyle}>
+                  {[0, 10, 20, 30, 40, 50, 60, 70].map((tick) => (
+                    <div key={tick} style={sliderTickStyle}>
+                      <div style={sliderTickMarkStyle}></div>
+                      <span style={sliderTickLabelStyle}>{tick}%</span>
+                    </div>
+                  ))}
                 </div>
               </div>
-            ))}
+
+              <div style={sliderOutputContainerStyle}>
+                <Field
+                  label="Rent Price Per Month"
+                  type="text"
+                  name="rent_price_per_month"
+                  value={`₹${formData.rent_price_per_month}/-`}
+                  readOnly
+                  style={readonlyFieldStyle}
+                />
+              </div>
+            </div>
 
             <div style={{ gridColumn: "1 / -1" }}>
               <Field
@@ -1264,10 +1284,6 @@ const ProductsEditLayout = () => {
     </div>
   );
 };
-
-
-
-
 
 // Field component
 const Field = ({
@@ -1373,6 +1389,106 @@ const CheckboxField = ({ label, name, checked, onChange }) => (
 );
 
 // Styles
+
+const sliderContainerStyle = {
+  position: "relative",
+  margin: "1.5rem 0 1rem 0",
+  padding: "0 0.5rem",
+};
+
+const sliderStyle = {
+  width: "100%",
+  height: "6px",
+  borderRadius: "3px",
+  background: "#ddd",
+  outline: "none",
+  opacity: "0.7",
+  transition: "opacity .2s",
+  WebkitAppearance: "none",
+
+  "&:hover": {
+    opacity: "1",
+  },
+
+  "&::-webkit-slider-thumb": {
+    WebkitAppearance: "none",
+    appearance: "none",
+    width: "20px",
+    height: "20px",
+    borderRadius: "50%",
+    background: "#2563eb",
+    cursor: "pointer",
+    border: "2px solid #fff",
+    boxShadow: "0 0 5px rgba(0,0,0,0.2)",
+  },
+
+  "&::-moz-range-thumb": {
+    width: "20px",
+    height: "20px",
+    borderRadius: "50%",
+    background: "#2563eb",
+    cursor: "pointer",
+    border: "2px solid #fff",
+    boxShadow: "0 0 5px rgba(0,0,0,0.2)",
+  },
+};
+
+const sliderValueContainerStyle = {
+  textAlign: "center",
+  marginTop: "10px",
+  marginBottom: "25px",
+};
+
+const sliderValueStyle = {
+  display: "inline-block",
+  padding: "5px 15px",
+  backgroundColor: "#2563eb",
+  color: "white",
+  borderRadius: "20px",
+  fontWeight: "bold",
+  fontSize: "1rem",
+};
+
+const sliderTicksContainerStyle = {
+  display: "flex",
+  justifyContent: "space-between",
+  position: "relative",
+  marginTop: "5px",
+};
+
+const sliderTickStyle = {
+  display: "flex",
+  flexDirection: "column",
+  alignItems: "center",
+  position: "relative",
+};
+
+const sliderTickMarkStyle = {
+  width: "2px",
+  height: "10px",
+  backgroundColor: "#999",
+  marginBottom: "5px",
+};
+
+const sliderTickLabelStyle = {
+  fontSize: "0.75rem",
+  color: "#666",
+  position: "absolute",
+  top: "15px",
+};
+
+const sliderOutputContainerStyle = {
+  marginTop: "1rem",
+  padding: "1rem",
+  backgroundColor: "#f8f9fa",
+  borderRadius: "8px",
+  border: "1px solid #e9ecef",
+};
+
+const readonlyFieldStyle = {
+  backgroundColor: "#f8f9fa",
+  cursor: "not-allowed",
+};
 
 const breadcrumbStyle = {
   marginBottom: "1.5rem",

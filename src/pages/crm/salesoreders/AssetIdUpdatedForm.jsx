@@ -1,8 +1,13 @@
 import React, { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import API_URL, { IMAGE_API_URL } from "../../../api/Api_url";
+import { useSelector } from "react-redux";
 
 const AssetIdUpdatedForm = () => {
+  const { user, token } = useSelector((state) => state.auth);
+
+  const userToken = token;
+
   const { id, assetId } = useParams(); // ✅ gets productId and assetId
   const product_id = id;
   const [assets, setAssets] = useState([]);
@@ -31,16 +36,23 @@ const AssetIdUpdatedForm = () => {
     const fetchAssets = async () => {
       try {
         const response = await fetch(
-          `${API_URL}/asset-modification/product_id/${product_id}`
+          `${API_URL}/asset-modification/product_id/${product_id}`,
+          {
+            headers: {
+              "Authorization": `Bearer ${userToken}`,
+            },
+          }
         );
         const data = await response.json();
         setAssets(data);
-        
+
         // If assetId is provided in URL, find and pre-fill the asset data
         if (assetId) {
-          const selectedAsset = data.find(asset => asset.asset_id === assetId);
+          const selectedAsset = data.find(
+            (asset) => asset.asset_id === assetId
+          );
           if (selectedAsset) {
-            setFormData(prev => ({
+            setFormData((prev) => ({
               ...prev,
               product_name: selectedAsset.product_name,
               currentRAM: selectedAsset.ram || "N/A",
@@ -48,7 +60,7 @@ const AssetIdUpdatedForm = () => {
             }));
           }
         }
-        
+
         setIsLoading(false);
       } catch (error) {
         console.error("Error fetching assets:", error);
@@ -85,19 +97,17 @@ const AssetIdUpdatedForm = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const response = await fetch(
-        `${API_URL}/asset-modification`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            ...formData,
-            product_id: parseInt(product_id),
-          }),
-        }
-      );
+      const response = await fetch(`${API_URL}/asset-modification`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${userToken}`,
+        },
+        body: JSON.stringify({
+          ...formData,
+          product_id: parseInt(product_id),
+        }),
+      });
 
       if (response.ok) {
         alert("Asset modification request submitted successfully!");
@@ -144,69 +154,76 @@ const AssetIdUpdatedForm = () => {
             <h3 style={cardHeaderStyle}>Select Assets</h3>
           </div>
           <div style={fieldContainerStyle}>
-  <label style={labelStyle}>Asset ID</label>
-  <div style={{ position: "relative" }}>
-    <div
-      style={{
-        ...inputStyle,
-        padding: "0.75rem",
-        cursor: selectedAssetId ? "default" : "pointer", // Change cursor when selected
-        display: "flex",
-        justifyContent: "space-between",
-        alignItems: "center",
-        backgroundColor: "#fff",
-        opacity: selectedAssetId ? 0.8 : 1, // Slightly fade when selected
-        pointerEvents: selectedAssetId ? "none" : "auto", // Disable clicks when selected
-      }}
-      onClick={() => !selectedAssetId && setIsDropdownOpen(!isDropdownOpen)} // Only toggle if no selection
-    >
-      <span style={{ color: selectedAssetId ? "#1e293b" : "#9ca3af" }}>
-        {selectedAssetId || "Select an Asset"}
-      </span>
-      {!selectedAssetId && ( // Only show dropdown arrow when no selection
-        <span style={{ color: "#6b7280", fontSize: "0.75rem" }}>
-          {isDropdownOpen ? "▲" : "▼"}
-        </span>
-      )}
-    </div>
+            <label style={labelStyle}>Asset ID</label>
+            <div style={{ position: "relative" }}>
+              <div
+                style={{
+                  ...inputStyle,
+                  padding: "0.75rem",
+                  cursor: selectedAssetId ? "default" : "pointer", // Change cursor when selected
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  backgroundColor: "#fff",
+                  opacity: selectedAssetId ? 0.8 : 1, // Slightly fade when selected
+                  pointerEvents: selectedAssetId ? "none" : "auto", // Disable clicks when selected
+                }}
+                onClick={() =>
+                  !selectedAssetId && setIsDropdownOpen(!isDropdownOpen)
+                } // Only toggle if no selection
+              >
+                <span
+                  style={{ color: selectedAssetId ? "#1e293b" : "#9ca3af" }}
+                >
+                  {selectedAssetId || "Select an Asset"}
+                </span>
+                {!selectedAssetId && ( // Only show dropdown arrow when no selection
+                  <span style={{ color: "#6b7280", fontSize: "0.75rem" }}>
+                    {isDropdownOpen ? "▲" : "▼"}
+                  </span>
+                )}
+              </div>
 
-    {/* Only show dropdown if no asset is selected and dropdown is open */}
-    {!selectedAssetId && isDropdownOpen && (
-      <div
-        style={{
-          position: "absolute",
-          top: "100%",
-          left: 0,
-          right: 0,
-          maxHeight: "200px",
-          overflowY: "auto",
-          backgroundColor: "#fff",
-          border: "1px solid #e5e7eb",
-          borderRadius: "0 0 8px 8px",
-          boxShadow: "0 4px 6px rgba(0, 0, 0, 0.05)",
-          zIndex: 10,
-        }}
-      >
-        {assets.map((asset) => (
-          <div
-            key={asset.asset_id}
-            style={{
-              padding: "0.75rem",
-              cursor: "pointer",
-              backgroundColor: selectedAssetId === asset.asset_id ? "#f3f4f6" : "#fff",
-              ":hover": {
-                backgroundColor: "#f9fafb",
-              },
-            }}
-            onClick={() => handleAssetSelect(asset.asset_id)}
-          >
-            {asset.asset_id} - {asset.product_name}
+              {/* Only show dropdown if no asset is selected and dropdown is open */}
+              {!selectedAssetId && isDropdownOpen && (
+                <div
+                  style={{
+                    position: "absolute",
+                    top: "100%",
+                    left: 0,
+                    right: 0,
+                    maxHeight: "200px",
+                    overflowY: "auto",
+                    backgroundColor: "#fff",
+                    border: "1px solid #e5e7eb",
+                    borderRadius: "0 0 8px 8px",
+                    boxShadow: "0 4px 6px rgba(0, 0, 0, 0.05)",
+                    zIndex: 10,
+                  }}
+                >
+                  {assets.map((asset) => (
+                    <div
+                      key={asset.asset_id}
+                      style={{
+                        padding: "0.75rem",
+                        cursor: "pointer",
+                        backgroundColor:
+                          selectedAssetId === asset.asset_id
+                            ? "#f3f4f6"
+                            : "#fff",
+                        ":hover": {
+                          backgroundColor: "#f9fafb",
+                        },
+                      }}
+                      onClick={() => handleAssetSelect(asset.asset_id)}
+                    >
+                      {asset.asset_id} - {asset.product_name}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
-        ))}
-      </div>
-    )}
-  </div>
-</div>
         </div>
 
         {/* Asset Information Section */}

@@ -2,9 +2,13 @@ import React, { useEffect, useState } from "react";
 import DynamicTable from "../../../components/table-format/DynamicTable";
 import axios from "axios";
 import API_URL, { IMAGE_API_URL } from "../../../api/Api_url";
+import { useSelector } from "react-redux";
 
 const SuppliersTable = () => {
   const [data, setData] = useState([]);
+const { user, token } = useSelector((state) => state.auth);
+  
+    const userToken = token;
 
   const columns = [
     { id: "s_id", label: "S.No." },
@@ -12,7 +16,7 @@ const SuppliersTable = () => {
     { id: "supplier_name", label: "Supplier Name" },
     { id: "supplier_owner", label: "Owner" },
     { id: "gst_number", label: "GST No." },
-        { id: "pan_number", label: "PAN No." },
+    { id: "pan_number", label: "PAN No." },
     // { id: "registration_date", label: "Registration Date" },
     // { id: "introduced_by", label: "Introduced By" },
     { id: "address_summary", label: "Address" },
@@ -23,7 +27,12 @@ const SuppliersTable = () => {
   useEffect(() => {
     const fetchSuppliers = async () => {
       try {
-        const response = await axios.get(`${API_URL}/supplier`);
+        const token = localStorage.getItem("token");
+        const response = await axios.get(`${API_URL}/supplier`, {
+          headers: {
+            "Authorization": `Bearer ${userToken}`,
+          },
+        });
         if (response.status === 200) {
           const formattedData = response.data.map((supplier, index) => {
             const address = supplier.address
@@ -34,10 +43,12 @@ const SuppliersTable = () => {
               ? `${supplier.bank.bank_name}, A/C: ${supplier.bank.account_number}`
               : "N/A";
 
-              const pan_number = supplier.bank.pan_number;
+            const pan_number = supplier.bank.pan_number;
 
             const contacts = supplier.contacts?.length
-              ? supplier.contacts.map((c) => `${c.contact_name} (${c.designation})`).join("; ")
+              ? supplier.contacts
+                  .map((c) => `${c.contact_name} (${c.designation})`)
+                  .join("; ")
               : "N/A";
 
             return {

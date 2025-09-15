@@ -2,12 +2,20 @@ import React, { useEffect, useState } from "react";
 import DynamicTable from "../../components/table-format/DynamicTable";
 import axios from "axios";
 import API_URL, { IMAGE_API_URL } from "../../api/Api_url";
+  import { useSelector } from "react-redux";
 
 import DefaultImage from "../../assets/logos/default.jpg";
 
 const InventoryTable = () => {
   const [data, setData] = useState([]);
   const [summary, setSummary] = useState(null);
+
+
+
+
+    const { user, token } = useSelector((state) => state.auth);
+  
+    const userToken = token;
 
   const columns = [
     { id: "id", label: "S.No." },
@@ -39,7 +47,7 @@ const InventoryTable = () => {
           `${API_URL}/goods-receipts/approved-receipt-products`,
           {
             headers: {
-              Authorization: `Bearer ${token}`,
+              "Authorization": `Bearer ${userToken}`,
             },
           }
         );

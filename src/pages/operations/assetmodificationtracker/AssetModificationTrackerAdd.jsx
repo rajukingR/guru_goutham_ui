@@ -3,8 +3,13 @@ import { useNavigate } from "react-router-dom";
 import Snackbar from "@mui/material/Snackbar";
 import Alert from "@mui/material/Alert";
 import API_URL, { IMAGE_API_URL } from "../../../api/Api_url";
+import { useSelector } from "react-redux";
 
 const AssetModificationTrackerAdd = () => {
+  const { user, token } = useSelector((state) => state.auth);
+
+  const userToken = token;
+
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
     assetId: "",
@@ -34,7 +39,12 @@ const AssetModificationTrackerAdd = () => {
     const fetchDeliveryChallans = async () => {
       try {
         const response = await fetch(
-          `${API_URL}/delivery-challans/approved-delivery-challan`
+          `${API_URL}/delivery-challans/approved-delivery-challan`,
+          {
+            headers: {
+              "Authorization": `Bearer ${userToken}`,
+            },
+          }
         );
         if (!response.ok) throw new Error("Failed to fetch delivery challans");
         const data = await response.json();
@@ -74,7 +84,12 @@ const AssetModificationTrackerAdd = () => {
 
       try {
         const response = await fetch(
-          `${API_URL}/delivery-challans/peripheral-assets/${selectedCustomer}`
+          `${API_URL}/delivery-challans/peripheral-assets/${selectedCustomer}`,
+          {
+            headers: {
+              "Authorization": `Bearer ${userToken}`,
+            },
+          }
         );
         if (!response.ok) throw new Error("Failed to fetch peripheral assets");
         const data = await response.json();
@@ -180,7 +195,7 @@ const AssetModificationTrackerAdd = () => {
               storage: item.product.storage,
               brand: item.product.brand,
               model: item.product.model,
-  processor_model: item.product.processor_model, // Add this
+              processor_model: item.product.processor_model, // Add this
               os: item.product.os,
               graphics: item.product.graphics,
               disk_type: item.product.disk_type,
@@ -203,42 +218,42 @@ const AssetModificationTrackerAdd = () => {
     }
   }, [selectedChallan, deliveryChallans]);
 
- const handleInputChange = (field, value) => {
-  setFormData((prev) => ({ ...prev, [field]: value }));
+  const handleInputChange = (field, value) => {
+    setFormData((prev) => ({ ...prev, [field]: value }));
 
-  // When assetId changes, auto-fill the asset details
-  if (field === "assetId") {
-    const selectedAsset = availableAssets.find(
-      (asset) => asset.asset_id === value
-    );
+    // When assetId changes, auto-fill the asset details
+    if (field === "assetId") {
+      const selectedAsset = availableAssets.find(
+        (asset) => asset.asset_id === value
+      );
 
-    if (selectedAsset) {
-      // Extract numeric values from "16GB" format
-      const parseSpecValue = (spec) => {
-        if (!spec) return "";
-        const numValue = spec.replace(/[^\d.]/g, "");
-        return numValue || "";
-      };
+      if (selectedAsset) {
+        // Extract numeric values from "16GB" format
+        const parseSpecValue = (spec) => {
+          if (!spec) return "";
+          const numValue = spec.replace(/[^\d.]/g, "");
+          return numValue || "";
+        };
 
-      // Build processor string from available fields
-      const processorModel = [
-        selectedAsset.processor_model,
-        selectedAsset.generation,
-        selectedAsset.processor_speed
-      ]
-        .filter(Boolean) // Remove empty/null values
-        .join(" ");
+        // Build processor string from available fields
+        const processorModel = [
+          selectedAsset.processor_model,
+          selectedAsset.generation,
+          selectedAsset.processor_speed,
+        ]
+          .filter(Boolean) // Remove empty/null values
+          .join(" ");
 
-      setFormData((prev) => ({
-        ...prev,
-        product_name: selectedAsset.product_name || "",
-        currentRAM: parseSpecValue(selectedAsset.ram),
-        currentStorage: parseSpecValue(selectedAsset.storage),
-        processorModel: processorModel || "", // Use the constructed processor string
-      }));
+        setFormData((prev) => ({
+          ...prev,
+          product_name: selectedAsset.product_name || "",
+          currentRAM: parseSpecValue(selectedAsset.ram),
+          currentStorage: parseSpecValue(selectedAsset.storage),
+          processorModel: processorModel || "", // Use the constructed processor string
+        }));
+      }
     }
-  }
-};
+  };
 
   const handlePeripheralSelection = (category, deviceId, action) => {
     setSelectedPeripherals((prev) => {
@@ -330,7 +345,10 @@ const AssetModificationTrackerAdd = () => {
 
       const response = await fetch(`${API_URL}/peripheral-assets/create`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${userToken}`,
+        },
         body: JSON.stringify(payload),
       });
 

@@ -18,8 +18,13 @@ import { Add, Remove } from "@mui/icons-material";
 import API_URL, { IMAGE_API_URL } from "../../../api/Api_url";
 import { useNavigate, useParams } from "react-router-dom";
 import { Snackbar, Alert } from "@mui/material";
+import { useSelector } from "react-redux";
 
 const PurchaseRequestEdit = () => {
+  const { user, token } = useSelector((state) => state.auth);
+
+  const userToken = token;
+
   const { id } = useParams();
   const [showProductTable, setShowProductTable] = useState(false);
   const [selectedProductIds, setSelectedProductIds] = useState([]);
@@ -59,7 +64,11 @@ const PurchaseRequestEdit = () => {
   useEffect(() => {
     const fetchPurchaseRequest = async () => {
       try {
-        const response = await fetch(`${API_URL}/purchase-requests/${id}`);
+        const response = await fetch(`${API_URL}/purchase-requests/${id}`, {
+          headers: {
+            Authorization: `Bearer ${userToken}`,
+          },
+        });
         if (!response.ok) throw new Error("Failed to fetch purchase request");
         const data = await response.json();
 
@@ -92,7 +101,11 @@ const PurchaseRequestEdit = () => {
 
     const fetchSuppliers = async () => {
       try {
-        const response = await fetch(`${API_URL}/supplier`);
+        const response = await fetch(`${API_URL}/supplier`, {
+          headers: {
+            Authorization: `Bearer ${userToken}`,
+          },
+        });
         if (!response.ok) throw new Error("Failed to fetch suppliers");
         const data = await response.json();
         setSuppliers(data);
@@ -105,7 +118,11 @@ const PurchaseRequestEdit = () => {
 
     const fetchProducts = async () => {
       try {
-        const response = await fetch(`${API_URL}/product-templete`);
+        const response = await fetch(`${API_URL}/product-templete`, {
+          headers: {
+            "Authorization": `Bearer ${userToken}`,
+          },
+        });
         if (!response.ok) throw new Error("Failed to fetch products");
 
         const data = await response.json();
@@ -177,14 +194,14 @@ const PurchaseRequestEdit = () => {
     };
 
     try {
-      const response = await fetch(
-        `${API_URL}/purchase-requests/${id}`,
-        {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        }
-      );
+      const response = await fetch(`${API_URL}/purchase-requests/${id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${userToken}`,
+        },
+        body: JSON.stringify(payload),
+      });
 
       if (response.ok) {
         setSnackbar({

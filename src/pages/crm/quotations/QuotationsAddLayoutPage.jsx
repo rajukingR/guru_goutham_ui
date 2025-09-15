@@ -22,6 +22,7 @@ import {
 import { Add, Remove, Edit } from "@mui/icons-material";
 import API_URL, { IMAGE_API_URL } from "../../../api/Api_url";
 import { useNavigate } from "react-router-dom";
+import { useSelector } from "react-redux";
 
 const generateQuotationId = () => {
   const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
@@ -34,6 +35,10 @@ const generateQuotationId = () => {
 
 const QuotationsAddLayoutPage = () => {
   const navigate = useNavigate();
+
+  const { user, token } = useSelector((state) => state.auth);
+
+  const userToken = token;
 
   const [leads, setLeads] = useState([]);
   const [products, setProducts] = useState([]);
@@ -60,6 +65,9 @@ const QuotationsAddLayoutPage = () => {
 
   const [productOfferPrices, setProductOfferPrices] = useState({});
   const [productRentOfferPrices, setProductRentOfferPrices] = useState({});
+
+  const [assetIds, setAssetIds] = useState({});
+  const [assetIdErrors, setAssetIdErrors] = useState({});
 
   const [priceForm, setPriceForm] = useState({
     purchase_price: "",
@@ -94,6 +102,7 @@ const QuotationsAddLayoutPage = () => {
     rentalStartDate: "",
     rentalEndDate: "",
     quotationDate: new Date().toISOString().split("T")[0],
+    is_direct_invoice: false,
     industry: "",
     street: "",
     landmark: "",
@@ -114,7 +123,11 @@ const QuotationsAddLayoutPage = () => {
   useEffect(() => {
     const fetchActiveLeads = async () => {
       try {
-        const response = await fetch(`${API_URL}/leads/active-leads`);
+        const response = await fetch(`${API_URL}/leads/active-leads`, {
+          headers: {
+            "Authorization": `Bearer ${userToken}`,
+          },
+        });
         if (!response.ok) {
           throw new Error("Failed to fetch active leads");
         }
@@ -139,7 +152,11 @@ const QuotationsAddLayoutPage = () => {
   useEffect(() => {
     const fetchProducts = async () => {
       try {
-        const response = await fetch(`${API_URL}/product-templete`);
+        const response = await fetch(`${API_URL}/product-templete`, {
+          headers: {
+            "Authorization": `Bearer ${userToken}`,
+          },
+        });
         if (!response.ok) {
           throw new Error("Failed to fetch products");
         }
@@ -215,6 +232,15 @@ const QuotationsAddLayoutPage = () => {
     setFormData((prev) => ({
       ...prev,
       [field]: value,
+    }));
+  };
+
+  // Add this function to your component
+  const handleCheckboxChange = (e) => {
+    const { name, checked } = e.target;
+    setFormData((prev) => ({
+      ...prev,
+      [name]: checked,
     }));
   };
 
@@ -384,22 +410,114 @@ const QuotationsAddLayoutPage = () => {
   const handleQtyChange = (id, value) => {
     const qty = Math.max(0, parseInt(value) || 0);
     setQuantities({ ...quantities, [id]: qty });
+
+    // Reset asset IDs when quantity changes
+    if (quantities[id] !== qty) {
+      setAssetIds((prev) => ({
+        ...prev,
+        [id]: Array(qty).fill(""),
+      }));
+    }
   };
 
   const incrementQty = (id) => {
-    setQuantities((prev) => ({ ...prev, [id]: (prev[id] || 0) + 1 }));
-  };
+    const newQty = (quantities[id] || 0) + 1;
+    setQuantities((prev) => ({ ...prev, [id]: newQty }));
 
-  const decrementQty = (id) => {
-    setQuantities((prev) => ({
+    // Add empty asset ID field when quantity increases
+    setAssetIds((prev) => ({
       ...prev,
-      [id]: Math.max(0, (prev[id] || 0) - 1),
+      [id]: [...(prev[id] || []), ""],
     }));
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    // Validate form
+  const decrementQty = (id) => {
+    const newQty = Math.max(0, (quantities[id] || 0) - 1);
+    setQuantities((prev) => ({ ...prev, [id]: newQty }));
+
+    // Remove last asset ID when quantity decreases
+    if (newQty < (quantities[id] || 0)) {
+      setAssetIds((prev) => ({
+        ...prev,
+        [id]: (prev[id] || []).slice(0, -1),
+      }));
+    }
+  };
+
+  const validateAssetIds = () => {
+    const errors = {};
+    let isValid = true;
+    let globalError = "";
+
+    if (formData.is_direct_invoice) {
+      // Check if any products are selected
+      if (selectedProductIds.length === 0) {
+        globalError = "Please select at least one product for direct invoice";
+        isValid = false;
+      } else {
+        for (const productId of selectedProductIds) {
+          const product = products.find((p) => p.id === productId);
+          const productAssetIds = assetIds[productId] || [];
+          const qty = quantities[productId] || 0;
+
+          // Skip validation if quantity is 0
+          if (qty === 0) continue;
+
+          // Check if we have the right number of asset IDs
+          if (productAssetIds.length !== qty) {
+            errors[productId] = `Please provide ${qty} asset ID(s) for ${
+              product?.product_name || "this product"
+            }`;
+            isValid = false;
+            continue;
+          }
+
+          // Check if all asset IDs are filled
+          const emptyIndexes = [];
+          for (let i = 0; i < productAssetIds.length; i++) {
+            if (!productAssetIds[i] || productAssetIds[i].trim() === "") {
+              emptyIndexes.push(i + 1);
+            }
+          }
+
+          if (emptyIndexes.length > 0) {
+            errors[productId] = `Asset ID(s) #${emptyIndexes.join(
+              ", "
+            )} required for ${product?.product_name || "this product"}`;
+            isValid = false;
+            continue;
+          }
+
+          // Check for duplicate asset IDs within the same product
+          const uniqueAssetIds = new Set(productAssetIds);
+          if (uniqueAssetIds.size !== productAssetIds.length) {
+            const duplicates = productAssetIds.filter(
+              (id, index) => productAssetIds.indexOf(id) !== index
+            );
+            errors[productId] = `Duplicate asset ID(s): ${[
+              ...new Set(duplicates),
+            ].join(", ")} found in ${product?.product_name || "this product"}`;
+            isValid = false;
+          }
+        }
+      }
+    }
+
+    setAssetIdErrors(errors);
+
+    // Show global error message if needed
+    if (globalError) {
+      setSnackbar({
+        open: true,
+        message: globalError,
+        severity: "error",
+      });
+    }
+
+    return isValid;
+  };
+
+  const validateForm = () => {
     let isValid = true;
     const newErrors = {
       selectedLead: "",
@@ -412,6 +530,67 @@ const QuotationsAddLayoutPage = () => {
     }
 
     setErrors(newErrors);
+
+    // Validate asset IDs if it's a direct invoice
+    if (formData.is_direct_invoice) {
+      const assetIdValid = validateAssetIds();
+      if (!assetIdValid) {
+        isValid = false;
+
+        // Show specific error message if we have product-specific errors
+        const hasProductErrors = Object.keys(assetIdErrors).length > 0;
+        if (hasProductErrors) {
+          setSnackbar({
+            open: true,
+            message:
+              "Please provide all required asset IDs for the selected products",
+            severity: "error",
+          });
+        }
+      }
+    }
+
+    return isValid;
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+
+    // Validate form
+    if (!validateForm()) {
+      if (
+        !formData.is_direct_invoice ||
+        Object.keys(assetIdErrors).length === 0
+      ) {
+        setSnackbar({
+          open: true,
+          message: "Please fix the errors before submitting",
+          severity: "error",
+        });
+      }
+      return;
+    }
+
+    let isValid = true;
+    const newErrors = { selectedLead: "" };
+
+    // Validate lead selection
+    if (!selectedLeadId) {
+      newErrors.selectedLead = "Lead selection is required";
+      isValid = false;
+    }
+
+    setErrors(newErrors);
+
+    // Validate asset IDs if it's a direct invoice
+    if (formData.is_direct_invoice && !validateAssetIds()) {
+      isValid = false;
+      setSnackbar({
+        open: true,
+        message: "Please provide all required asset IDs",
+        severity: "error",
+      });
+    }
 
     if (!isValid) {
       setSnackbar({
@@ -434,6 +613,7 @@ const QuotationsAddLayoutPage = () => {
         quotation_date: formData.quotationDate,
         rental_duration: parseInt(formData.rentalDurationMonths) || 0,
         rental_duration_days: parseInt(formData.rentalDurationDays) || 0,
+        is_direct_invoice: formData.is_direct_invoice,
         customer_id: formData.customer_id,
         customer_first_name: formData.customer_first_name,
         customer_last_name: formData.customer_last_name,
@@ -442,31 +622,29 @@ const QuotationsAddLayoutPage = () => {
         status: formData.quotationStatus,
         items: selectedProductIds.map((productId) => {
           const product = products.find((p) => p.id === productId);
-
           const offerPrice = productOfferPrices[productId] || 0;
           const rentOfferPrice = productRentOfferPrices[productId] || 0;
 
-          const offer_purchase_price = offerPrice;
-          const offer_rent_price_per_month = rentOfferPrice;
-          const purchase_price = product.purchase_price;
-          const rent_price_per_month = product.rent_price_per_month;
-
-          // Get quantity from lead products if available
           const leadProduct = selectedLeadId
             ? leads
                 .find((lead) => lead.id === parseInt(selectedLeadId))
                 ?.lead_products?.find((lp) => lp.product_id === productId)
             : null;
 
+          const asset_ids = formData.is_direct_invoice
+            ? assetIds[productId] || []
+            : [];
+
           return {
             product_id: productId,
             requested_quantity: leadProduct?.quantity || 1,
             quotation_quantity: quantities[productId] || 0,
             product_name: product?.product_name || "",
-            offer_purchase_price,
-            offer_rent_price_per_month,
-            purchase_price,
-            rent_price_per_month,
+            offer_purchase_price: offerPrice,
+            offer_rent_price_per_month: rentOfferPrice,
+            purchase_price: product.purchase_price,
+            rent_price_per_month: product.rent_price_per_month,
+            asset_ids,
           };
         }),
       };
@@ -475,15 +653,34 @@ const QuotationsAddLayoutPage = () => {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          "Authorization": `Bearer ${userToken}`,
         },
         body: JSON.stringify(quotationPayload),
       });
 
+      const result = await response.json();
+
       if (!response.ok) {
-        throw new Error("Failed to create quotation");
+        // ✅ Check if backend returned duplicate asset errors
+        if (result?.duplicates?.length > 0) {
+          const duplicateMsg = result.duplicates
+            .map((d) => `Asset: ${d.asset_id} (Product: ${d.product_name})`)
+            .join(", ");
+          setSnackbar({
+            open: true,
+            message: `Duplicate Asset IDs found: ${duplicateMsg}`,
+            severity: "error",
+          });
+        } else {
+          setSnackbar({
+            open: true,
+            message: result.message || "Failed to create quotation",
+            severity: "error",
+          });
+        }
+        return;
       }
 
-      const result = await response.json();
       console.log("Quotation created:", result);
 
       setSnackbar({
@@ -496,10 +693,11 @@ const QuotationsAddLayoutPage = () => {
         navigate("/dashboard/crm/quotations");
       }, 1500);
 
-      // Reset form if needed
+      // Reset form
       setFormData((prev) => ({ ...prev, quotationTitle: "", remarks: "" }));
       setSelectedProductIds([]);
       setQuantities({});
+      setAssetIds({});
     } catch (error) {
       console.error("Submission error:", error);
       setSnackbar({
@@ -654,7 +852,10 @@ const QuotationsAddLayoutPage = () => {
                 onChange={(e) =>
                   handleInputChange("transactionType", e.target.value)
                 }
-                options={["Rent", "Buy"]}
+                options={[
+                  { value: "Rent", label: "Rent" },
+                  { value: "Buy", label: "Sale" },
+                ]}
                 disabled
               />
               <Field
@@ -667,7 +868,7 @@ const QuotationsAddLayoutPage = () => {
                 }
                 options={["Pending", "Approved", "Rejected"]}
               />
-              <Field
+              {/* <Field
                 label="Source of Enquiry"
                 type="select"
                 placeholder="Select Source"
@@ -676,7 +877,7 @@ const QuotationsAddLayoutPage = () => {
                   handleInputChange("sourceOfEnquiry", e.target.value)
                 }
                 options={["Search Engine", "Referral", "Advertisement"]}
-              />
+              /> */}
               <Field
                 label="Owner"
                 placeholder="Enter Owner Name"
@@ -696,29 +897,6 @@ const QuotationsAddLayoutPage = () => {
                 value={formData.quotationGeneratedBy}
                 disabled
               />
-              <div style={{ gridColumn: "1 / -1" }}>
-                <label style={checkboxLabelStyle}>
-                  <input
-                    type="checkbox"
-                    style={{
-                      ...checkboxStyle,
-                      position: "absolute",
-                      opacity: 0,
-                      cursor: "pointer",
-                    }}
-                    checked={formData.activeStatus}
-                    onChange={(e) =>
-                      handleInputChange("activeStatus", e.target.checked)
-                    }
-                  />
-                  <div style={checkboxCustomStyle}>
-                    {formData.activeStatus && (
-                      <span style={checkmarkStyle}>✓</span>
-                    )}
-                  </div>
-                  <span style={checkboxTextStyle}>Active Status</span>
-                </label>
-              </div>
             </div>
           </div>
 
@@ -777,6 +955,26 @@ const QuotationsAddLayoutPage = () => {
                 value={formData.industry}
                 onChange={(e) => handleInputChange("industry", e.target.value)}
               />
+              {/* <Field
+                label="Active Status"
+                name="activeStatus"
+                type="checkbox"
+                value={formData.activeStatus}
+                onChange={(e) =>
+                  handleInputChange("activeStatus", e.target.checked)
+                }
+                description="Check if this record is active"
+              /> */}
+              {formData.transactionType === "Buy" && (
+                <Field
+                  label="Direct Invoice"
+                  name="is_direct_invoice"
+                  type="checkbox"
+                  value={formData.is_direct_invoice}
+                  onChange={handleCheckboxChange}
+                  description="Check if this is a direct invoice"
+                />
+              )}
             </div>
           </div>
 
@@ -910,6 +1108,14 @@ const QuotationsAddLayoutPage = () => {
                         >
                           Quantity
                         </TableCell>
+                        {formData.is_direct_invoice === true && (
+                          <TableCell
+                            sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
+                          >
+                            Asset IDs
+                          </TableCell>
+                        )}
+
                         <TableCell
                           sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
                         >
@@ -956,13 +1162,11 @@ const QuotationsAddLayoutPage = () => {
                               <div>
                                 <strong>Purchase Price:</strong> ₹
                                 {productOfferPrices[product.id] ||
-                                  product.offer_purchase_price ||
                                   product.purchase_price}
                               </div>
                               <div>
-                                <strong>Month:</strong> ₹
+                                <strong>Month Price:</strong> ₹
                                 {productRentOfferPrices[product.id] ||
-                                  product.offer_rent_price_per_month ||
                                   product.rent_price_per_month}
                               </div>
                             </>
@@ -995,6 +1199,85 @@ const QuotationsAddLayoutPage = () => {
                               </IconButton>
                             </Box>
                           </TableCell>
+                          {formData.is_direct_invoice === true && (
+                            <TableCell>
+                              {quantities[product.id] > 0 && (
+                                <Box
+                                  display="flex"
+                                  flexDirection="column"
+                                  gap={1}
+                                  sx={{ width: "200px" }}
+                                >
+                                  {/* TextFields with Errors */}
+                                  <Box
+                                    display="flex"
+                                    flexDirection="column"
+                                    gap={1}
+                                  >
+                                    {(assetIds[product.id] || []).map(
+                                      (id, idx) => (
+                                        <TextField
+                                          key={idx}
+                                          size="small"
+                                          fullWidth
+                                          placeholder={`Asset ID ${idx + 1}`}
+                                          value={id}
+                                          onChange={(e) => {
+                                            const updated = [
+                                              ...(assetIds[product.id] || []),
+                                            ];
+                                            updated[idx] = e.target.value;
+                                            setAssetIds((prev) => ({
+                                              ...prev,
+                                              [product.id]: updated,
+                                            }));
+                                            if (assetIdErrors[product.id]) {
+                                              setAssetIdErrors((prev) => {
+                                                const newErrors = { ...prev };
+                                                delete newErrors[product.id];
+                                                return newErrors;
+                                              });
+                                            }
+                                          }}
+                                          error={Boolean(
+                                            assetIdErrors[product.id]
+                                          )}
+                                          helperText={
+                                            idx === 0
+                                              ? assetIdErrors[product.id]
+                                              : ""
+                                          }
+                                        />
+                                      )
+                                    )}
+                                  </Box>
+
+                                  {/* Add Button OUTSIDE */}
+                                  {(assetIds[product.id]?.length || 0) <
+                                    (quantities[product.id] || 0) && (
+                                    <Box mt={1}>
+                                      <Button
+                                        size="small"
+                                        variant="outlined"
+                                        onClick={() =>
+                                          setAssetIds((prev) => ({
+                                            ...prev,
+                                            [product.id]: [
+                                              ...(prev[product.id] || []),
+                                              "",
+                                            ],
+                                          }))
+                                        }
+                                      >
+                                        + Add Asset ID
+                                      </Button>
+                                    </Box>
+                                  )}
+                                </Box>
+                              )}
+                            </TableCell>
+                          )}
+
                           <TableCell>
                             <IconButton
                               size="small"
@@ -1059,15 +1342,42 @@ const Field = ({
   readOnly = false,
   required = false,
   error = "",
-  disabled = false, // default false
+  disabled = false,
+  description = "",
+  name,
 }) => (
   <div style={fieldContainerStyle}>
     <label style={labelStyle}>
-      {label}
-      {required && <span style={{ color: "red" }}>*</span>}
+      {type !== "checkbox" && label}
+      {required && type !== "checkbox" && (
+        <span style={{ color: "red" }}>*</span>
+      )}
     </label>
 
-    {type === "select" ? (
+    {type === "checkbox" ? (
+      <div style={{ ...checkboxContainerStyle, marginTop: "0.5rem" }}>
+        <label style={checkboxLabelStyle}>
+          <input
+            type="checkbox"
+            name={name}
+            checked={value}
+            onChange={onChange}
+            disabled={disabled}
+            style={checkboxInputStyle}
+          />
+          <div style={checkboxCustomStyle}>
+            {value && <span style={checkmarkStyle}>✓</span>}
+          </div>
+          <div>
+            <span style={checkboxTextStyle}>
+              {label}
+              {required && <span style={{ color: "red" }}>*</span>}
+            </span>
+            {description && <div style={descriptionStyle}>{description}</div>}
+          </div>
+        </label>
+      </div>
+    ) : type === "select" ? (
       <div>
         <div style={selectWrapperStyle}>
           <select
@@ -1077,8 +1387,9 @@ const Field = ({
             }}
             value={value}
             onChange={onChange}
-            disabled={disabled || readOnly} // <- apply disabled here
+            disabled={disabled || readOnly}
             required={required}
+            name={name}
           >
             <option value="" disabled>
               {placeholder}
@@ -1111,21 +1422,55 @@ const Field = ({
         value={value}
         onChange={onChange}
         readOnly={readOnly}
-        disabled={disabled} // <- apply disabled
+        disabled={disabled}
+        name={name}
       />
     ) : (
       <input
         type={type}
         placeholder={placeholder}
-        style={inputStyle}
+        style={{
+          ...inputStyle,
+          borderColor: error ? "red" : "#d1d5db",
+        }}
         value={value}
         onChange={onChange}
         readOnly={readOnly}
-        disabled={disabled} // <- apply disabled
+        disabled={disabled}
+        name={name}
       />
+    )}
+
+    {error && type !== "select" && type !== "checkbox" && (
+      <div style={{ color: "red", fontSize: "0.75rem", marginTop: "4px" }}>
+        {error}
+      </div>
+    )}
+
+    {description && type !== "checkbox" && (
+      <div style={descriptionStyle}>{description}</div>
     )}
   </div>
 );
+
+const checkboxContainerStyle = {
+  display: "flex",
+  alignItems: "flex-start",
+};
+
+const checkboxInputStyle = {
+  position: "absolute",
+  opacity: 0,
+  cursor: "pointer",
+  height: 0,
+  width: 0,
+};
+
+const descriptionStyle = {
+  fontSize: "0.75rem",
+  color: "#6b7280",
+  marginTop: "0.25rem",
+};
 
 // Styles (same as in your original code)
 const containerStyle = {

@@ -12,8 +12,13 @@ import {
 } from "lucide-react";
 
 import API_URL from "../../../api/Api_url";
+import { useSelector } from "react-redux";
 
 const ClientJourneyOp = () => {
+  const { user, token } = useSelector((state) => state.auth);
+
+  const userToken = token;
+
   const [searchBy, setSearchBy] = useState("");
   const [searchCode, setSearchCode] = useState("");
   const [expandedSections, setExpandedSections] = useState({
@@ -50,143 +55,178 @@ const ClientJourneyOp = () => {
   useEffect(() => {
     // Fetch client data
     const fetchClientData = async () => {
-      setLoading(prev => ({...prev, client: true}));
-      setError(prev => ({...prev, client: null}));
+      setLoading((prev) => ({ ...prev, client: true }));
+      setError((prev) => ({ ...prev, client: null }));
       try {
-        const response = await fetch(`${API_URL}/contacts`);
+        const response = await fetch(`${API_URL}/contacts`, {
+          headers: {
+            "Authorization": `Bearer ${userToken}`,
+          },
+        });
         if (!response.ok) throw new Error("Failed to fetch client data");
         const data = await response.json();
-        setClientData(data.map(client => ({
-          dateOfFirstContact: client.date,
-          contactCoName: client.company_name,
-          clientCode: client.customer_id,
-          contactPerson: `${client.first_name} ${client.last_name}`,
-          mobileNumber: client.phone_number,
-          email: client.email,
-          clientOwner: client.owner,
-        })));
+        setClientData(
+          data.map((client) => ({
+            dateOfFirstContact: client.date,
+            contactCoName: client.company_name,
+            clientCode: client.customer_id,
+            contactPerson: `${client.first_name} ${client.last_name}`,
+            mobileNumber: client.phone_number,
+            email: client.email,
+            clientOwner: client.owner,
+          }))
+        );
       } catch (err) {
-        setError(prev => ({...prev, client: err.message}));
+        setError((prev) => ({ ...prev, client: err.message }));
       } finally {
-        setLoading(prev => ({...prev, client: false}));
+        setLoading((prev) => ({ ...prev, client: false }));
       }
     };
 
     // Fetch leads data
     const fetchLeadsData = async () => {
-      setLoading(prev => ({...prev, leads: true}));
-      setError(prev => ({...prev, leads: null}));
+      setLoading((prev) => ({ ...prev, leads: true }));
+      setError((prev) => ({ ...prev, leads: null }));
       try {
-        const response = await fetch(`${API_URL}/leads`);
+        const response = await fetch(`${API_URL}/leads`, {
+          headers: {
+            "Authorization": `Bearer ${userToken}`,
+          },
+        });
         if (!response.ok) throw new Error("Failed to fetch leads data");
         const data = await response.json();
-        setLeadsData(data.map(lead => ({
-          leadDate: lead.lead_date,
-          leadCode: lead.lead_id,
-          leadType: lead.transaction_type,
-          leadOwner: lead.owner,
-          leadTitle: lead.lead_title,
-          executedBy: lead.lead_generated_by,
-          leadStatus: lead.is_active ? "Active" : "Inactive",
-        })));
+        setLeadsData(
+          data.map((lead) => ({
+            leadDate: lead.lead_date,
+            leadCode: lead.lead_id,
+            leadType: lead.transaction_type,
+            leadOwner: lead.owner,
+            leadTitle: lead.lead_title,
+            executedBy: lead.lead_generated_by,
+            leadStatus: lead.is_active ? "Active" : "Inactive",
+          }))
+        );
       } catch (err) {
-        setError(prev => ({...prev, leads: err.message}));
+        setError((prev) => ({ ...prev, leads: err.message }));
       } finally {
-        setLoading(prev => ({...prev, leads: false}));
+        setLoading((prev) => ({ ...prev, leads: false }));
       }
     };
 
     // Fetch quotation data
     const fetchQuotationData = async () => {
-      setLoading(prev => ({...prev, quotation: true}));
-      setError(prev => ({...prev, quotation: null}));
+      setLoading((prev) => ({ ...prev, quotation: true }));
+      setError((prev) => ({ ...prev, quotation: null }));
       try {
-        const response = await fetch(`${API_URL}/quotations`);
+        const response = await fetch(`${API_URL}/quotations`, {
+          headers: {
+            "Authorization": `Bearer ${userToken}`,
+          },
+        });
         if (!response.ok) throw new Error("Failed to fetch quotation data");
         const data = await response.json();
-        setQuotationData(data.map(quote => ({
-          quotationDate: quote.quotation_date,
-          quotationCode: quote.quotation_id,
-          quotationType: quote.status,
-          quotationAmount: quote.items.reduce((sum, item) => sum + (item.item_total_value || 0), 0),
-          quotationStatus: quote.status,
-          executedBy: quote.quotation_generated_by,
-        })));
+        setQuotationData(
+          data.map((quote) => ({
+            quotationDate: quote.quotation_date,
+            quotationCode: quote.quotation_id,
+            quotationType: quote.status,
+            quotationAmount: quote.items.reduce(
+              (sum, item) => sum + (item.item_total_value || 0),
+              0
+            ),
+            quotationStatus: quote.status,
+            executedBy: quote.quotation_generated_by,
+          }))
+        );
       } catch (err) {
-        setError(prev => ({...prev, quotation: err.message}));
+        setError((prev) => ({ ...prev, quotation: err.message }));
       } finally {
-        setLoading(prev => ({...prev, quotation: false}));
+        setLoading((prev) => ({ ...prev, quotation: false }));
       }
     };
 
     // Fetch orders data
     const fetchOrdersData = async () => {
-      setLoading(prev => ({...prev, orders: true}));
-      setError(prev => ({...prev, orders: null}));
+      setLoading((prev) => ({ ...prev, orders: true }));
+      setError((prev) => ({ ...prev, orders: null }));
       try {
-        const response = await fetch(`${API_URL}/orders`);
+        const response = await fetch(`${API_URL}/orders`, {
+          headers: {
+            "Authorization": `Bearer ${userToken}`,
+          },
+        });
         if (!response.ok) throw new Error("Failed to fetch orders data");
         const data = await response.json();
-        setOrdersData(data.map(order => ({
-          orderDate: order.order_date,
-          orderCode: order.order_id,
-          orderAmount: order.total_order_value,
-          billingContact: `${order.personalDetails.first_name} ${order.personalDetails.last_name}`,
-          shippingContact: `${order.personalDetails.first_name} ${order.personalDetails.last_name}`,
-          paymentTerms: order.payment_type,
-          executive: order.order_generated_by,
-        })));
+        setOrdersData(
+          data.map((order) => ({
+            orderDate: order.order_date,
+            orderCode: order.order_id,
+            orderAmount: order.total_order_value,
+            billingContact: `${order.personalDetails.first_name} ${order.personalDetails.last_name}`,
+            shippingContact: `${order.personalDetails.first_name} ${order.personalDetails.last_name}`,
+            paymentTerms: order.payment_type,
+            executive: order.order_generated_by,
+          }))
+        );
       } catch (err) {
-        setError(prev => ({...prev, orders: err.message}));
+        setError((prev) => ({ ...prev, orders: err.message }));
       } finally {
-        setLoading(prev => ({...prev, orders: false}));
+        setLoading((prev) => ({ ...prev, orders: false }));
       }
     };
 
     // Fetch DC data
     const fetchDcData = async () => {
-      setLoading(prev => ({...prev, dc: true}));
-      setError(prev => ({...prev, dc: null}));
+      setLoading((prev) => ({ ...prev, dc: true }));
+      setError((prev) => ({ ...prev, dc: null }));
       try {
-        const response = await fetch(`${API_URL}/delivery-challans`);
+        const response = await fetch(`${API_URL}/delivery-challans`, {
+          headers: {
+            "Authorization": `Bearer ${userToken}`,
+          },
+        });
         if (!response.ok) throw new Error("Failed to fetch DC data");
         const data = await response.json();
-        setDcData(data.map(dc => ({
-          dcDate: dc.dc_date,
-          dcCode: dc.dc_id,
-          vehicleNumber: dc.vehicle_number,
-          deliveredStaff: dc.delivery_person_name,
-          receiverName: dc.receiver_name,
-          receiverPhNumber: dc.receiver_phone_number,
-          shippingAddress: `${dc.street}, ${dc.city}, ${dc.state} - ${dc.pincode}`,
-          dcStatus: dc.dc_status,
-        })));
+        setDcData(
+          data.map((dc) => ({
+            dcDate: dc.dc_date,
+            dcCode: dc.dc_id,
+            vehicleNumber: dc.vehicle_number,
+            deliveredStaff: dc.delivery_person_name,
+            receiverName: dc.receiver_name,
+            receiverPhNumber: dc.receiver_phone_number,
+            shippingAddress: `${dc.street}, ${dc.city}, ${dc.state} - ${dc.pincode}`,
+            dcStatus: dc.dc_status,
+          }))
+        );
       } catch (err) {
-        setError(prev => ({...prev, dc: err.message}));
+        setError((prev) => ({ ...prev, dc: err.message }));
       } finally {
-        setLoading(prev => ({...prev, dc: false}));
+        setLoading((prev) => ({ ...prev, dc: false }));
       }
     };
 
     // Fetch GRN data (mock data since no API provided)
     const fetchGrnData = async () => {
-      setLoading(prev => ({...prev, grn: true}));
-      setError(prev => ({...prev, grn: null}));
+      setLoading((prev) => ({ ...prev, grn: true }));
+      setError((prev) => ({ ...prev, grn: null }));
       try {
         // Mock data since we don't have an API for GRN
-        setGrnData([{
-          grnDate: "05-07-2024",
-          grnCode: "8974",
-          informedPerson: "Mr Sathish",
-          contactNumber: "9123456789",
-          returnedPerson: "Anand",
-          contactNumber2: "9123456789",
-          vehicleNumber: "KA 05 AD 9956",
-        }]);
+        setGrnData([
+          {
+            grnDate: "05-07-2024",
+            grnCode: "8974",
+            informedPerson: "Mr Sathish",
+            contactNumber: "9123456789",
+            returnedPerson: "Anand",
+            contactNumber2: "9123456789",
+            vehicleNumber: "KA 05 AD 9956",
+          },
+        ]);
       } catch (err) {
-        setError(prev => ({...prev, grn: err.message}));
+        setError((prev) => ({ ...prev, grn: err.message }));
       } finally {
-        setLoading(prev => ({...prev, grn: false}));
+        setLoading((prev) => ({ ...prev, grn: false }));
       }
     };
 
@@ -304,39 +344,25 @@ const ClientJourneyOp = () => {
         </div>
       </div>
 
-      {renderSection(
-        "client",
-        User,
-        "Client",
-        "#3b82f6",
-        clientData,
-        [
-          { key: "dateOfFirstContact", label: "Date of First Contact" },
-          { key: "contactCoName", label: "Contact/Co. Name" },
-          { key: "clientCode", label: "Client Code" },
-          { key: "contactPerson", label: "Contact Person" },
-          { key: "mobileNumber", label: "Mobile Number" },
-          { key: "email", label: "Email" },
-          { key: "clientOwner", label: "Client Owner" },
-        ]
-      )}
+      {renderSection("client", User, "Client", "#3b82f6", clientData, [
+        { key: "dateOfFirstContact", label: "Date of First Contact" },
+        { key: "contactCoName", label: "Contact/Co. Name" },
+        { key: "clientCode", label: "Client Code" },
+        { key: "contactPerson", label: "Contact Person" },
+        { key: "mobileNumber", label: "Mobile Number" },
+        { key: "email", label: "Email" },
+        { key: "clientOwner", label: "Client Owner" },
+      ])}
 
-      {renderSection(
-        "leads",
-        TrendingUp,
-        "Leads",
-        "#3b82f6",
-        leadsData,
-        [
-          { key: "leadDate", label: "Lead Date" },
-          { key: "leadCode", label: "Lead Code" },
-          { key: "leadType", label: "Lead Type" },
-          { key: "leadOwner", label: "Lead Owner" },
-          { key: "leadTitle", label: "Lead Title" },
-          { key: "executedBy", label: "Executed By" },
-          { key: "leadStatus", label: "Lead Status" },
-        ]
-      )}
+      {renderSection("leads", TrendingUp, "Leads", "#3b82f6", leadsData, [
+        { key: "leadDate", label: "Lead Date" },
+        { key: "leadCode", label: "Lead Code" },
+        { key: "leadType", label: "Lead Type" },
+        { key: "leadOwner", label: "Lead Owner" },
+        { key: "leadTitle", label: "Lead Title" },
+        { key: "executedBy", label: "Executed By" },
+        { key: "leadStatus", label: "Lead Status" },
+      ])}
 
       {renderSection(
         "quotation",
@@ -354,22 +380,15 @@ const ClientJourneyOp = () => {
         ]
       )}
 
-      {renderSection(
-        "orders",
-        ShoppingCart,
-        "Orders",
-        "#3b82f6",
-        ordersData,
-        [
-          { key: "orderDate", label: "Order Date" },
-          { key: "orderCode", label: "Order Code" },
-          { key: "orderAmount", label: "Order Amount" },
-          { key: "billingContact", label: "Billing Contact" },
-          { key: "shippingContact", label: "Shipping Contact" },
-          { key: "paymentTerms", label: "Payment Terms" },
-          { key: "executive", label: "Executive" },
-        ]
-      )}
+      {renderSection("orders", ShoppingCart, "Orders", "#3b82f6", ordersData, [
+        { key: "orderDate", label: "Order Date" },
+        { key: "orderCode", label: "Order Code" },
+        { key: "orderAmount", label: "Order Amount" },
+        { key: "billingContact", label: "Billing Contact" },
+        { key: "shippingContact", label: "Shipping Contact" },
+        { key: "paymentTerms", label: "Payment Terms" },
+        { key: "executive", label: "Executive" },
+      ])}
 
       {renderSection("dc", Truck, "DC", "#3b82f6", dcData, [
         { key: "dcDate", label: "DC Date" },
@@ -398,7 +417,8 @@ const ClientJourneyOp = () => {
 // Styles remain the same as your original code
 const containerStyle = {
   padding: "2rem",
-  fontFamily: '"Inter", "Segoe UI", -apple-system, BlinkMacSystemFont, sans-serif',
+  fontFamily:
+    '"Inter", "Segoe UI", -apple-system, BlinkMacSystemFont, sans-serif',
   minHeight: "100vh",
   lineHeight: 1.6,
 };

@@ -24,7 +24,7 @@ const POQuotationTable = () => {
       try {
         const response = await axios.get(`${API_URL}/purchase-quotation`, {
           headers: {
-            Authorization: `Bearer ${token}`,
+            "Authorization": `Bearer ${token}`,
           },
         });
 

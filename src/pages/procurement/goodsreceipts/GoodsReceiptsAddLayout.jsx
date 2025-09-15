@@ -18,6 +18,7 @@ import {
 } from "@mui/material";
 import { Add, Remove } from "@mui/icons-material";
 import API_URL, { IMAGE_API_URL } from "../../../api/Api_url";
+import { useSelector } from "react-redux";
 
 const generateRandomId = () => {
   const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
@@ -29,6 +30,10 @@ const generateRandomId = () => {
 };
 
 const GoodsReceiptsAddLayout = () => {
+  const { user, token } = useSelector((state) => state.auth);
+
+  const userToken = token;
+
   const [purchaseOrders, setPurchaseOrders] = useState([]);
   const [selectedPurchaseOrder, setSelectedPurchaseOrder] = useState(null);
   const [suppliers, setSuppliers] = useState([]);
@@ -83,17 +88,29 @@ const GoodsReceiptsAddLayout = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const poResponse = await fetch(`${API_URL}/purchase-orders/approved`);
+        const poResponse = await fetch(`${API_URL}/purchase-orders/approved`, {
+          headers: {
+            "Authorization": `Bearer ${userToken}`,
+          },
+        });
         if (!poResponse.ok) throw new Error("Failed to fetch purchase orders");
         const poData = await poResponse.json();
         setPurchaseOrders(poData);
 
-        const supResponse = await fetch(`${API_URL}/supplier`);
+        const supResponse = await fetch(`${API_URL}/supplier`, {
+          headers: {
+            "Authorization": `Bearer ${userToken}`,
+          },
+        });
         if (!supResponse.ok) throw new Error("Failed to fetch suppliers");
         const supData = await supResponse.json();
         setSuppliers(supData);
 
-        const prodResponse = await fetch(`${API_URL}/product-templete`);
+        const prodResponse = await fetch(`${API_URL}/product-templete`, {
+          headers: {
+            "Authorization": `Bearer ${userToken}`,
+          },
+        });
         if (!prodResponse.ok) throw new Error("Failed to fetch products");
         const prodData = await prodResponse.json();
         setProducts(prodData);
@@ -328,7 +345,10 @@ const GoodsReceiptsAddLayout = () => {
 
       const response = await fetch(`${API_URL}/goods-receipts/create`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${userToken}`,
+        },
         body: JSON.stringify(payload),
       });
 

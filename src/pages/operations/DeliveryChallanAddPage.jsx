@@ -19,7 +19,7 @@ import { Add, Remove } from "@mui/icons-material";
 import { useNavigate } from "react-router-dom";
 import API_URL from "../../api/Api_url";
 import { useInventory } from "../../contexts/InventoryContext";
-
+import { useSelector } from "react-redux";
 // Styles
 const containerStyle = {
   padding: "2rem",
@@ -418,6 +418,10 @@ const DeliveryChallanAddPage = ({ product }) => {
   const [assetSearchTerms, setAssetSearchTerms] = useState({});
   const [errors, setErrors] = useState({});
 
+  const { user, token } = useSelector((state) => state.auth);
+
+  const userToken = token;
+
   const getAvailableQty = (productId) => {
     const entry = inventoryData.find((item) => item.id === productId);
     return entry ? entry.available_quantity : "N/A";
@@ -495,14 +499,23 @@ const DeliveryChallanAddPage = ({ product }) => {
     const fetchData = async () => {
       try {
         const dispatchOrderResponse = await fetch(
-          `${API_URL}/dispatch-orders/approved`
+          `${API_URL}/dispatch-orders/approved`,
+          {
+            headers: {
+              Authorization: `Bearer ${userToken}`,
+            },
+          }
         );
         if (!dispatchOrderResponse.ok)
           throw new Error("Failed to fetch dispatch orders");
         const dispatchOrderData = await dispatchOrderResponse.json();
         setDispatchOrders(dispatchOrderData);
 
-        const prodResponse = await fetch(`${API_URL}/product-templete`);
+        const prodResponse = await fetch(`${API_URL}/product-templete`, {
+          headers: {
+            Authorization: `Bearer ${userToken}`,
+          },
+        });
         if (!prodResponse.ok) throw new Error("Failed to fetch products");
         const prodData = await prodResponse.json();
         setProducts(prodData);
@@ -586,6 +599,10 @@ const DeliveryChallanAddPage = ({ product }) => {
         product_name: item.product_name,
         quantity: item.quantity,
         item_total_value: item.total_price,
+        purchase_price: item.purchase_price || 0,
+        offer_purchase_price: item.offer_purchase_price || 0,
+        rent_price_per_month: item.rent_price_per_month || 0,
+        offer_rent_price_per_month: item.offer_rent_price_per_month || 0,
         device_ids: item.device_ids || [],
       })),
     });
@@ -729,54 +746,42 @@ const DeliveryChallanAddPage = ({ product }) => {
     try {
       const items = selectedProductIds.map((productId) => {
         const product = products.find((p) => p.id === productId);
+        const orderItem = formData.items.find(
+          (item) => item.product_id === productId
+        );
+
         const quantity = quantities[productId] || 1;
         const selectedDeviceIds = deviceIds[productId] || [];
+        
 
-        // let total_price = 0;
-        // if (formData.type === "Rent") {
-        //   const rentalDuration = 1;
-        //   if (rentalDuration === 12) {
-        //     total_price = product.rent_price_1_year * quantity;
-        //   } else if (rentalDuration === 6) {
-        //     total_price = product.rent_price_6_months * quantity;
-        //   } else {
-        //     total_price = product.rent_price_per_month * quantity;
-        //   }
-        // } else {
-        //   total_price = product.purchase_price * quantity;
-        // }
+        const unit_price = Number(
+          orderItem?.offer_rent_price_per_month > 0
+            ? orderItem.offer_rent_price_per_month
+            : orderItem.rent_price_per_month
+        );
 
-        let total_price = 0;
-
-        if (formData.type === "Rent") {
-          const rentalDuration = 1; // can be 1, 6, or 12 months
-          if (rentalDuration === 12) {
-            total_price = product?.rent_price_1_year
-              ? Number(product.rent_price_1_year) * quantity
-              : 0;
-          } else if (rentalDuration === 6) {
-            total_price = product?.rent_price_6_months
-              ? Number(product.rent_price_6_months) * quantity
-              : 0;
-          } else {
-            // monthly price with fallback to offer rent price
-            const monthlyPrice =
-              product?.offer_rent_price_per_month &&
-              product.offer_rent_price_per_month !== ""
-                ? Number(product.offer_rent_price_per_month)
-                : Number(product?.rent_price_per_month || 0);
-
-            total_price = monthlyPrice * quantity;
-          }
-        } else {
-          total_price = Number(product?.purchase_price || 0) * quantity;
-        }
+        const total_price = Number(
+          orderItem?.offer_purchase_price > 0
+            ? orderItem.offer_purchase_price
+            : orderItem.purchase_price
+        );
 
         return {
           product_id: productId,
           product_name: product.product_name,
           quantity,
-          total_price,
+          total_price: total_price.toFixed(2),
+          unit_price: unit_price.toFixed(2),
+          purchase_price: Number(orderItem.purchase_price).toFixed(2),
+          offer_purchase_price: Number(orderItem.offer_purchase_price).toFixed(
+            2
+          ),
+          rent_price_per_month: Number(orderItem.rent_price_per_month).toFixed(
+            2
+          ),
+          offer_rent_price_per_month: Number(
+            orderItem.offer_rent_price_per_month
+          ).toFixed(2),
           device_ids: selectedDeviceIds,
         };
       });
@@ -793,6 +798,7 @@ const DeliveryChallanAddPage = ({ product }) => {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          Authorization: `Bearer ${userToken}`,
         },
         body: JSON.stringify(payload),
       });

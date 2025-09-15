@@ -2,9 +2,16 @@ import React, { useEffect, useState } from "react";
 import DynamicTable from "../../../components/table-format/DynamicTable";
 import axios from "axios";
 import API_URL from "../../../api/Api_url";
+import { useSelector } from "react-redux";
 
 const AssetTrackerOp = () => {
   const [data, setData] = useState([]);
+
+
+
+    const { user, token } = useSelector((state) => state.auth);
+  
+    const userToken = token;
 
   const columns = [
     { id: "s_id", label: "S.No." },
@@ -21,7 +28,7 @@ const AssetTrackerOp = () => {
         const token = localStorage.getItem("token");
 
         const response = await axios.get(`${API_URL}/peripheral-assets`, {
-          headers: { Authorization: `Bearer ${token}` },
+          headers: { "Authorization": `Bearer ${userToken}` },
         });
 
         if (response.status === 200) {
@@ -30,14 +37,19 @@ const AssetTrackerOp = () => {
             const ramItems = item.items.filter(
               (i) => i.product_category === "RAM"
             );
-            const ramSpecs = ramItems.map(item => item.specifications).join(" + ");
-            
+            const ramSpecs = ramItems
+              .map((item) => item.specifications)
+              .join(" + ");
+
             // Extract Storage items
             const storageItems = item.items.filter(
-              (i) => i.product_category === "SSD" || i.product_category === "HDD"
+              (i) =>
+                i.product_category === "SSD" || i.product_category === "HDD"
             );
-            const storageSpecs = storageItems.map(item => item.specifications).join(" + ");
-            
+            const storageSpecs = storageItems
+              .map((item) => item.specifications)
+              .join(" + ");
+
             // Extract Processor
             const processorItem = item.items.find(
               (i) => i.product_category === "Processor"

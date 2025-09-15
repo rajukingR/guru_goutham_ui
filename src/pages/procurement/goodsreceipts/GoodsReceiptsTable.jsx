@@ -2,8 +2,17 @@ import React, { useEffect, useState } from "react";
 import DynamicTable from "../../../components/table-format/DynamicTable";
 import axios from "axios";
 import API_URL, { IMAGE_API_URL } from "../../../api/Api_url";
+  import { useSelector } from "react-redux";
 
 const GoodsReceiptsTable = () => {
+
+
+
+
+    const { user, token } = useSelector((state) => state.auth);
+  
+    const userToken = token;
+
   const [data, setData] = useState([]);
 
   const columns = [
@@ -26,7 +35,7 @@ const GoodsReceiptsTable = () => {
 
         const response = await axios.get(`${API_URL}/goods-receipts`, {
           headers: {
-            Authorization: `Bearer ${token}`,
+            "Authorization": `Bearer ${userToken}`,
           },
         });
 

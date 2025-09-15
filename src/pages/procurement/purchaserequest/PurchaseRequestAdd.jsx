@@ -18,7 +18,7 @@ import { Add, Remove } from "@mui/icons-material";
 import API_URL, { IMAGE_API_URL } from "../../../api/Api_url";
 import { useNavigate } from "react-router-dom";
 import { Snackbar, Alert } from "@mui/material";
-
+import { useSelector } from "react-redux";
 const generateRandomId = () => {
   const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
   let code = "";
@@ -29,6 +29,10 @@ const generateRandomId = () => {
 };
 
 const PurchaseRequestAdd = () => {
+  const { user, token } = useSelector((state) => state.auth);
+
+  const userToken = token;
+
   const [showProductTable, setShowProductTable] = useState(false);
   const [selectedProductIds, setSelectedProductIds] = useState([]);
   const [suppliers, setSuppliers] = useState([]);
@@ -77,7 +81,11 @@ const PurchaseRequestAdd = () => {
 
     const fetchSuppliers = async () => {
       try {
-        const response = await fetch(`${API_URL}/supplier`);
+        const response = await fetch(`${API_URL}/supplier`, {
+          headers: {
+            "Authorization": `Bearer ${userToken}`,
+          },
+        });
         if (!response.ok) throw new Error("Failed to fetch suppliers");
         const data = await response.json();
         setSuppliers(data);
@@ -90,7 +98,11 @@ const PurchaseRequestAdd = () => {
 
     const fetchProducts = async () => {
       try {
-        const response = await fetch(`${API_URL}/product-templete`);
+        const response = await fetch(`${API_URL}/product-templete`, {
+          headers: {
+            Authorization: `Bearer ${userToken}`,
+          },
+        });
         if (!response.ok) throw new Error("Failed to fetch products");
         const data = await response.json();
 
@@ -276,7 +288,10 @@ const PurchaseRequestAdd = () => {
     try {
       const response = await fetch(`${API_URL}/purchase-requests/create`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${userToken}`,
+        },
         body: JSON.stringify(payload),
       });
 

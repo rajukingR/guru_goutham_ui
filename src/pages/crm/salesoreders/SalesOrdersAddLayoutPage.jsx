@@ -22,6 +22,7 @@ import { Add, Remove } from "@mui/icons-material";
 import { useParams, useNavigate } from "react-router-dom";
 import API_URL, { IMAGE_API_URL } from "../../../api/Api_url";
 import { useInventory } from "../../../contexts/InventoryContext";
+import { useSelector } from "react-redux";
 
 const generateSalesOrderId = () => {
   const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
@@ -35,6 +36,9 @@ const generateSalesOrderId = () => {
 const SalesOrdersAddLayoutPage = ({ product }) => {
   // State for form data
   const { inventoryData } = useInventory();
+  const { user, token } = useSelector((state) => state.auth);
+
+  const userToken = token;
 
   const getAvailableQty = (productId) => {
     const entry = inventoryData.find((item) => item.id === productId);
@@ -133,7 +137,11 @@ const SalesOrdersAddLayoutPage = ({ product }) => {
   useEffect(() => {
     const fetchApprovedQuotations = async () => {
       try {
-        const response = await fetch(`${API_URL}/quotations/approved`);
+        const response = await fetch(`${API_URL}/quotations/approved`, {
+          headers: {
+            "Authorization": `Bearer ${userToken}`,
+          },
+        });
         if (!response.ok) {
           throw new Error("Failed to fetch approved quotations");
         }
@@ -207,7 +215,11 @@ const SalesOrdersAddLayoutPage = ({ product }) => {
   useEffect(() => {
     const fetchProducts = async () => {
       try {
-        const response = await fetch(`${API_URL}/product-templete`);
+        const response = await fetch(`${API_URL}/product-templete`, {
+          headers: {
+            "Authorization": `Bearer ${userToken}`,
+          },
+        });
         if (!response.ok) {
           throw new Error("Failed to fetch products");
         }
@@ -584,6 +596,7 @@ const SalesOrdersAddLayoutPage = ({ product }) => {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          "Authorization": `Bearer ${userToken}`,
         },
         body: JSON.stringify(payload),
       });
@@ -731,7 +744,10 @@ const SalesOrdersAddLayoutPage = ({ product }) => {
                     }));
                   }
                 }}
-                options={["Rent", "Buy"]}
+                options={[
+                  { value: "Rent", label: "Rent" },
+                  { value: "Buy", label: "Sale" },
+                ]}
               />
 
               <Field

@@ -5,8 +5,12 @@ import RecentRentals from "../dashboard_page/recentrentals/RecentRentals";
 import RecentSales from "../dashboard_page/recentsales/RecentSales";
 import RentalAndSalesTrends from "../dashboard_page/rental-sales-trends/Rental&SalesTrends";
 import API_URL from "../../api/Api_url";
+import { useSelector } from "react-redux";
 
 const Dashboard = () => {
+  const { user, token } = useSelector((state) => state.auth);
+
+  const userToken = token;
   // Date states for filters
   const [laptopCategoriesDate, setLaptopCategoriesDate] = useState(
     new Date(2023, 5, 1)
@@ -46,9 +50,11 @@ const Dashboard = () => {
     const fetchDeliveryChallans = async () => {
       try {
         setLoading(true);
-        const response = await fetch(
-          `${API_URL}/delivery-challans`
-        );
+        const response = await fetch(`${API_URL}/delivery-challans`, {
+          headers: {
+            "Authorization": `Bearer ${userToken}`,
+          },
+        });
         if (!response.ok) throw new Error(`HTTP error ${response.status}`);
         const data = await response.json();
         setDeliveryChallans(data);
@@ -69,7 +75,12 @@ const Dashboard = () => {
     const fetchAvailableStock = async () => {
       try {
         const response = await fetch(
-          `${API_URL}/goods-receipts/approved-receipt-products`
+          `${API_URL}/goods-receipts/approved-receipt-products`,
+          {
+            headers: {
+              "Authorization": `Bearer ${userToken}`,
+            },
+          }
         );
         if (!response.ok) throw new Error(`HTTP error ${response.status}`);
         const data = await response.json();

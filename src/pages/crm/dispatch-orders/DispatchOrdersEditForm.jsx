@@ -23,6 +23,7 @@ import { Add, Remove, Edit } from "@mui/icons-material";
 import { useNavigate, useParams } from "react-router-dom";
 import API_URL from "../../../api/Api_url";
 import { useInventory } from "../../../contexts/InventoryContext";
+import { useSelector } from "react-redux";
 
 // Styles (same as in your original code)
 const containerStyle = {
@@ -421,6 +422,10 @@ const Field = memo(
   )
 );
 const DispatchOrdersEditForm = () => {
+  const { user, token } = useSelector((state) => state.auth);
+
+  const userToken = token;
+
   const navigate = useNavigate();
   const { id } = useParams();
   const [newQuantities, setNewQuantities] = useState({});
@@ -519,7 +524,12 @@ const DispatchOrdersEditForm = () => {
     const fetchApprovedReceiptProducts = async () => {
       try {
         const response = await fetch(
-          `${API_URL}/goods-receipts/approved-receipt-products`
+          `${API_URL}/goods-receipts/approved-receipt-products`,
+          {
+            headers: {
+              "Authorization": `Bearer ${userToken}`,
+            },
+          }
         );
         if (!response.ok)
           throw new Error("Failed to fetch approved receipt products");
@@ -546,7 +556,12 @@ const DispatchOrdersEditForm = () => {
 
         // Fetch dispatch order data
         const dispatchOrderResponse = await fetch(
-          `${API_URL}/dispatch-orders/${id}`
+          `${API_URL}/dispatch-orders/${id}`,
+          {
+            headers: {
+              "Authorization": `Bearer ${userToken}`,
+            },
+          }
         );
         if (!dispatchOrderResponse.ok)
           throw new Error("Failed to fetch dispatch order");
@@ -554,13 +569,21 @@ const DispatchOrdersEditForm = () => {
         setDispatchOrderItems(dispatchOrderData.items || []);
 
         // Fetch orders
-        const orderResponse = await fetch(`${API_URL}/orders/order-approved`);
+        const orderResponse = await fetch(`${API_URL}/orders/order-approved`, {
+          headers: {
+            "Authorization": `Bearer ${userToken}`,
+          },
+        });
         if (!orderResponse.ok) throw new Error("Failed to fetch orders");
         const orderData = await orderResponse.json();
         setOrders(orderData);
 
         // Fetch products
-        const prodResponse = await fetch(`${API_URL}/product-templete`);
+        const prodResponse = await fetch(`${API_URL}/product-templete`, {
+          headers: {
+            "Authorization": `Bearer ${userToken}`,
+          },
+        });
         if (!prodResponse.ok) throw new Error("Failed to fetch products");
         const prodData = await prodResponse.json();
         setProducts(prodData);
@@ -797,35 +820,35 @@ const DispatchOrdersEditForm = () => {
 
   // Submit updated prices
   // Replace handleUpdatePrices with this:
-// Replace the handleUpdatePrices function with this:
-const handleUpdatePrices = () => {
-  if (!editingProduct) return;
+  // Replace the handleUpdatePrices function with this:
+  const handleUpdatePrices = () => {
+    if (!editingProduct) return;
 
-  // Update both productPrices and productOfferPrices states
-  setProductPrices((prev) => ({
-    ...prev,
-    [editingProduct.product_id]: {
-      ...prev[editingProduct.product_id],
-      purchase_price: priceForm.purchase_price,
-      offer_purchase_price: priceForm.offer_purchase_price,
-      rent_price_per_month: priceForm.rent_price_per_month,
-      offer_rent_price_per_month: priceForm.offer_rent_price_per_month,
-    },
-  }));
+    // Update both productPrices and productOfferPrices states
+    setProductPrices((prev) => ({
+      ...prev,
+      [editingProduct.product_id]: {
+        ...prev[editingProduct.product_id],
+        purchase_price: priceForm.purchase_price,
+        offer_purchase_price: priceForm.offer_purchase_price,
+        rent_price_per_month: priceForm.rent_price_per_month,
+        offer_rent_price_per_month: priceForm.offer_rent_price_per_month,
+      },
+    }));
 
-  setProductOfferPrices((prev) => ({
-    ...prev,
-    [editingProduct.id]: priceForm.offer_purchase_price,
-  }));
+    setProductOfferPrices((prev) => ({
+      ...prev,
+      [editingProduct.id]: priceForm.offer_purchase_price,
+    }));
 
-  setSnackbar({
-    open: true,
-    message: "Prices updated successfully!",
-    severity: "success",
-  });
+    setSnackbar({
+      open: true,
+      message: "Prices updated successfully!",
+      severity: "success",
+    });
 
-  handleCloseEditDialog();
-};
+    handleCloseEditDialog();
+  };
 
   // Handle form field changes
   const handleInputChange = useCallback((e) => {
@@ -917,9 +940,7 @@ const handleUpdatePrices = () => {
     }
 
     try {
-
-
-       // Find the selected order to get rental dates
+      // Find the selected order to get rental dates
       const selectedOrder = orders.find(
         (order) => order.id === parseInt(formData.order_id)
       );
@@ -934,11 +955,9 @@ const handleUpdatePrices = () => {
             }
           : null;
 
-
       // Prepare items data with updated prices
       const items = selectedProductIds.map((productId) => {
-
-         const orderItem = selectedOrder.items.find(
+        const orderItem = selectedOrder.items.find(
           (item) => item.product_id === productId
         );
 
@@ -949,7 +968,7 @@ const handleUpdatePrices = () => {
 
         // Calculate total price based on transaction type
         let total_price = 0;
-       if (formData.transaction_type === "Rent") {
+        if (formData.transaction_type === "Rent") {
           const rentalDuration = selectedOrder?.rental_duration || 1;
           if (rentalDuration === 12) {
             total_price = product.rent_price_1_year * quantity;
@@ -995,6 +1014,10 @@ const handleUpdatePrices = () => {
         ...formData,
         type: formData.type,
         convert_rent_to_sale: formData.convert_rent_to_sale,
+        order_sale_date:
+          formData.convert_rent_to_sale === ""
+            ? null
+            : formData.order_sale_date,
         items,
       };
 
@@ -1004,6 +1027,7 @@ const handleUpdatePrices = () => {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
+          "Authorization": `Bearer ${userToken}`,
         },
         body: JSON.stringify(payload),
       });
@@ -1175,11 +1199,11 @@ const handleUpdatePrices = () => {
                 }}
                 options={[
                   { value: "Rent", label: "Rent" },
-                  { value: "Buy", label: "Buy" },
+                  { value: "Buy", label: "Sale" },
                 ]}
               />
 
-              <Field
+              {/* <Field
                 label="Rent To Sale"
                 name="convert_rent_to_sale"
                 type="select"
@@ -1189,7 +1213,7 @@ const handleUpdatePrices = () => {
                   handleInputChange(e);
                 }}
                 options={[{ value: "Buy", label: "Buy" }]}
-              />
+              /> */}
 
               {formData.convert_rent_to_sale === "Buy" && (
                 <Field
@@ -1556,38 +1580,55 @@ const handleUpdatePrices = () => {
                               {(deviceIds[product.id] || []).join(", ")}
                             </TableCell>
 
-                           {formData.convert_rent_to_sale === "Buy" && (
-  <>
-    <TableCell>
-      <div>
-        <strong>Purchase Price:</strong> ₹
-        {productPrices[product.id]?.purchase_price || 
-         product.purchase_price}
-      </div>
-      {productPrices[product.id]?.offer_purchase_price && (
-        <div>
-          <strong>Offer Price:</strong> ₹
-          {productPrices[product.id]?.offer_purchase_price}
-        </div>
-      )}
-    </TableCell>
+                            {formData.convert_rent_to_sale === "Buy" && (
+                              <>
+                                <TableCell>
+                                  <div>
+                                    <strong>Purchase Price:</strong> ₹
+                                    {productPrices[product.id]
+                                      ?.purchase_price ||
+                                      product.purchase_price}
+                                  </div>
+                                  {productPrices[product.id]
+                                    ?.offer_purchase_price && (
+                                    <div>
+                                      <strong>Offer Price:</strong> ₹
+                                      {
+                                        productPrices[product.id]
+                                          ?.offer_purchase_price
+                                      }
+                                    </div>
+                                  )}
+                                </TableCell>
 
-    <TableCell>
-      <IconButton
-        size="small"
-        onClick={() => handleOpenEditDialog(product)}
-        title="Edit Prices"
-        disabled={!selectedProductIds.includes(product.id)}
-        style={{
-          opacity: selectedProductIds.includes(product.id) ? 1 : 0.5,
-          cursor: selectedProductIds.includes(product.id) ? "pointer" : "not-allowed",
-        }}
-      >
-        <Edit fontSize="small" />
-      </IconButton>
-    </TableCell>
-  </>
-)}
+                                <TableCell>
+                                  <IconButton
+                                    size="small"
+                                    onClick={() =>
+                                      handleOpenEditDialog(product)
+                                    }
+                                    title="Edit Prices"
+                                    disabled={
+                                      !selectedProductIds.includes(product.id)
+                                    }
+                                    style={{
+                                      opacity: selectedProductIds.includes(
+                                        product.id
+                                      )
+                                        ? 1
+                                        : 0.5,
+                                      cursor: selectedProductIds.includes(
+                                        product.id
+                                      )
+                                        ? "pointer"
+                                        : "not-allowed",
+                                    }}
+                                  >
+                                    <Edit fontSize="small" />
+                                  </IconButton>
+                                </TableCell>
+                              </>
+                            )}
                           </TableRow>
                         ))}
                     </TableBody>

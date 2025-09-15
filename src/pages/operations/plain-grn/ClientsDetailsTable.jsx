@@ -25,7 +25,7 @@
 //         const token = localStorage.getItem("token");
 
 //         const response = await axios.get(`${API_URL}/contacts`, {
-//           headers: { Authorization: `Bearer ${token}` },
+//           headers: { "Authorization": `Bearer ${token}` },
 //         });
 
 //         if (response.status === 200) {
@@ -62,26 +62,20 @@
 
 // export default ClientsDetailsTable;
 
-
-
-
-
-
-
-
-
-
-
-
-
-
 import React, { useEffect, useState } from "react";
 import DynamicTable from "../../../components/table-format/DynamicTable";
 import axios from "axios";
 import API_URL from "../../../api/Api_url";
+import { useSelector } from "react-redux";
 
 const ClientsDetailsTable = () => {
   const [data, setData] = useState([]);
+
+
+
+    const { user, token } = useSelector((state) => state.auth);
+  
+    const userToken = token;
 
   const columns = [
     { id: "s_id", label: "S.No." },
@@ -105,7 +99,7 @@ const ClientsDetailsTable = () => {
           `${API_URL}/contacts/delivered-contacts`,
           {
             headers: {
-              Authorization: `Bearer ${token}`,
+              "Authorization": `Bearer ${userToken}`,
             },
           }
         );

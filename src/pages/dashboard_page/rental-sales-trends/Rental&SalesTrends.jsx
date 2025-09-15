@@ -2,8 +2,14 @@ import React, { useState, useEffect, useRef } from "react";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import API_URL from "../../../api/Api_url";
+  import { useSelector } from "react-redux";
 
 const RentalAndSalesTrends = () => {
+
+    const { user, token } = useSelector((state) => state.auth);
+  
+    const userToken = token;
+
   const [trendsDate, setTrendsDate] = useState(new Date());
   const [monthlyTrendsData, setMonthlyTrendsData] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -30,14 +36,19 @@ const RentalAndSalesTrends = () => {
     "Dec",
   ];
 
-  useEffect(() => { 
+  useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
       setError(null);
       try {
-        const response = await fetch(`${API_URL}/delivery-challans`);
+        const token = localStorage.getItem("token");
+        const response = await fetch(`${API_URL}/delivery-challans`, {
+          headers: {
+            Authorization: `Bearer ${userToken}`,
+          },
+        });
         if (!response.ok)
-        throw new Error(`HTTP error! status: ${response.status}`);
+          throw new Error(`HTTP error! status: ${response.status}`);
         const data = await response.json();
         const year = trendsDate.getFullYear();
         // Initialize totals per month

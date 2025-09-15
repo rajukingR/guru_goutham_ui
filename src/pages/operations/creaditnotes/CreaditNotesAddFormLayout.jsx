@@ -27,6 +27,7 @@ import {
 } from "@mui/material";
 import { Add, CheckBox, Remove } from "@mui/icons-material";
 import API_URL from "../../../api/Api_url";
+import { useSelector } from "react-redux";
 
 const Alert = React.forwardRef(function Alert(props, ref) {
   return <MuiAlert elevation={6} ref={ref} variant="filled" {...props} />;
@@ -43,6 +44,9 @@ const generateCreditNoteNumber = () => {
 
 const CreaditNotesAddFormLayout = () => {
   const navigate = useNavigate();
+  const { user, token } = useSelector((state) => state.auth);
+
+  const userToken = token;
 
   const [formData, setFormData] = useState({
     creditNoteNumber: generateCreditNoteNumber(),
@@ -98,12 +102,21 @@ const CreaditNotesAddFormLayout = () => {
       try {
         // Fetch contacts
         const contactResponse = await axios.get(
-          `${API_URL}/contacts/delivered-contacts`
+          `${API_URL}/contacts/delivered-contacts`,
+          {
+            headers: {
+              "Authorization": `Bearer ${userToken}`,
+            },
+          }
         );
         setOrders(contactResponse.data);
 
         // Fetch products
-        const prodResponse = await axios.get(`${API_URL}/product-templete`);
+        const prodResponse = await axios.get(`${API_URL}/product-templete`, {
+          headers: {
+            "Authorization": `Bearer ${userToken}`,
+          },
+        });
         setProducts(prodResponse.data);
       } catch (error) {
         console.error("Error fetching data:", error);
@@ -122,7 +135,12 @@ const CreaditNotesAddFormLayout = () => {
       const fetchDeliveryChallans = async () => {
         try {
           const response = await axios.get(
-            `${API_URL}/delivery-challans/customer/${formData.customerId}`
+            `${API_URL}/delivery-challans/customer/${formData.customerId}`,
+            {
+              headers: {
+                "Authorization": `Bearer ${userToken}`,
+              },
+            }
           );
           setDeliveryChallans(response.data);
         } catch (error) {
@@ -435,7 +453,7 @@ const CreaditNotesAddFormLayout = () => {
       return;
     }
 
-     // Validate collected person fields
+    // Validate collected person fields
     if (!formData.collectedPersonName) {
       setErrors((prev) => ({ ...prev, collectedPersonName: true }));
       setSnackbarMessage("Collected Person Name is required");
@@ -535,7 +553,11 @@ const CreaditNotesAddFormLayout = () => {
     };
 
     try {
-      await axios.post(`${API_URL}/credit-notes/create`, payload);
+      await axios.post(`${API_URL}/credit-notes/create`, payload, {
+        headers: {
+          "Authorization": `Bearer ${userToken}`,
+        },
+      });
       setSnackbarMessage("GRN created successfully!");
       setSnackbarSeverity("success");
       setOpenSnackbar(true);
@@ -938,7 +960,7 @@ const CreaditNotesAddFormLayout = () => {
               />
             </div>
 
-             <div style={fieldContainerStyle}>
+            <div style={fieldContainerStyle}>
               <label style={labelStyle}>Vehicle No</label>
               <input
                 type="text"
@@ -975,7 +997,7 @@ const CreaditNotesAddFormLayout = () => {
                 </span>
               )}
             </div>
-            
+
             <div style={fieldContainerStyle}>
               <label style={labelStyle}>
                 Collected Person No

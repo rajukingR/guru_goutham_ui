@@ -4,11 +4,17 @@ import axios from "axios";
 import API_URL, { IMAGE_API_URL } from "../../../api/Api_url";
 import DefaultImage from "../../../assets/logos/default.jpg";
 import { Box, Typography, Paper } from "@mui/material";
+import { useSelector } from "react-redux";
 
 const WearClientPlaceStock = () => {
   const [data, setData] = useState([]);
   const [summary, setSummary] = useState(null);
 
+
+
+    const { user, token } = useSelector((state) => state.auth);
+  
+    const userToken = token;
   const columns = [
     { id: "id", label: "S.No." },
     { id: "product_image", label: "Image" },
@@ -27,7 +33,7 @@ const WearClientPlaceStock = () => {
           `${API_URL}/goods-receipts/approved-receipt-products`,
           {
             headers: {
-              Authorization: `Bearer ${token}`,
+              "Authorization": `Bearer ${userToken}`,
             },
           }
         );

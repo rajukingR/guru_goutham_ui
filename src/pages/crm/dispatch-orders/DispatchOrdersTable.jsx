@@ -2,10 +2,14 @@ import React, { useEffect, useState } from "react";
 import DynamicTable from "../../../components/table-format/DynamicTable";
 import axios from "axios";
 import API_URL from "../../../api/Api_url";
+import { useSelector } from "react-redux";
 
 const DispatchOrdersTable = () => {
   const [data, setData] = useState([]);
 
+    const { user, token } = useSelector((state) => state.auth);
+  
+    const userToken = token;
   const columns = [
     { id: "s_no", label: "S.No." },
     { id: "dispatch_order_id", label: "Dispatch ID" },
@@ -13,8 +17,9 @@ const DispatchOrdersTable = () => {
     { id: "shipping_name", label: "Shipping Name" },
     { id: "shipping_phone_number", label: "Phone" },
     { id: "order_number", label: "Order No." },
+    { id: "type", label: "Transaction Type" },
     { id: "payment_type", label: "Payment Type" },
-    { id: "transaction_type", label: "Transaction Type" },
+
     { id: "city", label: "City" },
     { id: "state", label: "State" },
   ];
@@ -26,7 +31,7 @@ const DispatchOrdersTable = () => {
 
         const response = await axios.get(`${API_URL}/dispatch-orders`, {
           headers: {
-            Authorization: `Bearer ${token}`,
+            "Authorization": `Bearer ${userToken}`,
           },
         });
 
@@ -34,10 +39,12 @@ const DispatchOrdersTable = () => {
           const formattedData = response.data.map((item, index) => ({
             s_no: index + 1,
             ...item,
-            payment_type: item.order_sale_date === null ? item.type : "Buy",
-            transaction_type:item.payment_type,
-            dispatch_order_date: item.order_sale_date === null ? item.dispatch_order_date : item.order_sale_date,
-
+            dispatch_order_date:
+              item.order_sale_date === null
+                ? item.dispatch_order_date
+                : item.order_sale_date,
+            type: item.type === "Buy" ? "Sale" : item.type,
+            payment_type: item.payment_type === "" ? "Sale" : item.payment_type,
 
             status:
               item.dispatch_order_status === "Approved" ? "Active" : "Inactive",

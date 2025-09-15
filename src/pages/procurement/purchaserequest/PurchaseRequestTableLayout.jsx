@@ -7,7 +7,7 @@ import { useSelector } from "react-redux";
 const PurchaseRequestTable = () => {
   const [data, setData] = useState([]);
   const { user, token } = useSelector((state) => state.auth);
-
+    const userToken = token;
   // Change column from supplier_id to supplier_name
   const columns = [
     { id: "s_id", label: "S.No." },
@@ -26,7 +26,7 @@ const PurchaseRequestTable = () => {
 
         const response = await axios.get(`${API_URL}/purchase-requests`, {
           headers: {
-            Authorization: `Bearer ${token}`,
+            Authorization: `Bearer ${userToken}`,
           },
         });
 

@@ -32,7 +32,10 @@ const generateLeadId = () => {
 };
 
 const LeadsLayoutAddPage = () => {
-  const { user } = useSelector((state) => state.auth);
+  const { user, token } = useSelector((state) => state.auth);
+
+  const userToken = token;
+
   const LoginUserName = user.full_name;
   const navigate = useNavigate();
 
@@ -163,7 +166,11 @@ const LeadsLayoutAddPage = () => {
   useEffect(() => {
     const fetchCustomers = async () => {
       try {
-        const response = await fetch(`${API_URL}/contacts/active-contacts`);
+        const response = await fetch(`${API_URL}/contacts/active-contacts`, {
+          headers: {
+            "Authorization": `Bearer ${userToken}`,
+          },
+        });
         if (!response.ok) {
           throw new Error("Failed to fetch customers");
         }
@@ -188,7 +195,11 @@ const LeadsLayoutAddPage = () => {
   useEffect(() => {
     const fetchProducts = async () => {
       try {
-        const response = await fetch(`${API_URL}/product-templete`);
+        const response = await fetch(`${API_URL}/product-templete`, {
+          headers: {
+            "Authorization": `Bearer ${userToken}`,
+          },
+        });
         if (!response.ok) {
           throw new Error("Failed to fetch products");
         }
@@ -406,6 +417,7 @@ const LeadsLayoutAddPage = () => {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          "Authorization": `Bearer ${userToken}`,
         },
         body: JSON.stringify(payload),
       });
@@ -471,13 +483,35 @@ const LeadsLayoutAddPage = () => {
               onChange={(value) => handleInputChange("leadId", value)}
               disabled
             />
+
+            <Field
+              label="Source of Enquiry"
+              type="select"
+              placeholder="Select Source"
+              value={formData.sourceOfEnquiry}
+              onChange={(value) => handleInputChange("sourceOfEnquiry", value)}
+              options={[
+                "Website",
+                "Referral",
+                "Social Media",
+                "Email Campaign",
+                "Phone Inquiry",
+                "Walk-in",
+                "Trade Show",
+                "Other",
+              ]}
+            />
+
             <Field
               label="Transaction Type"
               type="select"
               placeholder="Select Transaction Type"
               value={formData.transactionType}
               onChange={(value) => handleInputChange("transactionType", value)}
-              options={["Rent", "Buy"]}
+              options={[
+                { value: "Rent", label: "Rent" },
+                { value: "Buy", label: "Sale" },
+              ]}
               required
               error={errors.transactionType}
             />
@@ -952,7 +986,9 @@ const Field = ({
       />
     )}
     {error && (
-      <div style={{ color: "#ef4444", fontSize: "0.75rem", marginTop: "0.25rem" }}>
+      <div
+        style={{ color: "#ef4444", fontSize: "0.75rem", marginTop: "0.25rem" }}
+      >
         {error}
       </div>
     )}

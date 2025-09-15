@@ -23,7 +23,10 @@ import API_URL from "../../../api/Api_url";
 import { useNavigate, useParams } from "react-router-dom";
 
 const LeadsLayoutEditPage = () => {
-  const { user } = useSelector((state) => state.auth);
+  const { user, token } = useSelector((state) => state.auth);
+
+  const userToken = token;
+
   const LoginUserName = user.full_name;
   const navigate = useNavigate();
   const { id } = useParams();
@@ -92,7 +95,11 @@ const LeadsLayoutEditPage = () => {
   useEffect(() => {
     const fetchLeadData = async () => {
       try {
-        const response = await fetch(`${API_URL}/leads/${id}`);
+        const response = await fetch(`${API_URL}/leads/${id}`, {
+          headers: {
+            "Authorization": `Bearer ${userToken}`,
+          },
+        });
         if (!response.ok) throw new Error("Failed to fetch lead data");
         const data = await response.json();
 
@@ -170,7 +177,11 @@ const LeadsLayoutEditPage = () => {
   useEffect(() => {
     const fetchProducts = async () => {
       try {
-        const response = await fetch(`${API_URL}/product-templete`);
+        const response = await fetch(`${API_URL}/product-templete`, {
+          headers: {
+            "Authorization": `Bearer ${userToken}`,
+          },
+        });
         if (!response.ok) {
           throw new Error("Failed to fetch products");
         }
@@ -195,7 +206,11 @@ const LeadsLayoutEditPage = () => {
   useEffect(() => {
     const fetchCustomers = async () => {
       try {
-        const response = await fetch(`${API_URL}/contacts/active-contacts`);
+        const response = await fetch(`${API_URL}/contacts/active-contacts`, {
+          headers: {
+            "Authorization": `Bearer ${userToken}`,
+          },
+        });
         if (!response.ok) throw new Error("Failed to fetch customers");
         const data = await response.json();
         setCustomers(data);
@@ -371,6 +386,7 @@ const LeadsLayoutEditPage = () => {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
+          "Authorization": `Bearer ${userToken}`,
         },
         body: JSON.stringify(payload),
       });
@@ -422,9 +438,6 @@ const LeadsLayoutEditPage = () => {
 
       <div style={headerStyle}>
         <h1 style={titleStyle}>Edit Lead</h1>
-        <p style={subtitleStyle}>
-          Update the details below for lead {formData.leadId}
-        </p>
       </div>
 
       <div style={formContainerStyle}>
@@ -442,6 +455,23 @@ const LeadsLayoutEditPage = () => {
               onChange={(value) => handleInputChange("leadId", value)}
               disabled
             />
+            <Field
+              label="Source of Enquiry"
+              type="select"
+              placeholder="Select Source"
+              value={formData.sourceOfEnquiry}
+              onChange={(value) => handleInputChange("sourceOfEnquiry", value)}
+              options={[
+                "Website",
+                "Referral",
+                "Social Media",
+                "Email Campaign",
+                "Phone Inquiry",
+                "Walk-in",
+                "Trade Show",
+                "Other",
+              ]}
+            />
             {/* <Field
               label="Lead Title"
               placeholder="Enter Lead Title"
@@ -454,7 +484,10 @@ const LeadsLayoutEditPage = () => {
               placeholder="Select Transaction Type"
               value={formData.transactionType}
               onChange={(value) => handleInputChange("transactionType", value)}
-              options={["Rent", "Buy"]}
+              options={[
+                { value: "Rent", label: "Rent" },
+                { value: "Buy", label: "Sale" },
+              ]}
             />
             {formData.transactionType === "Rent" && (
               <Field
@@ -528,13 +561,13 @@ const LeadsLayoutEditPage = () => {
                 label: `${customer.first_name} ${customer.last_name} (${customer.company_name})`,
               }))}
             />
-            <Field
+            {/* <Field
               label="Customer ID"
               placeholder="Customer ID"
               value={formData.customerId}
               onChange={(value) => handleInputChange("customerId", value)}
               disabled
-            />
+            /> */}
             <Field
               label="First Name"
               placeholder="First Name"
@@ -1125,13 +1158,22 @@ const Field = ({
   onChange,
   options = [],
   disabled = false,
+  required = false,
+  error = "",
 }) => (
   <div style={fieldContainerStyle}>
-    <label style={labelStyle}>{label}</label>
+    <label style={labelStyle}>
+      {label}
+      {required && <span style={requiredStyle}>*</span>}
+    </label>
     {type === "select" ? (
       <div style={selectWrapperStyle}>
         <select
-          style={{ ...selectStyle, opacity: disabled ? 0.7 : 1 }}
+          style={{
+            ...selectStyle,
+            opacity: disabled ? 0.7 : 1,
+            borderColor: error ? "#ef4444" : "#d1d5db",
+          }}
           value={value}
           onChange={(e) => onChange(e.target.value)}
           disabled={disabled}
@@ -1154,7 +1196,10 @@ const Field = ({
     ) : type === "textarea" ? (
       <textarea
         placeholder={placeholder}
-        style={textareaStyle}
+        style={{
+          ...textareaStyle,
+          borderColor: error ? "#ef4444" : "#d1d5db",
+        }}
         value={value}
         onChange={(e) => onChange(e.target.value)}
         rows={3}
@@ -1164,7 +1209,10 @@ const Field = ({
       <input
         type="date"
         placeholder={placeholder}
-        style={inputStyle}
+        style={{
+          ...inputStyle,
+          borderColor: error ? "#ef4444" : "#d1d5db",
+        }}
         value={value}
         onChange={(e) => onChange(e.target.value)}
         disabled={disabled}
@@ -1173,11 +1221,21 @@ const Field = ({
       <input
         type={type}
         placeholder={placeholder}
-        style={inputStyle}
+        style={{
+          ...inputStyle,
+          borderColor: error ? "#ef4444" : "#d1d5db",
+        }}
         value={value}
         onChange={(e) => onChange(e.target.value)}
         disabled={disabled}
       />
+    )}
+    {error && (
+      <div
+        style={{ color: "#ef4444", fontSize: "0.75rem", marginTop: "0.25rem" }}
+      >
+        {error}
+      </div>
     )}
   </div>
 );

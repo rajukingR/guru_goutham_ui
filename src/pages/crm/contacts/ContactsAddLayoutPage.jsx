@@ -42,7 +42,9 @@ const validatePincode = (pincode) => {
 };
 
 const ContactsAddLayoutPage = () => {
-  const { user } = useSelector((state) => state.auth);
+  const { user, token } = useSelector((state) => state.auth);
+    const userToken = token;
+
   const LoginUserName = user.full_name;
 
   const navigate = useNavigate();
@@ -151,8 +153,7 @@ const ContactsAddLayoutPage = () => {
           error = "Invalid pincode (6 digits required)";
         break;
       case "gst":
-        if (!value) error = "GST is required";
-        else if (!validateGST(value)) error = "Invalid GST format";
+        if (!validateGST(value)) error = "Invalid GST format";
         break;
       case "pan_no":
         if (!value) error = "PAN number is required";
@@ -279,6 +280,7 @@ const ContactsAddLayoutPage = () => {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          'Authorization': `Bearer ${userToken}`
         },
         body: JSON.stringify(formData),
       });
@@ -469,7 +471,6 @@ const ContactsAddLayoutPage = () => {
                 placeholder="Enter GST (22AAAAA0000A1Z5)"
                 value={formData.gst}
                 onChange={handleInputChange}
-                required
                 errors={errors} // Add this prop
               />
 

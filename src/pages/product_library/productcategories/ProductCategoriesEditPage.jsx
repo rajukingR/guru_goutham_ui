@@ -1,31 +1,43 @@
-import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import React, { useState, useEffect } from "react";
+import axios from "axios";
 import { useNavigate, useParams } from "react-router-dom";
 import API_URL from "../../../api/Api_url";
-import { Snackbar, Alert, Checkbox, FormControlLabel } from '@mui/material';
+import { Snackbar, Alert, Checkbox, FormControlLabel } from "@mui/material";
+import { useSelector } from "react-redux";
 
 const ProductCategoriesEditPage = () => {
+  const { user, token } = useSelector((state) => state.auth);
+
+  const userToken = token;
+
   const { id } = useParams();
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
-    categoryCode: '',
-    categoryName: '',
-    description: '',
+    categoryCode: "",
+    categoryName: "",
+    description: "",
     activeStatus: false,
   });
 
   const [snackbar, setSnackbar] = useState({
     open: false,
-    message: '',
-    severity: 'success'
+    message: "",
+    severity: "success",
   });
 
   useEffect(() => {
     const fetchCategory = async () => {
       try {
-        const response = await axios.get(`${API_URL}/product-categories/${id}`);
+        const response = await axios.get(
+          `${API_URL}/product-categories/${id}`,
+          {
+            headers: {
+              "Authorization": `Bearer ${userToken}`,
+            },
+          }
+        );
         const category = response.data;
-        
+
         setFormData({
           categoryCode: category.category_number,
           categoryName: category.category_name,
@@ -35,8 +47,8 @@ const ProductCategoriesEditPage = () => {
       } catch (error) {
         setSnackbar({
           open: true,
-          message: 'Failed to fetch category details. Please try again.',
-          severity: 'error'
+          message: "Failed to fetch category details. Please try again.",
+          severity: "error",
         });
         setTimeout(() => {
           navigate("/dashboard/product_library/product_categories");
@@ -48,7 +60,7 @@ const ProductCategoriesEditPage = () => {
   }, [id, navigate]);
 
   const handleInputChange = (field, value) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+    setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
   const handleSubmit = async (e) => {
@@ -61,12 +73,16 @@ const ProductCategoriesEditPage = () => {
         is_active: formData.activeStatus,
       };
 
-      await axios.put(`${API_URL}/product-categories/${id}`, payload);
+      await axios.put(`${API_URL}/product-categories/${id}`, payload, {
+        headers: {
+          "Authorization": `Bearer ${userToken}`,
+        },
+      });
 
       setSnackbar({
         open: true,
-        message: 'Category updated successfully!',
-        severity: 'success'
+        message: "Category updated successfully!",
+        severity: "success",
       });
 
       setTimeout(() => {
@@ -75,8 +91,8 @@ const ProductCategoriesEditPage = () => {
     } catch (error) {
       setSnackbar({
         open: true,
-        message: 'Failed to update category. Please try again.',
-        severity: 'error'
+        message: "Failed to update category. Please try again.",
+        severity: "error",
       });
     }
   };
@@ -113,7 +129,7 @@ const ProductCategoriesEditPage = () => {
               label="Category Code"
               placeholder="Auto-generated"
               value={formData.categoryCode}
-              onChange={(value) => handleInputChange('categoryCode', value)}
+              onChange={(value) => handleInputChange("categoryCode", value)}
               required
               disabled
             />
@@ -121,17 +137,19 @@ const ProductCategoriesEditPage = () => {
               label="Category Name"
               placeholder="Enter Category Name"
               value={formData.categoryName}
-              onChange={(value) => handleInputChange('categoryName', value)}
+              onChange={(value) => handleInputChange("categoryName", value)}
               required
             />
-            <div style={{ ...fieldContainerStyle, gridColumn: '1 / -1' }}>
+            <div style={{ ...fieldContainerStyle, gridColumn: "1 / -1" }}>
               <label style={labelStyle}>Description</label>
               <textarea
                 rows={3}
                 placeholder="Enter Description"
-                style={{ ...inputStyle, resize: 'vertical' }}
+                style={{ ...inputStyle, resize: "vertical" }}
                 value={formData.description}
-                onChange={(e) => handleInputChange('description', e.target.value)}
+                onChange={(e) =>
+                  handleInputChange("description", e.target.value)
+                }
               />
             </div>
           </div>
@@ -147,7 +165,9 @@ const ProductCategoriesEditPage = () => {
               control={
                 <Checkbox
                   checked={formData.activeStatus}
-                  onChange={(e) => handleInputChange('activeStatus', e.target.checked)}
+                  onChange={(e) =>
+                    handleInputChange("activeStatus", e.target.checked)
+                  }
                   color="primary"
                 />
               }
@@ -163,8 +183,8 @@ const ProductCategoriesEditPage = () => {
           type="button"
           style={cancelBtnStyle}
           onClick={handleCancel}
-          onMouseEnter={(e) => e.target.style.backgroundColor = '#e5e7eb'}
-          onMouseLeave={(e) => e.target.style.backgroundColor = '#f3f4f6'}
+          onMouseEnter={(e) => (e.target.style.backgroundColor = "#e5e7eb")}
+          onMouseLeave={(e) => (e.target.style.backgroundColor = "#f3f4f6")}
         >
           Cancel
         </button>
@@ -172,8 +192,8 @@ const ProductCategoriesEditPage = () => {
           type="button"
           style={updateBtnStyle}
           onClick={handleSubmit}
-          onMouseEnter={(e) => e.target.style.backgroundColor = '#1d4ed8'}
-          onMouseLeave={(e) => e.target.style.backgroundColor = '#2563eb'}
+          onMouseEnter={(e) => (e.target.style.backgroundColor = "#1d4ed8")}
+          onMouseLeave={(e) => (e.target.style.backgroundColor = "#2563eb")}
         >
           Update Category
         </button>
@@ -182,11 +202,18 @@ const ProductCategoriesEditPage = () => {
   );
 };
 
-const Field = ({ label, placeholder, value, onChange, required, disabled = false }) => (
+const Field = ({
+  label,
+  placeholder,
+  value,
+  onChange,
+  required,
+  disabled = false,
+}) => (
   <div style={fieldContainerStyle}>
     <label style={labelStyle}>
       {label}
-      {required && <span style={{ color: 'red' }}> *</span>}
+      {required && <span style={{ color: "red" }}> *</span>}
     </label>
     <input
       type="text"
@@ -201,111 +228,111 @@ const Field = ({ label, placeholder, value, onChange, required, disabled = false
 
 // Styles (same as in ProductCategoriesAddPage)
 const containerStyle = {
-  padding: '2rem',
+  padding: "2rem",
   fontFamily: '"Inter", sans-serif',
-  minHeight: '100vh',
+  minHeight: "100vh",
 };
 
 const formContainerStyle = {
-  display: 'grid',
-  gap: '1.5rem',
-  maxWidth: '1400px',
-  gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))',
+  display: "grid",
+  gap: "1.5rem",
+  maxWidth: "1400px",
+  gridTemplateColumns: "repeat(auto-fit, minmax(400px, 1fr))",
 };
 
 const cardStyle = {
-  backgroundColor: '#ffffff',
-  padding: '1.5rem',
-  borderRadius: '12px',
-  boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
-  border: '1px solid #e2e8f0',
+  backgroundColor: "#ffffff",
+  padding: "1.5rem",
+  borderRadius: "12px",
+  boxShadow: "0 1px 3px rgba(0, 0, 0, 0.1)",
+  border: "1px solid #e2e8f0",
 };
 
 const cardHeaderContainerStyle = {
-  display: 'flex',
-  alignItems: 'center',
-  marginBottom: '1.5rem',
-  borderBottom: '1px solid #e2e8f0',
-  paddingBottom: '1rem',
+  display: "flex",
+  alignItems: "center",
+  marginBottom: "1.5rem",
+  borderBottom: "1px solid #e2e8f0",
+  paddingBottom: "1rem",
 };
 
 const iconStyle = {
-  fontSize: '1.25rem',
-  marginRight: '0.75rem',
-  backgroundColor: '#f1f5f9',
-  padding: '0.5rem',
-  borderRadius: '8px',
+  fontSize: "1.25rem",
+  marginRight: "0.75rem",
+  backgroundColor: "#f1f5f9",
+  padding: "0.5rem",
+  borderRadius: "8px",
 };
 
 const cardHeaderStyle = {
-  fontSize: '1.125rem',
-  fontWeight: '600',
-  color: '#1e293b',
+  fontSize: "1.125rem",
+  fontWeight: "600",
+  color: "#1e293b",
 };
 
 const fieldsGridStyle = {
-  display: 'grid',
-  gap: '1rem',
-  gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
+  display: "grid",
+  gap: "1rem",
+  gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))",
 };
 
 const fieldContainerStyle = {
-  display: 'flex',
-  flexDirection: 'column',
+  display: "flex",
+  flexDirection: "column",
 };
 
 const labelStyle = {
-  marginBottom: '0.5rem',
-  fontWeight: '500',
-  fontSize: '0.875rem',
-  color: '#374151',
+  marginBottom: "0.5rem",
+  fontWeight: "500",
+  fontSize: "0.875rem",
+  color: "#374151",
 };
 
 const inputStyle = {
-  padding: '0.6rem',
-  borderRadius: '8px',
-  border: '1px solid #d1d5db',
-  fontSize: '0.875rem',
-  backgroundColor: '#ffffff',
-  outline: 'none',
+  padding: "0.6rem",
+  borderRadius: "8px",
+  border: "1px solid #d1d5db",
+  fontSize: "0.875rem",
+  backgroundColor: "#ffffff",
+  outline: "none",
 };
 
 const checkboxContainerStyle = {
-  marginTop: '1rem',
+  marginTop: "1rem",
 };
 
 const checkboxLabelStyle = {
-  display: 'flex',
-  alignItems: 'center',
-  gap: '1rem',
-  cursor: 'pointer',
+  display: "flex",
+  alignItems: "center",
+  gap: "1rem",
+  cursor: "pointer",
 };
 
 const buttonContainerStyle = {
-  display: 'flex',
-  justifyContent: 'flex-end',
-  gap: '1rem',
-  marginTop: '2rem',
+  display: "flex",
+  justifyContent: "flex-end",
+  gap: "1rem",
+  marginTop: "2rem",
 };
 
 const cancelBtnStyle = {
-  backgroundColor: '#f3f4f6',
-  padding: '0.75rem 1.5rem',
-  borderRadius: '8px',
-  border: '1px solid #d1d5db',
-  fontWeight: '500',
-  color: '#111827',
-  cursor: 'pointer',
+  backgroundColor: "#f3f4f6",
+  padding: "0.75rem 1.5rem",
+  borderRadius: "8px",
+  border: "1px solid #d1d5db",
+  fontWeight: "500",
+  color: "#111827",
+  cursor: "pointer",
 };
 
 const updateBtnStyle = {
-  backgroundColor: '#2563eb',
-  padding: '0.75rem 1.5rem',
-  borderRadius: '8px',
-  border: 'none',
-  fontWeight: '500',
-  color: '#ffffff',
-  cursor: 'pointer',
+  backgroundColor: "#2563eb",
+  padding: "0.75rem 1.5rem",
+  borderRadius: "8px",
+  border: "none",
+  fontWeight: "500",
+  color: "#ffffff",
+  cursor: "pointer",
 };
 
 export default ProductCategoriesEditPage;

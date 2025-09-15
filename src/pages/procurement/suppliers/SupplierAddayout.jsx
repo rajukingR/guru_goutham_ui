@@ -3,7 +3,7 @@ import API_URL, { IMAGE_API_URL } from "../../../api/Api_url";
 import Snackbar from "@mui/material/Snackbar";
 import Alert from "@mui/material/Alert";
 import { useNavigate } from "react-router-dom";
-
+import { useSelector } from "react-redux";
 const supplier_code = () => {
   const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
   let randomPart = "";
@@ -15,6 +15,10 @@ const supplier_code = () => {
 
 const SupplierAddLayout = () => {
   const navigate = useNavigate();
+
+  const { user, token } = useSelector((state) => state.auth);
+
+  const userToken = token;
 
   const [formData, setFormData] = useState({
     supplier_code: "",
@@ -135,7 +139,7 @@ const SupplierAddLayout = () => {
       case "bank_name":
         if (!value.trim()) error = "Bank name is required";
         break;
-        case "bank_address":
+      case "bank_address":
         if (!value.trim()) error = "Bank address is required";
         break;
       case "account_number":
@@ -343,7 +347,12 @@ const SupplierAddLayout = () => {
     const newErrors = JSON.parse(JSON.stringify(errors)); // Deep clone
 
     // Validate main fields
-    const mainFields = ["supplier_name", "registration_date", "supplier_owner", "gst_number"];
+    const mainFields = [
+      "supplier_name",
+      "registration_date",
+      "supplier_owner",
+      "gst_number",
+    ];
     mainFields.forEach((field) => {
       const error = validateField(field, formData[field]);
       newErrors[field] = error;
@@ -366,7 +375,12 @@ const SupplierAddLayout = () => {
     });
 
     // Validate bank fields
-    const bankFields = ["bank_name","bank_address", "account_number", "pan_number"];
+    const bankFields = [
+      "bank_name",
+      "bank_address",
+      "account_number",
+      "pan_number",
+    ];
     bankFields.forEach((field) => {
       const error = validateField(field, formData.bank[field]);
       newErrors.bank[field] = error;
@@ -420,6 +434,7 @@ const SupplierAddLayout = () => {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          "Authorization": `Bearer ${userToken}`,
         },
         body: JSON.stringify(formData),
       });

@@ -2,8 +2,14 @@ import React, { useEffect, useState } from "react";
 import DynamicTable from "../../../components/table-format/DynamicTable";
 import axios from "axios";
 import API_URL, { IMAGE_API_URL } from "../../../api/Api_url";
+  import { useSelector } from "react-redux";
 
 const AssetIdsTable = () => {
+
+    const { user, token } = useSelector((state) => state.auth);
+  
+    const userToken = token;
+
   const [data, setData] = useState([]);
 
   const columns = [
@@ -29,7 +35,7 @@ const AssetIdsTable = () => {
           `${API_URL}/asset-modification/asset-ids`,
           {
             headers: {
-              Authorization: `Bearer ${token}`,
+              Authorization: `Bearer ${userToken}`,
             },
           }
         );

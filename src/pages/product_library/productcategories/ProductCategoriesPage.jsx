@@ -2,8 +2,13 @@ import React, { useEffect, useState } from "react";
 import DynamicTable from "../../../components/table-format/DynamicTable";
 import axios from "axios";
 import API_URL, { IMAGE_API_URL } from "../../../api/Api_url";
+import { useSelector } from "react-redux";
 
 const ProductCategoriesPage = () => {
+   const { user, token } = useSelector((state) => state.auth);
+  
+    const userToken = token;
+
   const [data, setData] = useState([]);
 
   const columns = [
@@ -17,7 +22,12 @@ const ProductCategoriesPage = () => {
   useEffect(() => {
     const fetchCategories = async () => {
       try {
-        const response = await axios.get(`${API_URL}/product-categories`);
+        const token = localStorage.getItem("token");
+        const response = await axios.get(`${API_URL}/product-categories`, {
+          headers: {
+            "Authorization": `Bearer ${userToken}`,
+          },
+        });
         if (response.status === 200) {
           const formattedData = response.data.map((item, index) => ({
             s_no: index + 1,

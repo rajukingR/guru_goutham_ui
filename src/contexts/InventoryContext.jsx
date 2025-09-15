@@ -2,6 +2,7 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
 import axios from "axios";
 import API_URL from "../api/Api_url";
+  import { useSelector } from "react-redux";
 
 const InventoryContext = createContext();
 
@@ -10,19 +11,23 @@ export const useInventory = () => useContext(InventoryContext);
 
 // Provider component
 export const InventoryProvider = ({ children }) => {
+
+    const { user, token } = useSelector((state) => state.auth);
+  
+    const userToken = token;
+
   const [inventoryData, setInventoryData] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchInventory = async () => {
       try {
-        const token = localStorage.getItem("token");
 
         const response = await axios.get(
           `${API_URL}/goods-receipts/approved-receipt-products`,
           {
             headers: {
-              Authorization: `Bearer ${token}`,
+              Authorization: `Bearer ${userToken}`,
             },
           }
         );

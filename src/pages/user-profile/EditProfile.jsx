@@ -15,6 +15,7 @@ import EditIcon from "@mui/icons-material/Edit";
 import Snackbar from "@mui/material/Snackbar";
 import MuiAlert from "@mui/material/Alert";
 import API_URL, { IMAGE_API_URL } from "../../api/Api_url";
+import { useSelector } from "react-redux";
 
 const Alert = React.forwardRef(function Alert(props, ref) {
   return <MuiAlert elevation={6} ref={ref} variant="filled" {...props} />;
@@ -22,6 +23,11 @@ const Alert = React.forwardRef(function Alert(props, ref) {
 
 const EditProfile = () => {
   const { id } = useParams();
+
+  const { user, token } = useSelector((state) => state.auth);
+
+  const userToken = token;
+
   const navigate = useNavigate();
   const [snackbar, setSnackbar] = useState({
     open: false,
@@ -49,7 +55,11 @@ const EditProfile = () => {
   useEffect(() => {
     const fetchUserData = async () => {
       try {
-        const response = await fetch(`${API_URL}/users/${id}`);
+        const response = await fetch(`${API_URL}/users/${id}`, {
+          headers: {
+            "Authorization": `Bearer ${userToken}`,
+          },
+        });
         const data = await response.json();
         setFormData({
           full_name: data.full_name,
@@ -98,18 +108,21 @@ const EditProfile = () => {
     e.preventDefault();
     try {
       const formDataToSend = new FormData();
-      
+
       // Append all form data
-      Object.keys(formData).forEach(key => {
+      Object.keys(formData).forEach((key) => {
         formDataToSend.append(key, formData[key]);
       });
-      
+
       // Append image if it exists
       if (image) {
         formDataToSend.append("image", image);
       }
 
       const response = await fetch(`${API_URL}/users/${id}`, {
+        headers: {
+          "Authorization": `Bearer ${userToken}`,
+        },
         method: "PUT",
         body: formDataToSend,
         // Don't set Content-Type header when using FormData
@@ -163,7 +176,7 @@ const EditProfile = () => {
                 />
                 <input
                   accept="image/*"
-                  style={{ display: 'none' }}
+                  style={{ display: "none" }}
                   id="icon-button-file"
                   type="file"
                   onChange={handleImageChange}

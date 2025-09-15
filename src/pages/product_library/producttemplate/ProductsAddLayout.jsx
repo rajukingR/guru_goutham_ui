@@ -4,7 +4,7 @@ import API_URL, { IMAGE_API_URL } from "../../../api/Api_url";
 import Snackbar from "@mui/material/Snackbar";
 import MuiAlert from "@mui/material/Alert";
 import { useNavigate } from "react-router-dom";
-
+import { useSelector } from "react-redux";
 const generateProductId = () => {
   const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
   let randomPart = "";
@@ -21,6 +21,10 @@ const Alert = React.forwardRef(function Alert(props, ref) {
 
 const ProductsAddLayout = () => {
   const navigate = useNavigate();
+
+  const { user, token } = useSelector((state) => state.auth);
+
+  const userToken = token;
 
   // State for form data
   const [formData, setFormData] = useState({
@@ -70,7 +74,7 @@ const ProductsAddLayout = () => {
     // HDD specific
     capacity: "",
     speed: "",
-frequency_band: "",
+    frequency_band: "",
     wifi_standard: "",
     // SSD specific
     ssd_type: "",
@@ -125,9 +129,21 @@ frequency_band: "",
     const fetchData = async () => {
       try {
         const [brandsRes, categoriesRes, stockLocationRes] = await Promise.all([
-          axios.get(`${API_URL}/product-brands/active`),
-          axios.get(`${API_URL}/product-categories/active`),
-          axios.get(`${API_URL}/stock-location/active-stock-location`),
+          axios.get(`${API_URL}/product-brands/active`, {
+            headers: {
+              "Authorization": `Bearer ${userToken}`,
+            },
+          }),
+          axios.get(`${API_URL}/product-categories/active`, {
+            headers: {
+              "Authorization": `Bearer ${userToken}`,
+            },
+          }),
+          axios.get(`${API_URL}/stock-location/active-stock-location`, {
+            headers: {
+              "Authorization": `Bearer ${userToken}`,
+            },
+          }),
         ]);
 
         setBrands(brandsRes.data);
@@ -147,7 +163,7 @@ frequency_band: "",
     };
 
     fetchData();
-  }, []);
+  }, [userToken]); // Added userToken as dependency
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -266,13 +282,13 @@ frequency_band: "",
         }
       });
 
-      // Submit the request
+      // Better approach - let axios set the correct Content-Type automatically
       const response = await axios.post(
         `${API_URL}/product-templete/create`,
         formDataToSend,
         {
           headers: {
-            "Content-Type": "multipart/form-data",
+            "Authorization": `Bearer ${userToken}`,
           },
         }
       );
@@ -329,7 +345,7 @@ frequency_band: "",
         // Storage
         capacity: "",
         speed: "",
-        frequency_band: "", 
+        frequency_band: "",
         wifi_standard: "",
         ssd_type: "",
         // RAM
@@ -421,7 +437,6 @@ frequency_band: "",
                 placeholder="Enter Processor Speed (GHz)"
                 value={formData.processor_speed}
                 onChange={handleChange}
-                required
               />
 
               <Field
@@ -430,7 +445,6 @@ frequency_band: "",
                 placeholder="Enter Generation"
                 value={formData.generation}
                 onChange={handleChange}
-                required
               />
             </div>
 
@@ -496,7 +510,6 @@ frequency_band: "",
                 placeholder="Enter Graphics Card"
                 value={formData.graphics}
                 onChange={handleChange}
-                required
               />
 
               <Field
@@ -647,7 +660,6 @@ frequency_band: "",
                 placeholder="Enter GPU"
                 value={formData.graphics}
                 onChange={handleChange}
-                required
               />
 
               <Field
@@ -744,53 +756,48 @@ frequency_band: "",
             />
           </>
         );
-        case "Wi-Fi":
-  return (
-    <>
-      <Field
-        label="Wi-Fi Standard"
-        name="wifi_standard"
-        type="select"
-        value={formData.wifi_standard}
-        onChange={handleChange}
-        required
-      >
-        <option value="">Select Standard</option>
-        <option value="802.11a">802.11a</option>
-        <option value="802.11b">802.11b</option>
-        <option value="802.11g">802.11g</option>
-        <option value="802.11n">802.11n</option>
-        <option value="802.11ac">802.11ac</option>
-        <option value="802.11ax (Wi-Fi 6)">802.11ax (Wi-Fi 6)</option>
-      </Field>
+      case "Wi-Fi":
+        return (
+          <>
+            <Field
+              label="Wi-Fi Standard"
+              name="wifi_standard"
+              type="select"
+              value={formData.wifi_standard}
+              onChange={handleChange}
+              required
+            >
+              <option value="">Select Standard</option>
+              <option value="802.11a">802.11a</option>
+              <option value="802.11b">802.11b</option>
+              <option value="802.11g">802.11g</option>
+              <option value="802.11n">802.11n</option>
+              <option value="802.11ac">802.11ac</option>
+              <option value="802.11ax (Wi-Fi 6)">802.11ax (Wi-Fi 6)</option>
+            </Field>
 
-      <Field
-        label="Frequency Band"
-        name="frequency_band"
-        type="select"
-        value={formData.frequency_band}
-        onChange={handleChange}
-        required
-      >
-        <option value="">Select Frequency</option>
-        <option value="2.4GHz">2.4GHz</option>
-        <option value="5GHz">5GHz</option>
-      </Field>
+            <Field
+              label="Frequency Band"
+              name="frequency_band"
+              type="select"
+              value={formData.frequency_band}
+              onChange={handleChange}
+              required
+            >
+              <option value="">Select Frequency</option>
+              <option value="2.4GHz">2.4GHz</option>
+              <option value="5GHz">5GHz</option>
+            </Field>
 
-      <Field
-        label="Max Speed"
-        name="speed"
-        placeholder="Enter Max Speed (e.g., 1200 Mbps)"
-        value={formData.speed}
-        onChange={handleChange}
-      />
-
-     
-
-      
-    </>
-  );
-
+            <Field
+              label="Max Speed"
+              name="speed"
+              placeholder="Enter Max Speed (e.g., 1200 Mbps)"
+              value={formData.speed}
+              onChange={handleChange}
+            />
+          </>
+        );
 
       case "Processor":
         return (
@@ -934,7 +941,6 @@ frequency_band: "",
                 placeholder="Enter GPU"
                 value={formData.graphics}
                 onChange={handleChange}
-                required
               />
 
               <Field
@@ -1083,7 +1089,6 @@ frequency_band: "",
               placeholder="Enter Speed (e.g., 6Gbps)"
               value={formData.speed}
               onChange={handleChange}
-              required
             />
           </>
         );
@@ -1401,74 +1406,52 @@ frequency_band: "",
               required
             />
 
-            {[
-              // {
-              //   label: "Per Day",
-              //   percent: "rent_percent_per_day",
-              //   price: "rent_price_per_day",
-              // },
-              {
-                label: "Per Month",
-                percent: "rent_percent_per_month",
-                price: "rent_price_per_month",
-              },
-              // {
-              //   label: "6 Months",
-              //   percent: "rent_percent_6_months",
-              //   price: "rent_price_6_months",
-              // },
-              // {
-              //   label: "1 Year",
-              //   percent: "rent_percent_1_year",
-              //   price: "rent_price_1_year",
-              // },
-            ].map(({ label, percent, price }) => (
-              <div
-                key={label}
-                style={{ display: "flex", gap: "1rem", alignItems: "flex-end" }}
-              >
-                <div style={{ flex: 1 }}>
-                  <Field
-                    label={`Rent Percent ${label}`}
-                    type="select"
-                    name={percent}
-                    value={formData[percent]}
-                    onChange={handlePriceChange}
-                    required
-                  >
-                    <option value="0">0%</option>
-                    <option value="1">1%</option>
-                    <option value="2">2%</option>
-                    <option value="3">3%</option>
-                    <option value="4">4%</option>
-                    <option value="5">5%</option>
-                    <option value="8">8%</option>
-                    <option value="10">10%</option>
-                    <option value="15">15%</option>
-                    <option value="18">18%</option>
-                    <option value="20">20%</option>
-                    <option value="25">25%</option>
-                    <option value="30">30%</option>
-                    <option value="35">35%</option>
-                    <option value="40">40%</option>
-                    <option value="45">45%</option>
-                    <option value="50">50%</option>
-                    <option value="60">60%</option>
-                    <option value="65">65%</option>
-                    <option value="70">70%</option>
-                  </Field>
+            {/* Rent Percentage Slider for Per Month */}
+            <div style={{ gridColumn: "1 / -1", marginTop: "1rem" }}>
+              <label style={labelStyle}>
+                Rent Percent Per Month
+                <span style={requiredStyle}>*</span>
+              </label>
+
+              <div style={sliderContainerStyle}>
+                <input
+                  type="range"
+                  min="0"
+                  max="70"
+                  step="1"
+                  name="rent_percent_per_month"
+                  value={formData.rent_percent_per_month}
+                  onChange={handlePriceChange}
+                  style={sliderStyle}
+                />
+
+                <div style={sliderValueContainerStyle}>
+                  <span style={sliderValueStyle}>
+                    {formData.rent_percent_per_month}%
+                  </span>
                 </div>
-                <div style={{ flex: 1 }}>
-                  <Field
-                    label=" "
-                    type="text"
-                    name={price}
-                    value={`₹${formData[price]}/-`}
-                    readOnly
-                  />
+
+                <div style={sliderTicksContainerStyle}>
+                  {[0, 10, 20, 30, 40, 50, 60, 70].map((tick) => (
+                    <div key={tick} style={sliderTickStyle}>
+                      <div style={sliderTickMarkStyle}></div>
+                      <span style={sliderTickLabelStyle}>{tick}%</span>
+                    </div>
+                  ))}
                 </div>
               </div>
-            ))}
+
+              <div style={sliderOutputContainerStyle}>
+                <Field
+                  label="Rent Price Per Month"
+                  type="text"
+                  name="rent_price_per_month"
+                  value={`₹${formData.rent_price_per_month}/-`}
+                  readOnly
+                  style={readonlyFieldStyle}
+                />
+              </div>
+            </div>
 
             <div style={{ gridColumn: "1 / -1" }}>
               <Field
@@ -1605,6 +1588,106 @@ const CheckboxField = ({ label, name, checked, onChange }) => (
 );
 
 // Styles
+
+const sliderContainerStyle = {
+  position: "relative",
+  margin: "1.5rem 0 1rem 0",
+  padding: "0 0.5rem",
+};
+
+const sliderStyle = {
+  width: "100%",
+  height: "6px",
+  borderRadius: "3px",
+  background: "#ddd",
+  outline: "none",
+  opacity: "0.7",
+  transition: "opacity .2s",
+  WebkitAppearance: "none",
+
+  "&:hover": {
+    opacity: "1",
+  },
+
+  "&::-webkit-slider-thumb": {
+    WebkitAppearance: "none",
+    appearance: "none",
+    width: "20px",
+    height: "20px",
+    borderRadius: "50%",
+    background: "#2563eb",
+    cursor: "pointer",
+    border: "2px solid #fff",
+    boxShadow: "0 0 5px rgba(0,0,0,0.2)",
+  },
+
+  "&::-moz-range-thumb": {
+    width: "20px",
+    height: "20px",
+    borderRadius: "50%",
+    background: "#2563eb",
+    cursor: "pointer",
+    border: "2px solid #fff",
+    boxShadow: "0 0 5px rgba(0,0,0,0.2)",
+  },
+};
+
+const sliderValueContainerStyle = {
+  textAlign: "center",
+  marginTop: "10px",
+  marginBottom: "25px",
+};
+
+const sliderValueStyle = {
+  display: "inline-block",
+  padding: "5px 15px",
+  backgroundColor: "#2563eb",
+  color: "white",
+  borderRadius: "20px",
+  fontWeight: "bold",
+  fontSize: "1rem",
+};
+
+const sliderTicksContainerStyle = {
+  display: "flex",
+  justifyContent: "space-between",
+  position: "relative",
+  marginTop: "5px",
+};
+
+const sliderTickStyle = {
+  display: "flex",
+  flexDirection: "column",
+  alignItems: "center",
+  position: "relative",
+};
+
+const sliderTickMarkStyle = {
+  width: "2px",
+  height: "10px",
+  backgroundColor: "#999",
+  marginBottom: "5px",
+};
+
+const sliderTickLabelStyle = {
+  fontSize: "0.75rem",
+  color: "#666",
+  position: "absolute",
+  top: "15px",
+};
+
+const sliderOutputContainerStyle = {
+  marginTop: "1rem",
+  padding: "1rem",
+  backgroundColor: "#f8f9fa",
+  borderRadius: "8px",
+  border: "1px solid #e9ecef",
+};
+
+const readonlyFieldStyle = {
+  backgroundColor: "#f8f9fa",
+  cursor: "not-allowed",
+};
 
 const breadcrumbStyle = {
   marginBottom: "1.5rem",

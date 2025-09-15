@@ -27,6 +27,8 @@ import ForwardIcon from "../assets/logos/ForvordIcon.svg";
 import SettingIcon from "../assets/logos/SettingIcon.svg";
 import { useSelector } from "react-redux";
 import API_URL, { IMAGE_API_URL } from "../api/Api_url";
+import axios from "axios";
+import DefaultImage from "../assets/logos/default.jpg";
 
 const navItems = [
   { label: "Dashboard", path: "/dashboard" },
@@ -48,7 +50,28 @@ const LayOut = () => {
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
   const [section, setSection] = useState("");
 
-  const { user } = useSelector((state) => state.auth);
+  const { user, token } = useSelector((state) => state.auth);
+
+  const [profileData, setProfileData] = useState(null);
+
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        const response = await axios.get(`${API_URL}/users/${user?.id}`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+        setProfileData(response.data);
+      } catch (error) {
+        console.error("Failed to fetch profile:", error);
+      }
+    };
+
+    if (user?.id && token) {
+      fetchProfile();
+    }
+  }, [user?.id, token]);
 
   // Function to determine which section the user is on
   const getSection = () => {
@@ -285,11 +308,10 @@ const LayOut = () => {
             >
               <Avatar
                 src={
-                  user.image
-                    ? `${IMAGE_API_URL}/${user.image}`
-                    : "https://via.placeholder.com/40"
+                  profileData?.image
+                    ? `${IMAGE_API_URL}/${profileData?.image}`
+                    : "/default-avatar.png" // local fallback
                 }
-                alt={user.full_name}
                 sx={{
                   width: { xs: 32, sm: 40 },
                   height: { xs: 32, sm: 40 },
@@ -298,7 +320,11 @@ const LayOut = () => {
                     borderColor: "#764ba2",
                   },
                 }}
-              />
+                onError={(e) => {
+                  e.target.onerror = null; // prevent infinite loop
+                  e.target.src = "/default-avatar.png"; // fallback to local image
+                }}
+              ></Avatar>
               <Typography
                 sx={{
                   color: "#171719",
@@ -306,7 +332,7 @@ const LayOut = () => {
                   fontSize: { sm: "0.9rem", md: "1rem" },
                 }}
               >
-                {user.full_name}
+                {profileData?.full_name || "Loading..."}
               </Typography>
             </Box>
           </Box>
@@ -332,8 +358,7 @@ const LayOut = () => {
       <Toolbar />
 
       {/* Main Content with Sidebar */}
-      <Box sx={{ display: "flex", flex: 1 }}>
-        {/* Show sidebar for all sections except dashboard */}
+      {/* <Box sx={{ display: "flex", flex: 1 }}>
         {location.pathname !== "/dashboard" && (
           <Box
             sx={{
@@ -356,6 +381,38 @@ const LayOut = () => {
             minHeight: "calc(100vh - 64px)",
             overflowY: "auto", // ✅ only Outlet scrolls
             width: "100%",
+          }}
+        >
+          <Outlet />
+        </Box>
+      </Box> */}
+
+      <Box sx={{ display: "flex", flex: 1, overflow: "hidden" }}>
+        {/* Sidebar */}
+        {location.pathname !== "/dashboard" && (
+          <Box
+            sx={{
+              display: { xs: "none", md: "block" },
+              position: "sticky", // or fixed if you want it locked always
+              top: 64, // matches AppBar height
+              height: "calc(100vh - 64px)",
+              overflowY: "auto", // scrollable if sidebar items overflow
+              flexShrink: 0,
+              borderRight: "1px solid #ddd",
+            }}
+          >
+            <Sidebar section={getSection()} />
+          </Box>
+        )}
+
+        {/* Main Content */}
+        <Box
+          component="main"
+          sx={{
+            flexGrow: 1,
+            p: { xs: 2, sm: 3 },
+            height: "calc(100vh - 64px)",
+            overflowY: "auto", // ✅ only this part scrolls
           }}
         >
           <Outlet />

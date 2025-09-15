@@ -3,6 +3,7 @@ import Snackbar from "@mui/material/Snackbar";
 import MuiAlert from "@mui/material/Alert";
 import { useNavigate } from "react-router-dom";
 import API_URL, { IMAGE_API_URL } from "../../../api/Api_url";
+import { useSelector } from "react-redux";
 
 // Styling constants
 const styles = {
@@ -266,6 +267,10 @@ const CheckboxField = ({ label, name, checked, onChange }) => (
 const HardwareSelector = () => {
   const navigate = useNavigate();
 
+  const { user, token } = useSelector((state) => state.auth);
+
+  const userToken = token;
+
   const [snackbar, setSnackbar] = useState({
     open: false,
     message: "",
@@ -410,7 +415,11 @@ const HardwareSelector = () => {
   const fetchComponentData = async (endpointParams) => {
     try {
       const url = `${API_URL}/product-templete/products-with-assets?${endpointParams}`;
-      const response = await fetch(url);
+      const response = await fetch(url, {
+        headers: {
+          "Authorization": `Bearer ${userToken}`,
+        },
+      });
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
@@ -560,7 +569,12 @@ const HardwareSelector = () => {
           if (ram.type && !ram.brands.length) {
             setLoading((prev) => ({ ...prev, brands: true }));
             const data = await fetchComponentData(
-              `product_category=RAM&ramType=${ram.type}`
+              `product_category=RAM&ramType=${ram.type}`,
+              {
+                headers: {
+                  "Authorization": `Bearer ${userToken}`,
+                },
+              }
             );
             const updatedRamModules = [...ramModules];
             updatedRamModules[index].brands = data;
@@ -571,7 +585,12 @@ const HardwareSelector = () => {
           if (ram.type && ram.brand && !ram.models.length) {
             setLoading((prev) => ({ ...prev, models: true }));
             const data = await fetchComponentData(
-              `product_category=RAM&ramType=${ram.type}&brand=${ram.brand}`
+              `product_category=RAM&ramType=${ram.type}&brand=${ram.brand}`,
+              {
+                headers: {
+                  "Authorization": `Bearer ${userToken}`,
+                },
+              }
             );
             const updatedRamModules = [...ramModules];
             updatedRamModules[index].models = data;
@@ -582,7 +601,12 @@ const HardwareSelector = () => {
           if (ram.type && ram.brand && ram.model && !ram.sizes.length) {
             setLoading((prev) => ({ ...prev, capacities: true }));
             const data = await fetchComponentData(
-              `product_category=RAM&ramType=${ram.type}&brand=${ram.brand}&model=${ram.model}`
+              `product_category=RAM&ramType=${ram.type}&brand=${ram.brand}&model=${ram.model}`,
+              {
+                headers: {
+                  "Authorization": `Bearer ${userToken}`,
+                },
+              }
             );
             const updatedRamModules = [...ramModules];
             updatedRamModules[index].sizes = data;
@@ -599,7 +623,12 @@ const HardwareSelector = () => {
           ) {
             setLoading((prev) => ({ ...prev, assets: true }));
             const data = await fetchComponentData(
-              `product_category=RAM&ramType=${ram.type}&brand=${ram.brand}&model=${ram.model}&capacity=${ram.size}`
+              `product_category=RAM&ramType=${ram.type}&brand=${ram.brand}&model=${ram.model}&capacity=${ram.size}`,
+              {
+                headers: {
+                  "Authorization": `Bearer ${userToken}`,
+                },
+              }
             );
             const updatedRamModules = [...ramModules];
             updatedRamModules[index].assetIds = data.asset_ids;
@@ -622,7 +651,12 @@ const HardwareSelector = () => {
           if (drive.type && !drive.brands.length) {
             setLoading((prev) => ({ ...prev, brands: true }));
             const data = await fetchComponentData(
-              `product_category=${drive.type}`
+              `product_category=${drive.type}`,
+              {
+                headers: {
+                  "Authorization": `Bearer ${userToken}`,
+                },
+              }
             );
             const updatedStorageDrives = [...storageDrives];
             updatedStorageDrives[index].brands = data;
@@ -633,7 +667,12 @@ const HardwareSelector = () => {
           if (drive.type && drive.brand && !drive.models.length) {
             setLoading((prev) => ({ ...prev, models: true }));
             const data = await fetchComponentData(
-              `product_category=${drive.type}&brand=${drive.brand}`
+              `product_category=${drive.type}&brand=${drive.brand}`,
+              {
+                headers: {
+                  "Authorization": `Bearer ${userToken}`,
+                },
+              }
             );
             const updatedStorageDrives = [...storageDrives];
             updatedStorageDrives[index].models = data;
@@ -644,7 +683,12 @@ const HardwareSelector = () => {
           if (drive.type && drive.brand && drive.model && !drive.sizes.length) {
             setLoading((prev) => ({ ...prev, capacities: true }));
             const data = await fetchComponentData(
-              `product_category=${drive.type}&brand=${drive.brand}&model=${drive.model}`
+              `product_category=${drive.type}&brand=${drive.brand}&model=${drive.model}`,
+              {
+                headers: {
+                  "Authorization": `Bearer ${userToken}`,
+                },
+              }
             );
             const updatedStorageDrives = [...storageDrives];
             updatedStorageDrives[index].sizes = data;
@@ -661,7 +705,12 @@ const HardwareSelector = () => {
           ) {
             setLoading((prev) => ({ ...prev, assets: true }));
             const data = await fetchComponentData(
-              `product_category=${drive.type}&brand=${drive.brand}&model=${drive.model}&capacity=${drive.size}`
+              `product_category=${drive.type}&brand=${drive.brand}&model=${drive.model}&capacity=${drive.size}`,
+              {
+                headers: {
+                  "Authorization": `Bearer ${userToken}`,
+                },
+              }
             );
             const updatedStorageDrives = [...storageDrives];
             updatedStorageDrives[index].assetIds = data.asset_ids;
@@ -682,7 +731,12 @@ const HardwareSelector = () => {
       const fetchProcessorBrands = async () => {
         setLoading((prev) => ({ ...prev, brands: true }));
         const data = await fetchComponentData(
-          `product_category=${componentCategories.processor}`
+          `product_category=${componentCategories.processor}`,
+          {
+            headers: {
+              "Authorization": `Bearer ${userToken}`,
+            },
+          }
         );
         setProcessorBrands(data);
         setLoading((prev) => ({ ...prev, brands: false }));
@@ -696,7 +750,12 @@ const HardwareSelector = () => {
       const fetchProcessorModels = async () => {
         setLoading((prev) => ({ ...prev, models: true }));
         const data = await fetchComponentData(
-          `product_category=${componentCategories.processor}&brand=${processorBrand}`
+          `product_category=${componentCategories.processor}&brand=${processorBrand}`,
+          {
+            headers: {
+              "Authorization": `Bearer ${userToken}`,
+            },
+          }
         );
         setProcessorModels(data);
         setLoading((prev) => ({ ...prev, models: false }));
@@ -711,7 +770,12 @@ const HardwareSelector = () => {
       const fetchProcessorAssetIds = async () => {
         setLoading((prev) => ({ ...prev, assets: true }));
         const data = await fetchComponentData(
-          `product_category=${componentCategories.processor}&brand=${processorBrand}&model=${processorModel}`
+          `product_category=${componentCategories.processor}&brand=${processorBrand}&model=${processorModel}`,
+          {
+            headers: {
+              "Authorization": `Bearer ${userToken}`,
+            },
+          }
         );
         setProcessorAssetIds(data.asset_ids);
         setProcessorProductId(data.product_id); // Store product_id
@@ -727,7 +791,12 @@ const HardwareSelector = () => {
       const fetchMotherboardBrands = async () => {
         setLoading((prev) => ({ ...prev, brands: true }));
         const data = await fetchComponentData(
-          `product_category=${componentCategories.motherboard}`
+          `product_category=${componentCategories.motherboard}`,
+          {
+            headers: {
+              "Authorization": `Bearer ${userToken}`,
+            },
+          }
         );
         setMotherboardBrands(data);
         setLoading((prev) => ({ ...prev, brands: false }));
@@ -741,7 +810,12 @@ const HardwareSelector = () => {
       const fetchMotherboardModels = async () => {
         setLoading((prev) => ({ ...prev, models: true }));
         const data = await fetchComponentData(
-          `product_category=${componentCategories.motherboard}&brand=${motherboardBrand}`
+          `product_category=${componentCategories.motherboard}&brand=${motherboardBrand}`,
+          {
+            headers: {
+              "Authorization": `Bearer ${userToken}`,
+            },
+          }
         );
         setMotherboardModels(data);
         setLoading((prev) => ({ ...prev, models: false }));
@@ -759,7 +833,12 @@ const HardwareSelector = () => {
       const fetchMotherboardAssetIds = async () => {
         setLoading((prev) => ({ ...prev, assets: true }));
         const data = await fetchComponentData(
-          `product_category=${componentCategories.motherboard}&brand=${motherboardBrand}&model=${motherboardModel}`
+          `product_category=${componentCategories.motherboard}&brand=${motherboardBrand}&model=${motherboardModel}`,
+          {
+            headers: {
+              "Authorization": `Bearer ${userToken}`,
+            },
+          }
         );
         setMotherboardAssetIds(data.asset_ids);
         setMotherboardProductId(data.product_id); // Store product_id
@@ -775,7 +854,12 @@ const HardwareSelector = () => {
       const fetchCabinetBrands = async () => {
         setLoading((prev) => ({ ...prev, brands: true }));
         const data = await fetchComponentData(
-          `product_category=${componentCategories.cabinet}`
+          `product_category=${componentCategories.cabinet}`,
+          {
+            headers: {
+              "Authorization": `Bearer ${userToken}`,
+            },
+          }
         );
         setCabinetBrands(data);
         setLoading((prev) => ({ ...prev, brands: false }));
@@ -789,7 +873,12 @@ const HardwareSelector = () => {
       const fetchCabinetModels = async () => {
         setLoading((prev) => ({ ...prev, models: true }));
         const data = await fetchComponentData(
-          `product_category=${componentCategories.cabinet}&brand=${cabinetBrand}`
+          `product_category=${componentCategories.cabinet}&brand=${cabinetBrand}`,
+          {
+            headers: {
+              "Authorization": `Bearer ${userToken}`,
+            },
+          }
         );
         setCabinetModels(data);
         setLoading((prev) => ({ ...prev, models: false }));
@@ -803,7 +892,12 @@ const HardwareSelector = () => {
       const fetchCabinetAssetIds = async () => {
         setLoading((prev) => ({ ...prev, assets: true }));
         const data = await fetchComponentData(
-          `product_category=${componentCategories.cabinet}&brand=${cabinetBrand}&model=${cabinetModel}`
+          `product_category=${componentCategories.cabinet}&brand=${cabinetBrand}&model=${cabinetModel}`,
+          {
+            headers: {
+              "Authorization": `Bearer ${userToken}`,
+            },
+          }
         );
         setCabinetAssetIds(data.asset_ids);
         setCabinetProductId(data.product_id); // Store product_id
@@ -819,7 +913,12 @@ const HardwareSelector = () => {
       const fetchGpuBrands = async () => {
         setLoading((prev) => ({ ...prev, brands: true }));
         const data = await fetchComponentData(
-          `product_category=${componentCategories.gpu}`
+          `product_category=${componentCategories.gpu}`,
+          {
+            headers: {
+              "Authorization": `Bearer ${userToken}`,
+            },
+          }
         );
         setGpuBrands(data);
         setLoading((prev) => ({ ...prev, brands: false }));
@@ -833,7 +932,12 @@ const HardwareSelector = () => {
       const fetchGpuModels = async () => {
         setLoading((prev) => ({ ...prev, models: true }));
         const data = await fetchComponentData(
-          `product_category=${componentCategories.gpu}&brand=${gpuBrand}`
+          `product_category=${componentCategories.gpu}&brand=${gpuBrand}`,
+          {
+            headers: {
+              "Authorization": `Bearer ${userToken}`,
+            },
+          }
         );
         setGpuModels(data);
         setLoading((prev) => ({ ...prev, models: false }));
@@ -848,7 +952,12 @@ const HardwareSelector = () => {
       const fetchGpuAssetIds = async () => {
         setLoading((prev) => ({ ...prev, assets: true }));
         const data = await fetchComponentData(
-          `product_category=${componentCategories.gpu}&brand=${gpuBrand}&model=${gpuModel}`
+          `product_category=${componentCategories.gpu}&brand=${gpuBrand}&model=${gpuModel}`,
+          {
+            headers: {
+              "Authorization": `Bearer ${userToken}`,
+            },
+          }
         );
         setGpuAssetIds(data.asset_ids);
         setGpuProductId(data.product_id); // Store product_id
@@ -863,7 +972,12 @@ const HardwareSelector = () => {
       const fetchSmpsBrands = async () => {
         setLoading((prev) => ({ ...prev, brands: true }));
         const data = await fetchComponentData(
-          `product_category=${componentCategories.smps}`
+          `product_category=${componentCategories.smps}`,
+          {
+            headers: {
+              "Authorization": `Bearer ${userToken}`,
+            },
+          }
         );
         setSmpsBrands(data);
         setLoading((prev) => ({ ...prev, brands: false }));
@@ -877,7 +991,12 @@ const HardwareSelector = () => {
       const fetchSmpsModels = async () => {
         setLoading((prev) => ({ ...prev, models: true }));
         const data = await fetchComponentData(
-          `product_category=${componentCategories.smps}&brand=${smpsBrand}`
+          `product_category=${componentCategories.smps}&brand=${smpsBrand}`,
+          {
+            headers: {
+              "Authorization": `Bearer ${userToken}`,
+            },
+          }
         );
         setSmpsModels(data);
         setLoading((prev) => ({ ...prev, models: false }));
@@ -891,7 +1010,12 @@ const HardwareSelector = () => {
       const fetchSmpsWattages = async () => {
         setLoading((prev) => ({ ...prev, capacities: true }));
         const data = await fetchComponentData(
-          `product_category=${componentCategories.smps}&brand=${smpsBrand}&model=${smpsModel}`
+          `product_category=${componentCategories.smps}&brand=${smpsBrand}&model=${smpsModel}`,
+          {
+            headers: {
+              "Authorization": `Bearer ${userToken}`,
+            },
+          }
         );
         setSmpsWattages(data);
         setLoading((prev) => ({ ...prev, capacities: false }));
@@ -905,7 +1029,12 @@ const HardwareSelector = () => {
       const fetchSmpsAssetIds = async () => {
         setLoading((prev) => ({ ...prev, assets: true }));
         const data = await fetchComponentData(
-          `product_category=${componentCategories.smps}&brand=${smpsBrand}&model=${smpsModel}&smps=${smpsWattage}`
+          `product_category=${componentCategories.smps}&brand=${smpsBrand}&model=${smpsModel}&smps=${smpsWattage}`,
+          {
+            headers: {
+              "Authorization": `Bearer ${userToken}`,
+            },
+          }
         );
         setSmpsAssetIds(data.asset_ids);
         setSmpsProductId(data.product_id); // Store product_id
@@ -921,7 +1050,12 @@ const HardwareSelector = () => {
       const fetchWifiBrands = async () => {
         setLoading((prev) => ({ ...prev, brands: true }));
         const data = await fetchComponentData(
-          `product_category=${componentCategories.wifi}`
+          `product_category=${componentCategories.wifi}`,
+          {
+            headers: {
+              "Authorization": `Bearer ${userToken}`,
+            },
+          }
         );
         setWifiBrands(data);
         setLoading((prev) => ({ ...prev, brands: false }));
@@ -935,7 +1069,12 @@ const HardwareSelector = () => {
       const fetchWifiModels = async () => {
         setLoading((prev) => ({ ...prev, models: true }));
         const data = await fetchComponentData(
-          `product_category=${componentCategories.wifi}&brand=${wifiBrand}`
+          `product_category=${componentCategories.wifi}&brand=${wifiBrand}`,
+          {
+            headers: {
+              "Authorization": `Bearer ${userToken}`,
+            },
+          }
         );
         setWifiModels(data);
         setLoading((prev) => ({ ...prev, models: false }));
@@ -949,7 +1088,12 @@ const HardwareSelector = () => {
       const fetchWifiFrequencyBands = async () => {
         setLoading((prev) => ({ ...prev, details: true }));
         const data = await fetchComponentData(
-          `product_category=${componentCategories.wifi}&brand=${wifiBrand}&model=${wifiModel}`
+          `product_category=${componentCategories.wifi}&brand=${wifiBrand}&model=${wifiModel}`,
+          {
+            headers: {
+              "Authorization": `Bearer ${userToken}`,
+            },
+          }
         );
         setFrequencyBands(data);
         setLoading((prev) => ({ ...prev, details: false }));
@@ -968,7 +1112,12 @@ const HardwareSelector = () => {
       const fetchWifiStandards = async () => {
         setLoading((prev) => ({ ...prev, details: true }));
         const data = await fetchComponentData(
-          `product_category=${componentCategories.wifi}&brand=${wifiBrand}&model=${wifiModel}&frequency_band=${selectedFrequencyBand}`
+          `product_category=${componentCategories.wifi}&brand=${wifiBrand}&model=${wifiModel}&frequency_band=${selectedFrequencyBand}`,
+          {
+            headers: {
+              "Authorization": `Bearer ${userToken}`,
+            },
+          }
         );
         setWifiStandards(data);
         setLoading((prev) => ({ ...prev, details: false }));
@@ -989,7 +1138,12 @@ const HardwareSelector = () => {
         setLoading((prev) => ({ ...prev, assets: true }));
 
         const data = await fetchComponentData(
-          `product_category=${componentCategories.wifi}&brand=${wifiBrand}&model=${wifiModel}&frequency_band=${selectedFrequencyBand}&wifi_standard=${selectedWifiStandard}`
+          `product_category=${componentCategories.wifi}&brand=${wifiBrand}&model=${wifiModel}&frequency_band=${selectedFrequencyBand}&wifi_standard=${selectedWifiStandard}`,
+          {
+            headers: {
+              "Authorization": `Bearer ${userToken}`,
+            },
+          }
         );
 
         setWifiAssetIds(data.asset_ids);
@@ -1166,6 +1320,9 @@ const HardwareSelector = () => {
 
     try {
       const response = await fetch(`${API_URL}/assembled-assets/create`, {
+        headers: {
+          "Authorization": `Bearer ${userToken}`,
+        },
         method: "POST",
         body: formDataToSend,
       });
@@ -1341,13 +1498,13 @@ const HardwareSelector = () => {
               />
             </div>
             <div style={styles.fieldWrapper}>
-              <label style={styles.label}>Asset ID</label>
+              <label style={styles.label}>Cabinet asset ID</label>
               <input
                 type="text"
                 style={styles.input}
                 value={formData.asset_id}
                 onChange={(e) => handleInputChange("asset_id", e.target.value)}
-                placeholder="Enter Asset ID"
+                placeholder="Enter Cabinet asset ID"
               />
             </div>
           </div>

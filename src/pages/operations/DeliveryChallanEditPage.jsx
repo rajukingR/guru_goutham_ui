@@ -19,11 +19,13 @@ import { Add, Remove } from "@mui/icons-material";
 import { useNavigate, useParams } from "react-router-dom";
 import API_URL from "../../api/Api_url";
 import { useInventory } from "../../contexts/InventoryContext";
+import { useSelector } from "react-redux";
 
 // Reuse the same styles from DeliveryChallanAddPage
 const containerStyle = {
   padding: "2rem",
-  fontFamily: '"Inter", "Segoe UI", -apple-system, BlinkMacSystemFont, sans-serif',
+  fontFamily:
+    '"Inter", "Segoe UI", -apple-system, BlinkMacSystemFont, sans-serif',
   minHeight: "100vh",
   lineHeight: 1.6,
 };
@@ -253,7 +255,6 @@ const updateBtnStyle = {
   outline: "none",
 };
 
-
 const checkboxGroupStyle = {
   display: "flex",
   gap: "1rem",
@@ -261,106 +262,112 @@ const checkboxGroupStyle = {
 };
 
 // Field component (same as in AddPage)
-const Field = memo(({
-  label,
-  name,
-  placeholder,
-  type = "text",
-  options = [],
-  required = false,
-  readOnly = false,
-  value,
-  onChange,
-  error,
-  ...props
-}) => (
-  <div style={fieldContainerStyle}>
-    <label style={labelStyle}>
-      {label}
-      {required && <span style={requiredStyle}>*</span>}
-    </label>
-    {type === "select" ? (
-      <div style={selectWrapperStyle}>
-        <select
+const Field = memo(
+  ({
+    label,
+    name,
+    placeholder,
+    type = "text",
+    options = [],
+    required = false,
+    readOnly = false,
+    value,
+    onChange,
+    error,
+    ...props
+  }) => (
+    <div style={fieldContainerStyle}>
+      <label style={labelStyle}>
+        {label}
+        {required && <span style={requiredStyle}>*</span>}
+      </label>
+      {type === "select" ? (
+        <div style={selectWrapperStyle}>
+          <select
+            style={{
+              ...selectStyle,
+              borderColor: error ? "#ef4444" : "#d1d5db",
+            }}
+            name={name}
+            value={value}
+            onChange={onChange}
+            disabled={readOnly}
+            {...props}
+          >
+            <option value="">{placeholder}</option>
+            {options.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+          <div style={selectArrowStyle}>▼</div>
+        </div>
+      ) : type === "textarea" ? (
+        <textarea
+          name={name}
+          placeholder={placeholder}
           style={{
-            ...selectStyle,
+            ...textareaStyle,
             borderColor: error ? "#ef4444" : "#d1d5db",
           }}
-          name={name}
+          rows={3}
+          readOnly={readOnly}
           value={value}
           onChange={onChange}
-          disabled={readOnly}
           {...props}
+        />
+      ) : type === "date" ? (
+        <input
+          type="date"
+          name={name}
+          placeholder={placeholder}
+          style={{
+            ...inputStyle,
+            borderColor: error ? "#ef4444" : "#d1d5db",
+          }}
+          value={value}
+          onChange={onChange}
+          readOnly={readOnly}
+          {...props}
+        />
+      ) : type === "checkbox" ? (
+        <input
+          type="checkbox"
+          name={name}
+          checked={value}
+          onChange={onChange}
+          style={checkboxStyle}
+          {...props}
+        />
+      ) : (
+        <input
+          type={type}
+          name={name}
+          placeholder={placeholder}
+          style={{
+            ...inputStyle,
+            backgroundColor: readOnly ? "#f3f4f6" : "#ffffff",
+            borderColor: error ? "#ef4444" : "#d1d5db",
+          }}
+          readOnly={readOnly}
+          value={value}
+          onChange={onChange}
+          {...props}
+        />
+      )}
+      {error && (
+        <Typography
+          variant="caption"
+          color="error"
+          style={{ marginTop: "4px" }}
         >
-          <option value="">{placeholder}</option>
-          {options.map((option) => (
-            <option key={option.value} value={option.value}>
-              {option.label}
-            </option>
-          ))}
-        </select>
-        <div style={selectArrowStyle}>▼</div>
-      </div>
-    ) : type === "textarea" ? (
-      <textarea
-        name={name}
-        placeholder={placeholder}
-        style={{
-          ...textareaStyle,
-          borderColor: error ? "#ef4444" : "#d1d5db",
-        }}
-        rows={3}
-        readOnly={readOnly}
-        value={value}
-        onChange={onChange}
-        {...props}
-      />
-    ) : type === "date" ? (
-      <input
-        type="date"
-        name={name}
-        placeholder={placeholder}
-        style={{
-          ...inputStyle,
-          borderColor: error ? "#ef4444" : "#d1d5db",
-        }}
-        value={value}
-        onChange={onChange}
-        readOnly={readOnly}
-        {...props}
-      />
-    ) : type === "checkbox" ? (
-      <input
-        type="checkbox"
-        name={name}
-        checked={value}
-        onChange={onChange}
-        style={checkboxStyle}
-        {...props}
-      />
-    ) : (
-      <input
-        type={type}
-        name={name}
-        placeholder={placeholder}
-        style={{
-          ...inputStyle,
-          backgroundColor: readOnly ? "#f3f4f6" : "#ffffff",
-          borderColor: error ? "#ef4444" : "#d1d5db",
-        }}
-        readOnly={readOnly}
-        value={value}
-        onChange={onChange}
-        {...props}
-      />
-    )}
-    {error && (
-      <Typography variant="caption" color="error" style={{ marginTop: "4px" }}>
-        {error}
-      </Typography>
-    )}
-  </div>
-));
+          {error}
+        </Typography>
+      )}
+    </div>
+  )
+);
 
 const DeliveryChallanEditPage = () => {
   const { id } = useParams();
@@ -368,6 +375,10 @@ const DeliveryChallanEditPage = () => {
   const { inventoryData } = useInventory();
   const [assetSearchTerms, setAssetSearchTerms] = useState({});
   const [errors, setErrors] = useState({});
+
+  const { user, token } = useSelector((state) => state.auth);
+
+  const userToken = token;
 
   const getAvailableQty = (productId) => {
     const entry = inventoryData.find((item) => item.id === productId);
@@ -425,9 +436,9 @@ const DeliveryChallanEditPage = () => {
   const [deviceIds, setDeviceIds] = useState({});
   const [deviceIdErrors, setDeviceIdErrors] = useState({});
   const [loading, setLoading] = useState(true);
-// Add these state variables near the other state declarations
-const [showOtherAccessory, setShowOtherAccessory] = useState(false);
-const [otherAccessory, setOtherAccessory] = useState("");
+  // Add these state variables near the other state declarations
+  const [showOtherAccessory, setShowOtherAccessory] = useState(false);
+  const [otherAccessory, setOtherAccessory] = useState("");
 
   const [snackbar, setSnackbar] = useState({
     open: false,
@@ -439,18 +450,34 @@ const [otherAccessory, setOtherAccessory] = useState("");
     const fetchData = async () => {
       try {
         // Fetch the delivery challan data
-        const dcResponse = await fetch(`${API_URL}/delivery-challans/${id}`);
+        const dcResponse = await fetch(`${API_URL}/delivery-challans/${id}`, {
+          headers: {
+            "Authorization": `Bearer ${userToken}`,
+          },
+        });
         if (!dcResponse.ok) throw new Error("Failed to fetch delivery challan");
         const dcData = await dcResponse.json();
 
         // Fetch dispatch orders
-        const dispatchOrderResponse = await fetch(`${API_URL}/dispatch-orders/approved`);
-        if (!dispatchOrderResponse.ok) throw new Error("Failed to fetch dispatch orders");
+        const dispatchOrderResponse = await fetch(
+          `${API_URL}/dispatch-orders/approved`,
+          {
+            headers: {
+              "Authorization": `Bearer ${userToken}`,
+            },
+          }
+        );
+        if (!dispatchOrderResponse.ok)
+          throw new Error("Failed to fetch dispatch orders");
         const dispatchOrderData = await dispatchOrderResponse.json();
         setDispatchOrders(dispatchOrderData);
 
         // Fetch products
-        const prodResponse = await fetch(`${API_URL}/product-templete`);
+        const prodResponse = await fetch(`${API_URL}/product-templete`, {
+          headers: {
+            "Authorization": `Bearer ${userToken}`,
+          },
+        });
         if (!prodResponse.ok) throw new Error("Failed to fetch products");
         const prodData = await prodResponse.json();
         setProducts(prodData);
@@ -458,26 +485,28 @@ const [otherAccessory, setOtherAccessory] = useState("");
         // Set form data from the fetched delivery challan
         setFormData({
           ...dcData,
-          dc_date: dcData.dc_date ? dcData.dc_date.split('T')[0] : new Date().toISOString().split('T')[0],
+          dc_date: dcData.dc_date
+            ? dcData.dc_date.split("T")[0]
+            : new Date().toISOString().split("T")[0],
         });
 
-         // Initialize other accessory state
-      setShowOtherAccessory(dcData.others || false);
-      setOtherAccessory(dcData.other_accessory || "");
+        // Initialize other accessory state
+        setShowOtherAccessory(dcData.others || false);
+        setOtherAccessory(dcData.other_accessory || "");
 
         // Set selected products and quantities
-        const productIds = dcData.items.map(item => item.product_id);
+        const productIds = dcData.items.map((item) => item.product_id);
         setSelectedProductIds(productIds);
 
         const newQuantities = {};
-        dcData.items.forEach(item => {
+        dcData.items.forEach((item) => {
           newQuantities[item.product_id] = item.quantity;
         });
         setQuantities(newQuantities);
 
         // Set device IDs
         const newDeviceIds = {};
-        dcData.items.forEach(item => {
+        dcData.items.forEach((item) => {
           newDeviceIds[item.product_id] = item.device_ids || [];
         });
         setDeviceIds(newDeviceIds);
@@ -499,21 +528,20 @@ const [otherAccessory, setOtherAccessory] = useState("");
 
   const validateForm = () => {
     const newErrors = {};
-    
+
     if (!formData.order_id) {
       newErrors.order_id = "Dispatch Order is required";
     }
     if (!formData.dc_status) {
       newErrors.dc_status = "DC Status is required";
     }
-    if (!formData.vehicle_number) {
-      newErrors.vehicle_number = "Vehicle Number is required";
-    }
+
     if (!formData.delivery_person_name) {
       newErrors.delivery_person_name = "Delivery Person Name is required";
     }
     if (!formData.delivery_person_phone_number) {
-      newErrors.delivery_person_phone_number = "Delivery Person Phone is required";
+      newErrors.delivery_person_phone_number =
+        "Delivery Person Phone is required";
     }
 
     if (!formData.receiver_name) {
@@ -522,7 +550,7 @@ const [otherAccessory, setOtherAccessory] = useState("");
     if (!formData.receiver_phone_number) {
       newErrors.receiver_phone_number = "Receiver Person Number is required";
     }
-    
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -564,7 +592,12 @@ const [otherAccessory, setOtherAccessory] = useState("");
         product_id: item.product_id,
         product_name: item.product_name,
         quantity: item.quantity,
-        item_total_value: item.total_price,
+        total_price: item.total_price,
+        unit_price: item.unit_price,
+        purchase_price: item.purchase_price || 0,
+        offer_purchase_price: item.offer_purchase_price || 0,
+        rent_price_per_month: item.rent_price_per_month || 0,
+        offer_rent_price_per_month: item.offer_rent_price_per_month || 0,
         device_ids: item.device_ids || [],
       })),
     });
@@ -626,26 +659,26 @@ const [otherAccessory, setOtherAccessory] = useState("");
   }, [formData.pincode]);
 
   // Update the handleInputChange function to handle the "others" checkbox
-const handleInputChange = useCallback((e) => {
-  const { name, value, type, checked } = e.target;
-  
-  if (name === "others") {
-    setFormData((prev) => ({
-      ...prev,
-      [name]: checked,
-    }));
-    // Show/hide the other accessory input based on checkbox state
-    setShowOtherAccessory(checked);
-    if (!checked) {
-      setOtherAccessory(""); // Clear the other accessory field when unchecked
+  const handleInputChange = useCallback((e) => {
+    const { name, value, type, checked } = e.target;
+
+    if (name === "others") {
+      setFormData((prev) => ({
+        ...prev,
+        [name]: checked,
+      }));
+      // Show/hide the other accessory input based on checkbox state
+      setShowOtherAccessory(checked);
+      if (!checked) {
+        setOtherAccessory(""); // Clear the other accessory field when unchecked
+      }
+    } else {
+      setFormData((prev) => ({
+        ...prev,
+        [name]: type === "checkbox" ? checked : value,
+      }));
     }
-  } else {
-    setFormData((prev) => ({
-      ...prev,
-      [name]: type === "checkbox" ? checked : value,
-    }));
-  }
-}, []);
+  }, []);
 
   const handleProductSelection = useCallback((productId) => {
     setSelectedProductIds((prev) => {
@@ -692,7 +725,7 @@ const handleInputChange = useCallback((e) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     if (!validateForm()) {
       return;
     }
@@ -702,26 +735,19 @@ const handleInputChange = useCallback((e) => {
         const product = products.find((p) => p.id === productId);
         const quantity = quantities[productId] || 1;
         const selectedDeviceIds = deviceIds[productId] || [];
+        const orderItem = formData.items.find((item) => item.product_id === productId);
 
-        let total_price = 0;
-        if (formData.type === "Rent") {
-          const rentalDuration = 1;
-          if (rentalDuration === 12) {
-            total_price = product.rent_price_1_year * quantity;
-          } else if (rentalDuration === 6) {
-            total_price = product.rent_price_6_months * quantity;
-          } else {
-            total_price = product.rent_price_per_month * quantity;
-          }
-        } else {
-          total_price = product.purchase_price * quantity;
-        }
+        
+
+        const total_price = orderItem.total_price;
+        const unit_price = orderItem.unit_price;
 
         return {
           product_id: productId,
           product_name: product.product_name,
           quantity,
           total_price,
+          unit_price,
           device_ids: selectedDeviceIds,
         };
       });
@@ -738,6 +764,7 @@ const handleInputChange = useCallback((e) => {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
+          "Authorization": `Bearer ${userToken}`,
         },
         body: JSON.stringify(payload),
       });
@@ -813,7 +840,7 @@ const handleInputChange = useCallback((e) => {
                 onChange={handleInputChange}
                 readOnly
               />
-              
+
               <Field
                 label="Select Dispatch Order"
                 name="order_id"
@@ -829,7 +856,9 @@ const handleInputChange = useCallback((e) => {
                 error={errors.order_id}
                 options={dispatchOrders.map((order) => ({
                   value: order.id,
-                  label: `${order.dispatch_order_id} - ${order.shipping_name || ""}`,
+                  label: `${order.dispatch_order_id} - ${
+                    order.shipping_name || ""
+                  }`,
                 }))}
               />
 
@@ -954,7 +983,7 @@ const handleInputChange = useCallback((e) => {
                 value={formData.shipping_phone_number}
                 onChange={handleInputChange}
               />
-              
+
               <Field
                 label="Street"
                 name="street"
@@ -1022,8 +1051,6 @@ const handleInputChange = useCallback((e) => {
                     setErrors({ ...errors, vehicle_number: "" });
                   }
                 }}
-                error={errors.vehicle_number}
-                required
               />
 
               <Field
@@ -1057,7 +1084,7 @@ const handleInputChange = useCallback((e) => {
                 required
               />
 
-               <Field
+              <Field
                 label="Receiver Name"
                 name="receiver_name"
                 placeholder="Enter Name"
@@ -1086,7 +1113,6 @@ const handleInputChange = useCallback((e) => {
                 error={errors.receiver_phone_number}
                 required
               />
-
             </div>
             {/* Default DC Checkbox */}
             <div style={fieldContainerStyle}>
@@ -1126,42 +1152,42 @@ const handleInputChange = useCallback((e) => {
 
             {/* Accessories Checkboxes */}
             <div style={fieldContainerStyle}>
-  <label style={labelStyle}>Included Accessories:</label>
-  <div style={checkboxGroupStyle}>
-    {["mouse", "cable", "bag", "others"].map((field) => (
-      <label
-        key={field}
-        style={{
-          display: "flex",
-          alignItems: "center",
-          marginRight: "15px",
-        }}
-      >
-        <input
-          type="checkbox"
-          name={field}
-          checked={formData[field]}
-          onChange={handleInputChange}
-          style={{ marginRight: "5px" }}
-        />
-        {field.charAt(0).toUpperCase() + field.slice(1)}
-      </label>
-    ))}
-  </div>
-  
-  {/* Add the Other Accessory input field that appears when "others" is checked */}
-  {showOtherAccessory && (
-    <div style={{ marginTop: "10px" }}>
-      <Field
-        label="Specify Other Accessory"
-        name="other_accessory"
-        placeholder="Enter accessory name"
-        value={otherAccessory}
-        onChange={(e) => setOtherAccessory(e.target.value)}
-      />
-    </div>
-  )}
-</div>
+              <label style={labelStyle}>Included Accessories:</label>
+              <div style={checkboxGroupStyle}>
+                {["mouse", "cable", "bag", "others"].map((field) => (
+                  <label
+                    key={field}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      marginRight: "15px",
+                    }}
+                  >
+                    <input
+                      type="checkbox"
+                      name={field}
+                      checked={formData[field]}
+                      onChange={handleInputChange}
+                      style={{ marginRight: "5px" }}
+                    />
+                    {field.charAt(0).toUpperCase() + field.slice(1)}
+                  </label>
+                ))}
+              </div>
+
+              {/* Add the Other Accessory input field that appears when "others" is checked */}
+              {showOtherAccessory && (
+                <div style={{ marginTop: "10px" }}>
+                  <Field
+                    label="Specify Other Accessory"
+                    name="other_accessory"
+                    placeholder="Enter accessory name"
+                    value={otherAccessory}
+                    onChange={(e) => setOtherAccessory(e.target.value)}
+                  />
+                </div>
+              )}
+            </div>
           </div>
         </div>
 

@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import DynamicTable from "../../components/table-format/DynamicTable";
 import axios from "axios";
 import API_URL from "../../api/Api_url";
+  import { useSelector } from "react-redux";
 
 // Badge formatter for delivery status
 const getStatusBadge = (status) => {
@@ -22,6 +23,14 @@ const getStatusBadge = (status) => {
 };
 
 const DeliveryChallanTable = () => {
+
+
+
+
+    const { user, token } = useSelector((state) => state.auth);
+  
+    const userToken = token;
+
   const [data, setData] = useState([]);
 
   const columns = [
@@ -49,7 +58,7 @@ const DeliveryChallanTable = () => {
 
         const response = await axios.get(`${API_URL}/delivery-challans`, {
           headers: {
-            Authorization: `Bearer ${token}`,
+            "Authorization": `Bearer ${userToken}`,
           },
         });
 

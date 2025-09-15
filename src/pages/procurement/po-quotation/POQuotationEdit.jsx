@@ -19,8 +19,12 @@ import {
 } from "@mui/material";
 import { Add, Remove } from "@mui/icons-material";
 import API_URL, { IMAGE_API_URL } from "../../../api/Api_url";
-
+import { useSelector } from "react-redux";
 const POQuotationEdit = () => {
+  const { user, token } = useSelector((state) => state.auth);
+
+  const userToken = token;
+
   const { id } = useParams();
   const navigate = useNavigate();
   const isEditMode = !!id;
@@ -64,9 +68,21 @@ const POQuotationEdit = () => {
 
         // Fetch all necessary data in parallel
         const [prResponse, supResponse, prodResponse] = await Promise.all([
-          fetch(`${API_URL}/purchase-requests/approved`),
-          fetch(`${API_URL}/supplier`),
-          fetch(`${API_URL}/product-templete`),
+          fetch(`${API_URL}/purchase-requests/approved`, {
+            headers: {
+              "Authorization": `Bearer ${userToken}`,
+            },
+          }),
+          fetch(`${API_URL}/supplier`, {
+            headers: {
+              "Authorization": `Bearer ${userToken}`,
+            },
+          }),
+          fetch(`${API_URL}/product-templete`, {
+            headers: {
+              "Authorization": `Bearer ${userToken}`,
+            },
+          }),
         ]);
 
         if (!prResponse.ok)
@@ -91,7 +107,12 @@ const POQuotationEdit = () => {
         // If in edit mode, fetch the existing quotation
         if (isEditMode) {
           const quoteResponse = await fetch(
-            `${API_URL}/purchase-quotation/${id}`
+            `${API_URL}/purchase-quotation/${id}`,
+            {
+              headers: {
+                "Authorization": `Bearer ${userToken}`,
+              },
+            }
           );
           if (!quoteResponse.ok)
             throw new Error("Failed to fetch quotation data");
@@ -268,7 +289,10 @@ const POQuotationEdit = () => {
 
       const response = await fetch(url, {
         method,
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${userToken}`,
+        },
         body: JSON.stringify(payload),
       });
 
@@ -473,9 +497,6 @@ const POQuotationEdit = () => {
       <div style={cardStyle}>
         <div style={cardHeaderContainerStyle}>
           <h3 style={cardHeaderStyle}>Selected Products</h3>
-          <Typography variant="subtitle1" style={{ marginLeft: "auto" }}>
-            Total Amount: ₹{totalAmount.toFixed(2)}
-          </Typography>
         </div>
 
         <button
@@ -565,7 +586,7 @@ const POQuotationEdit = () => {
                       sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
                     >
                       Price per Piece
-                    </TableCell>{" "}
+                    </TableCell>
                     {/* ✅ New column */}
                     <TableCell
                       sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
@@ -612,8 +633,8 @@ const POQuotationEdit = () => {
                         <>
                           {/* <div><strong>Day:</strong> ₹{product.rent_price_per_day}</div> */}
                           <div>
-                            <strong>Month:</strong> ₹
-                            {product.rent_price_per_month}
+                            <strong>Purchase Price:</strong> ₹
+                            {product.purchase_price}
                           </div>
                           {/* <div><strong>6 Months:</strong> ₹{product.rent_price_6_months}</div>
                          <div><strong>1 Year:</strong> ₹{product.rent_price_1_year}</div> */}

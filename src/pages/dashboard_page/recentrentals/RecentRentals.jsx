@@ -2,9 +2,17 @@ import React, { useState, useEffect } from "react";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import API_URL from "../../../api/Api_url";
+import { useSelector } from "react-redux";
 
 const RecentRentals = () => {
-  const [fromMonth, setFromMonth] = useState(new Date(new Date().setMonth(new Date().getMonth() - 1)));
+
+    const { user, token } = useSelector((state) => state.auth);
+  
+    const userToken = token;
+
+  const [fromMonth, setFromMonth] = useState(
+    new Date(new Date().setMonth(new Date().getMonth() - 1))
+  );
   const [toMonth, setToMonth] = useState(new Date());
   const [recentRentals, setRecentRentals] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -22,7 +30,12 @@ const RecentRentals = () => {
       setLoading(true);
       setError(null);
       try {
-        const response = await fetch(`${API_URL}/delivery-challans`);
+        const token = localStorage.getItem("token");
+        const response = await fetch(`${API_URL}/delivery-challans`, {
+          headers: {
+            "Authorization": `Bearer ${userToken}`,
+          },
+        });
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
@@ -34,7 +47,7 @@ const RecentRentals = () => {
         // Filter Rent type challans within month range
         const filtered = data.filter((challan) => {
           if (challan.type !== "Rent") return false;
-          
+
           const challanMonth = challan.dc_date.substring(0, 7); // Extract YYYY-MM
           return challanMonth >= startMonth && challanMonth <= endMonth;
         });
@@ -61,7 +74,7 @@ const RecentRentals = () => {
   }, [fromMonth, toMonth]);
 
   // Styles
-// Styles (same as before)
+  // Styles (same as before)
   const chartCardStyle = {
     backgroundColor: "#ffffff",
     borderRadius: "16px",
@@ -131,17 +144,32 @@ const RecentRentals = () => {
     textAlign: "left",
   };
 
-
   const getStatusColor = (status) => {
     switch (status) {
       case "Active":
-        return { backgroundColor: "#dcfce7", color: "#166534", border: "1px solid #bbf7d0" };
+        return {
+          backgroundColor: "#dcfce7",
+          color: "#166534",
+          border: "1px solid #bbf7d0",
+        };
       case "Completed":
-        return { backgroundColor: "#dbeafe", color: "#1e40af", border: "1px solid #bfdbfe" };
+        return {
+          backgroundColor: "#dbeafe",
+          color: "#1e40af",
+          border: "1px solid #bfdbfe",
+        };
       case "Overdue":
-        return { backgroundColor: "#fee2e2", color: "#991b1b", border: "1px solid #fecaca" };
+        return {
+          backgroundColor: "#fee2e2",
+          color: "#991b1b",
+          border: "1px solid #fecaca",
+        };
       default:
-        return { backgroundColor: "#f3f4f6", color: "#374151", border: "1px solid #e5e7eb" };
+        return {
+          backgroundColor: "#f3f4f6",
+          color: "#374151",
+          border: "1px solid #e5e7eb",
+        };
     }
   };
 
@@ -219,7 +247,7 @@ const RecentRentals = () => {
     display: "inline-block",
   };
 
-   return (
+  return (
     <div style={tableCardStyle}>
       <div style={chartHeaderWithDateStyle}>
         <div style={chartHeaderStyle}>
@@ -272,15 +300,21 @@ const RecentRentals = () => {
       </div>
       <div style={tableContainerStyle}>
         {loading ? (
-          <div style={{ padding: "1rem", color: "#64748b", textAlign: "center" }}>
+          <div
+            style={{ padding: "1rem", color: "#64748b", textAlign: "center" }}
+          >
             Loading recent rentals...
           </div>
         ) : error ? (
-          <div style={{ padding: "1rem", color: "#ef4444", textAlign: "center" }}>
+          <div
+            style={{ padding: "1rem", color: "#ef4444", textAlign: "center" }}
+          >
             {error}
           </div>
         ) : recentRentals.length === 0 ? (
-          <div style={{ padding: "1rem", color: "#64748b", textAlign: "center" }}>
+          <div
+            style={{ padding: "1rem", color: "#64748b", textAlign: "center" }}
+          >
             No rentals found for selected month.
           </div>
         ) : (
@@ -291,7 +325,9 @@ const RecentRentals = () => {
                 <th style={tableHeaderCellStyle}>Customer Name</th>
                 <th style={tableHeaderCellStyle}>Model</th>
                 <th style={tableHeaderCellStyle}>Start Date</th>
-                <th style={{ ...tableHeaderCellStyle, textAlign: "right" }}>Status</th>
+                <th style={{ ...tableHeaderCellStyle, textAlign: "right" }}>
+                  Status
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -302,7 +338,12 @@ const RecentRentals = () => {
                   <td style={tableCellStyle}>{row.model}</td>
                   <td style={tableCellStyle}>{row.startDate}</td>
                   <td style={{ ...tableCellStyle, textAlign: "right" }}>
-                    <span style={{ ...statusBadgeStyle, ...getStatusColor(row.status) }}>
+                    <span
+                      style={{
+                        ...statusBadgeStyle,
+                        ...getStatusColor(row.status),
+                      }}
+                    >
                       {row.status}
                     </span>
                   </td>

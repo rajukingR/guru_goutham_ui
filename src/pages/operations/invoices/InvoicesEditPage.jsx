@@ -18,6 +18,7 @@ import {
 import { Add, Remove } from "@mui/icons-material";
 import API_URL from "../../../api/Api_url";
 import { useNavigate, useParams } from "react-router-dom";
+import { useSelector } from "react-redux";
 
 // Reuse the same styles from InvoicesAddPage
 const containerStyle = {
@@ -465,6 +466,10 @@ const formatINR = (number) =>
   }).format(number || 0);
 
 const InvoicesEditPage = () => {
+  const { user, token } = useSelector((state) => state.auth);
+
+  const userToken = token;
+
   const { id } = useParams();
   const navigate = useNavigate();
 
@@ -546,7 +551,11 @@ const InvoicesEditPage = () => {
     const fetchInvoiceData = async () => {
       try {
         // Fetch the invoice data
-        const invoiceResponse = await fetch(`${API_URL}/invoices/${id}`);
+        const invoiceResponse = await fetch(`${API_URL}/invoices/${id}`, {
+          headers: {
+            "Authorization": `Bearer ${userToken}`,
+          },
+        });
         if (!invoiceResponse.ok) {
           throw new Error("Failed to fetch invoice data");
         }
@@ -555,9 +564,21 @@ const InvoicesEditPage = () => {
         // Fetch other necessary data (products, tax types, etc.)
         const [productsResponse, taxResponse, dispatchOrdersResponse] =
           await Promise.all([
-            fetch(`${API_URL}/product-templete`),
-            fetch(`${API_URL}/tax-types`),
-            fetch(`${API_URL}/dispatch-orders/approved-dc`),
+            fetch(`${API_URL}/product-templete`, {
+              headers: {
+                "Authorization": `Bearer ${userToken}`,
+              },
+            }),
+            fetch(`${API_URL}/tax-types`, {
+              headers: {
+                "Authorization": `Bearer ${userToken}`,
+              },
+            }),
+            fetch(`${API_URL}/dispatch-orders/approved-dc`, {
+              headers: {
+                "Authorization": `Bearer ${userToken}`,
+              },
+            }),
           ]);
 
         if (!productsResponse.ok) throw new Error("Failed to fetch products");
@@ -1318,6 +1339,7 @@ const InvoicesEditPage = () => {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
+          "Authorization": `Bearer ${userToken}`,
         },
         body: JSON.stringify(submissionData),
       });
@@ -1439,7 +1461,7 @@ const InvoicesEditPage = () => {
                 }}
                 options={[
                   { value: "Rent", label: "Rent" },
-                  { value: "Buy", label: "Buy" },
+                  { value: "Buy", label: "Sale" },
                 ]}
               />
 

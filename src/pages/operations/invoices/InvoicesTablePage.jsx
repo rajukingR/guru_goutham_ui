@@ -2,9 +2,15 @@ import React, { useEffect, useState } from "react";
 import DynamicTable from "../../../components/table-format/DynamicTable";
 import axios from "axios";
 import API_URL, { IMAGE_API_URL } from "../../../api/Api_url";
+import { useSelector } from "react-redux";
 
 const InvoicesTablePage = () => {
   const [data, setData] = useState([]);
+
+
+    const { user, token } = useSelector((state) => state.auth);
+  
+    const userToken = token;
 
   const columns = [
     { id: "s_id", label: "S.No." },
@@ -15,7 +21,7 @@ const InvoicesTablePage = () => {
         // { id: "customer_id", label: "Customer ID" },
 
     { id: "invoice_date", label: "Invoice Date" },
-        { id: "transaction_type", label: "Paymenet Type" },
+        { id: "transaction_type", label: "Transaction Type" },
         { id: "payment_mode", label: "Paymenet Type" },
 
     { id: "email", label: "Email" },
@@ -34,7 +40,7 @@ const InvoicesTablePage = () => {
 
         const response = await axios.get(`${API_URL}/invoices`, {
           headers: {
-            Authorization: `Bearer ${token}`,
+            Authorization: `Bearer ${userToken}`,
           },
         });
 
@@ -44,6 +50,9 @@ const InvoicesTablePage = () => {
             ...item,
             // payment_mode: item.payment_mode === "" ? "Buy": item.payment_mode,
             status: item.approval_status === "Approved" ? "Active" : "Inactive",
+            transaction_type:
+            item.transaction_type === "Buy" ? "Sale" : item.transaction_type,
+          payment_mode: item.payment_mode === ""? "Sale" : item.payment_mode,
           }));
           setData(formatted);
         }

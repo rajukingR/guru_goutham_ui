@@ -18,8 +18,12 @@ import {
 } from "@mui/material";
 import { Add, Remove } from "@mui/icons-material";
 import { useNavigate } from "react-router-dom";
-
+import { useSelector } from "react-redux";
 const PurchaseOrderEditLayout = () => {
+  const { user, token } = useSelector((state) => state.auth);
+
+  const userToken = token;
+
   const { id } = useParams();
   const [purchaseOrder, setPurchaseOrder] = useState(null);
   const [purchaseQuotations, setPurchaseQuotations] = useState([]);
@@ -68,7 +72,11 @@ const PurchaseOrderEditLayout = () => {
     const fetchData = async () => {
       try {
         // Fetch the purchase order to edit
-        const poResponse = await fetch(`${API_URL}/purchase-orders/${id}`);
+        const poResponse = await fetch(`${API_URL}/purchase-orders/${id}`, {
+          headers: {
+            "Authorization": `Bearer ${userToken}`,
+          },
+        });
         if (!poResponse.ok) throw new Error("Failed to fetch purchase order");
         const poData = await poResponse.json();
         setPurchaseOrder(poData);
@@ -104,7 +112,12 @@ const PurchaseOrderEditLayout = () => {
 
         // Fetch approved purchase quotations
         const pqResponse = await fetch(
-          `${API_URL}/purchase-quotation/approved`
+          `${API_URL}/purchase-quotation/approved`,
+          {
+            headers: {
+              "Authorization": `Bearer ${userToken}`,
+            },
+          }
         );
         if (!pqResponse.ok)
           throw new Error("Failed to fetch purchase quotations");
@@ -112,13 +125,21 @@ const PurchaseOrderEditLayout = () => {
         setPurchaseQuotations(pqData);
 
         // Fetch suppliers
-        const supResponse = await fetch(`${API_URL}/supplier`);
+        const supResponse = await fetch(`${API_URL}/supplier`, {
+          headers: {
+            "Authorization": `Bearer ${userToken}`,
+          },
+        });
         if (!supResponse.ok) throw new Error("Failed to fetch suppliers");
         const supData = await supResponse.json();
         setSuppliers(supData);
 
         // Fetch products
-        const prodResponse = await fetch(`${API_URL}/product-templete`);
+        const prodResponse = await fetch(`${API_URL}/product-templete`, {
+          headers: {
+            "Authorization": `Bearer ${userToken}`,
+          },
+        });
         if (!prodResponse.ok) throw new Error("Failed to fetch products");
         const prodData = await prodResponse.json();
 
@@ -261,7 +282,10 @@ const PurchaseOrderEditLayout = () => {
 
       const response = await fetch(`${API_URL}/purchase-orders/${id}`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${userToken}`,
+        },
         body: JSON.stringify(payload),
       });
 

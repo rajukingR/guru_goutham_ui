@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from "react";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import API_URL from "../../../api/Api_url";
+import { useSelector } from "react-redux";
 
 const ProductCategories = () => {
   const [selectedDate, setSelectedDate] = useState(new Date());
@@ -11,13 +12,21 @@ const ProductCategories = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+    const { user, token } = useSelector((state) => state.auth);
+  
+    const userToken = token;
   // Fetch categories on mount
   useEffect(() => {
     const fetchCategories = async () => {
       setLoading(true);
       setError(null);
       try {
-        const response = await fetch(`${API_URL}/product-categories`);
+        const token = localStorage.getItem("token");
+        const response = await fetch(`${API_URL}/product-categories`, {
+          headers: {
+            "Authorization": `Bearer ${userToken}`,
+          },
+        });
         if (!response.ok) throw new Error(`HTTP error: ${response.status}`);
         const data = await response.json();
         setApiData(data);
@@ -42,13 +51,30 @@ const ProductCategories = () => {
     if (!apiData || apiData.length === 0) return [];
 
     const colors = [
-      "#fb923c", "#6366f1", "#2dd4bf", "#f472b6", "#fbbf24",
-      "#a855f7", "#10b981", "#3b82f6", "#ef4444", "#8b5cf6",
-      "#ec4899", "#14b8a6", "#c084fc", "#f0abfc", "#e879f9",
-      "#f43f5e", "#ef4444", "#a3e635", "#d946ef", "#06b6d4",
+      "#fb923c",
+      "#6366f1",
+      "#2dd4bf",
+      "#f472b6",
+      "#fbbf24",
+      "#a855f7",
+      "#10b981",
+      "#3b82f6",
+      "#ef4444",
+      "#8b5cf6",
+      "#ec4899",
+      "#14b8a6",
+      "#c084fc",
+      "#f0abfc",
+      "#e879f9",
+      "#f43f5e",
+      "#ef4444",
+      "#a3e635",
+      "#d946ef",
+      "#06b6d4",
     ];
 
-    const seedBase = selectedDate.getMonth() + 1 + selectedDate.getFullYear() * 100;
+    const seedBase =
+      selectedDate.getMonth() + 1 + selectedDate.getFullYear() * 100;
 
     return apiData.map((category, index) => {
       const seed = seedBase + index * 13;
@@ -77,7 +103,9 @@ const ProductCategories = () => {
 
   // Update mouse position for tooltip
   const handleMouseMove = (e) => {
-    const svgRect = e.currentTarget.querySelector("svg").getBoundingClientRect();
+    const svgRect = e.currentTarget
+      .querySelector("svg")
+      .getBoundingClientRect();
     setHoverPosition({
       x: e.clientX - svgRect.left,
       y: e.clientY - svgRect.top,
@@ -119,36 +147,42 @@ const ProductCategories = () => {
           <>
             <div style={doughnutChartStyle} data-chart-container>
               <svg style={svgStyle} viewBox="0 0 100 100">
-                {categoryData.reduce(
-                  (acc, item, index) => {
-                    const prevValue = acc.prev;
-                    const percentage = item.value / totalValue;
-                    const angle = percentage * 360;
-                    const path = generatePathData(prevValue, prevValue + angle);
-                    acc.prev += angle;
-                    acc.paths.push(
-                      <path
-                        key={index}
-                        d={path}
-                        fill={item.color}
-                        stroke="white"
-                        strokeWidth="0.5"
-                        onMouseEnter={() => setHoveredCategory(index)}
-                        onMouseLeave={() => setHoveredCategory(null)}
-                        style={{
-                          cursor: "pointer",
-                          opacity:
-                            hoveredCategory === null || hoveredCategory === index
-                              ? 1
-                              : 0.6,
-                          transition: "opacity 0.2s ease",
-                        }}
-                      />
-                    );
-                    return acc;
-                  },
-                  { prev: 0, paths: [] }
-                ).paths}
+                {
+                  categoryData.reduce(
+                    (acc, item, index) => {
+                      const prevValue = acc.prev;
+                      const percentage = item.value / totalValue;
+                      const angle = percentage * 360;
+                      const path = generatePathData(
+                        prevValue,
+                        prevValue + angle
+                      );
+                      acc.prev += angle;
+                      acc.paths.push(
+                        <path
+                          key={index}
+                          d={path}
+                          fill={item.color}
+                          stroke="white"
+                          strokeWidth="0.5"
+                          onMouseEnter={() => setHoveredCategory(index)}
+                          onMouseLeave={() => setHoveredCategory(null)}
+                          style={{
+                            cursor: "pointer",
+                            opacity:
+                              hoveredCategory === null ||
+                              hoveredCategory === index
+                                ? 1
+                                : 0.6,
+                            transition: "opacity 0.2s ease",
+                          }}
+                        />
+                      );
+                      return acc;
+                    },
+                    { prev: 0, paths: [] }
+                  ).paths
+                }
                 <circle cx="50" cy="50" r="20" fill="white" />
               </svg>
               {hoveredCategory !== null && (
@@ -186,7 +220,8 @@ const ProductCategories = () => {
                     {categoryData[hoveredCategory].name}
                   </div>
                   <div style={{ fontWeight: 400, opacity: 0.8 }}>
-                    Value: {categoryData[hoveredCategory].value.toLocaleString()}
+                    Value:{" "}
+                    {categoryData[hoveredCategory].value.toLocaleString()}
                   </div>
                   <div style={{ fontWeight: 400, opacity: 0.8 }}>
                     Percentage:{" "}
@@ -201,36 +236,42 @@ const ProductCategories = () => {
             </div>
 
             <div style={legendRowsContainerStyle}>
-  {Array.from({ length: Math.ceil(categoryData.length / 4) }).map((_, rowIndex) => (
-    <div key={rowIndex} style={legendRowStyle}>
-      {categoryData
-        .slice(rowIndex * 4, rowIndex * 4 + 4)
-        .map((item, index) => (
-          <div
-            key={index}
-            style={{
-              ...legendItemBoxStyle,
-              backgroundColor:
-                hoveredCategory === rowIndex * 4 + index ? "#f1f5f9" : "#ffffff",
-            }}
-            onMouseEnter={() => setHoveredCategory(rowIndex * 4 + index)}
-            onMouseLeave={() => setHoveredCategory(null)}
-          >
-            <div
-              style={{
-                ...legendDotStyle,
-                backgroundColor: item.color,
-              }}
-            />
-            <span style={legendTextStyle}>
-              {item.name} (₹{item.value.toLocaleString("en-IN")})
-            </span>
-          </div>
-        ))}
-    </div>
-  ))}
-</div>
-
+              {Array.from({ length: Math.ceil(categoryData.length / 4) }).map(
+                (_, rowIndex) => (
+                  <div key={rowIndex} style={legendRowStyle}>
+                    {categoryData
+                      .slice(rowIndex * 4, rowIndex * 4 + 4)
+                      .map((item, index) => (
+                        <div
+                          key={index}
+                          style={{
+                            ...legendItemBoxStyle,
+                            backgroundColor:
+                              hoveredCategory === rowIndex * 4 + index
+                                ? "#f1f5f9"
+                                : "#ffffff",
+                          }}
+                          onMouseEnter={() =>
+                            setHoveredCategory(rowIndex * 4 + index)
+                          }
+                          onMouseLeave={() => setHoveredCategory(null)}
+                        >
+                          <div
+                            style={{
+                              ...legendDotStyle,
+                              backgroundColor: item.color,
+                            }}
+                          />
+                          <span style={legendTextStyle}>
+                            {item.name}
+                            {/* {item.name} (₹{item.value.toLocaleString("en-IN")}) */}
+                          </span>
+                        </div>
+                      ))}
+                  </div>
+                )
+              )}
+            </div>
           </>
         ) : (
           <div style={loadingStyle}>No data available</div>
@@ -241,7 +282,6 @@ const ProductCategories = () => {
 };
 
 // ========== Your ORIGINAL Styles ==========
-
 
 const legendRowsContainerStyle = {
   display: "flex",
@@ -386,7 +426,6 @@ const legendColorStyle = {
   borderRadius: "50%",
   flexShrink: 0,
 };
-
 
 const legendValueStyle = {
   fontSize: "0.875rem",

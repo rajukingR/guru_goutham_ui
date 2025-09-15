@@ -1,16 +1,47 @@
 import React, { useState, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
 import Snackbar from "@mui/material/Snackbar";
 import Alert from "@mui/material/Alert";
+import { useNavigate, useParams } from "react-router-dom";
 import { useSelector } from "react-redux";
-import API_URL, { IMAGE_API_URL } from "../../../api/Api_url";
+import API_URL from "../../../api/Api_url";
+
+const validateEmail = (email) => {
+  const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return re.test(String(email).toLowerCase());
+};
+
+const validatePhone = (phone) => {
+  const re = /^[0-9]{10}$/;
+  return re.test(phone);
+};
+
+const validateGST = (gst) => {
+  if (!gst) return true; // Optional field
+  const re = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/;
+  return re.test(gst.toUpperCase());
+};
+
+const validatePAN = (pan) => {
+  if (!pan) return true; // Optional field
+  const re = /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/;
+  return re.test(pan.toUpperCase());
+};
+
+const validatePincode = (pincode) => {
+  const re = /^[1-9][0-9]{5}$/;
+  return re.test(pincode);
+};
 
 const ContactsEditLayoutPage = () => {
-  const { user } = useSelector((state) => state.auth);
+  const { id } = useParams();
+  const { user, token } = useSelector((state) => state.auth);
+
+  const userToken = token;
+
   const LoginUserName = user.full_name;
 
-  const { id } = useParams();
   const navigate = useNavigate();
+  const [loading, setLoading] = useState(true);
   const [formData, setFormData] = useState({
     first_name: "",
     last_name: "",
@@ -18,14 +49,14 @@ const ContactsEditLayoutPage = () => {
     phone_number: "",
     company_name: "",
     customer_id: "",
-    date: "",
+    date: new Date(),
     industry: "",
-    payment_type: "",
+    payment_type: "Prepaid",
     address: {
       street: "",
       city: "",
       state: "",
-      zip: "",
+      pincode: "",
       country: "India",
     },
     gst: "",
@@ -33,62 +64,157 @@ const ContactsEditLayoutPage = () => {
     owner: "",
     remarks: "",
     contact_generated_by: "",
-    status: "",
+    status: "Inactive",
   });
 
-  useEffect(() => {
-    if (LoginUserName && !formData.contact_generated_by) {
-      setFormData((prev) => ({
-        ...prev,
-        contact_generated_by: LoginUserName,
-      }));
-    }
-  }, [LoginUserName, formData.contact_generated_by]);
+  const [errors, setErrors] = useState({
+    first_name: "",
+    last_name: "",
+    email: "",
+    phone_number: "",
+    company_name: "",
+    industry: "",
+    "address.street": "",
+    "address.pincode": "",
+    gst: "",
+    pan_no: "",
+  });
 
-  const [loading, setLoading] = useState(true);
   const [snackbar, setSnackbar] = useState({
     open: false,
     message: "",
     severity: "success",
   });
 
-  // Fetch contact data when component mounts
+  // Fetch contact data
   useEffect(() => {
-    const fetchContactData = async () => {
+    const fetchContact = async () => {
       try {
-        const response = await fetch(
-          `${API_URL}/contacts/${id}`
-        );
+        setLoading(true);
+        const response = await fetch(`${API_URL}/contacts/${id}`, {
+          headers: {
+            "Authorization": `Bearer ${userToken}`,
+          },
+        });
         const data = await response.json();
 
         if (response.ok) {
           setFormData(data);
         } else {
-          throw new Error(data.message || "Failed to fetch contact data");
+          throw new Error(data.message || "Failed to fetch contact");
         }
       } catch (error) {
         console.error("Error fetching contact:", error);
         setSnackbar({
           open: true,
-          message: error.message || "Error fetching contact data",
+          message: error.message || "Error loading contact",
           severity: "error",
         });
-        navigate("/dashboard/crm/contacts");
       } finally {
         setLoading(false);
       }
     };
 
-    fetchContactData();
-  }, [id, navigate]);
+    if (id) {
+      fetchContact();
+    }
+  }, [id]);
+
+  const handleStatusChange = (e) => {
+    handleInputChange("status", e.target.checked ? "Active" : "Inactive");
+  };
+
+  const validateField = (name, value) => {
+    let error = "";
+
+    switch (name) {
+      case "first_name":
+        if (!value.trim()) error = "First name is required";
+        else if (value.length > 50) error = "First name too long";
+        break;
+      case "last_name":
+        if (!value.trim()) error = "Last name is required";
+        else if (value.length > 50) error = "Last name too long";
+        break;
+      case "email":
+        if (value && !validateEmail(value)) error = "Invalid email format";
+        break;
+      case "phone_number":
+        if (!value) error = "Phone number is required";
+        else if (!validatePhone(value))
+          error = "Invalid phone number (10 digits required)";
+        break;
+      case "company_name":
+        if (!value.trim()) error = "Company name is required";
+        break;
+      case "industry":
+        if (!value.trim()) error = "Industry is required";
+        break;
+      case "address.street":
+      case "address.city":
+      case "address.state":
+      case "address.country":
+      case "owner":
+      case "remarks":
+        // No validation needed for these fields
+        break;
+      case "address.pincode":
+        if (!value) error = "Pincode is required";
+        else if (!validatePincode(value))
+          error = "Invalid pincode (6 digits required)";
+        break;
+      case "gst":
+        if (!validateGST(value)) error = "Invalid GST format";
+        break;
+      case "pan_no":
+        if (!value) error = "PAN number is required";
+        else if (!validatePAN(value)) error = "Invalid PAN format";
+        break;
+      default:
+        break;
+    }
+
+    return error;
+  };
+
+  const validateForm = () => {
+    const newErrors = {};
+    let isValid = true;
+
+    // Validate all fields
+    Object.keys(formData).forEach((key) => {
+      if (key === "address") {
+        Object.keys(formData.address).forEach((addrKey) => {
+          const fullKey = `address.${addrKey}`;
+          const error = validateField(fullKey, formData.address[addrKey]);
+          if (error) {
+            newErrors[fullKey] = error;
+            isValid = false;
+          }
+        });
+      } else {
+        const error = validateField(key, formData[key]);
+        if (error) {
+          newErrors[key] = error;
+          isValid = false;
+        }
+      }
+    });
+
+    setErrors(newErrors);
+    return isValid;
+  };
 
   // Fetch location data when pincode changes
   useEffect(() => {
     const fetchLocationData = async () => {
-      if (formData.address.zip.length === 6) {
+      if (
+        formData.address.pincode.length === 6 &&
+        validatePincode(formData.address.pincode)
+      ) {
         try {
           const response = await fetch(
-            `https://api.postalpincode.in/pincode/${formData.address.zip}`
+            `https://api.postalpincode.in/pincode/${formData.address.pincode}`
           );
           const data = await response.json();
 
@@ -121,11 +247,15 @@ const ContactsEditLayoutPage = () => {
         }
       }
     };
-
     fetchLocationData();
-  }, [formData.address.zip]);
+  }, [formData.address.pincode]);
 
   const handleInputChange = (field, value) => {
+    // Clear error when field changes
+    if (errors[field]) {
+      setErrors((prev) => ({ ...prev, [field]: "" }));
+    }
+
     // Handle nested address fields
     if (field.includes("address.")) {
       const addressField = field.split(".")[1];
@@ -147,17 +277,25 @@ const ContactsEditLayoutPage = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
+    if (!validateForm()) {
+      setSnackbar({
+        open: true,
+        message: "Please fix the errors in the form",
+        severity: "error",
+      });
+      return;
+    }
+
     try {
       const response = await fetch(`${API_URL}/contacts/${id}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
+          "Authorization": `Bearer ${userToken}`,
         },
         body: JSON.stringify(formData),
       });
-
       const data = await response.json();
-
       if (response.ok) {
         setSnackbar({
           open: true,
@@ -181,7 +319,11 @@ const ContactsEditLayoutPage = () => {
   };
 
   if (loading) {
-    return <div style={loadingStyle}>Loading contact data...</div>;
+    return (
+      <div style={containerStyle}>
+        <div style={loadingStyle}>Loading contact data...</div>
+      </div>
+    );
   }
 
   return (
@@ -229,6 +371,7 @@ const ContactsEditLayoutPage = () => {
                 placeholder="Enter First Name"
                 value={formData.first_name}
                 onChange={handleInputChange}
+                errors={errors}
                 required
               />
 
@@ -238,8 +381,9 @@ const ContactsEditLayoutPage = () => {
                 placeholder="Enter Last Name"
                 value={formData.last_name}
                 onChange={handleInputChange}
+                errors={errors}
+                required
               />
-
               <Field
                 label="Email ID"
                 type="email"
@@ -248,7 +392,6 @@ const ContactsEditLayoutPage = () => {
                 value={formData.email}
                 onChange={handleInputChange}
               />
-
               <Field
                 label="Phone Number"
                 type="tel"
@@ -256,25 +399,18 @@ const ContactsEditLayoutPage = () => {
                 placeholder="Enter Phone Number"
                 value={formData.phone_number}
                 onChange={handleInputChange}
+                errors={errors}
+                required
               />
-
               <Field
                 label="Company Name"
                 name="company_name"
                 placeholder="Enter Company Name"
                 value={formData.company_name}
                 onChange={handleInputChange}
+                errors={errors}
+                required
               />
-
-              
-
-              {/* <Field
-                label="Date"
-                type="date"
-                name="date"
-                value={formData.date}
-                onChange={handleInputChange}
-              /> */}
 
               <Field
                 label="Industry"
@@ -282,20 +418,9 @@ const ContactsEditLayoutPage = () => {
                 placeholder="Enter Industry"
                 value={formData.industry}
                 onChange={handleInputChange}
+                errors={errors}
+                required
               />
-
-              {/* <Field
-                label="Payment Type"
-                name="payment_type"
-                type="select"
-                value={formData.payment_type}
-                onChange={handleInputChange}
-                options={[
-                  { value: "Prepaid", label: "Prepaid" },
-                  { value: "Postpaid", label: "Postpaid" },
-                  { value: "Credit", label: "Credit" },
-                ]}
-              /> */}
             </div>
           </div>
 
@@ -317,10 +442,12 @@ const ContactsEditLayoutPage = () => {
 
               <Field
                 label="Pincode"
-                name="address.zip"
+                name="address.pincode"
                 placeholder="Enter Pincode"
-                value={formData.address.zip}
+                value={formData.address.pincode}
                 onChange={handleInputChange}
+                errors={errors}
+                required
               />
 
               <Field
@@ -360,19 +487,20 @@ const ContactsEditLayoutPage = () => {
               <Field
                 label="GST"
                 name="gst"
-                placeholder="Enter GST"
+                placeholder="Enter GST (22AAAAA0000A1Z5)"
                 value={formData.gst}
                 onChange={handleInputChange}
-                required
+                errors={errors}
               />
 
               <Field
                 label="PAN No"
                 name="pan_no"
-                placeholder="Enter PAN No"
+                placeholder="Enter PAN No (AAAAA0000A)"
                 value={formData.pan_no}
                 onChange={handleInputChange}
                 required
+                errors={errors}
               />
             </div>
           </div>
@@ -429,12 +557,7 @@ const ContactsEditLayoutPage = () => {
                   type="checkbox"
                   style={checkboxStyle}
                   checked={formData.status === "Active"}
-                  onChange={(e) =>
-                    handleInputChange(
-                      "status",
-                      e.target.checked ? "Active" : "Inactive"
-                    )
-                  }
+                  onChange={handleStatusChange}
                 />
                 <div
                   style={{
@@ -462,12 +585,12 @@ const ContactsEditLayoutPage = () => {
           <button
             type="button"
             style={cancelBtnStyle}
-            onClick={() => navigate("/dashboard/crm/contacts")}
+            onClick={() => navigate("/dashboard/crm/client-list")}
           >
             Cancel
           </button>
           <button type="submit" style={updateBtnStyle}>
-            Update Contact
+            Update
           </button>
         </div>
       </form>
@@ -485,7 +608,10 @@ const Field = ({
   onChange,
   disabled = false,
   options = [],
+  errors = {},
 }) => {
+  const error = errors[name];
+
   const handleFieldChange = (e) => {
     onChange(name, e.target.value);
   };
@@ -500,7 +626,10 @@ const Field = ({
         <textarea
           name={name}
           placeholder={placeholder}
-          style={textareaStyle}
+          style={{
+            ...textareaStyle,
+            borderColor: error ? "#ef4444" : "#d1d5db",
+          }}
           value={value}
           onChange={handleFieldChange}
           rows={3}
@@ -509,7 +638,10 @@ const Field = ({
       ) : type === "select" ? (
         <div style={selectWrapperStyle}>
           <select
-            style={selectStyle}
+            style={{
+              ...selectStyle,
+              borderColor: error ? "#ef4444" : "#d1d5db",
+            }}
             name={name}
             value={value}
             onChange={handleFieldChange}
@@ -528,31 +660,46 @@ const Field = ({
           type={type}
           name={name}
           placeholder={placeholder}
-          style={inputStyle}
+          style={{
+            ...inputStyle,
+            borderColor: error ? "#ef4444" : "#d1d5db",
+          }}
           value={value}
           onChange={handleFieldChange}
           disabled={disabled}
         />
       )}
+      {error && (
+        <div
+          style={{
+            color: "#ef4444",
+            fontSize: "0.75rem",
+            marginTop: "0.25rem",
+          }}
+        >
+          {error}
+        </div>
+      )}
     </div>
   );
 };
 
-// Styles
-const loadingStyle = {
-  display: "flex",
-  justifyContent: "center",
-  alignItems: "center",
-  height: "100vh",
-  fontSize: "1.2rem",
-};
-
+// Styles (same as your add page)
 const containerStyle = {
   padding: "2rem",
   fontFamily:
     '"Inter", "Segoe UI", -apple-system, BlinkMacSystemFont, sans-serif',
   minHeight: "100vh",
   lineHeight: 1.6,
+};
+
+const loadingStyle = {
+  display: "flex",
+  justifyContent: "center",
+  alignItems: "center",
+  height: "200px",
+  fontSize: "1.125rem",
+  color: "#6b7280",
 };
 
 const headerContainerStyle = {
@@ -739,13 +886,6 @@ const checkboxTextStyle = {
   display: "block",
 };
 
-const checkboxDescStyle = {
-  fontSize: "0.75rem",
-  color: "#6b7280",
-  display: "block",
-  marginTop: "0.25rem",
-};
-
 const buttonContainerStyle = {
   display: "flex",
   justifyContent: "flex-end",
@@ -771,7 +911,7 @@ const cancelBtnStyle = {
 
 const updateBtnStyle = {
   padding: "0.75rem 1.5rem",
-  backgroundColor: "#2563eb",
+  backgroundColor: "#10b981",
   color: "white",
   border: "none",
   borderRadius: "8px",

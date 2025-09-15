@@ -17,6 +17,7 @@ import {
 } from "@mui/material";
 import { Add, Remove } from "@mui/icons-material";
 import { useNavigate } from "react-router-dom";
+import { useSelector } from "react-redux";
 
 const generateRandomId = () => {
   const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
@@ -28,6 +29,10 @@ const generateRandomId = () => {
 };
 
 const PurchaseOrderAddLayout = () => {
+  const { user, token } = useSelector((state) => state.auth);
+
+  const userToken = token;
+
   const [purchaseQuotations, setPurchaseQuotations] = useState([]);
   const [selectedPurchaseQuotation, setSelectedPurchaseQuotation] =
     useState(null);
@@ -95,13 +100,21 @@ const PurchaseOrderAddLayout = () => {
         setPurchaseQuotations(pqData);
 
         // Fetch suppliers
-        const supResponse = await fetch(`${API_URL}/supplier`);
+        const supResponse = await fetch(`${API_URL}/supplier`, {
+          headers: {
+            "Authorization": `Bearer ${userToken}`,
+          },
+        });
         if (!supResponse.ok) throw new Error("Failed to fetch suppliers");
         const supData = await supResponse.json();
         setSuppliers(supData);
 
         // Fetch products
-        const prodResponse = await fetch(`${API_URL}/product-templete`);
+        const prodResponse = await fetch(`${API_URL}/product-templete`, {
+          headers: {
+            "Authorization": `Bearer ${userToken}`,
+          },
+        });
         if (!prodResponse.ok) throw new Error("Failed to fetch products");
         const prodData = await prodResponse.json();
 
@@ -141,7 +154,7 @@ const PurchaseOrderAddLayout = () => {
       case "poStatus":
         if (!value) error = "PO status is required";
         break;
-      
+
       case "products":
         if (selectedProductIds.length === 0)
           error = "At least one product must be selected";
@@ -346,7 +359,10 @@ const PurchaseOrderAddLayout = () => {
 
       const response = await fetch(`${API_URL}/purchase-orders/create`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${userToken}`,
+        },
         body: JSON.stringify(payload),
       });
 

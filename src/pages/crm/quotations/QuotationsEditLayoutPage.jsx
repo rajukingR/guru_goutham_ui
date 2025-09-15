@@ -14,7 +14,6 @@ import {
   Snackbar,
   Alert,
   Dialog,
-  DialogTitle,
   DialogContent,
   DialogActions,
   Button,
@@ -22,8 +21,13 @@ import {
 import { Add, Remove, Edit } from "@mui/icons-material";
 import API_URL, { IMAGE_API_URL } from "../../../api/Api_url";
 import { useNavigate, useParams } from "react-router-dom";
+import { useSelector } from "react-redux";
 
 const QuotationsEditLayoutPage = () => {
+  const { user, token } = useSelector((state) => state.auth);
+
+  const userToken = token;
+
   const navigate = useNavigate();
   const { id } = useParams(); // Get quotation ID from URL params
 
@@ -55,6 +59,9 @@ const QuotationsEditLayoutPage = () => {
 
   const [productOfferPrices, setProductOfferPrices] = useState({});
   const [productRentOfferPrices, setProductRentOfferPrices] = useState({});
+
+  const [assetIds, setAssetIds] = useState({});
+  const [assetIdErrors, setAssetIdErrors] = useState({});
 
   const [priceForm, setPriceForm] = useState({
     purchase_price: "",
@@ -89,6 +96,7 @@ const QuotationsEditLayoutPage = () => {
     rentalStartDate: "",
     rentalEndDate: "",
     quotationDate: new Date().toISOString().split("T")[0],
+    is_direct_invoice: false,
     industry: "",
     street: "",
     landmark: "",
@@ -102,74 +110,76 @@ const QuotationsEditLayoutPage = () => {
   useEffect(() => {
     const fetchQuotation = async () => {
       try {
-        const response = await fetch(`${API_URL}/quotations/${id}`);
+        const response = await fetch(`${API_URL}/quotations/${id}`, {
+          headers: {
+            "Authorization": `Bearer ${userToken}`,
+          },
+        });
         if (!response.ok) {
           throw new Error("Failed to fetch quotation");
         }
         const data = await response.json();
         setQuotation(data);
 
-        // Extract address data from customer object
-        const customerAddress = data.customer?.address || {};
+        // Extract address from customer object or use empty values as fallback
+        const address = data.customer?.address || {};
 
-        // Set form data from fetched quotation
+        // Populate form data
         setFormData({
-          quotationId: data.quotation_id || "",
-          quotationTitle: data.quotation_title || "",
-          leadId: data.lead_id || "",
-          transactionType: data.transaction_type || "",
-          payment_type: data.payment_type || "",
-          quotationStatus: data.status || "Pending",
-          sourceOfEnquiry: data.source_of_enquiry || "",
-          owner: data.owner || "",
-          remarks: data.remarks || "",
-          quotationGeneratedBy: data.quotation_generated_by || "",
-          activeStatus: data.is_active !== undefined ? data.is_active : true,
-          customer_id: data.customer_id || "",
-          customer_first_name:
-            data.customer_first_name || data.customer?.first_name || "",
-          customer_last_name:
-            data.customer_last_name || data.customer?.last_name || "",
-          email: data.email || data.customer?.email || "",
-          phoneNumber: data.phone_number || data.customer?.phone_number || "",
-          rentalDurationMonths: data.rental_duration_months || "",
-          rentalDurationDays: data.rental_duration_days || "",
-          rentalStartDate: data.rental_start_date || "",
-          rentalEndDate: data.rental_end_date || "",
-          quotationDate:
-            data.quotation_date || new Date().toISOString().split("T")[0],
-          industry: data.industry || data.customer?.industry || "",
-          street: customerAddress.street || "",
-          landmark: data.landmark || "",
-          pincode: customerAddress.pincode || "",
-          city: customerAddress.city || "",
-          state: customerAddress.state || "",
-          country: customerAddress.country || "India",
+          quotationId: data.quotation_id,
+          quotationTitle: data.quotation_title,
+          leadId: data.lead_id,
+          transactionType: data.transaction_type,
+          payment_type: data.payment_type,
+          quotationStatus: data.status,
+          sourceOfEnquiry: data.source_of_enquiry,
+          owner: data.owner,
+          remarks: data.remarks,
+          quotationGeneratedBy: data.quotation_generated_by,
+          activeStatus: data.active_status,
+          customer_id: data.customer_id,
+          customer_first_name: data.customer_first_name,
+          customer_last_name: data.customer_last_name,
+          email: data.customer?.email || "", // Get email from customer object
+          phoneNumber: data.customer?.phone_number || "", // Get phone from customer object
+          rentalDurationMonths: data.rental_duration_months,
+          rentalDurationDays: data.rental_duration_days,
+          rentalStartDate: data.rental_start_date,
+          rentalEndDate: data.rental_end_date,
+          quotationDate: data.quotation_date,
+          is_direct_invoice: data.is_direct_invoice,
+          industry: data.customer?.industry || "", // Get industry from customer object
+          street: address.street || "",
+          landmark: address.landmark || "", // This might not exist in API
+          pincode: address.pincode || address.zip || "", // Handle both pincode and zip
+          city: address.city || "",
+          state: address.state || "",
+          country: address.country || "India",
         });
 
-        // Set selected lead
         setSelectedLeadId(data.lead_id);
 
         // Set selected products and quantities
-        // Inside the fetchQuotation useEffect, after setting the quotation data
         if (data.items && data.items.length > 0) {
           const productIds = data.items.map((item) => item.product_id);
           setSelectedProductIds(productIds);
 
           const productQuantities = {};
-          const productOfferPrices = {};
-          const productRentOfferPrices = {};
+          const offerPrices = {};
+          const rentOfferPrices = {};
+          const assetIdsData = {};
 
           data.items.forEach((item) => {
             productQuantities[item.product_id] = item.quotation_quantity;
-            productOfferPrices[item.product_id] = item.offer_purchase_price;
-            productRentOfferPrices[item.product_id] =
-              item.offer_rent_price_per_month;
+            offerPrices[item.product_id] = item.offer_purchase_price;
+            rentOfferPrices[item.product_id] = item.offer_rent_price_per_month;
+            assetIdsData[item.product_id] = item.device_ids || []; // Changed from asset_ids to device_ids
           });
 
           setQuantities(productQuantities);
-          setProductOfferPrices(productOfferPrices);
-          setProductRentOfferPrices(productRentOfferPrices);
+          setProductOfferPrices(offerPrices);
+          setProductRentOfferPrices(rentOfferPrices);
+          setAssetIds(assetIdsData);
         }
 
         setLoading((prev) => ({ ...prev, quotation: false }));
@@ -184,14 +194,20 @@ const QuotationsEditLayoutPage = () => {
       }
     };
 
-    fetchQuotation();
+    if (id) {
+      fetchQuotation();
+    }
   }, [id]);
 
   // Fetch active leads
   useEffect(() => {
     const fetchActiveLeads = async () => {
       try {
-        const response = await fetch(`${API_URL}/leads/active-leads`);
+        const response = await fetch(`${API_URL}/leads/active-leads`, {
+          headers: {
+            "Authorization": `Bearer ${userToken}`,
+          },
+        });
         if (!response.ok) {
           throw new Error("Failed to fetch active leads");
         }
@@ -216,7 +232,11 @@ const QuotationsEditLayoutPage = () => {
   useEffect(() => {
     const fetchProducts = async () => {
       try {
-        const response = await fetch(`${API_URL}/product-templete`);
+        const response = await fetch(`${API_URL}/product-templete`, {
+          headers: {
+            "Authorization": `Bearer ${userToken}`,
+          },
+        });
         if (!response.ok) {
           throw new Error("Failed to fetch products");
         }
@@ -243,9 +263,6 @@ const QuotationsEditLayoutPage = () => {
     const selectedLead = leads.find((lead) => lead.id === parseInt(leadId));
 
     if (selectedLead) {
-      // Extract address data from lead's contact
-      const leadAddress = selectedLead.contact?.address || {};
-
       setFormData((prev) => ({
         ...prev,
         leadId: selectedLead.lead_id,
@@ -267,11 +284,11 @@ const QuotationsEditLayoutPage = () => {
         rentalStartDate: selectedLead.rental_start_date || "",
         rentalEndDate: selectedLead.rental_end_date || "",
         industry: selectedLead.contact?.industry || "",
-        street: leadAddress.street || "",
-        pincode: leadAddress.pincode || "",
-        city: leadAddress.city || "",
-        state: leadAddress.state || "",
-        country: leadAddress.country || "India",
+        street: selectedLead.contact?.address?.street || "",
+        pincode: selectedLead.contact?.address?.pincode || "",
+        city: selectedLead.contact?.address?.city || "",
+        state: selectedLead.contact?.address?.state || "",
+        country: selectedLead.contact?.address?.country || "India",
       }));
 
       // Auto-select products from the lead
@@ -295,6 +312,15 @@ const QuotationsEditLayoutPage = () => {
     setFormData((prev) => ({
       ...prev,
       [field]: value,
+    }));
+  };
+
+  // Add this function to your component
+  const handleCheckboxChange = (e) => {
+    const { name, checked } = e.target;
+    setFormData((prev) => ({
+      ...prev,
+      [name]: checked,
     }));
   };
 
@@ -338,25 +364,14 @@ const QuotationsEditLayoutPage = () => {
     fetchLocationData();
   }, [formData.pincode]);
 
-  // Open edit dialog for a product
   const handleOpenEditDialog = (product) => {
     setEditingProduct(product);
-
-    // Get the current offer prices from state (or use the product's default if not set)
-    const currentOfferPrice =
-      productOfferPrices[product.id] || product.offer_purchase_price || "";
-    const currentRentOfferPrice =
-      productRentOfferPrices[product.id] ||
-      product.offer_rent_price_per_month ||
-      "";
-
     setPriceForm({
       purchase_price: product.purchase_price || "",
       rent_price_per_month: product.rent_price_per_month || "",
-      offer_purchase_price: currentOfferPrice,
-      offer_rent_price_per_month: currentRentOfferPrice,
+      offer_purchase_price: productOfferPrices[product.id] || "",
+      offer_rent_price_per_month: productRentOfferPrices[product.id] || "",
     });
-
     setEditDialogOpen(true);
   };
 
@@ -377,73 +392,6 @@ const QuotationsEditLayoutPage = () => {
       [field]: value,
     }));
   };
-
-  // // Submit updated prices
-  // const handleUpdatePrices = async () => {
-  //   if (!editingProduct) return;
-
-  //   // Check if the product is selected
-  //   if (!selectedProductIds.includes(editingProduct.id)) {
-  //     setSnackbar({
-  //       open: true,
-  //       message:
-  //         "This product is not selected. Please select it first to update prices.",
-  //       severity: "warning",
-  //     });
-  //     return;
-  //   }
-
-  //   try {
-  //     const payload = {
-  //       // new editable offer prices
-  //       offer_purchase_price: priceForm.offer_purchase_price
-  //         ? parseFloat(priceForm.offer_purchase_price)
-  //         : null,
-  //       offer_rent_price_per_month: priceForm.offer_rent_price_per_month
-  //         ? parseFloat(priceForm.offer_rent_price_per_month)
-  //         : null,
-  //     };
-
-  //     const response = await fetch(
-  //       `${API_URL}/product-templete/${editingProduct.id}`,
-  //       {
-  //         method: "PUT",
-  //         headers: {
-  //           "Content-Type": "application/json",
-  //         },
-  //         body: JSON.stringify(payload),
-  //       }
-  //     );
-
-  //     if (!response.ok) {
-  //       throw new Error("Failed to update product prices");
-  //     }
-
-  //     // Update the product in local state
-  //     setProducts((prevProducts) =>
-  //       prevProducts.map((product) =>
-  //         product.id === editingProduct.id
-  //           ? { ...product, ...payload }
-  //           : product
-  //       )
-  //     );
-
-  //     setSnackbar({
-  //       open: true,
-  //       message: "Product prices updated successfully!",
-  //       severity: "success",
-  //     });
-
-  //     handleCloseEditDialog();
-  //   } catch (error) {
-  //     console.error("Error updating product prices:", error);
-  //     setSnackbar({
-  //       open: true,
-  //       message: "Error updating product prices. Please try again.",
-  //       severity: "error",
-  //     });
-  //   }
-  // };
 
   const handleUpdatePrices = () => {
     if (!editingProduct) return;
@@ -476,22 +424,114 @@ const QuotationsEditLayoutPage = () => {
   const handleQtyChange = (id, value) => {
     const qty = Math.max(0, parseInt(value) || 0);
     setQuantities({ ...quantities, [id]: qty });
+
+    // Reset asset IDs when quantity changes
+    if (quantities[id] !== qty) {
+      setAssetIds((prev) => ({
+        ...prev,
+        [id]: Array(qty).fill(""),
+      }));
+    }
   };
 
   const incrementQty = (id) => {
-    setQuantities((prev) => ({ ...prev, [id]: (prev[id] || 0) + 1 }));
-  };
+    const newQty = (quantities[id] || 0) + 1;
+    setQuantities((prev) => ({ ...prev, [id]: newQty }));
 
-  const decrementQty = (id) => {
-    setQuantities((prev) => ({
+    // Add empty asset ID field when quantity increases
+    setAssetIds((prev) => ({
       ...prev,
-      [id]: Math.max(0, (prev[id] || 0) - 1),
+      [id]: [...(prev[id] || []), ""],
     }));
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    // Validate form
+  const decrementQty = (id) => {
+    const newQty = Math.max(0, (quantities[id] || 0) - 1);
+    setQuantities((prev) => ({ ...prev, [id]: newQty }));
+
+    // Remove last asset ID when quantity decreases
+    if (newQty < (quantities[id] || 0)) {
+      setAssetIds((prev) => ({
+        ...prev,
+        [id]: (prev[id] || []).slice(0, -1),
+      }));
+    }
+  };
+
+  const validateAssetIds = () => {
+    const errors = {};
+    let isValid = true;
+    let globalError = "";
+
+    if (formData.is_direct_invoice) {
+      // Check if any products are selected
+      if (selectedProductIds.length === 0) {
+        globalError = "Please select at least one product for direct invoice";
+        isValid = false;
+      } else {
+        for (const productId of selectedProductIds) {
+          const product = products.find((p) => p.id === productId);
+          const productAssetIds = assetIds[productId] || [];
+          const qty = quantities[productId] || 0;
+
+          // Skip validation if quantity is 0
+          if (qty === 0) continue;
+
+          // Check if we have the right number of asset IDs
+          if (productAssetIds.length !== qty) {
+            errors[productId] = `Please provide ${qty} asset ID(s) for ${
+              product?.product_name || "this product"
+            }`;
+            isValid = false;
+            continue;
+          }
+
+          // Check if all asset IDs are filled
+          const emptyIndexes = [];
+          for (let i = 0; i < productAssetIds.length; i++) {
+            if (!productAssetIds[i] || productAssetIds[i].trim() === "") {
+              emptyIndexes.push(i + 1);
+            }
+          }
+
+          if (emptyIndexes.length > 0) {
+            errors[productId] = `Asset ID(s) #${emptyIndexes.join(
+              ", "
+            )} required for ${product?.product_name || "this product"}`;
+            isValid = false;
+            continue;
+          }
+
+          // Check for duplicate asset IDs within the same product
+          const uniqueAssetIds = new Set(productAssetIds);
+          if (uniqueAssetIds.size !== productAssetIds.length) {
+            const duplicates = productAssetIds.filter(
+              (id, index) => productAssetIds.indexOf(id) !== index
+            );
+            errors[productId] = `Duplicate asset ID(s): ${[
+              ...new Set(duplicates),
+            ].join(", ")} found in ${product?.product_name || "this product"}`;
+            isValid = false;
+          }
+        }
+      }
+    }
+
+    setAssetIdErrors(errors);
+
+    // Show global error message if needed
+    if (globalError) {
+      setSnackbar({
+        open: true,
+        message: globalError,
+        severity: "error",
+      });
+    }
+
+    return isValid;
+  };
+
+  const validateForm = () => {
     let isValid = true;
     const newErrors = {
       selectedLead: "",
@@ -504,6 +544,67 @@ const QuotationsEditLayoutPage = () => {
     }
 
     setErrors(newErrors);
+
+    // Validate asset IDs if it's a direct invoice
+    if (formData.is_direct_invoice) {
+      const assetIdValid = validateAssetIds();
+      if (!assetIdValid) {
+        isValid = false;
+
+        // Show specific error message if we have product-specific errors
+        const hasProductErrors = Object.keys(assetIdErrors).length > 0;
+        if (hasProductErrors) {
+          setSnackbar({
+            open: true,
+            message:
+              "Please provide all required asset IDs for the selected products",
+            severity: "error",
+          });
+        }
+      }
+    }
+
+    return isValid;
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+
+    // Validate form
+    if (!validateForm()) {
+      if (
+        !formData.is_direct_invoice ||
+        Object.keys(assetIdErrors).length === 0
+      ) {
+        setSnackbar({
+          open: true,
+          message: "Please fix the errors before submitting",
+          severity: "error",
+        });
+      }
+      return;
+    }
+
+    let isValid = true;
+    const newErrors = { selectedLead: "" };
+
+    // Validate lead selection
+    if (!selectedLeadId) {
+      newErrors.selectedLead = "Lead selection is required";
+      isValid = false;
+    }
+
+    setErrors(newErrors);
+
+    // Validate asset IDs if it's a direct invoice
+    if (formData.is_direct_invoice && !validateAssetIds()) {
+      isValid = false;
+      setSnackbar({
+        open: true,
+        message: "Please provide all required asset IDs",
+        severity: "error",
+      });
+    }
 
     if (!isValid) {
       setSnackbar({
@@ -526,6 +627,7 @@ const QuotationsEditLayoutPage = () => {
         quotation_date: formData.quotationDate,
         rental_duration: parseInt(formData.rentalDurationMonths) || 0,
         rental_duration_days: parseInt(formData.rentalDurationDays) || 0,
+        is_direct_invoice: formData.is_direct_invoice,
         customer_id: formData.customer_id,
         customer_first_name: formData.customer_first_name,
         customer_last_name: formData.customer_last_name,
@@ -534,36 +636,29 @@ const QuotationsEditLayoutPage = () => {
         status: formData.quotationStatus,
         items: selectedProductIds.map((productId) => {
           const product = products.find((p) => p.id === productId);
+          const offerPrice = productOfferPrices[productId] || 0;
+          const rentOfferPrice = productRentOfferPrices[productId] || 0;
 
-          // Get the offer prices from state (or use the original if not set)
-          const offerPrice =
-            productOfferPrices[productId] || product.offer_purchase_price || 0;
-          const rentOfferPrice =
-            productRentOfferPrices[productId] ||
-            product.offer_rent_price_per_month ||
-            0;
-
-          const offer_purchase_price = offerPrice;
-          const offer_rent_price_per_month = rentOfferPrice;
-          const purchase_price = product.purchase_price;
-          const rent_price_per_month = product.rent_price_per_month;
-
-          // Get quantity from lead products if available
           const leadProduct = selectedLeadId
             ? leads
                 .find((lead) => lead.id === parseInt(selectedLeadId))
                 ?.lead_products?.find((lp) => lp.product_id === productId)
             : null;
 
+          const asset_ids = formData.is_direct_invoice
+            ? assetIds[productId] || []
+            : [];
+
           return {
             product_id: productId,
             requested_quantity: leadProduct?.quantity || 1,
             quotation_quantity: quantities[productId] || 0,
             product_name: product?.product_name || "",
-            offer_purchase_price,
-            offer_rent_price_per_month,
-            purchase_price,
-            rent_price_per_month,
+            offer_purchase_price: offerPrice,
+            offer_rent_price_per_month: rentOfferPrice,
+            purchase_price: product.purchase_price,
+            rent_price_per_month: product.rent_price_per_month,
+            asset_ids,
           };
         }),
       };
@@ -572,15 +667,34 @@ const QuotationsEditLayoutPage = () => {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
+          "Authorization": `Bearer ${userToken}`,
         },
         body: JSON.stringify(quotationPayload),
       });
 
+      const result = await response.json();
+
       if (!response.ok) {
-        throw new Error("Failed to update quotation");
+        // ✅ Check if backend returned duplicate asset errors
+        if (result?.duplicates?.length > 0) {
+          const duplicateMsg = result.duplicates
+            .map((d) => `Asset: ${d.asset_id} (Product: ${d.product_name})`)
+            .join(", ");
+          setSnackbar({
+            open: true,
+            message: `Duplicate Asset IDs found: ${duplicateMsg}`,
+            severity: "error",
+          });
+        } else {
+          setSnackbar({
+            open: true,
+            message: result.message || "Failed to update quotation",
+            severity: "error",
+          });
+        }
+        return;
       }
 
-      const result = await response.json();
       console.log("Quotation updated:", result);
 
       setSnackbar({
@@ -642,12 +756,9 @@ const QuotationsEditLayoutPage = () => {
                 label="Product Name"
                 value={editingProduct.product_name}
                 placeholder=""
-                disabled={true} // properly disables the field
+                disabled={true}
               />
               <div style={fieldsGridStyle}>
-                {/* Product Name - Disabled */}
-
-                {/* Disabled - Actual Prices */}
                 <Field
                   label="Purchase Price (₹)"
                   type="number"
@@ -663,7 +774,6 @@ const QuotationsEditLayoutPage = () => {
                   disabled={true}
                 />
 
-                {/* Editable - Offer Prices */}
                 <Field
                   label="Offer Purchase Price (₹)"
                   type="number"
@@ -699,6 +809,7 @@ const QuotationsEditLayoutPage = () => {
           </Button>
         </DialogActions>
       </Dialog>
+
       <div style={headerStyle}>
         <h1 style={titleStyle}>Edit Quotation</h1>
       </div>
@@ -728,7 +839,6 @@ const QuotationsEditLayoutPage = () => {
                 value={selectedLeadId || ""}
                 onChange={(e) => {
                   handleLeadChange(e.target.value);
-                  // Clear error when user selects something
                   if (errors.selectedLead) {
                     setErrors({ ...errors, selectedLead: "" });
                   }
@@ -753,7 +863,11 @@ const QuotationsEditLayoutPage = () => {
                 onChange={(e) =>
                   handleInputChange("transactionType", e.target.value)
                 }
-                options={["Rent", "Buy"]}
+                options={[
+                  { value: "Rent", label: "Rent" },
+                  { value: "Buy", label: "Sale" },
+                ]}
+                disabled
               />
               <Field
                 label="Quotation Status"
@@ -784,29 +898,6 @@ const QuotationsEditLayoutPage = () => {
                 value={formData.quotationGeneratedBy}
                 disabled
               />
-              <div style={{ gridColumn: "1 / -1" }}>
-                <label style={checkboxLabelStyle}>
-                  <input
-                    type="checkbox"
-                    style={{
-                      ...checkboxStyle,
-                      position: "absolute",
-                      opacity: 0,
-                      cursor: "pointer",
-                    }}
-                    checked={formData.activeStatus}
-                    onChange={(e) =>
-                      handleInputChange("activeStatus", e.target.checked)
-                    }
-                  />
-                  <div style={checkboxCustomStyle}>
-                    {formData.activeStatus && (
-                      <span style={checkmarkStyle}>✓</span>
-                    )}
-                  </div>
-                  <span style={checkboxTextStyle}>Active Status</span>
-                </label>
-              </div>
             </div>
           </div>
 
@@ -865,6 +956,16 @@ const QuotationsEditLayoutPage = () => {
                 value={formData.industry}
                 onChange={(e) => handleInputChange("industry", e.target.value)}
               />
+              {formData.transactionType === "Buy" && (
+                <Field
+                  label="Direct Invoice"
+                  name="is_direct_invoice"
+                  type="checkbox"
+                  value={formData.is_direct_invoice}
+                  onChange={handleCheckboxChange}
+                  description="Check if this is a direct invoice"
+                />
+              )}
             </div>
           </div>
 
@@ -957,7 +1058,7 @@ const QuotationsEditLayoutPage = () => {
                 <TableContainer
                   component={Paper}
                   sx={{
-                    maxHeight: "400px", // or whatever height you prefer
+                    maxHeight: "400px",
                     overflow: "auto",
                     position: "relative",
                   }}
@@ -998,6 +1099,14 @@ const QuotationsEditLayoutPage = () => {
                         >
                           Quantity
                         </TableCell>
+                        {formData.is_direct_invoice === true && (
+                          <TableCell
+                            sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
+                          >
+                            Asset IDs
+                          </TableCell>
+                        )}
+
                         <TableCell
                           sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
                         >
@@ -1043,17 +1152,18 @@ const QuotationsEditLayoutPage = () => {
                             <>
                               <div>
                                 <strong>Purchase Price:</strong> ₹
-                                {productOfferPrices[product.id] ||
-                                  product.purchase_price}
+                                {productOfferPrices[product.id] > 0
+                                  ? productOfferPrices[product.id]
+                                  : product.purchase_price}
                               </div>
                               <div>
-                                <strong>Month:</strong> ₹
-                                {productRentOfferPrices[product.id] ||
-                                  product.rent_price_per_month}
+                                <strong>Month Price:</strong> ₹
+                                {productRentOfferPrices[product.id] > 0
+                                  ? productRentOfferPrices[product.id]
+                                  : product.rent_price_per_month}
                               </div>
                             </>
                           </TableCell>
-
                           <TableCell>
                             <Box display="flex" alignItems="center">
                               <IconButton
@@ -1082,6 +1192,83 @@ const QuotationsEditLayoutPage = () => {
                               </IconButton>
                             </Box>
                           </TableCell>
+                          {formData.is_direct_invoice === true && (
+                            <TableCell>
+                              {quantities[product.id] > 0 && (
+                                <Box
+                                  display="flex"
+                                  flexDirection="column"
+                                  gap={1}
+                                  sx={{ width: "200px" }}
+                                >
+                                  <Box
+                                    display="flex"
+                                    flexDirection="column"
+                                    gap={1}
+                                  >
+                                    {(assetIds[product.id] || []).map(
+                                      (id, idx) => (
+                                        <TextField
+                                          key={idx}
+                                          size="small"
+                                          fullWidth
+                                          placeholder={`Asset ID ${idx + 1}`}
+                                          value={id}
+                                          onChange={(e) => {
+                                            const updated = [
+                                              ...(assetIds[product.id] || []),
+                                            ];
+                                            updated[idx] = e.target.value;
+                                            setAssetIds((prev) => ({
+                                              ...prev,
+                                              [product.id]: updated,
+                                            }));
+                                            if (assetIdErrors[product.id]) {
+                                              setAssetIdErrors((prev) => {
+                                                const newErrors = { ...prev };
+                                                delete newErrors[product.id];
+                                                return newErrors;
+                                              });
+                                            }
+                                          }}
+                                          error={Boolean(
+                                            assetIdErrors[product.id]
+                                          )}
+                                          helperText={
+                                            idx === 0
+                                              ? assetIdErrors[product.id]
+                                              : ""
+                                          }
+                                        />
+                                      )
+                                    )}
+                                  </Box>
+
+                                  {(assetIds[product.id]?.length || 0) <
+                                    (quantities[product.id] || 0) && (
+                                    <Box mt={1}>
+                                      <Button
+                                        size="small"
+                                        variant="outlined"
+                                        onClick={() =>
+                                          setAssetIds((prev) => ({
+                                            ...prev,
+                                            [product.id]: [
+                                              ...(prev[product.id] || []),
+                                              "",
+                                            ],
+                                          }))
+                                        }
+                                      >
+                                        + Add Asset ID
+                                      </Button>
+                                    </Box>
+                                  )}
+                                </Box>
+                              )}
+                            </TableCell>
+                          )}
+
                           <TableCell>
                             <IconButton
                               size="small"
@@ -1089,7 +1276,7 @@ const QuotationsEditLayoutPage = () => {
                               title="Edit Prices"
                               disabled={
                                 !selectedProductIds.includes(product.id)
-                              } // Add this line
+                              }
                               style={{
                                 opacity: selectedProductIds.includes(product.id)
                                   ? 1
@@ -1137,85 +1324,7 @@ const QuotationsEditLayoutPage = () => {
   );
 };
 
-const Field = ({
-  label,
-  placeholder,
-  type = "text",
-  options = [],
-  value,
-  onChange,
-  readOnly = false,
-  required = false,
-  error = "",
-  disabled = false, // default false
-}) => (
-  <div style={fieldContainerStyle}>
-    <label style={labelStyle}>
-      {label}
-      {required && <span style={{ color: "red" }}>*</span>}
-    </label>
-
-    {type === "select" ? (
-      <div>
-        <div style={selectWrapperStyle}>
-          <select
-            style={{
-              ...selectStyle,
-              borderColor: error ? "red" : "#d1d5db",
-            }}
-            value={value}
-            onChange={onChange}
-            disabled={disabled || readOnly} // <- apply disabled here
-            required={required}
-          >
-            <option value="" disabled>
-              {placeholder}
-            </option>
-            {options.map((option, idx) =>
-              typeof option === "object" ? (
-                <option key={idx} value={option.value}>
-                  {option.label}
-                </option>
-              ) : (
-                <option key={idx} value={option}>
-                  {option}
-                </option>
-              )
-            )}
-          </select>
-          <div style={selectArrowStyle}>▼</div>
-        </div>
-        {error && (
-          <div style={{ color: "red", fontSize: "0.75rem", marginTop: "4px" }}>
-            {error}
-          </div>
-        )}
-      </div>
-    ) : type === "textarea" ? (
-      <textarea
-        placeholder={placeholder}
-        style={textareaStyle}
-        rows={3}
-        value={value}
-        onChange={onChange}
-        readOnly={readOnly}
-        disabled={disabled} // <- apply disabled
-      />
-    ) : (
-      <input
-        type={type}
-        placeholder={placeholder}
-        style={inputStyle}
-        value={value}
-        onChange={onChange}
-        readOnly={readOnly}
-        disabled={disabled} // <- apply disabled
-      />
-    )}
-  </div>
-);
-
-// Styles (same as in your original code)
+// All the style constants remain the same as in your original code
 const containerStyle = {
   padding: "2rem",
   fontFamily:
@@ -1232,15 +1341,9 @@ const headerStyle = {
 const titleStyle = {
   fontSize: "2rem",
   fontWeight: "700",
-  color: "##1e293b",
+  color: "#1e293b",
   margin: "0 0 0.5rem 0",
   letterSpacing: "-0.025em",
-};
-
-const subtitleStyle = {
-  fontSize: "1rem",
-  color: "#64748b",
-  margin: 0,
 };
 
 const formContainerStyle = {
@@ -1428,6 +1531,147 @@ const createBtnStyle = {
   fontWeight: "500",
   transition: "all 0.2s ease",
   outline: "none",
+};
+
+// Field component (same as in your original code)
+const Field = ({
+  label,
+  placeholder,
+  type = "text",
+  options = [],
+  value,
+  onChange,
+  readOnly = false,
+  required = false,
+  error = "",
+  disabled = false,
+  description = "",
+  name,
+}) => (
+  <div style={fieldContainerStyle}>
+    <label style={labelStyle}>
+      {type !== "checkbox" && label}
+      {required && type !== "checkbox" && (
+        <span style={{ color: "red" }}>*</span>
+      )}
+    </label>
+
+    {type === "checkbox" ? (
+      <div style={{ ...checkboxContainerStyle, marginTop: "0.5rem" }}>
+        <label style={checkboxLabelStyle}>
+          <input
+            type="checkbox"
+            name={name}
+            checked={value}
+            onChange={onChange}
+            disabled={disabled}
+            style={checkboxInputStyle}
+          />
+          <div style={checkboxCustomStyle}>
+            {value && <span style={checkmarkStyle}>✓</span>}
+          </div>
+          <div>
+            <span style={checkboxTextStyle}>
+              {label}
+              {required && <span style={{ color: "red" }}>*</span>}
+            </span>
+            {description && <div style={descriptionStyle}>{description}</div>}
+          </div>
+        </label>
+      </div>
+    ) : type === "select" ? (
+      <div>
+        <div style={selectWrapperStyle}>
+          <select
+            style={{
+              ...selectStyle,
+              borderColor: error ? "red" : "#d1d5db",
+            }}
+            value={value}
+            onChange={onChange}
+            disabled={disabled || readOnly}
+            required={required}
+            name={name}
+          >
+            <option value="" disabled>
+              {placeholder}
+            </option>
+            {options.map((option, idx) =>
+              typeof option === "object" ? (
+                <option key={idx} value={option.value}>
+                  {option.label}
+                </option>
+              ) : (
+                <option key={idx} value={option}>
+                  {option}
+                </option>
+              )
+            )}
+          </select>
+          <div style={selectArrowStyle}>▼</div>
+        </div>
+        {error && (
+          <div style={{ color: "red", fontSize: "0.75rem", marginTop: "4px" }}>
+            {error}
+          </div>
+        )}
+      </div>
+    ) : type === "textarea" ? (
+      <textarea
+        placeholder={placeholder}
+        style={textareaStyle}
+        rows={3}
+        value={value}
+        onChange={onChange}
+        readOnly={readOnly}
+        disabled={disabled}
+        name={name}
+      />
+    ) : (
+      <input
+        type={type}
+        placeholder={placeholder}
+        style={{
+          ...inputStyle,
+          borderColor: error ? "red" : "#d1d5db",
+        }}
+        value={value}
+        onChange={onChange}
+        readOnly={readOnly}
+        disabled={disabled}
+        name={name}
+      />
+    )}
+
+    {error && type !== "select" && type !== "checkbox" && (
+      <div style={{ color: "red", fontSize: "0.75rem", marginTop: "4px" }}>
+        {error}
+      </div>
+    )}
+
+    {description && type !== "checkbox" && (
+      <div style={descriptionStyle}>{description}</div>
+    )}
+  </div>
+);
+
+const checkboxContainerStyle = {
+  display: "flex",
+  alignItems: "flex-start",
+};
+
+const checkboxInputStyle = {
+  position: "absolute",
+  opacity: 0,
+  cursor: "pointer",
+  height: 0,
+  width: 0,
+};
+
+const descriptionStyle = {
+  fontSize: "0.75rem",
+  color: "#6b7280",
+  marginTop: "0.25rem",
 };
 
 export default QuotationsEditLayoutPage;

@@ -3,11 +3,14 @@ import { useParams, useNavigate } from "react-router-dom";
 import API_URL, { IMAGE_API_URL } from "../../../api/Api_url";
 import Snackbar from "@mui/material/Snackbar";
 import Alert from "@mui/material/Alert";
-
+import { useSelector } from "react-redux";
 const SupplierEditLayout = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  
+  const { user, token } = useSelector((state) => state.auth);
+
+  const userToken = token;
+
   const [formData, setFormData] = useState({
     supplier_code: "",
     registration_date: "",
@@ -58,7 +61,11 @@ const SupplierEditLayout = () => {
   useEffect(() => {
     const fetchSupplierData = async () => {
       try {
-        const response = await fetch(`${API_URL}/supplier/${id}`);
+        const response = await fetch(`${API_URL}/supplier/${id}`, {
+          headers: {
+            "Authorization": `Bearer ${userToken}`,
+          },
+        });
         const data = await response.json();
 
         if (response.ok) {
@@ -85,7 +92,7 @@ const SupplierEditLayout = () => {
   // Handle form input changes
   const handleChange = (e) => {
     const { name, value } = e.target;
-    
+
     if (formData.hasOwnProperty(name)) {
       setFormData({
         ...formData,
@@ -115,7 +122,7 @@ const SupplierEditLayout = () => {
     const { name, value } = e.target;
     const updatedContacts = [...formData.contacts];
     updatedContacts[index][name] = value;
-    
+
     setFormData({
       ...formData,
       contacts: updatedContacts,
@@ -145,7 +152,7 @@ const SupplierEditLayout = () => {
     if (formData.contacts.length > 1) {
       const updatedContacts = [...formData.contacts];
       updatedContacts.splice(index, 1);
-      
+
       setFormData({
         ...formData,
         contacts: updatedContacts,
@@ -166,7 +173,7 @@ const SupplierEditLayout = () => {
           if (data && data[0]?.Status === "Success") {
             const postOffice = data[0].PostOffice[0];
 
-            setFormData(prev => ({
+            setFormData((prev) => ({
               ...prev,
               address: {
                 ...prev.address,
@@ -199,12 +206,13 @@ const SupplierEditLayout = () => {
   // Handle form submission
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     try {
       const response = await fetch(`${API_URL}/supplier/${id}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
+          "Authorization": `Bearer ${userToken}`,
         },
         body: JSON.stringify(formData),
       });
@@ -219,7 +227,7 @@ const SupplierEditLayout = () => {
         });
 
         setTimeout(() => {
-          navigate('/dashboard/procurement/supplier');
+          navigate("/dashboard/procurement/supplier");
         }, 1500);
       } else {
         throw new Error(data.message || "Failed to update supplier");
@@ -244,10 +252,10 @@ const SupplierEditLayout = () => {
         anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
         open={snackbar.open}
         autoHideDuration={3000}
-        onClose={() => setSnackbar(prev => ({ ...prev, open: false }))}
+        onClose={() => setSnackbar((prev) => ({ ...prev, open: false }))}
       >
         <Alert
-          onClose={() => setSnackbar(prev => ({ ...prev, open: false }))}
+          onClose={() => setSnackbar((prev) => ({ ...prev, open: false }))}
           severity={snackbar.severity}
           sx={{ width: "100%" }}
         >
@@ -273,43 +281,43 @@ const SupplierEditLayout = () => {
               onChange={handleChange}
               disabled
             /> */}
-            
-            <Field 
-              label="Supplier Name" 
+
+            <Field
+              label="Supplier Name"
               name="supplier_name"
-              placeholder="Enter Supplier Name" 
+              placeholder="Enter Supplier Name"
               value={formData.supplier_name}
               onChange={handleChange}
             />
-            <Field 
-              label="Supplier Owner" 
+            <Field
+              label="Supplier Owner"
               name="supplier_owner"
-              placeholder="Enter Supplier Owner" 
+              placeholder="Enter Supplier Owner"
               value={formData.supplier_owner}
               onChange={handleChange}
             />
-            <Field 
-              label="GST Number" 
+            <Field
+              label="GST Number"
               name="gst_number"
-              placeholder="Enter GST Number" 
+              placeholder="Enter GST Number"
               value={formData.gst_number}
               onChange={handleChange}
             />
-            <Field 
-              label="Introduced By" 
+            <Field
+              label="Introduced By"
               name="introduced_by"
-              placeholder="Enter Introduced By" 
+              placeholder="Enter Introduced By"
               value={formData.introduced_by}
               onChange={handleChange}
             />
-            <Field 
-              label="Description" 
+            <Field
+              label="Description"
               name="description"
-              placeholder="Enter Description" 
-              type="textarea" 
+              placeholder="Enter Description"
+              type="textarea"
               value={formData.description}
               onChange={handleChange}
-              style={{ gridColumn: '1 / -1' }}
+              style={{ gridColumn: "1 / -1" }}
             />
           </div>
         </div>
@@ -321,17 +329,19 @@ const SupplierEditLayout = () => {
             <h3 style={cardHeaderStyle}>Supplier Address</h3>
           </div>
           <div style={fieldsGridStyle}>
-            <Field 
-              label="Address Line" 
+            <Field
+              label="Address Line"
               name="address_line1"
-              placeholder="Enter Address Line" 
+              placeholder="Enter Address Line"
               value={formData.address.address_line1}
-              onChange={(e) => handleChange({
-                target: {
-                  name: e.target.name,
-                  value: e.target.value
-                }
-              })}
+              onChange={(e) =>
+                handleChange({
+                  target: {
+                    name: e.target.name,
+                    value: e.target.value,
+                  },
+                })
+              }
             />
             {/* <Field 
               label="Address Line 2" 
@@ -345,105 +355,121 @@ const SupplierEditLayout = () => {
                 }
               })}
             /> */}
-            <Field 
-              label="Pincode" 
+            <Field
+              label="Pincode"
               name="pincode"
-              placeholder="Enter Pincode" 
+              placeholder="Enter Pincode"
               value={formData.address.pincode}
-              onChange={(e) => handleChange({
-                target: {
-                  name: e.target.name,
-                  value: e.target.value
-                }
-              })}
+              onChange={(e) =>
+                handleChange({
+                  target: {
+                    name: e.target.name,
+                    value: e.target.value,
+                  },
+                })
+              }
             />
-            <Field 
-              label="Country" 
+            <Field
+              label="Country"
               name="country"
-              placeholder="Country" 
+              placeholder="Country"
               value={formData.address.country}
-              onChange={(e) => handleChange({
-                target: {
-                  name: e.target.name,
-                  value: e.target.value
-                }
-              })}
+              onChange={(e) =>
+                handleChange({
+                  target: {
+                    name: e.target.name,
+                    value: e.target.value,
+                  },
+                })
+              }
               disabled
             />
-            <Field 
-              label="State" 
+            <Field
+              label="State"
               name="state"
-              placeholder="State" 
+              placeholder="State"
               value={formData.address.state}
-              onChange={(e) => handleChange({
-                target: {
-                  name: e.target.name,
-                  value: e.target.value
-                }
-              })}
+              onChange={(e) =>
+                handleChange({
+                  target: {
+                    name: e.target.name,
+                    value: e.target.value,
+                  },
+                })
+              }
               disabled
             />
-            <Field 
-              label="City" 
+            <Field
+              label="City"
               name="city"
-              placeholder="City" 
+              placeholder="City"
               value={formData.address.city}
-              onChange={(e) => handleChange({
-                target: {
-                  name: e.target.name,
-                  value: e.target.value
-                }
-              })}
+              onChange={(e) =>
+                handleChange({
+                  target: {
+                    name: e.target.name,
+                    value: e.target.value,
+                  },
+                })
+              }
               disabled
             />
-            <Field 
-              label="Telephone" 
+            <Field
+              label="Telephone"
               name="telephone1"
-              placeholder="Enter Telephone" 
+              placeholder="Enter Telephone"
               value={formData.address.telephone1}
-              onChange={(e) => handleChange({
-                target: {
-                  name: e.target.name,
-                  value: e.target.value
-                }
-              })}
+              onChange={(e) =>
+                handleChange({
+                  target: {
+                    name: e.target.name,
+                    value: e.target.value,
+                  },
+                })
+              }
             />
-            
-            <Field 
-              label="Website" 
+
+            <Field
+              label="Website"
               name="website"
-              placeholder="Enter Website" 
+              placeholder="Enter Website"
               value={formData.address.website}
-              onChange={(e) => handleChange({
-                target: {
-                  name: e.target.name,
-                  value: e.target.value
-                }
-              })}
+              onChange={(e) =>
+                handleChange({
+                  target: {
+                    name: e.target.name,
+                    value: e.target.value,
+                  },
+                })
+              }
             />
-            <Field 
-              label="Fax" 
+            <Field
+              label="Fax"
               name="fax"
-              placeholder="Enter Fax" 
+              placeholder="Enter Fax"
               value={formData.address.fax}
-              onChange={(e) => handleChange({
-                target: {
-                  name: e.target.name,
-                  value: e.target.value
-                }
-              })}
+              onChange={(e) =>
+                handleChange({
+                  target: {
+                    name: e.target.name,
+                    value: e.target.value,
+                  },
+                })
+              }
             />
-            <Field 
-              label="Email id" 
+            <Field
+              label="Email id"
               name="email"
-              placeholder="Enter Email" 
+              placeholder="Enter Email"
               value={formData.address.email}
-              onChange={(e) => handleChange({
-                target: {
-                  name: e.target.name,
-                  value: e.target.value
-                }
-              })}
+              onChange={(e) =>
+                handleChange({
+                  target: {
+                    name: e.target.name,
+                    value: e.target.value,
+                  },
+                })
+              }
             />
           </div>
         </div>
@@ -455,53 +481,61 @@ const SupplierEditLayout = () => {
             <h3 style={cardHeaderStyle}>Bank Details</h3>
           </div>
           <div style={fieldsGridStyle}>
-            <Field 
-              label="Bank Name" 
+            <Field
+              label="Bank Name"
               name="bank_name"
-              placeholder="Enter Bank Name" 
+              placeholder="Enter Bank Name"
               value={formData.bank.bank_name}
-              onChange={(e) => handleChange({
-                target: {
-                  name: e.target.name,
-                  value: e.target.value
-                }
-              })}
+              onChange={(e) =>
+                handleChange({
+                  target: {
+                    name: e.target.name,
+                    value: e.target.value,
+                  },
+                })
+              }
             />
-            <Field 
-              label="Bank Address" 
+            <Field
+              label="Bank Address"
               name="bank_address"
-              placeholder="Enter Bank Address" 
+              placeholder="Enter Bank Address"
               value={formData.bank.bank_address}
-              onChange={(e) => handleChange({
-                target: {
-                  name: e.target.name,
-                  value: e.target.value
-                }
-              })}
+              onChange={(e) =>
+                handleChange({
+                  target: {
+                    name: e.target.name,
+                    value: e.target.value,
+                  },
+                })
+              }
             />
-            <Field 
-              label="Account Number" 
+            <Field
+              label="Account Number"
               name="account_number"
-              placeholder="Enter Account Number" 
+              placeholder="Enter Account Number"
               value={formData.bank.account_number}
-              onChange={(e) => handleChange({
-                target: {
-                  name: e.target.name,
-                  value: e.target.value
-                }
-              })}
+              onChange={(e) =>
+                handleChange({
+                  target: {
+                    name: e.target.name,
+                    value: e.target.value,
+                  },
+                })
+              }
             />
-            <Field 
-              label="PAN Number" 
+            <Field
+              label="PAN Number"
               name="pan_number"
-              placeholder="Enter PAN Number" 
+              placeholder="Enter PAN Number"
               value={formData.bank.pan_number}
-              onChange={(e) => handleChange({
-                target: {
-                  name: e.target.name,
-                  value: e.target.value
-                }
-              })}
+              onChange={(e) =>
+                handleChange({
+                  target: {
+                    name: e.target.name,
+                    value: e.target.value,
+                  },
+                })
+              }
             />
           </div>
         </div>
@@ -513,53 +547,58 @@ const SupplierEditLayout = () => {
             <h3 style={cardHeaderStyle}>Supplier Contact Details</h3>
           </div>
           {formData.contacts.map((contact, index) => (
-            <div key={index} style={{ ...fieldsGridStyle, marginBottom: "1rem" }}>
-              <Field 
-                label="Contact Name" 
+            <div
+              key={index}
+              style={{ ...fieldsGridStyle, marginBottom: "1rem" }}
+            >
+              <Field
+                label="Contact Name"
                 name="contact_name"
-                placeholder="Enter Contact Name" 
+                placeholder="Enter Contact Name"
                 value={contact.contact_name}
                 onChange={(e) => handleContactChange(index, e)}
               />
-              <Field 
-                label="Designation" 
+              <Field
+                label="Designation"
                 name="designation"
-                placeholder="Enter Designation" 
+                placeholder="Enter Designation"
                 value={contact.designation}
                 onChange={(e) => handleContactChange(index, e)}
               />
-              <Field 
-                label="Contact Landline" 
+              <Field
+                label="Contact Landline"
                 name="contact_landline"
-                placeholder="Enter Landline" 
+                placeholder="Enter Landline"
                 value={contact.contact_landline}
                 onChange={(e) => handleContactChange(index, e)}
               />
-              <Field 
-                label="Landline Extension" 
+              <Field
+                label="Landline Extension"
                 name="landline_extension"
-                placeholder="Enter Extension" 
+                placeholder="Enter Extension"
                 value={contact.landline_extension}
                 onChange={(e) => handleContactChange(index, e)}
               />
-              <Field 
-                label="Contact Email" 
+              <Field
+                label="Contact Email"
                 name="contact_email"
-                placeholder="Enter Contact Email" 
+                placeholder="Enter Contact Email"
                 value={contact.contact_email}
                 onChange={(e) => handleContactChange(index, e)}
               />
-              <Field 
-                label="Contact Number" 
+              <Field
+                label="Contact Number"
                 name="contact_number"
-                placeholder="Enter Contact Number" 
+                placeholder="Enter Contact Number"
                 value={contact.contact_number}
                 onChange={(e) => handleContactChange(index, e)}
               />
-              <div style={{ display: "flex", gap: "0.5rem", gridColumn: "1 / -1" }}>
+              <div
+                style={{ display: "flex", gap: "0.5rem", gridColumn: "1 / -1" }}
+              >
                 {index > 0 && (
-                  <button 
-                    type="button" 
+                  <button
+                    type="button"
                     style={removeBtnStyle}
                     onClick={() => removeContact(index)}
                   >
@@ -567,8 +606,8 @@ const SupplierEditLayout = () => {
                   </button>
                 )}
                 {index === formData.contacts.length - 1 && (
-                  <button 
-                    type="button" 
+                  <button
+                    type="button"
                     style={addBtnStyle}
                     onClick={addContact}
                   >
@@ -582,10 +621,10 @@ const SupplierEditLayout = () => {
 
         {/* Action Buttons */}
         <div style={buttonContainerStyle}>
-          <button 
-            type="button" 
+          <button
+            type="button"
             style={cancelBtnStyle}
-            onClick={() => navigate('/dashboard/procurement/suppliers')}
+            onClick={() => navigate("/dashboard/procurement/suppliers")}
           >
             Cancel
           </button>
@@ -599,13 +638,22 @@ const SupplierEditLayout = () => {
 };
 
 // Field component and styles remain the same as in SupplierAddLayout.jsx
-const Field = ({ label, name, placeholder, type = 'text', value, onChange, disabled = false, style }) => (
-  <div style={{...fieldContainerStyle, ...style}}>
+const Field = ({
+  label,
+  name,
+  placeholder,
+  type = "text",
+  value,
+  onChange,
+  disabled = false,
+  style,
+}) => (
+  <div style={{ ...fieldContainerStyle, ...style }}>
     <label style={labelStyle}>{label}</label>
-    {type === 'select' ? (
+    {type === "select" ? (
       <div style={selectWrapperStyle}>
-        <select 
-          style={selectStyle} 
+        <select
+          style={selectStyle}
           name={name}
           value={value}
           onChange={onChange}
@@ -617,11 +665,11 @@ const Field = ({ label, name, placeholder, type = 'text', value, onChange, disab
         </select>
         <div style={selectArrowStyle}>▼</div>
       </div>
-    ) : type === 'textarea' ? (
+    ) : type === "textarea" ? (
       <textarea
         name={name}
         placeholder={placeholder}
-        style={{...inputStyle, height: '80px'}}
+        style={{ ...inputStyle, height: "80px" }}
         value={value}
         onChange={onChange}
         disabled={disabled}
@@ -642,163 +690,164 @@ const Field = ({ label, name, placeholder, type = 'text', value, onChange, disab
 
 // Styles (same as SupplierAddLayout with addition for loading)
 const loadingStyle = {
-  display: 'flex',
-  justifyContent: 'center',
-  alignItems: 'center',
-  height: '100vh',
-  fontSize: '1.2rem',
+  display: "flex",
+  justifyContent: "center",
+  alignItems: "center",
+  height: "100vh",
+  fontSize: "1.2rem",
 };
 
 const containerStyle = {
-  padding: '2rem',
-  fontFamily: '"Inter", "Segoe UI", -apple-system, BlinkMacSystemFont, sans-serif',
-  minHeight: '100vh',
+  padding: "2rem",
+  fontFamily:
+    '"Inter", "Segoe UI", -apple-system, BlinkMacSystemFont, sans-serif',
+  minHeight: "100vh",
   lineHeight: 1.6,
-  maxWidth: '1400px',
+  maxWidth: "1400px",
 };
 
 const headingStyle = {
-  fontSize: '1.5rem',
-  fontWeight: '600',
-  color: '#1e293b',
-  marginBottom: '1.5rem',
+  fontSize: "1.5rem",
+  fontWeight: "600",
+  color: "#1e293b",
+  marginBottom: "1.5rem",
 };
 
 const cardStyle = {
-  backgroundColor: '#ffffff',
-  padding: '1.5rem',
-  borderRadius: '12px',
-  boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06)',
-  border: '1px solid #e2e8f0',
-  marginBottom: '1.5rem',
+  backgroundColor: "#ffffff",
+  padding: "1.5rem",
+  borderRadius: "12px",
+  boxShadow: "0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06)",
+  border: "1px solid #e2e8f0",
+  marginBottom: "1.5rem",
 };
 
 const cardHeaderContainerStyle = {
-  display: 'flex',
-  alignItems: 'center',
-  marginBottom: '1.5rem',
-  paddingBottom: '1rem',
-  borderBottom: '1px solid #e2e8f0',
+  display: "flex",
+  alignItems: "center",
+  marginBottom: "1.5rem",
+  paddingBottom: "1rem",
+  borderBottom: "1px solid #e2e8f0",
 };
 
 const iconStyle = {
-  fontSize: '1.25rem',
-  marginRight: '0.75rem',
-  backgroundColor: '#f1f5f9',
-  padding: '0.5rem',
-  borderRadius: '8px',
+  fontSize: "1.25rem",
+  marginRight: "0.75rem",
+  backgroundColor: "#f1f5f9",
+  padding: "0.5rem",
+  borderRadius: "8px",
 };
 
 const cardHeaderStyle = {
-  fontSize: '1.125rem',
-  fontWeight: '600',
-  color: '#1e293b',
+  fontSize: "1.125rem",
+  fontWeight: "600",
+  color: "#1e293b",
   margin: 0,
 };
 
 const fieldsGridStyle = {
-  display: 'grid',
-  gap: '1rem',
-  gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))',
+  display: "grid",
+  gap: "1rem",
+  gridTemplateColumns: "repeat(auto-fill, minmax(250px, 1fr))",
 };
 
 const fieldContainerStyle = {
-  display: 'flex',
-  flexDirection: 'column',
+  display: "flex",
+  flexDirection: "column",
 };
 
 const labelStyle = {
-  display: 'block',
-  marginBottom: '0.5rem',
-  fontWeight: '500',
-  fontSize: '0.875rem',
-  color: '#374151',
+  display: "block",
+  marginBottom: "0.5rem",
+  fontWeight: "500",
+  fontSize: "0.875rem",
+  color: "#374151",
 };
 
 const inputStyle = {
-  width: '100%',
-  padding: '0.75rem',
-  borderRadius: '8px',
-  border: '1px solid #d1d5db',
-  fontSize: '0.875rem',
-  backgroundColor: '#ffffff',
+  width: "100%",
+  padding: "0.75rem",
+  borderRadius: "8px",
+  border: "1px solid #d1d5db",
+  fontSize: "0.875rem",
+  backgroundColor: "#ffffff",
 };
 
 const selectWrapperStyle = {
-  position: 'relative',
-  width: '100%',
+  position: "relative",
+  width: "100%",
 };
 
 const selectStyle = {
-  width: '100%',
-  padding: '0.75rem',
-  paddingRight: '2.5rem',
-  borderRadius: '8px',
-  border: '1px solid #d1d5db',
-  fontSize: '0.875rem',
-  backgroundColor: '#ffffff',
-  appearance: 'none',
+  width: "100%",
+  padding: "0.75rem",
+  paddingRight: "2.5rem",
+  borderRadius: "8px",
+  border: "1px solid #d1d5db",
+  fontSize: "0.875rem",
+  backgroundColor: "#ffffff",
+  appearance: "none",
 };
 
 const selectArrowStyle = {
-  position: 'absolute',
-  right: '0.75rem',
-  top: '50%',
-  transform: 'translateY(-50%)',
-  pointerEvents: 'none',
-  fontSize: '0.75rem',
-  color: '#6b7280',
+  position: "absolute",
+  right: "0.75rem",
+  top: "50%",
+  transform: "translateY(-50%)",
+  pointerEvents: "none",
+  fontSize: "0.75rem",
+  color: "#6b7280",
 };
 
 const buttonContainerStyle = {
-  display: 'flex',
-  justifyContent: 'flex-end',
-  gap: '0.75rem',
-  marginTop: '1rem',
+  display: "flex",
+  justifyContent: "flex-end",
+  gap: "0.75rem",
+  marginTop: "1rem",
 };
 
 const cancelBtnStyle = {
-  padding: '0.75rem 1.5rem',
-  backgroundColor: '#f3f4f6',
-  color: '#374151',
-  border: '1px solid #d1d5db',
-  borderRadius: '8px',
-  cursor: 'pointer',
-  fontSize: '0.875rem',
-  fontWeight: '500',
+  padding: "0.75rem 1.5rem",
+  backgroundColor: "#f3f4f6",
+  color: "#374151",
+  border: "1px solid #d1d5db",
+  borderRadius: "8px",
+  cursor: "pointer",
+  fontSize: "0.875rem",
+  fontWeight: "500",
 };
 
 const createBtnStyle = {
-  padding: '0.75rem 1.5rem',
-  backgroundColor: '#2563eb',
-  color: 'white',
-  border: 'none',
-  borderRadius: '8px',
-  cursor: 'pointer',
-  fontSize: '0.875rem',
-  fontWeight: '500',
+  padding: "0.75rem 1.5rem",
+  backgroundColor: "#2563eb",
+  color: "white",
+  border: "none",
+  borderRadius: "8px",
+  cursor: "pointer",
+  fontSize: "0.875rem",
+  fontWeight: "500",
 };
 
 const addBtnStyle = {
-  padding: '0.5rem 1rem',
-  backgroundColor: '#10b981',
-  color: 'white',
-  border: 'none',
-  borderRadius: '6px',
-  cursor: 'pointer',
-  fontSize: '0.75rem',
-  fontWeight: '500',
+  padding: "0.5rem 1rem",
+  backgroundColor: "#10b981",
+  color: "white",
+  border: "none",
+  borderRadius: "6px",
+  cursor: "pointer",
+  fontSize: "0.75rem",
+  fontWeight: "500",
 };
 
 const removeBtnStyle = {
-  padding: '0.5rem 1rem',
-  backgroundColor: '#ef4444',
-  color: 'white',
-  border: 'none',
-  borderRadius: '6px',
-  cursor: 'pointer',
-  fontSize: '0.75rem',
-  fontWeight: '500',
+  padding: "0.5rem 1rem",
+  backgroundColor: "#ef4444",
+  color: "white",
+  border: "none",
+  borderRadius: "6px",
+  cursor: "pointer",
+  fontSize: "0.75rem",
+  fontWeight: "500",
 };
 
 export default SupplierEditLayout;

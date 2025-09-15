@@ -20,13 +20,16 @@ import {
   Alert,
 } from "@mui/material";
 import { Add, Remove } from "@mui/icons-material";
-
+import { useSelector } from "react-redux";
 import API_URL, { IMAGE_API_URL } from "../../../api/Api_url";
 import { useInventory } from "../../../contexts/InventoryContext";
 
 const SalesOrdersEditLayoutPage = ({ product }) => {
   // State for form data
   const { inventoryData } = useInventory();
+  const { user, token } = useSelector((state) => state.auth);
+
+  const userToken = token;
 
   const getAvailableQty = (productId) => {
     const entry = inventoryData.find((item) => item.id === productId);
@@ -84,7 +87,7 @@ const SalesOrdersEditLayoutPage = ({ product }) => {
   const [products, setProducts] = useState([]);
   const [deviceIds, setDeviceIds] = useState({});
   const [deviceIdErrors, setDeviceIdErrors] = useState({});
-const [originalOrderItems, setOriginalOrderItems] = useState([]);
+  const [originalOrderItems, setOriginalOrderItems] = useState([]);
 
   const [loading, setLoading] = useState({
     order: true,
@@ -112,7 +115,11 @@ const [originalOrderItems, setOriginalOrderItems] = useState([]);
   useEffect(() => {
     const fetchOrderData = async () => {
       try {
-        const response = await fetch(`${API_URL}/orders/${id}`);
+        const response = await fetch(`${API_URL}/orders/${id}`, {
+          headers: {
+            "Authorization": `Bearer ${userToken}`,
+          },
+        });
         if (!response.ok) {
           throw new Error("Failed to fetch order data");
         }
@@ -173,7 +180,11 @@ const [originalOrderItems, setOriginalOrderItems] = useState([]);
   useEffect(() => {
     const fetchApprovedQuotations = async () => {
       try {
-        const response = await fetch(`${API_URL}/quotations/approved`);
+        const response = await fetch(`${API_URL}/quotations/approved`, {
+          headers: {
+            "Authorization": `Bearer ${userToken}`,
+          },
+        });
         if (!response.ok) {
           throw new Error("Failed to fetch approved quotations");
         }
@@ -198,7 +209,11 @@ const [originalOrderItems, setOriginalOrderItems] = useState([]);
   useEffect(() => {
     const fetchProducts = async () => {
       try {
-        const response = await fetch(`${API_URL}/product-templete`);
+        const response = await fetch(`${API_URL}/product-templete`, {
+          headers: {
+            "Authorization": `Bearer ${userToken}`,
+          },
+        });
         if (!response.ok) {
           throw new Error("Failed to fetch products");
         }
@@ -226,7 +241,12 @@ const [originalOrderItems, setOriginalOrderItems] = useState([]);
     try {
       // Fetch the selected quotation details
       const quotationResponse = await fetch(
-        `${API_URL}/quotations/${quotationId}`
+        `${API_URL}/quotations/${quotationId}`,
+        {
+          headers: {
+            "Authorization": `Bearer ${userToken}`,
+          },
+        }
       );
       if (!quotationResponse.ok) {
         throw new Error("Failed to fetch quotation details");
@@ -294,60 +314,57 @@ const [originalOrderItems, setOriginalOrderItems] = useState([]);
     }
   };
 
+  // Fetch location data when shipping pincode changes
+  useEffect(() => {
+    const fetchShippingLocationFromPincode = async () => {
+      const shippingPincode = formData.address.shipping_pincode;
 
+      // Only make API call if shipping pincode is 6 digits (India specific)
+      if (shippingPincode && shippingPincode.length === 6) {
+        try {
+          const response = await fetch(
+            `https://api.postalpincode.in/pincode/${shippingPincode}`
+          );
+          const data = await response.json();
 
-    // Fetch location data when shipping pincode changes
-    useEffect(() => {
-      const fetchShippingLocationFromPincode = async () => {
-        const shippingPincode = formData.address.shipping_pincode;
-  
-        // Only make API call if shipping pincode is 6 digits (India specific)
-        if (shippingPincode && shippingPincode.length === 6) {
-          try {
-            const response = await fetch(
-              `https://api.postalpincode.in/pincode/${shippingPincode}`
-            );
-            const data = await response.json();
-  
-            if (data && data[0]?.Status === "Success") {
-              const postOffice = data[0].PostOffice[0];
-  
-              setFormData((prev) => ({
-                ...prev,
-                address: {
-                  ...prev.address,
-                  shipping_city: postOffice.District,
-                  shipping_state: postOffice.State,
-                  shipping_country: "India",
-                },
-              }));
-            } else {
-              setSnackbar({
-                open: true,
-                message: "Could not find location for this shipping pincode",
-                severity: "warning",
-              });
-            }
-          } catch (error) {
-            console.error("Error fetching shipping location data:", error);
+          if (data && data[0]?.Status === "Success") {
+            const postOffice = data[0].PostOffice[0];
+
+            setFormData((prev) => ({
+              ...prev,
+              address: {
+                ...prev.address,
+                shipping_city: postOffice.District,
+                shipping_state: postOffice.State,
+                shipping_country: "India",
+              },
+            }));
+          } else {
             setSnackbar({
               open: true,
-              message:
-                "Error fetching shipping location data. Please check the pincode and try again.",
-              severity: "error",
+              message: "Could not find location for this shipping pincode",
+              severity: "warning",
             });
           }
+        } catch (error) {
+          console.error("Error fetching shipping location data:", error);
+          setSnackbar({
+            open: true,
+            message:
+              "Error fetching shipping location data. Please check the pincode and try again.",
+            severity: "error",
+          });
         }
-      };
-  
-      // Add debounce to prevent too many API calls
-      const debounceTimer = setTimeout(() => {
-        fetchShippingLocationFromPincode();
-      }, 500);
-  
-      return () => clearTimeout(debounceTimer);
-    }, [formData.address.shipping_pincode]);
+      }
+    };
 
+    // Add debounce to prevent too many API calls
+    const debounceTimer = setTimeout(() => {
+      fetchShippingLocationFromPincode();
+    }, 500);
+
+    return () => clearTimeout(debounceTimer);
+  }, [formData.address.shipping_pincode]);
 
   // Fetch location data when pincode changes
   useEffect(() => {
@@ -492,17 +509,18 @@ const [originalOrderItems, setOriginalOrderItems] = useState([]);
       product.description?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-const handleSubmit = async (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
     // Prepare items array with Asset IDs AND PRICING INFORMATION
     const orderItems = selectedProductIds.map((productId) => {
       const product = products.find((p) => p.id === productId);
-      
+
       // Find the original item to get pricing data
-      const originalItem = originalOrderItems.find(item => item.product_id === productId) || 
-                          formData.items.find(item => item.product_id === productId);
-      
+      const originalItem =
+        originalOrderItems.find((item) => item.product_id === productId) ||
+        formData.items.find((item) => item.product_id === productId);
+
       return {
         product_id: productId,
         product_name: product?.product_name || "Unknown Product",
@@ -512,7 +530,8 @@ const handleSubmit = async (e) => {
         purchase_price: originalItem?.purchase_price || 0,
         offer_purchase_price: originalItem?.offer_purchase_price || 0,
         rent_price_per_month: originalItem?.rent_price_per_month || 0,
-        offer_rent_price_per_month: originalItem?.offer_rent_price_per_month || 0,
+        offer_rent_price_per_month:
+          originalItem?.offer_rent_price_per_month || 0,
       };
     });
 
@@ -526,6 +545,7 @@ const handleSubmit = async (e) => {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
+          "Authorization": `Bearer ${userToken}`,
         },
         body: JSON.stringify(payload),
       });
@@ -564,7 +584,6 @@ const handleSubmit = async (e) => {
       });
     }
   };
-
 
   if (loading.order) {
     return (
@@ -675,28 +694,31 @@ const handleSubmit = async (e) => {
                 readOnly
               />
               <Field
-  label="Transaction Type"
-  type="select"
-  placeholder="Select Type"
-  value={formData.transaction_type}
-  onChange={(e) => {
-    handleChange({
-      target: { name: "transaction_type", value: e.target.value },
-    });
+                label="Transaction Type"
+                type="select"
+                placeholder="Select Type"
+                value={formData.transaction_type}
+                onChange={(e) => {
+                  handleChange({
+                    target: { name: "transaction_type", value: e.target.value },
+                  });
 
-    // Clear rental fields when switching to Buy
-    if (e.target.value === "Buy") {
-      setFormData((prev) => ({
-        ...prev,
-        rental_duration: null,
-        rental_start_date: null,
-        rental_end_date: null,
-      }));
-    }
-  }}
-  options={["Rent", "Buy"]}
-/>
-              
+                  // Clear rental fields when switching to Buy
+                  if (e.target.value === "Buy") {
+                    setFormData((prev) => ({
+                      ...prev,
+                      rental_duration: null,
+                      rental_start_date: null,
+                      rental_end_date: null,
+                    }));
+                  }
+                }}
+                options={[
+                  { value: "Rent", label: "Rent" },
+                  { value: "Buy", label: "Sale" },
+                ]}
+              />
+
               <Field
                 label="Order Status"
                 type="select"
@@ -715,7 +737,7 @@ const handleSubmit = async (e) => {
                   "Cancelled",
                 ]}
               />
-            
+
               <Field
                 label="Owner"
                 placeholder="Enter Owner Name"
@@ -743,45 +765,54 @@ const handleSubmit = async (e) => {
                 value={formData.order_generated_by}
                 readOnly
               /> */}
-             {formData.transaction_type === "Rent" && (
-  <>
-    <Field
-      label="Rental Duration (months)"
-      placeholder="Enter Duration"
-      type="number"
-      value={formData.rental_duration || ""}
-      onChange={(e) =>
-        handleChange({
-          target: { name: "rental_duration", value: e.target.value },
-        })
-      }
-    />
+              {formData.transaction_type === "Rent" && (
+                <>
+                  <Field
+                    label="Rental Duration (months)"
+                    placeholder="Enter Duration"
+                    type="number"
+                    value={formData.rental_duration || ""}
+                    onChange={(e) =>
+                      handleChange({
+                        target: {
+                          name: "rental_duration",
+                          value: e.target.value,
+                        },
+                      })
+                    }
+                  />
 
-    <Field
-      label="Rental Start Date"
-      type="date"
-      placeholder="Select Date"
-      value={formData.rental_start_date || ""}
-      onChange={(e) =>
-        handleChange({
-          target: { name: "rental_start_date", value: e.target.value },
-        })
-      }
-    />
+                  <Field
+                    label="Rental Start Date"
+                    type="date"
+                    placeholder="Select Date"
+                    value={formData.rental_start_date || ""}
+                    onChange={(e) =>
+                      handleChange({
+                        target: {
+                          name: "rental_start_date",
+                          value: e.target.value,
+                        },
+                      })
+                    }
+                  />
 
-    <Field
-      label="Rental End Date"
-      type="date"
-      placeholder="Select Date"
-      value={formData.rental_end_date || ""}
-      onChange={(e) =>
-        handleChange({
-          target: { name: "rental_end_date", value: e.target.value },
-        })
-      }
-    />
-  </>
-)}
+                  <Field
+                    label="Rental End Date"
+                    type="date"
+                    placeholder="Select Date"
+                    value={formData.rental_end_date || ""}
+                    onChange={(e) =>
+                      handleChange({
+                        target: {
+                          name: "rental_end_date",
+                          value: e.target.value,
+                        },
+                      })
+                    }
+                  />
+                </>
+              )}
               <Field
                 label="Order Date"
                 type="date"

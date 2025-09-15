@@ -3,11 +3,16 @@ import { useNavigate, useParams } from "react-router-dom";
 import Snackbar from "@mui/material/Snackbar";
 import Alert from "@mui/material/Alert";
 import API_URL, { IMAGE_API_URL } from "../../../api/Api_url";
+import { useSelector } from "react-redux";
 
 const AssetModificationTrackerEdit = () => {
+  const { user, token } = useSelector((state) => state.auth);
+
+  const userToken = token;
+
   const navigate = useNavigate();
   const { id } = useParams(); // Get the peripheral asset ID from URL params
-  
+
   const [formData, setFormData] = useState({
     assetId: "",
     product_name: "",
@@ -36,36 +41,40 @@ const AssetModificationTrackerEdit = () => {
     const fetchPeripheralAsset = async () => {
       try {
         setLoading(true);
-        const response = await fetch(`${API_URL}/peripheral-assets/${id}`);
+        const response = await fetch(`${API_URL}/peripheral-assets/${id}`, {
+          headers: {
+            "Authorization": `Bearer ${userToken}`,
+          },
+        });
         if (!response.ok) throw new Error("Failed to fetch peripheral asset");
         const data = await response.json();
-        
+
         // Set form data from API response
         setFormData({
           assetId: data.parent_asset_id,
           product_name: data.product_name,
           modificationType: "",
-          currentRAM: data.ram ? data.ram.replace('GB', '') : "",
-          currentStorage: data.storage ? data.storage.replace('GB', '') : "",
+          currentRAM: data.ram ? data.ram.replace("GB", "") : "",
+          currentStorage: data.storage ? data.storage.replace("GB", "") : "",
           approvalDate: data.approval_date || "",
         });
-        
+
         // Set customer from API response
         setSelectedCustomer(data.delivery_challan.customer_code);
-        
+
         // Set challan from API response
         setSelectedChallan(data.challan_id);
-        
+
         // Process selected peripherals from API response
         const peripheralsByCategory = {};
-        data.items.forEach(item => {
+        data.items.forEach((item) => {
           if (!peripheralsByCategory[item.product_category]) {
             peripheralsByCategory[item.product_category] = [];
           }
           peripheralsByCategory[item.product_category].push(item.device_id);
         });
         setSelectedPeripherals(peripheralsByCategory);
-        
+
         setLoading(false);
       } catch (error) {
         console.error("Error fetching peripheral asset:", error);
@@ -77,7 +86,7 @@ const AssetModificationTrackerEdit = () => {
         setLoading(false);
       }
     };
-    
+
     fetchPeripheralAsset();
   }, [id]);
 
@@ -86,7 +95,12 @@ const AssetModificationTrackerEdit = () => {
     const fetchDeliveryChallans = async () => {
       try {
         const response = await fetch(
-          `${API_URL}/delivery-challans/approved-delivery-challan`
+          `${API_URL}/delivery-challans/approved-delivery-challan`,
+          {
+            headers: {
+              "Authorization": `Bearer ${userToken}`,
+            },
+          }
         );
         if (!response.ok) throw new Error("Failed to fetch delivery challans");
         const data = await response.json();
@@ -126,7 +140,12 @@ const AssetModificationTrackerEdit = () => {
 
       try {
         const response = await fetch(
-          `${API_URL}/delivery-challans/peripheral-assets/${selectedCustomer}`
+          `${API_URL}/delivery-challans/peripheral-assets/${selectedCustomer}`,
+          {
+            headers: {
+              "Authorization": `Bearer ${userToken}`,
+            },
+          }
         );
         if (!response.ok) throw new Error("Failed to fetch peripheral assets");
         const data = await response.json();
@@ -342,7 +361,10 @@ const AssetModificationTrackerEdit = () => {
 
       const response = await fetch(`${API_URL}/peripheral-assets/${id}`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${userToken}`,
+        },
         body: JSON.stringify(payload),
       });
 
@@ -1007,11 +1029,6 @@ const createBtnStyle = {
 };
 
 export default AssetModificationTrackerEdit;
-
-
-
-
-
 
 // import React, { useState, useEffect } from 'react';
 // import { useParams, useNavigate } from 'react-router-dom';

@@ -18,27 +18,20 @@ import {
 } from "@mui/material";
 
 import { Link, useLocation } from "react-router-dom";
+import { IoMdSwap } from "react-icons/io";
 
 import WorkIcon from "@mui/icons-material/Work";
-import AssignmentIcon from "@mui/icons-material/Assignment";
 import PeopleIcon from "@mui/icons-material/People";
-import GroupIcon from "@mui/icons-material/Group";
-import BusinessIcon from "@mui/icons-material/Business";
 import AccountBalanceIcon from "@mui/icons-material/AccountBalance";
-import ReceiptIcon from "@mui/icons-material/Receipt";
 import ContactsIcon from "@mui/icons-material/Contacts";
 import BusinessCenterIcon from "@mui/icons-material/BusinessCenter";
 import ReceiptLongIcon from "@mui/icons-material/ReceiptLong";
-import AdminPanelSettingsIcon from "@mui/icons-material/AdminPanelSettings";
 import ApartmentIcon from "@mui/icons-material/Apartment";
-import TimelineIcon from "@mui/icons-material/Timeline";
 import ShoppingCartIcon from "@mui/icons-material/ShoppingCart";
-import InventoryIcon from "@mui/icons-material/Inventory";
 import LocalShippingIcon from "@mui/icons-material/LocalShipping";
 import PurchaseRequestsIcon from "@mui/icons-material/ShoppingCart";
 import POQuotationsIcon from "@mui/icons-material/Description";
 import WarehouseIcon from "@mui/icons-material/Warehouse";
-import RequestQuoteIcon from "@mui/icons-material/RequestQuote";
 import BuildCircleIcon from "@mui/icons-material/BuildCircle";
 import CreditScoreIcon from "@mui/icons-material/CreditScore";
 import MiscellaneousServicesIcon from "@mui/icons-material/MiscellaneousServices";
@@ -50,6 +43,42 @@ import TravelExploreIcon from "@mui/icons-material/TravelExplore";
 import BarChartIcon from "@mui/icons-material/BarChart";
 import FeedbackIcon from "@mui/icons-material/Feedback";
 import { MdAttachMoney, MdOutlineComputer } from "react-icons/md";
+
+// Add these new imports at the top with your other MUI icon imports
+import InventoryIcon from "@mui/icons-material/Inventory";
+import ListAltIcon from "@mui/icons-material/ListAlt";
+import SellIcon from "@mui/icons-material/Sell"; // or LocalOfferIcon
+import CategoryIcon from "@mui/icons-material/Category";
+import FactoryIcon from "@mui/icons-material/Factory";
+import AssignmentIcon from "@mui/icons-material/Assignment";
+import DescriptionIcon from "@mui/icons-material/Description";
+import AssignmentTurnedInIcon from "@mui/icons-material/AssignmentTurnedIn";
+import PlaylistAddCheckIcon from "@mui/icons-material/PlaylistAddCheck";
+import BuildIcon from "@mui/icons-material/Build";
+import HomeWorkIcon from "@mui/icons-material/HomeWork";
+import BusinessIcon from "@mui/icons-material/Business";
+import ContactPhoneIcon from "@mui/icons-material/ContactPhone";
+import StarOutlineIcon from "@mui/icons-material/StarOutline";
+import RequestQuoteIcon from "@mui/icons-material/RequestQuote";
+import PointOfSaleIcon from "@mui/icons-material/PointOfSale";
+import ExitToAppIcon from "@mui/icons-material/ExitToApp";
+import SettingsIcon from "@mui/icons-material/Settings";
+import AssignmentReturnIcon from "@mui/icons-material/AssignmentReturn";
+import MoveToInboxIcon from "@mui/icons-material/MoveToInbox";
+import HandymanIcon from "@mui/icons-material/Handyman";
+import AttachMoneyIcon from "@mui/icons-material/AttachMoney";
+import GroupIcon from "@mui/icons-material/Group";
+import GroupsIcon from '@mui/icons-material/Groups';
+
+// Add these new MUI icon imports to your existing list
+import TimelineIcon from "@mui/icons-material/Timeline";
+import AdminPanelSettingsIcon from "@mui/icons-material/AdminPanelSettings";
+import VpnKeyIcon from "@mui/icons-material/VpnKey"; // For Roles
+import LocationOnIcon from "@mui/icons-material/LocationOn"; // For Address
+import ReceiptIcon from "@mui/icons-material/Receipt"; // For Tax List
+import AccountTreeIcon from "@mui/icons-material/AccountTree"; // For Branch
+import MemoryIcon from "@mui/icons-material/Memory"; // For RAM
+import StorageIcon from "@mui/icons-material/Storage"; // For Hard Disc
 
 import {
   FaUserTie,
@@ -88,24 +117,24 @@ const Sidebar = ({ section }) => {
   switch (section) {
     case "product_library":
       sectionTitle = "Product Library";
-      sectionIcon = <WorkIcon />;
+      sectionIcon = <InventoryIcon />;
       menuItems = [
         {
           text: "Product Template",
           path: "/dashboard/product_library",
-          icon: <WorkIcon />,
+          icon: <ListAltIcon />,
           description: "Manage product templates",
         },
         {
           text: "Brands",
           path: "/dashboard/product_library/brands",
-          icon: <AssignmentIcon />,
+          icon: <SellIcon />,
           description: "Brand management",
         },
         {
           text: "Product Categories",
           path: "/dashboard/product_library/product_categories",
-          icon: <GroupIcon />,
+          icon: <CategoryIcon />,
           description: "Category organization",
         },
         // {
@@ -124,26 +153,26 @@ const Sidebar = ({ section }) => {
         {
           text: "Supplier",
           path: "/dashboard/procurement/supplier",
-          icon: <LocalShippingIcon />,
+          icon: <FactoryIcon />,
           description: "Supplier management",
         },
         {
           text: "Purchase Requests",
           path: "/dashboard/procurement/purchase-requests",
-          icon: <PurchaseRequestsIcon />,
+          icon: <AssignmentIcon />,
           description: "New purchase requests",
           // badge: "12",
         },
         {
           text: "PO Quotations",
           path: "/dashboard/procurement/po-quotations",
-          icon: <POQuotationsIcon />,
+          icon: <DescriptionIcon />,
           description: "Purchase order quotes",
         },
         {
           text: "Purchase Orders",
           path: "/dashboard/procurement/purchase-orders",
-          icon: <ShoppingCartIcon />,
+          icon: <AssignmentTurnedInIcon />,
           description: "Active purchase orders",
         },
         {
@@ -168,14 +197,14 @@ const Sidebar = ({ section }) => {
         {
           text: "Product List",
           path: "/dashboard/inventory",
-          icon: <GroupIcon />,
+          icon: <PlaylistAddCheckIcon />,
           description: "All inventory items",
         },
 
         {
           text: "Assembled Products",
           path: "/dashboard/inventory/assembled-products",
-          icon: <GroupIcon />,
+          icon: <BuildIcon />,
           description: "All inventory items",
         },
         // {
@@ -187,13 +216,19 @@ const Sidebar = ({ section }) => {
         {
           text: "Wear House",
           path: "/dashboard/inventory/wear-house",
-          icon: <GroupIcon />,
+          icon: <HomeWorkIcon />,
           description: "Wear House",
         },
         {
           text: "Clinet Place",
           path: "/dashboard/inventory/client-place",
-          icon: <GroupIcon />,
+          icon: <BusinessIcon />,
+          description: "Clinet Place",
+        },
+        {
+          text: "Scrap",
+          path: "/dashboard/inventory/swap",
+          icon: <IoMdSwap />,
           description: "Clinet Place",
         },
       ];
@@ -201,38 +236,38 @@ const Sidebar = ({ section }) => {
 
     case "crm":
       sectionTitle = "Customer Relationship";
-      sectionIcon = <BusinessCenterIcon />;
+      sectionIcon = <GroupIcon />;
       menuItems = [
         {
           text: "Client List",
           path: "/dashboard/crm/client-list",
-          icon: <BusinessCenterIcon />,
+          icon: <ContactPhoneIcon />,
           description: "Customer database",
         },
         {
           text: "Leads",
           path: "/dashboard/crm/lead",
-          icon: <ContactsIcon />,
+          icon: <StarOutlineIcon />,
           description: "Potential customers",
           // badge: "New",
         },
         {
           text: "Quotations",
           path: "/dashboard/crm/quotations",
-          icon: <ReceiptLongIcon />,
+          icon: <RequestQuoteIcon />,
           description: "Price quotations",
         },
         {
           text: "Sales Orders",
           path: "/dashboard/crm/orders",
-          icon: <AssignmentIcon />,
+          icon: <PointOfSaleIcon />,
           description: "Customer orders",
         },
 
         {
           text: "Order Preparations",
           path: "/dashboard/crm/dispatch-orders",
-          icon: <AssignmentIcon />,
+          icon: <ExitToAppIcon />,
           description: "Order Preparations",
         },
         //  {
@@ -253,12 +288,12 @@ const Sidebar = ({ section }) => {
 
     case "operations":
       sectionTitle = "Operations";
-      sectionIcon = <AccountBalanceIcon />;
+      sectionIcon = <SettingsIcon />;
       menuItems = [
         {
           text: "Delivery Challan",
           path: "/dashboard/operations",
-          icon: <AccountBalanceIcon />,
+          icon: <LocalShippingIcon />,
           description: "Delivery documents",
         },
         // {
@@ -273,11 +308,10 @@ const Sidebar = ({ section }) => {
           icon: <ReceiptIcon />,
           description: "Invoice management",
         },
-
         {
           text: "Credit Notes",
           path: "/dashboard/operations/credit-notes",
-          icon: <MoneyOffIcon />,
+          icon: <AssignmentReturnIcon />,
           description: "Credit note management",
         },
         // {
@@ -289,17 +323,28 @@ const Sidebar = ({ section }) => {
         {
           text: "GRN",
           path: "/dashboard/operations/grn",
-          icon: <ReceiptLongIcon />,
+          icon: <MoveToInboxIcon />,
           description: "Goods return notes",
         },
-
-         {
+        {
           text: "Plain GRN",
           path: "/dashboard/operations/plain-grn",
-          icon: <ReceiptLongIcon />,
+          icon: <MoveToInboxIcon />,
           description: "Goods return notes",
         },
 
+        {
+          text: "Service & Maintenance",
+          path: "/dashboard/operations/service_maintenance",
+          icon: <HandymanIcon />,
+          description: "Invoice management",
+        },
+        {
+          text: "Courier Charges",
+          path: "/dashboard/operations/courier-charges",
+          icon: <AttachMoneyIcon />,
+          description: "Invoice management",
+        },
         {
           text: "Client Journey",
           path: "/dashboard/operations/client_journey",
@@ -318,12 +363,12 @@ const Sidebar = ({ section }) => {
 
     case "users_performance":
       sectionTitle = "Users Performance";
-      sectionIcon = <TimelineIcon />;
+      sectionIcon = <AssessmentIcon />;
       menuItems = [
         {
           text: "Performance List",
           path: "/dashboard/users_performance/user",
-          icon: <BusinessIcon />,
+          icon: <TrendingUpIcon />,
           description: "User performance metrics",
         },
       ];
@@ -336,19 +381,19 @@ const Sidebar = ({ section }) => {
         {
           text: "Client List",
           path: "/dashboard/client/client",
-          icon: <BusinessIcon />,
+          icon: <GroupIcon />,
           description: "Client management",
         },
       ];
       break;
     case "reports":
       sectionTitle = "Reports";
-      sectionIcon = <BusinessIcon />;
+      sectionIcon = <AssessmentIcon />;
       menuItems = [
         {
           text: "Report Library",
           path: "/dashboard/reports",
-          icon: <BarChartIcon />,
+          icon: <SummarizeIcon />,
           description: "Track overall sales metrics",
         },
         // {
@@ -362,7 +407,7 @@ const Sidebar = ({ section }) => {
 
     case "settings":
       sectionTitle = "Settings";
-      sectionIcon = <AdminPanelSettingsIcon />;
+      sectionIcon = <SettingsIcon />;
       menuItems = [
         {
           text: "Users",
@@ -373,45 +418,45 @@ const Sidebar = ({ section }) => {
         {
           text: "Roles",
           path: "/dashboard/settings/roles",
-          icon: <AdminPanelSettingsIcon />,
+          icon: <VpnKeyIcon />,
           description: "Role permissions",
         },
-        {
-          text: "Address",
-          path: "/dashboard/settings/address",
-          icon: <TimelineIcon />,
-          description: "Address management",
-        },
-        {
-          text: "Contact Type",
-          path: "/dashboard/settings/contact_type",
-          icon: <MdOutlineComputer />,
-          description: "Contact categorization",
-        },
-        {
-          text: "Tax List",
-          path: "/dashboard/settings/taxt_list",
-          icon: <FaUserTie />,
-          description: "Tax configuration",
-        },
+        // {
+        //   text: "Address",
+        //   path: "/dashboard/settings/address",
+        //   icon: <LocationOnIcon />,
+        //   description: "Address management",
+        // },
+        // {
+        //   text: "Contact Type",
+        //   path: "/dashboard/settings/contact_type",
+        //   icon: <ContactPhoneIcon />,
+        //   description: "Contact categorization",
+        // },
+        // {
+        //   text: "Tax List",
+        //   path: "/dashboard/settings/taxt_list",
+        //   icon: <ReceiptIcon />,
+        //   description: "Tax configuration",
+        // },
         {
           text: "Branch",
-          path: "/dashboard/settings/Branch",
-          icon: <MdOutlineAirlineSeatLegroomNormal />,
+          path: "/dashboard/settings/branches",
+          icon: <AccountTreeIcon />,
           description: "Branch management",
         },
-        {
-          text: "RAM",
-          path: "/dashboard/settings/ram",
-          icon: <MdOutlineAirlineSeatLegroomNormal />,
-          description: "Ram",
-        },
-        {
-          text: "Hard Disc",
-          path: "/dashboard/settings/hard-disc",
-          icon: <MdOutlineAirlineSeatLegroomNormal />,
-          description: "Hard Disc",
-        },
+        // {
+        //   text: "RAM",
+        //   path: "/dashboard/settings/ram",
+        //   icon: <MemoryIcon />,
+        //   description: "Ram",
+        // },
+        // {
+        //   text: "Hard Disc",
+        //   path: "/dashboard/settings/hard-disc",
+        //   icon: <StorageIcon />,
+        //   description: "Hard Disc",
+        // },
       ];
       break;
 

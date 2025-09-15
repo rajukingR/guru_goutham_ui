@@ -1,24 +1,27 @@
 import React from "react";
-import { 
-  Avatar, 
-  Card, 
-  CardContent 
-} from "@mui/material";
+import { Avatar, Card, CardContent } from "@mui/material";
 import DynamicTable from "../../../components/table-format/DynamicTable";
 
 const AssetmtTrackerPageLayout = () => {
-  // Define columns for the table
   const columns = [
-    { 
-      id: "itemImage", 
+    {
+      id: "itemImage",
       label: "Item Image",
-      render: (value) => (
-        <Avatar 
-          variant="square" 
-          src={value} 
+      render: (value, row) => (
+        <Avatar
+          variant="square"
+          src={value}
           sx={{ width: 56, height: 56 }}
-        />
-      )
+          alt={row.itemName}
+          onError={(e) => {
+            e.target.onerror = null; // prevent infinite loop
+            // Fallback to first letter of itemName if image fails
+            e.target.src = ""; 
+          }}
+        >
+          {row.itemName?.charAt(0)}
+        </Avatar>
+      ),
     },
     { id: "itemName", label: "Item Name" },
     { id: "itemCode", label: "Item Code" },
@@ -29,48 +32,43 @@ const AssetmtTrackerPageLayout = () => {
     { id: "actions", label: "Actions" },
   ];
 
-  // Sample data for items
   const data = [
     {
-      itemImage: "https://via.placeholder.com/56", 
+      itemImage: "https://via.placeholder.com/56",
       itemName: "Wireless Mouse",
       itemCode: "WM-1001",
       category: "Accessories",
       unitPrice: "$25",
       stockQuantity: 120,
       status: "Available",
-      actions: "..."
+      actions: "...",
     },
     {
-      itemImage: "https://via.placeholder.com/56", 
+      itemImage: "https://via.placeholder.com/56",
       itemName: "Mechanical Keyboard",
       itemCode: "MK-2002",
       category: "Accessories",
       unitPrice: "$70",
       stockQuantity: 85,
       status: "Available",
-      actions: "..."
+      actions: "...",
     },
     {
-      itemImage: "https://via.placeholder.com/56", 
+      itemImage: "https://via.placeholder.com/56",
       itemName: "27-inch Monitor",
       itemCode: "MN-3003",
       category: "Monitors",
       unitPrice: "$230",
       stockQuantity: 30,
       status: "Low Stock",
-      actions: "..."
+      actions: "...",
     },
   ];
 
   return (
     <Card>
       <CardContent>
-        <DynamicTable 
-          columns={columns} 
-          data={data} 
-          rowsPerPage={5} 
-        />
+        <DynamicTable columns={columns} data={data} rowsPerPage={5} />
       </CardContent>
     </Card>
   );

@@ -2,10 +2,14 @@ import React, { useEffect, useState } from "react";
 import DynamicTable from "../../../components/table-format/DynamicTable";
 import axios from "axios";
 import API_URL, { IMAGE_API_URL } from "../../../api/Api_url";
+import { useSelector } from "react-redux";
 
 const ContactsTable = () => {
   const [data, setData] = useState([]);
 
+    const { user, token } = useSelector((state) => state.auth);
+  
+    const userToken = token;
   const columns = [
     { id: "s_id", label: "S.No." },
     { id: "full_name", label: "Full Name" },
@@ -13,7 +17,7 @@ const ContactsTable = () => {
     { id: "phone_number", label: "Phone" },
     { id: "company_name", label: "Company" },
     { id: "industry", label: "Industry" },
-    { id: "payment_type", label: "Payment Type" },
+    // { id: "payment_type", label: "Payment Type" },
     { id: "owner", label: "Owner" }
   ];
 
@@ -24,7 +28,7 @@ const ContactsTable = () => {
 
         const response = await axios.get(`${API_URL}/contacts`, {
           headers: {
-            Authorization: `Bearer ${token}`,
+            "Authorization": `Bearer ${userToken}`,
           },
         });
 

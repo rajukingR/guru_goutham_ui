@@ -129,6 +129,15 @@ import HardwareSelectorEdit from "../pages/inventory/assembled-prodcts/HardwareS
 import WearClientPlaceStock from "../pages/inventory/wear-clinet-place/WearClientPlaceStock.jsx";
 import ClientPlaceStock from "../pages/inventory/wear-clinet-place/ClientPlaceStock.jsx";
 import ClientsDetailsTable from "../pages/operations/plain-grn/ClientsDetailsTable.jsx";
+import ServiceMaintenanceTable from "../pages/operations/service-maintenance/ServiceMaintenanceTable.jsx";
+import ServiceMaintenanceAdd from "../pages/operations/service-maintenance/ServiceMaintenanceAdd.jsx";
+import CourierChargesTable from "../pages/operations/courier-charges/CourierChargesTable.jsx";
+import CourierChargesAdd from "../pages/operations/courier-charges/CourierChargesAdd.jsx";
+import CourierChargesEdit from "../pages/operations/courier-charges/CourierChargesEdit.jsx";
+import ServiceMaintenanceEdit from "../pages/operations/service-maintenance/ServiceMaintenanceEdit.jsx";
+import AssetSwapsTable from "../pages/inventory/swap-products/AssetSwapsTable.jsx";
+import AssetSwapsAdd from "../pages/inventory/swap-products/AssetSwapsAdd.jsx";
+import AssetSwapsEdit from "../pages/inventory/swap-products/AssetSwapsEdit.jsx";
 const ProtectedRoute = ({ element }) => {
   const user = useSelector((state) => state.auth.user);
   return user ? element : <Navigate to="/signin" replace />;
@@ -391,6 +400,18 @@ const RoutesConfig = () => {
               element={<ClientPlaceStock />}
             />
             <Route
+              path="inventory/swap"
+              element={<AssetSwapsTable />}
+            />
+            <Route
+              path="inventory/swap/add"
+              element={<AssetSwapsAdd />}
+            />
+            <Route
+              path="inventory/swap/edit/:id"
+              element={<AssetSwapsEdit />}
+            />
+            <Route
               path="inventory/assembled-products/add"
               element={<DesktopAssembler />}
             />
@@ -428,6 +449,33 @@ const RoutesConfig = () => {
               path="operations/grn"
               element={<CreaditNotesTableLayout />}
             />
+            <Route
+              path="operations/courier-charges"
+              element={<CourierChargesTable />}
+            />
+            <Route
+              path="operations/courier-charges/add"
+              element={<CourierChargesAdd />}
+            />
+            <Route
+              path="operations/courier-charges/edit/:id"
+              element={<CourierChargesEdit />}
+            />
+
+            <Route
+              path="operations/service_maintenance"
+              element={<ServiceMaintenanceTable />}
+            />
+            <Route
+              path="operations/service_maintenance/add"
+              element={<ServiceMaintenanceAdd />}
+            />
+            <Route
+              path="operations/service_maintenance/edit/:id"
+              element={<ServiceMaintenanceEdit />}
+            />
+
+
             <Route
               path="operations/plain-grn"
               element={<ClientsDetailsTable />}
@@ -474,13 +522,13 @@ const RoutesConfig = () => {
               element={<TaxListEdit />}
             />
             <Route path="settings/address" element={<AddressTable />} />
-            <Route path="settings/branch" element={<BranchTablePageLayout />} />
+            <Route path="settings/branches" element={<BranchTablePageLayout />} />
             <Route
-              path="settings/branch/add"
+              path="settings/branches/add"
               element={<BranchAddPageLayout />}
             />
             <Route
-              path="settings/branch/edit/:id"
+              path="settings/branches/edit/:id"
               element={<BranchEditPageLayout />}
             />
             <Route

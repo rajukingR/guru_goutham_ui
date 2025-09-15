@@ -17,10 +17,14 @@ import {
   Button,
 } from "@mui/material";
 import { Add, Remove } from "@mui/icons-material";
-
+import { useSelector } from "react-redux";
 import API_URL, { IMAGE_API_URL } from "../../../api/Api_url";
 
 const GoodsReceiptsEditLayout = () => {
+  const { user, token } = useSelector((state) => state.auth);
+
+  const userToken = token;
+
   const { id } = useParams();
   const [goodsReceipt, setGoodsReceipt] = useState(null);
   const [purchaseOrders, setPurchaseOrders] = useState([]);
@@ -68,7 +72,11 @@ const GoodsReceiptsEditLayout = () => {
     const fetchData = async () => {
       try {
         // Fetch existing goods receipt
-        const grResponse = await fetch(`${API_URL}/goods-receipts/${id}`);
+        const grResponse = await fetch(`${API_URL}/goods-receipts/${id}`, {
+          headers: {
+            "Authorization": `Bearer ${userToken}`,
+          },
+        });
         if (!grResponse.ok) throw new Error("Failed to fetch goods receipt");
         const grData = await grResponse.json();
         setGoodsReceipt(grData);
@@ -110,7 +118,11 @@ const GoodsReceiptsEditLayout = () => {
         setAssetIds(newAssetIds);
 
         // Fetch purchase orders
-        const poResponse = await fetch(`${API_URL}/purchase-orders`);
+        const poResponse = await fetch(`${API_URL}/purchase-orders`, {
+          headers: {
+            "Authorization": `Bearer ${userToken}`,
+          },
+        });
         if (!poResponse.ok) throw new Error("Failed to fetch purchase orders");
         const poData = await poResponse.json();
         setPurchaseOrders(poData);
@@ -118,7 +130,12 @@ const GoodsReceiptsEditLayout = () => {
         // Fetch supplier name if supplier_id exists
         if (grData.supplier_id) {
           const supplierResponse = await fetch(
-            `${API_URL}/supplier/${grData.supplier_id}`
+            `${API_URL}/supplier/${grData.supplier_id}`,
+            {
+              headers: {
+                "Authorization": `Bearer ${userToken}`,
+              },
+            }
           );
           if (supplierResponse.ok) {
             const supplierData = await supplierResponse.json();
@@ -126,7 +143,11 @@ const GoodsReceiptsEditLayout = () => {
           }
         }
         // Fetch products
-        const prodResponse = await fetch(`${API_URL}/product-templete`);
+        const prodResponse = await fetch(`${API_URL}/product-templete`, {
+          headers: {
+            "Authorization": `Bearer ${userToken}`,
+          },
+        });
         if (!prodResponse.ok) throw new Error("Failed to fetch products");
         const prodData = await prodResponse.json();
         setProducts(prodData);
@@ -341,7 +362,10 @@ const GoodsReceiptsEditLayout = () => {
       // 4. Send update request
       const response = await fetch(`${API_URL}/goods-receipts/${id}`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${userToken}`,
+        },
         body: JSON.stringify(payload),
       });
 

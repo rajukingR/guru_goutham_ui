@@ -18,6 +18,7 @@ import {
 import { Add, Remove } from "@mui/icons-material";
 import { useNavigate } from "react-router-dom";
 import API_URL from "../../../api/Api_url";
+import { useSelector } from "react-redux";
 
 // Styles (same as in your original code)
 const containerStyle = {
@@ -427,6 +428,10 @@ const generateDispatchOrderId = () => {
 };
 
 const DispatchOrdersAddForm = ({ product }) => {
+  const { user, token } = useSelector((state) => state.auth);
+
+  const userToken = token;
+
   const navigate = useNavigate();
 
   // State for form data
@@ -516,7 +521,12 @@ const DispatchOrdersAddForm = ({ product }) => {
     const fetchApprovedReceiptProducts = async () => {
       try {
         const response = await fetch(
-          `${API_URL}/goods-receipts/approved-receipt-products`
+          `${API_URL}/goods-receipts/approved-receipt-products`,
+          {
+            headers: {
+              "Authorization": `Bearer ${userToken}`,
+            },
+          }
         );
         if (!response.ok)
           throw new Error("Failed to fetch approved receipt products");
@@ -540,13 +550,21 @@ const DispatchOrdersAddForm = ({ product }) => {
     const fetchData = async () => {
       try {
         // Fetch approved orders
-        const orderResponse = await fetch(`${API_URL}/orders/order-approved`);
+        const orderResponse = await fetch(`${API_URL}/orders/order-approved`, {
+          headers: {
+            "Authorization": `Bearer ${userToken}`,
+          },
+        });
         if (!orderResponse.ok) throw new Error("Failed to fetch orders");
         const orderData = await orderResponse.json();
         setOrders(orderData);
 
         // Fetch products
-        const prodResponse = await fetch(`${API_URL}/product-templete`);
+        const prodResponse = await fetch(`${API_URL}/product-templete`, {
+          headers: {
+            "Authorization": `Bearer ${userToken}`,
+          },
+        });
         if (!prodResponse.ok) throw new Error("Failed to fetch products");
         const prodData = await prodResponse.json();
         setProducts(prodData);
@@ -871,6 +889,7 @@ const DispatchOrdersAddForm = ({ product }) => {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          "Authorization": `Bearer ${userToken}`,
         },
         body: JSON.stringify(payload),
       });
@@ -986,7 +1005,7 @@ const DispatchOrdersAddForm = ({ product }) => {
                 }}
                 options={[
                   { value: "Rent", label: "Rent" },
-                  { value: "Buy", label: "Buy" },
+                  { value: "Buy", label: "Sale" },
                 ]}
               />
 

@@ -17,6 +17,7 @@ import {
 } from "@mui/material";
 import { Add, Remove } from "@mui/icons-material";
 import { useNavigate } from "react-router-dom";
+import { useSelector } from "react-redux";
 
 const generateRandomId = () => {
   const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
@@ -28,6 +29,10 @@ const generateRandomId = () => {
 };
 
 const PoOperationAddPageLayout = () => {
+  const { user, token } = useSelector((state) => state.auth);
+
+  const userToken = token;
+
   const [purchaseRequests, setPurchaseRequests] = useState([]);
   const [selectedPurchaseRequest, setSelectedPurchaseRequest] = useState(null);
   const [suppliers, setSuppliers] = useState([]);
@@ -76,18 +81,33 @@ const PoOperationAddPageLayout = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const prResponse = await fetch(`${API_URL}/purchase-requests/approved`);
+        const prResponse = await fetch(
+          `${API_URL}/purchase-requests/approved`,
+          {
+            headers: {
+              "Authorization": `Bearer ${userToken}`,
+            },
+          }
+        );
         if (!prResponse.ok)
           throw new Error("Failed to fetch purchase requests");
         const prData = await prResponse.json();
         setPurchaseRequests(prData);
 
-        const supResponse = await fetch(`${API_URL}/supplier`);
+        const supResponse = await fetch(`${API_URL}/supplier`, {
+          headers: {
+            "Authorization": `Bearer ${userToken}`,
+          },
+        });
         if (!supResponse.ok) throw new Error("Failed to fetch suppliers");
         const supData = await supResponse.json();
         setSuppliers(supData);
 
-        const prodResponse = await fetch(`${API_URL}/product-templete`);
+        const prodResponse = await fetch(`${API_URL}/product-templete`, {
+          headers: {
+            "Authorization": `Bearer ${userToken}`,
+          },
+        });
         if (!prodResponse.ok) throw new Error("Failed to fetch products");
 
         const prodData = await prodResponse.json();
@@ -263,7 +283,10 @@ const PoOperationAddPageLayout = () => {
 
       const response = await fetch(`${API_URL}/purchase-quotation/create`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${userToken}`,
+        },
         body: JSON.stringify(payload),
       });
 
@@ -340,7 +363,8 @@ const PoOperationAddPageLayout = () => {
               <option value="">Select Purchase Request</option>
               {purchaseRequests.map((request) => (
                 <option key={request.id} value={request.id}>
-                  {request.purchase_request_id} | {request.supplier.supplier_name}
+                  {request.purchase_request_id} |{" "}
+                  {request.supplier.supplier_name}
                 </option>
               ))}
             </Field>
@@ -525,7 +549,7 @@ const PoOperationAddPageLayout = () => {
                         sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
                       >
                         Price per Piece
-                      </TableCell>{" "}
+                      </TableCell>
                       {/* ✅ New column */}
                       <TableCell
                         sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
@@ -573,8 +597,8 @@ const PoOperationAddPageLayout = () => {
                           <>
                             {/* <div><strong>Day:</strong> ₹{product.rent_price_per_day}</div> */}
                             <div>
-                              <strong>Month:</strong> ₹
-                              {product.rent_price_per_month}
+                              <strong>Purchase Price:</strong> ₹
+                              {product.purchase_price}
                             </div>
                             {/* <div><strong>6 Months:</strong> ₹{product.rent_price_6_months}</div>
     <div><strong>1 Year:</strong> ₹{product.rent_price_1_year}</div> */}

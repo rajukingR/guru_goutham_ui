@@ -27,6 +27,7 @@ import {
 } from "@mui/material";
 import { Add, CheckBox, Remove } from "@mui/icons-material";
 import API_URL from "../../../api/Api_url";
+import { useSelector } from "react-redux";
 
 const Alert = React.forwardRef(function Alert(props, ref) {
   return <MuiAlert elevation={6} ref={ref} variant="filled" {...props} />;
@@ -35,6 +36,9 @@ const Alert = React.forwardRef(function Alert(props, ref) {
 const CreaditNotesEditFormLayout = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { user, token } = useSelector((state) => state.auth);
+
+  const userToken = token;
 
   const [formData, setFormData] = useState({
     creditNoteNumber: "",
@@ -88,7 +92,12 @@ const CreaditNotesEditFormLayout = () => {
       try {
         // Fetch credit note data
         const creditNoteResponse = await axios.get(
-          `${API_URL}/credit-notes/${id}`
+          `${API_URL}/credit-notes/${id}`,
+          {
+            headers: {
+              "Authorization": `Bearer ${userToken}`,
+            },
+          }
         );
         const creditNoteData = creditNoteResponse.data;
         setOriginalData(creditNoteData);
@@ -133,18 +142,32 @@ const CreaditNotesEditFormLayout = () => {
 
         // Fetch contacts
         const contactResponse = await axios.get(
-          `${API_URL}/contacts/delivered-contacts`
+          `${API_URL}/contacts/delivered-contacts`,
+          {
+            headers: {
+              "Authorization": `Bearer ${userToken}`,
+            },
+          }
         );
         setOrders(contactResponse.data);
 
         // Fetch products
-        const prodResponse = await axios.get(`${API_URL}/product-templete`);
+        const prodResponse = await axios.get(`${API_URL}/product-templete`, {
+          headers: {
+            "Authorization": `Bearer ${userToken}`,
+          },
+        });
         setProducts(prodResponse.data);
 
         // Fetch delivery challans for this customer
         if (creditNoteData.customer_id) {
           const dcResponse = await axios.get(
-            `${API_URL}/delivery-challans/customer/${creditNoteData.customer_id}`
+            `${API_URL}/delivery-challans/customer/${creditNoteData.customer_id}`,
+            {
+              headers: {
+                "Authorization": `Bearer ${userToken}`,
+              },
+            }
           );
           setDeliveryChallans(dcResponse.data);
 
@@ -183,7 +206,12 @@ const CreaditNotesEditFormLayout = () => {
       const fetchDeliveryChallans = async () => {
         try {
           const response = await axios.get(
-            `${API_URL}/delivery-challans/customer/${formData.customerId}`
+            `${API_URL}/delivery-challans/customer/${formData.customerId}`,
+            {
+              headers: {
+                "Authorization": `Bearer ${userToken}`,
+              },
+            }
           );
           setDeliveryChallans(response.data);
         } catch (error) {
@@ -591,7 +619,11 @@ const CreaditNotesEditFormLayout = () => {
     };
 
     try {
-      await axios.put(`${API_URL}/credit-notes/${id}`, payload);
+      await axios.put(`${API_URL}/credit-notes/${id}`, payload, {
+        headers: {
+          "Authorization": `Bearer ${userToken}`,
+        },
+      });
       setSnackbarMessage("GRN updated successfully!");
       setSnackbarSeverity("success");
       setOpenSnackbar(true);

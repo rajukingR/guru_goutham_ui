@@ -1,23 +1,25 @@
 import React from "react";
-import { 
-  Avatar, 
-  Card, 
-  CardContent 
-} from "@mui/material";
+import { Avatar, Card, CardContent } from "@mui/material";
 import DynamicTable from "../../../components/table-format/DynamicTable";
 
 const ItemVarientPageLayout = () => {
-  // Define columns for the table
   const columns = [
     { 
       id: "itemImage", 
       label: "Item Image",
       render: (value) => (
-        <Avatar 
-          variant="square" 
-          src={value} 
+       <Avatar
+          variant="square"
+          src={value}
           sx={{ width: 56, height: 56 }}
-        />
+          alt={row.itemName}
+          onError={(e) => {
+            e.target.onerror = null; // prevent infinite loop
+            e.target.src = ""; // remove broken image
+          }}
+        >
+          {row.itemName?.charAt(0)} {/* fallback to first letter */}
+        </Avatar>
       )
     },
     { id: "itemName", label: "Item Name" },
@@ -29,7 +31,6 @@ const ItemVarientPageLayout = () => {
     { id: "actions", label: "Actions" },
   ];
 
-  // Sample data for items
   const data = [
     {
       itemImage: "https://via.placeholder.com/56", 

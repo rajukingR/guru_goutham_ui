@@ -22,6 +22,7 @@ import {
 } from "@mui/material";
 import { Add, Remove } from "@mui/icons-material";
 import API_URL, { IMAGE_API_URL } from "../../../api/Api_url";
+import { useSelector } from "react-redux";
 
 // === Utility Functions ===
 const generateGrnId = () => {
@@ -87,6 +88,10 @@ const Field = ({
 
 // === Main Component ===
 const GrnAddForm = () => {
+  const { user, token } = useSelector((state) => state.auth);
+
+  const userToken = token;
+
   const navigate = useNavigate();
 
   const [formData, setFormData] = useState({
@@ -140,12 +145,21 @@ const GrnAddForm = () => {
       try {
         // Fetch approved dispatch orders with delivery challans
         const ordersResponse = await axios.get(
-          `${API_URL}/dispatch-orders/approved-dc`
+          `${API_URL}/dispatch-orders/approved-dc`,
+          {
+            headers: {
+              "Authorization": `Bearer ${userToken}`,
+            },
+          }
         );
         setDispatchOrders(ordersResponse.data);
 
         // Fetch products
-        const prodResponse = await axios.get(`${API_URL}/product-templete`);
+        const prodResponse = await axios.get(`${API_URL}/product-templete`, {
+          headers: {
+            "Authorization": `Bearer ${userToken}`,
+          },
+        });
         setProducts(prodResponse.data);
       } catch (error) {
         console.error("Error fetching data:", error);
@@ -323,7 +337,7 @@ const GrnAddForm = () => {
       description: formData.description,
       products: selectedProducts,
       dispatch_order_id: selectedOrder?.id || null,
-            dispatch_order_number: selectedOrder?.dispatch_order_id || null,
+      dispatch_order_number: selectedOrder?.dispatch_order_id || null,
 
       delivery_challan_id: selectedOrder?.delivery_challans?.[0]?.id || null,
     };
@@ -331,7 +345,12 @@ const GrnAddForm = () => {
     try {
       const response = await axios.post(
         `${API_URL}/goods-return-notes/create`,
-        payload
+        payload,
+        {
+          headers: {
+            "Authorization": `Bearer ${userToken}`,
+          },
+        }
       );
       setSnackbar({
         open: true,
