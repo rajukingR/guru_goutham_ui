@@ -17,8 +17,8 @@ const UsersTablePage = () => {
     { id: "role_name", label: "Role" },
     { id: "email", label: "Email Id" },
     { id: "phone_number", label: "Phone Number" },
-    { id: "login_id", label: "Username" },
-    { id: "status", label: "Status" },
+    // { id: "login_id", label: "Username" },
+    // { id: "status", label: "Status" },
   ];
 
   useEffect(() => {

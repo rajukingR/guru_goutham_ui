@@ -114,9 +114,9 @@ const SignIn = () => {
                   {loading ? <CircularProgress size={24} /> : "Sign In"}
                 </Button>
 
-                <Typography sx={{ mt: 2, textAlign: "center" }}>
+                {/* <Typography sx={{ mt: 2, textAlign: "center" }}>
                   Don't have an account? <Link to="/signup">Sign Up</Link>
-                </Typography>
+                </Typography> */}
               </Form>
             )}
           </Formik>
