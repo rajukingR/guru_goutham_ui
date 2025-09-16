@@ -138,6 +138,8 @@ import ServiceMaintenanceEdit from "../pages/operations/service-maintenance/Serv
 import AssetSwapsTable from "../pages/inventory/swap-products/AssetSwapsTable.jsx";
 import AssetSwapsAdd from "../pages/inventory/swap-products/AssetSwapsAdd.jsx";
 import AssetSwapsEdit from "../pages/inventory/swap-products/AssetSwapsEdit.jsx";
+import ForgotPasswordContainer from "../pages/auth_page/password-page/ForgotPasswordContainer.jsx";
+import ResetPasswordContainer from "../pages/auth_page/password-page/ResetPasswordContainer.jsx";
 const ProtectedRoute = ({ element }) => {
   const user = useSelector((state) => state.auth.user);
   return user ? element : <Navigate to="/signin" replace />;
@@ -150,7 +152,11 @@ const RoutesConfig = () => {
           <Route path="/" element={<Navigate to="/signin" />} />
           <Route path="/signin" element={<SignIn />} />
           <Route path="/signup" element={<SignUp />} />
-          {/* Dashboard */}
+          <Route
+            path="/forgot-password"
+            element={<ForgotPasswordContainer />}
+          />
+          <Route path="/reset-password" element={<ResetPasswordContainer />} />{" "}
           <Route
             path="/dashboard/*"
             element={<ProtectedRoute element={<LayOut />} />}
@@ -361,9 +367,18 @@ const RoutesConfig = () => {
               path="crm/orders/edit/:id"
               element={<SalesOrdersEditLayoutPage />}
             />
-            <Route path="crm/dispatch-orders" element={<DispatchOrdersTable />} />
-            <Route path="crm/dispatch-orders/add" element={<DispatchOrdersAddForm />} />
-            <Route path="crm/dispatch-orders/edit/:id" element={<DispatchOrdersEditForm />} />
+            <Route
+              path="crm/dispatch-orders"
+              element={<DispatchOrdersTable />}
+            />
+            <Route
+              path="crm/dispatch-orders/add"
+              element={<DispatchOrdersAddForm />}
+            />
+            <Route
+              path="crm/dispatch-orders/edit/:id"
+              element={<DispatchOrdersEditForm />}
+            />
 
             <Route path="operations" element={<DeliveryChallanTable />} />
             <Route path="operations/add" element={<DeliveryChallanAddPage />} />
@@ -399,14 +414,8 @@ const RoutesConfig = () => {
               path="inventory/client-place"
               element={<ClientPlaceStock />}
             />
-            <Route
-              path="inventory/swap"
-              element={<AssetSwapsTable />}
-            />
-            <Route
-              path="inventory/swap/add"
-              element={<AssetSwapsAdd />}
-            />
+            <Route path="inventory/swap" element={<AssetSwapsTable />} />
+            <Route path="inventory/swap/add" element={<AssetSwapsAdd />} />
             <Route
               path="inventory/swap/edit/:id"
               element={<AssetSwapsEdit />}
@@ -475,7 +484,6 @@ const RoutesConfig = () => {
               element={<ServiceMaintenanceEdit />}
             />
 
-
             <Route
               path="operations/plain-grn"
               element={<ClientsDetailsTable />}
@@ -522,7 +530,10 @@ const RoutesConfig = () => {
               element={<TaxListEdit />}
             />
             <Route path="settings/address" element={<AddressTable />} />
-            <Route path="settings/branches" element={<BranchTablePageLayout />} />
+            <Route
+              path="settings/branches"
+              element={<BranchTablePageLayout />}
+            />
             <Route
               path="settings/branches/add"
               element={<BranchAddPageLayout />}

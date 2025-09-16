@@ -86,16 +86,22 @@ const SignIn = () => {
                   helperText={<ErrorMessage name="password" />}
                 />
 
-                {/* Remember Me Checkbox */}
-                <FormControlLabel
-                  control={
-                    <Checkbox
-                      checked={values.rememberMe}
-                      onChange={(e) => setFieldValue("rememberMe", e.target.checked)}
-                    />
-                  }
-                  label="Remember Me"
-                />
+                {/* Remember Me Checkbox and Forgot Password Link */}
+                <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mt: 1 }}>
+                  <FormControlLabel
+                    control={
+                      <Checkbox
+                        checked={values.rememberMe}
+                        onChange={(e) => setFieldValue("rememberMe", e.target.checked)}
+                      />
+                    }
+                    label="Remember Me"
+                  />
+                  
+                  <Link to="/forgot-password" style={{ textDecoration: "none", fontSize: "0.875rem" }}>
+                    Forgot Password?
+                  </Link>
+                </Box>
 
                 <Button
                   type="submit"
@@ -121,7 +127,6 @@ const SignIn = () => {
 };
 
 export default SignIn;
-
 
 
 
