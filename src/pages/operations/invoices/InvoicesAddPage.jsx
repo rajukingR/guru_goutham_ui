@@ -21,7 +21,7 @@ import {
   Typography,
 } from "@mui/material";
 import { Add, Remove } from "@mui/icons-material";
-import API_URL, { IMAGE_API_URL } from "../../../api/Api_url";
+import API_URL, { IMAGE_API_URL, POSTAL_API} from "../../../api/Api_url";
 import { useNavigate } from "react-router-dom";
 import { useSelector } from "react-redux";
 
@@ -1104,54 +1104,55 @@ const InvoicesAddPage = () => {
     }
   }, [selectedProductIds]);
 
-  useEffect(() => {
-    const fetchLocationFromPincode = async () => {
-      const pincode = formData.shippingDetails.pincode;
+useEffect(() => {
+  const fetchLocationFromPincode = async () => {
+    const pincode = formData.shippingDetails.pincode;
 
-      if (pincode && pincode.length === 6) {
-        try {
-          const response = await fetch(
-            `https://api.postalpincode.in/pincode/${pincode}`
-          );
-          const data = await response.json();
+    if (pincode && pincode.length === 6) {
+      try {
+        const response = await fetch(
+          `${POSTAL_API}=${pincode}`
+        );
+        const result = await response.json();
 
-          if (data && data[0]?.Status === "Success") {
-            const postOffice = data[0].PostOffice[0];
+        if (result?.data) {
+          const info = result.data;
 
-            setFormData((prev) => ({
-              ...prev,
-              shippingDetails: {
-                ...prev.shippingDetails,
-                city: postOffice.District,
-                state: postOffice.State,
-                country: "India",
-              },
-            }));
-          } else {
-            setSnackbar({
-              open: true,
-              message: "Could not find location for this pincode",
-              severity: "warning",
-            });
-          }
-        } catch (error) {
-          console.error("Error fetching location data:", error);
+          setFormData((prev) => ({
+            ...prev,
+            shippingDetails: {
+              ...prev.shippingDetails,
+              city: info.district_name,
+              state: info.state_name,
+              country: "India",
+            },
+          }));
+        } else {
           setSnackbar({
             open: true,
-            message:
-              "Error fetching location data. Please check the pincode and try again.",
-            severity: "error",
+            message: "Could not find location for this pincode",
+            severity: "warning",
           });
         }
+      } catch (error) {
+        console.error("Error fetching location data:", error);
+        setSnackbar({
+          open: true,
+          message:
+            "Error fetching location data. Please check the pincode and try again.",
+          severity: "error",
+        });
       }
-    };
+    }
+  };
 
-    const debounceTimer = setTimeout(() => {
-      fetchLocationFromPincode();
-    }, 500);
+  const debounceTimer = setTimeout(() => {
+    fetchLocationFromPincode();
+  }, 500);
 
-    return () => clearTimeout(debounceTimer);
-  }, [formData.shippingDetails.pincode]);
+  return () => clearTimeout(debounceTimer);
+}, [formData.shippingDetails.pincode]);
+
 
   const handleInputChange = useCallback((e) => {
     const { name, value } = e.target;

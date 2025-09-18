@@ -3,7 +3,7 @@ import Snackbar from "@mui/material/Snackbar";
 import Alert from "@mui/material/Alert";
 import { useNavigate } from "react-router-dom";
 import { useSelector } from "react-redux";
-import API_URL from "../../../api/Api_url";
+import API_URL, {POSTAL_API} from "../../../api/Api_url";
 
 const generateCustomerId = () => {
   const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
@@ -194,50 +194,52 @@ const ContactsAddLayoutPage = () => {
     return isValid;
   };
 
-  // Fetch location data when pincode changes
-  useEffect(() => {
-    const fetchLocationData = async () => {
-      if (
-        formData.address.pincode.length === 6 &&
-        validatePincode(formData.address.pincode)
-      ) {
-        try {
-          const response = await fetch(
-            `https://api.postalpincode.in/pincode/${formData.address.pincode}`
-          );
-          const data = await response.json();
+// Fetch location data when pincode changes
+useEffect(() => {
+  const fetchLocationData = async () => {
+    if (
+      formData.address.pincode.length === 6 &&
+      validatePincode(formData.address.pincode)
+    ) {
+      try {
+        const response = await fetch(
+          `${POSTAL_API}=${formData.address.pincode}`
+        );
+        const result = await response.json();
 
-          if (data && data[0]?.Status === "Success") {
-            const postOffice = data[0].PostOffice[0];
+        if (result?.data) {
+          const info = result.data;
 
-            setFormData((prev) => ({
-              ...prev,
-              address: {
-                ...prev.address,
-                country: "India",
-                state: postOffice.State,
-                city: postOffice.District,
-              },
-            }));
-          } else {
-            setSnackbar({
-              open: true,
-              message: "Invalid Pincode. Please enter a valid one.",
-              severity: "error",
-            });
-          }
-        } catch (error) {
-          console.error("Error fetching location:", error);
+          setFormData((prev) => ({
+            ...prev,
+            address: {
+              ...prev.address,
+              country: "India",
+              state: info.state_name,
+              city: info.district_name,
+              street: info.office_name,
+            },
+          }));
+        } else {
           setSnackbar({
             open: true,
-            message: "Error fetching location. Try again.",
+            message: "Invalid Pincode. Please enter a valid one.",
             severity: "error",
           });
         }
+      } catch (error) {
+        console.error("Error fetching location:", error);
+        setSnackbar({
+          open: true,
+          message: "Error fetching location. Try again.",
+          severity: "error",
+        });
       }
-    };
-    fetchLocationData();
-  }, [formData.address.pincode]);
+    }
+  };
+  fetchLocationData();
+}, [formData.address.pincode]);
+
 
   const handleInputChange = (field, value) => {
     // Clear error when field changes

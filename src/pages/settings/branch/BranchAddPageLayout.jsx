@@ -3,7 +3,7 @@ import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import Snackbar from "@mui/material/Snackbar";
 import MuiAlert from "@mui/material/Alert";
-import API_URL, { IMAGE_API_URL } from "../../../api/Api_url";
+import API_URL, { IMAGE_API_URL, POSTAL_API} from "../../../api/Api_url";
 import { useSelector } from "react-redux";
 
 const Alert = React.forwardRef(function Alert(props, ref) {
@@ -38,33 +38,25 @@ const BranchAddPageLayout = () => {
     setFormData((prev) => ({ ...prev, [field]: !prev[field] }));
   };
 
-  useEffect(() => {
-    const fetchLocation = async () => {
-      if (formData.pincode.length === 6) {
-        try {
-          const response = await axios.get(
-            `https://api.postalpincode.in/pincode/${formData.pincode}`
-          );
-          const data = response.data;
+useEffect(() => {
+  const fetchLocation = async () => {
+    const pincode = formData.pincode;
 
-          if (data[0].Status === "Success") {
-            const postOffice = data[0].PostOffice[0];
-            setFormData((prev) => ({
-              ...prev,
-              country: "India",
-              state: postOffice.State || "",
-              city: postOffice.District || "",
-            }));
-          } else {
-            setFormData((prev) => ({
-              ...prev,
-              country: "",
-              state: "",
-              city: "",
-            }));
-          }
-        } catch (error) {
-          console.error("Error fetching location from pincode:", error);
+    if (pincode && pincode.length === 6) {
+      try {
+        const response = await axios.get(
+          `${POSTAL_API}=${pincode}`
+        );
+        const info = response.data?.data;
+
+        if (info) {
+          setFormData((prev) => ({
+            ...prev,
+            country: "India",
+            state: info.state_name || "",
+            city: info.district_name || "",
+          }));
+        } else {
           setFormData((prev) => ({
             ...prev,
             country: "",
@@ -72,11 +64,21 @@ const BranchAddPageLayout = () => {
             city: "",
           }));
         }
+      } catch (error) {
+        console.error("Error fetching location from pincode:", error);
+        setFormData((prev) => ({
+          ...prev,
+          country: "",
+          state: "",
+          city: "",
+        }));
       }
-    };
+    }
+  };
 
-    fetchLocation();
-  }, [formData.pincode]);
+  fetchLocation();
+}, [formData.pincode]);
+
 
   const handleSubmit = async () => {
     const payload = {

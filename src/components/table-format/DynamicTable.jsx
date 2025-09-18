@@ -1577,9 +1577,8 @@ const GoodsReturnNoteDialog = ({ open, onClose, grnData }) => {
       <!DOCTYPE html>
       <html>
         <head>
-          <title>Goods Return Note - ${
-            grnData.credit_note_number || "CN-9JGRRE"
-          }</title>
+          <title>Goods Return Note - ${grnData.credit_note_number || "CN-9JGRRE"
+      }</title>
           <style>
             @page { 
               size: A4; 
@@ -1998,9 +1997,8 @@ const PlainGoodsReturnNoteDialog = ({ open, onClose, grnData }) => {
       <!DOCTYPE html>
       <html>
         <head>
-          <title>Goods Return Note - ${
-            grnData.credit_note_number || "CN-9JGRRE"
-          }</title>
+          <title>Goods Return Note - ${grnData.credit_note_number || "CN-9JGRRE"
+      }</title>
           <style>
             @page { 
               size: A4; 
@@ -2135,6 +2133,7 @@ const PlainGoodsReturnNoteDialog = ({ open, onClose, grnData }) => {
                 <tr>
                   <th style={tableHeaderNoStyle}>NO.</th>
                   <th style={tableHeaderParticularsStyle}>Product Name</th>
+                  <th style={{ ...tableHeaderParticularsStyle, width: "40%" }}>Note</th>
                 </tr>
               </thead>
               <tbody>
@@ -2144,7 +2143,7 @@ const PlainGoodsReturnNoteDialog = ({ open, onClose, grnData }) => {
                       typeof item.device_ids === "string"
                         ? JSON.parse(item.device_ids)
                         : item.device_ids || [];
-                    return deviceIds.length > 0; // ✅ only include items with device_ids
+                    return deviceIds.length > 0;
                   })
                   .map((item, index) => {
                     const deviceIds =
@@ -2155,11 +2154,11 @@ const PlainGoodsReturnNoteDialog = ({ open, onClose, grnData }) => {
                     return (
                       <tr
                         key={item.id || index}
-                        style={
-                          index % 2 === 0 ? tableRowOddStyle : tableRowEvenStyle
-                        }
+                        style={index % 2 === 0 ? tableRowOddStyle : tableRowEvenStyle}
                       >
                         <td style={tableCellCenterStyle}>{index + 1}</td>
+
+                        {/* Product Name Column */}
                         <td style={tableCellStyle}>
                           <div
                             style={{
@@ -2184,8 +2183,8 @@ const PlainGoodsReturnNoteDialog = ({ open, onClose, grnData }) => {
                             {item.product?.model || "3420"}, Processor:{" "}
                             {item.product?.processor || "—"}, RAM:{" "}
                             {item.product?.ram || "8GB DDR4"}, <br />
-                            Storage: {item.product?.storage || "250GB"}, Disk
-                            Type: {item.product?.disk_type || "SSD"}, Graphics:{" "}
+                            Storage: {item.product?.storage || "250GB"}, Disk Type:{" "}
+                            {item.product?.disk_type || "SSD"}, Graphics:{" "}
                             {item.product?.graphics || "No"}, OS:{" "}
                             {item.product?.os || "Windows 11 Pro"}
                           </div>
@@ -2195,11 +2194,34 @@ const PlainGoodsReturnNoteDialog = ({ open, onClose, grnData }) => {
                             <strong>Asset IDs:</strong> {deviceIds.join(", ")}
                           </div>
                         </td>
+
+                        <td style={{ padding: "8px", verticalAlign: "top", width: "40%" }}>
+                          <div
+                            style={{
+                              width: "100%",
+                              minHeight: "100px",
+                              border: "1px solid #ccc",
+                              borderRadius: "4px",
+                              padding: "6px",
+                              fontSize: "12px",
+                              lineHeight: "1.5",
+                              whiteSpace: "pre-wrap",
+                              wordWrap: "break-word",
+                              textAlign: "left",
+                              boxSizing: "border-box",
+                            }}
+                          >
+                          </div>
+                        </td>
+
+
+
                       </tr>
                     );
                   })}
               </tbody>
             </table>
+
 
             {/* Footer Info */}
             <div style={footerInfoStyle}>
@@ -2340,21 +2362,26 @@ const CreditNoteDialog = ({ open, onClose, creditNoteData }) => {
     const ret = new Date(returnedDate);
     const end = new Date(rentalEndDate);
 
-    const retDay = ret.getDate();
-    const retMonth = ret.getMonth(); // 0-based
-    const retYear = ret.getFullYear();
+    let retDay = ret.getDate();
+    let retMonth = ret.getMonth(); // 0-based
+    let retYear = ret.getFullYear();
 
-    const endDay = end.getDate();
-    const endMonth = end.getMonth();
-    const endYear = end.getFullYear();
+    let endDay = end.getDate();
+    let endMonth = end.getMonth();
+    let endYear = end.getFullYear();
 
-    // Convert to total "billing days" using 30-day months and 360-day years
+    // 🔹 Force day = 30 if it's 31 (normalize to 30/360 convention)
+    if (retDay === 31) retDay = 30;
+    if (endDay === 31) endDay = 30;
+
+    // 🔹 Convert to total "billing days"
     const totalRetDays = retYear * 360 + retMonth * 30 + retDay;
     const totalEndDays = endYear * 360 + endMonth * 30 + endDay;
 
     // Inclusive difference (+1)
     return Math.abs(totalEndDays - totalRetDays) + 1;
   };
+
 
   // Calculate item prices based on days difference
   const calculateItemPrices = (items) => {
@@ -2515,9 +2542,8 @@ const CreditNoteDialog = ({ open, onClose, creditNoteData }) => {
       <!DOCTYPE html>
       <html>
         <head>
-          <title>Credit Note - ${
-            creditNoteData.credit_note_number || "CN"
-          }</title>
+          <title>Credit Note - ${creditNoteData.credit_note_number || "CN"
+      }</title>
           <style>
             @page { 
               size: A4; 
@@ -4546,7 +4572,7 @@ const InvoiceDialog = ({ open, onClose, invoiceData }) => {
     );
     additionalChallanMonthDiff =
       (invoiceStartDate.getFullYear() - additionalChallanDate.getFullYear()) *
-        12 +
+      12 +
       (invoiceStartDate.getMonth() - additionalChallanDate.getMonth());
   }
 
@@ -4694,10 +4720,10 @@ const InvoiceDialog = ({ open, onClose, invoiceData }) => {
           (item) => item.product_id === ri.product_id
         )
           ? Number(
-              invoiceData.items.find(
-                (item) => item.product_id === ri.product_id
-              ).unit_price
-            ) / 30
+            invoiceData.items.find(
+              (item) => item.product_id === ri.product_id
+            ).unit_price
+          ) / 30
           : 0;
 
         allReturnsMap[key].push({
@@ -4733,15 +4759,12 @@ const InvoiceDialog = ({ open, onClose, invoiceData }) => {
         ? calculateDays(dcDate, swappedDate)
         : calculateDays(swappedStartDate, swappedDate);
 
-      const dailyRate = invoiceData.items?.find(
-        (item) => item.product_id === swap.product_id
-      )
-        ? Number(
-            invoiceData.items.find(
-              (item) => item.product_id === swap.product_id
-            ).unit_price
-          ) / 30
-        : 0;
+      const dailyRateSource =
+        invoiceData.items?.find((item) => item.product_id === swap.product_id)?.unit_price ||
+        swap.rent_price_per_month ||
+        0;
+
+      const dailyRate = Number(dailyRateSource) / 30;
 
       allSwapsMap[key].push({
         swappedDate,
@@ -4780,9 +4803,9 @@ const InvoiceDialog = ({ open, onClose, invoiceData }) => {
             (item) => item.product_id === ri.product_id
           )
             ? Number(
-                challan.items.find((item) => item.product_id === ri.product_id)
-                  .unit_price
-              ) / 30
+              challan.items.find((item) => item.product_id === ri.product_id)
+                .unit_price
+            ) / 30
             : 0;
 
           allReturnsMap[key].push({
@@ -4820,9 +4843,9 @@ const InvoiceDialog = ({ open, onClose, invoiceData }) => {
           (item) => item.product_id === swap.product_id
         )
           ? Number(
-              challan.items.find((item) => item.product_id === swap.product_id)
-                .unit_price
-            ) / 30
+            challan.items.find((item) => item.product_id === swap.product_id)
+              .unit_price
+          ) / 30
           : 0;
 
         allSwapsMap[key].push({
@@ -5009,7 +5032,7 @@ const InvoiceDialog = ({ open, onClose, invoiceData }) => {
 
         const monthDiff =
           (invoiceStartDateObj.getFullYear() - challanDateObj.getFullYear()) *
-            12 +
+          12 +
           (invoiceStartDateObj.getMonth() - challanDateObj.getMonth());
 
         return challan.items.map((item) => {
@@ -5220,11 +5243,7 @@ const InvoiceDialog = ({ open, onClose, invoiceData }) => {
     if (quantity === 0 && combinedDeviceIds.length === 0) return null;
 
     const firstItem = items[0];
-    const daysUsed = paymentMode
-      ? firstItem.days
-      : firstItem.isFullMonth
-      ? 30
-      : firstItem.days || 1;
+    const daysUsed = firstItem.days || 1;
     const dailyRate = firstItem.dailyRate || firstItem.rate / 30;
     const baseCount =
       combinedDeviceIds.length > 0 ? combinedDeviceIds.length : quantity;
@@ -7772,10 +7791,10 @@ const DynamicTable = ({
                 "service_maintenance",
                 "swap",
               ].includes(tableType) === false && (
-                <TableCell align="center" sx={{ fontWeight: "bold" }}>
-                  Active Status
-                </TableCell>
-              )}
+                  <TableCell align="center" sx={{ fontWeight: "bold" }}>
+                    Active Status
+                  </TableCell>
+                )}
 
               {tableType === "invoices" && (
                 <TableCell align="center" sx={{ fontWeight: "bold" }}>
@@ -7829,15 +7848,14 @@ const DynamicTable = ({
                 "inventory",
                 "asset",
                 "credit-notes",
-                "invoices",
                 "client-place",
                 "wear-house",
                 "plain-grn",
               ].includes(tableType) === false && (
-                <TableCell align="center" sx={{ fontWeight: "bold" }}>
-                  Action
-                </TableCell>
-              )}
+                  <TableCell align="center" sx={{ fontWeight: "bold" }}>
+                    Action
+                  </TableCell>
+                )}
             </TableRow>
           </TableHead>
 
@@ -7884,18 +7902,18 @@ const DynamicTable = ({
                               row[column.id] === "Pending"
                                 ? "#b26a00"
                                 : row[column.id] === "Approved"
-                                ? "#1b5e20"
-                                : row[column.id] === "Rejected"
-                                ? "#b71c1c"
-                                : "inherit",
+                                  ? "#1b5e20"
+                                  : row[column.id] === "Rejected"
+                                    ? "#b71c1c"
+                                    : "inherit",
                             backgroundColor:
                               row[column.id] === "Pending"
                                 ? "#fff3e0"
                                 : row[column.id] === "Approved"
-                                ? "#e8f5e9"
-                                : row[column.id] === "Rejected"
-                                ? "#ffebee"
-                                : "transparent",
+                                  ? "#e8f5e9"
+                                  : row[column.id] === "Rejected"
+                                    ? "#ffebee"
+                                    : "transparent",
                           }}
                         >
                           {row[column.id]}
@@ -7930,17 +7948,17 @@ const DynamicTable = ({
                     "service_maintenance",
                     "swap",
                   ].includes(tableType) === false && (
-                    <TableCell align="center">
-                      <Button onClick={() => toggleStatus(rowIndex)}>
-                        <img
-                          src={status[rowIndex] ? StatusOn : StatusOff}
-                          alt={status[rowIndex] ? "Active" : "Inactive"}
-                          width="40"
-                          height="24"
-                        />
-                      </Button>
-                    </TableCell>
-                  )}
+                      <TableCell align="center">
+                        <Button onClick={() => toggleStatus(rowIndex)}>
+                          <img
+                            src={status[rowIndex] ? StatusOn : StatusOff}
+                            alt={status[rowIndex] ? "Active" : "Inactive"}
+                            width="40"
+                            height="24"
+                          />
+                        </Button>
+                      </TableCell>
+                    )}
 
                   {/* View Invoice */}
                   {tableType === "invoices" && (
@@ -8087,37 +8105,38 @@ const DynamicTable = ({
                           "client-place",
                           "wear-house",
                           "plain-grn",
-                        ].includes(tableType) === false && (
-                          <>
-                            {/* Always show Edit if allowed */}
-                            <Button
-                              onClick={() => handleEdit(row)}
-                              sx={{ minWidth: "30px", p: 0 }}
-                            >
-                              <img
-                                src={EditIcon}
-                                alt="Edit"
-                                width="45"
-                                height="35"
-                              />
-                            </Button>
 
-                            {/* Show Delete only if not asset-modifications */}
-                            {tableType !== "asset-modifications" && (
+                        ].includes(tableType) === false && (
+                            <>
+                              {/* Always show Edit if allowed */}
                               <Button
-                                onClick={() => handleDeleteClick(row)}
+                                onClick={() => handleEdit(row)}
                                 sx={{ minWidth: "30px", p: 0 }}
                               >
                                 <img
-                                  src={DeleteIcon}
-                                  alt="Delete"
+                                  src={EditIcon}
+                                  alt="Edit"
                                   width="45"
                                   height="35"
                                 />
                               </Button>
-                            )}
-                          </>
-                        )}
+
+                              {/* Show Delete only if not asset-modifications */}
+                              {tableType !== "asset-modifications" && (
+                                <Button
+                                  onClick={() => handleDeleteClick(row)}
+                                  sx={{ minWidth: "30px", p: 0 }}
+                                >
+                                  <img
+                                    src={DeleteIcon}
+                                    alt="Delete"
+                                    width="45"
+                                    height="35"
+                                  />
+                                </Button>
+                              )}
+                            </>
+                          )}
                       </Box>
                     </TableCell>
                   )}

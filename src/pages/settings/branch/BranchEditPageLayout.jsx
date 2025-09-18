@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { ChevronDown, CheckCircle, X } from "lucide-react";
 import axios from "axios";
 import { useNavigate, useParams } from "react-router-dom";
-import API_URL, { IMAGE_API_URL } from "../../../api/Api_url";
+import API_URL, { IMAGE_API_URL, POSTAL_API} from "../../../api/Api_url";
 import { useSelector } from "react-redux";
 
 const BranchEditPage = () => {
@@ -57,23 +57,23 @@ const BranchEditPage = () => {
 
     fetchBranchData();
   }, [id]);
-
 useEffect(() => {
   const fetchLocation = async () => {
-    if (formData.pincode.length === 6) {
+    const pincode = formData.pincode;
+
+    if (pincode && pincode.length === 6) {
       try {
         const response = await axios.get(
-          `https://api.postalpincode.in/pincode/${formData.pincode}`
+          `${POSTAL_API}=${pincode}`
         );
-        const data = response.data;
+        const info = response.data?.data;
 
-        if (data[0].Status === "Success" && data[0].PostOffice?.length > 0) {
-          const postOffice = data[0].PostOffice[0];
+        if (info) {
           setFormData((prev) => ({
             ...prev,
             country: "India",
-            state: postOffice.State || "",
-            city: postOffice.District || "",
+            state: info.state_name || "",
+            city: info.district_name || "",
           }));
         } else {
           setFormData((prev) => ({
@@ -97,6 +97,7 @@ useEffect(() => {
 
   fetchLocation();
 }, [formData.pincode]);
+
 
 
   const handleInputChange = (field, value) => {

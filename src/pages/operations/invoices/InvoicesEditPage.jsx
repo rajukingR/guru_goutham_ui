@@ -13,14 +13,19 @@ import {
   Paper,
   Snackbar,
   Alert,
+  Select,
+  MenuItem,
+  InputLabel,
+  FormControl,
+  Button,
   Typography,
 } from "@mui/material";
 import { Add, Remove } from "@mui/icons-material";
-import API_URL from "../../../api/Api_url";
+import API_URL, { IMAGE_API_URL, POSTAL_API} from "../../../api/Api_url";
 import { useNavigate, useParams } from "react-router-dom";
 import { useSelector } from "react-redux";
 
-// Reuse the same styles from InvoicesAddPage
+// Styles (same as in your original code)
 const containerStyle = {
   padding: "2rem",
   fontFamily:
@@ -207,6 +212,23 @@ const monthButtonStyle = (isSelected) => ({
   },
 });
 
+const requiredStyle = {
+  color: "#ef4444",
+  marginLeft: "0.25rem",
+};
+
+const textareaStyle = {
+  ...inputStyle,
+  resize: "vertical",
+  minHeight: "80px",
+};
+
+const checkboxStyle = {
+  width: "18px",
+  height: "18px",
+  cursor: "pointer",
+};
+
 const Field = memo(
   ({
     label,
@@ -220,7 +242,7 @@ const Field = memo(
     value,
     onChange,
     error,
-    children, // <-- keep children support also
+    children,
     ...props
   }) => (
     <div style={fieldContainerStyle}>
@@ -248,7 +270,6 @@ const Field = memo(
               </option>
             )}
 
-            {/* Support both `options` and `children` */}
             {options.length > 0
               ? options.map((option) => (
                   <option key={option.value} value={option.value}>
@@ -326,7 +347,7 @@ const Field = memo(
   )
 );
 
-// Reuse the DateRangeSelector component
+// DateRangeSelector component
 const DateRangeSelector = memo(
   ({ selectedMonth, setSelectedMonth, dateRanges, setDateRanges }) => {
     const [monthOffset, setMonthOffset] = useState(0);
@@ -458,19 +479,10 @@ const DateRangeSelector = memo(
   }
 );
 
-const formatINR = (number) =>
-  new Intl.NumberFormat("en-IN", {
-    style: "currency",
-    currency: "INR",
-    maximumFractionDigits: 2,
-  }).format(number || 0);
-
 const InvoicesEditPage = () => {
   const { user, token } = useSelector((state) => state.auth);
-
-  const userToken = token;
-
   const { id } = useParams();
+  const userToken = token;
   const navigate = useNavigate();
 
   const [errors, setErrors] = useState({
@@ -546,188 +558,206 @@ const InvoicesEditPage = () => {
     creditNoteEndDate: "",
   });
 
-  // Fetch invoice data to edit
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Fetch invoice data on component mount
   useEffect(() => {
     const fetchInvoiceData = async () => {
       try {
-        // Fetch the invoice data
-        const invoiceResponse = await fetch(`${API_URL}/invoices/${id}`, {
+        setIsLoading(true);
+        const response = await fetch(`${API_URL}/invoices/${id}`, {
           headers: {
             "Authorization": `Bearer ${userToken}`,
           },
         });
-        if (!invoiceResponse.ok) {
-          throw new Error("Failed to fetch invoice data");
-        }
-        const invoiceData = await invoiceResponse.json();
-
-        // Fetch other necessary data (products, tax types, etc.)
-        const [productsResponse, taxResponse, dispatchOrdersResponse] =
-          await Promise.all([
-            fetch(`${API_URL}/product-templete`, {
-              headers: {
-                "Authorization": `Bearer ${userToken}`,
-              },
-            }),
-            fetch(`${API_URL}/tax-types`, {
-              headers: {
-                "Authorization": `Bearer ${userToken}`,
-              },
-            }),
-            fetch(`${API_URL}/dispatch-orders/approved-dc`, {
-              headers: {
-                "Authorization": `Bearer ${userToken}`,
-              },
-            }),
-          ]);
-
-        if (!productsResponse.ok) throw new Error("Failed to fetch products");
-        if (!taxResponse.ok) throw new Error("Failed to fetch tax types");
-        if (!dispatchOrdersResponse.ok)
-          throw new Error("Failed to fetch dispatch orders");
-
-        const productsData = await productsResponse.json();
-        const taxData = await taxResponse.json();
-        const dispatchOrdersData = await dispatchOrdersResponse.json();
-
-        // Transform dispatch orders data
-        const transformedOrders = dispatchOrdersData.map((dispatchOrder) => {
-          const dc = dispatchOrder.delivery_challans?.[0] || dispatchOrder;
-          return {
-            id: dispatchOrder.id,
-            order_id: dispatchOrder.order_id,
-            dc_id: dc.dc_id || dispatchOrder.dispatch_order_id,
-            dispatch_order_number:
-              dc.dispatch_order_id || dispatchOrder.dispatch_order_id,
-            dc_date: dc.dc_date || dispatchOrder.dispatch_order_date,
-            customer_code: dispatchOrder.customer_code,
-            order_number: dispatchOrder.order_number,
-            dispatch_order_id: dispatchOrder.dispatch_order_id,
-            customer_id: dispatchOrder.contact?.id,
-            dispatch_order: dispatchOrder,
-            personalDetails: {
-              first_name:
-                dispatchOrder.shipping_name ||
-                dispatchOrder.contact?.first_name,
-              last_name: dispatchOrder.contact?.last_name || "",
-              email: dispatchOrder.email || dispatchOrder.contact?.email,
-              phone_number:
-                dispatchOrder.shipping_phone_number ||
-                dispatchOrder.contact?.phone_number,
-              gst_number:
-                dispatchOrder.gst_number || dispatchOrder.contact?.gst,
-              pan_number:
-                dispatchOrder.pan_number || dispatchOrder.contact?.pan_no,
-            },
-            address: {
-              country: dispatchOrder.country || "India",
-              state: dispatchOrder.state,
-              city: dispatchOrder.city,
-              street:
-                dispatchOrder.street || dispatchOrder.contact?.address?.street,
-              pincode: dispatchOrder.pincode,
-              landmark: dispatchOrder.landmark,
-            },
-            items: dispatchOrder.items.map((item) => ({
-              product_id: item.product_id,
-              product_name: item.product_name,
-              quantity: item.quantity,
-              unit_price: parseFloat(item.total_price) / item.quantity || 0,
-              total_price: item.total_price,
-              product: item.product,
-              device_ids: item.device_ids || [],
-              order_id: dispatchOrder.order_id,
-            })),
-            rental_start_date: dispatchOrder.order?.rental_start_date || null,
-            rental_end_date: dispatchOrder.order?.rental_end_date || null,
-            rental_duration: dispatchOrder.order?.rental_duration || null,
-            transaction_type: dispatchOrder.type || "",
-            payment_type: dispatchOrder.payment_type || "",
-          };
-        });
-
-        // Set the data
-        setProducts(productsData);
-        setTaxTypes(taxData);
-        setOrders(transformedOrders);
-
-        // Process the invoice data to populate the form
-        // Try multiple ways to find the matching order
-        let selectedOrder = null;
-
-        // First try to match by dispatch_order_number
-        if (invoiceData.dispatch_order_number) {
-          selectedOrder = transformedOrders.find(
-            (order) =>
-              order.dispatch_order_id === invoiceData.dispatch_order_number
-          );
-        }
-
-        // If not found, try by dc_id (database ID)
-        if (!selectedOrder && invoiceData.dc_id) {
-          selectedOrder = transformedOrders.find(
-            (order) => order.id === parseInt(invoiceData.dc_id)
-          );
-        }
-
-        // If still not found, try by dispatch_order_id field
-        if (!selectedOrder && invoiceData.dispatch_order_id) {
-          selectedOrder = transformedOrders.find(
-            (order) => order.id === parseInt(invoiceData.dispatch_order_id)
-          );
-        }
-
-        if (selectedOrder) {
-          setSelectedOrderId(selectedOrder.id.toString());
-          console.log("Found matching order:", selectedOrder);
-        } else {
-          console.warn(
-            "Could not find matching order for invoice:",
-            invoiceData
-          );
-          console.log("Available orders:", transformedOrders);
-        }
-
-        // Set quantities and selected products
-        const initialQuantities = {};
-        const initialSelectedProductIds = [];
-        invoiceData.items.forEach((item) => {
-          initialQuantities[item.product_id] = item.quantity;
-          initialSelectedProductIds.push(item.product_id);
-        });
-
-        setQuantities(initialQuantities);
-        setSelectedProductIds(initialSelectedProductIds);
-
-        // Set form data
+        
+        if (!response.ok) throw new Error("Failed to fetch invoice");
+        
+        const invoiceData = await response.json();
+        
+        // Set form data with existing invoice data
         setFormData({
+          ...formData,
           ...invoiceData,
-          shippingDetails: {
-            consignee_name: invoiceData.shippingDetail?.consignee_name || "",
-            country: invoiceData.shippingDetail?.country || "India",
-            state: invoiceData.shippingDetail?.state || "",
-            city: invoiceData.shippingDetail?.city || "",
-            street: invoiceData.shippingDetail?.street || "",
-            landmark: invoiceData.shippingDetail?.landmark || "",
-            pincode: invoiceData.shippingDetail?.pincode || "",
-            phone_number: invoiceData.shippingDetail?.phone_number || "",
-            email: invoiceData.shippingDetail?.email || "",
-          },
+          shippingDetails: invoiceData.shippingDetails || formData.shippingDetails,
+          items: invoiceData.items || [],
         });
-
-        // Set date ranges if they exist in the invoice data
+        
+        // Set selected products and quantities
+        const productIds = invoiceData.items.map(item => item.product_id);
+        setSelectedProductIds(productIds);
+        
+        const initialQuantities = {};
+        invoiceData.items.forEach(item => {
+          initialQuantities[item.product_id] = item.quantity;
+        });
+        setQuantities(initialQuantities);
+        
+        // Set date ranges if they exist
         if (invoiceData.invoice_start_date) {
           setDateRanges({
             invoiceStartDate: invoiceData.invoice_start_date,
             invoiceEndDate: invoiceData.invoice_end_date,
-            previousDeliveredStartDate:
-              invoiceData.previous_delivered_start_date || "",
-            previousDeliveredEndDate:
-              invoiceData.previous_delivered_end_date || "",
-            creditNoteStartDate: invoiceData.credit_note_start_date || "",
-            creditNoteEndDate: invoiceData.credit_note_end_date || "",
+            previousDeliveredStartDate: invoiceData.previous_delivered_start_date,
+            previousDeliveredEndDate: invoiceData.previous_delivered_end_date,
+            creditNoteStartDate: invoiceData.credit_note_start_date,
+            creditNoteEndDate: invoiceData.credit_note_end_date,
           });
         }
+        
+        setIsLoading(false);
+      } catch (error) {
+        console.error("Error fetching invoice:", error);
+        setSnackbar({
+          open: true,
+          message: "Error fetching invoice: " + error.message,
+          severity: "error",
+        });
+        setIsLoading(false);
+      }
+    };
+    
+    fetchInvoiceData();
+  }, [id, userToken]);
+
+  // Fetch other data (orders, products, tax types)
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const approvedDispatchOrdersResponse = await fetch(
+          `${API_URL}/dispatch-orders/approved-dc`,
+          {
+            headers: {
+              "Authorization": `Bearer ${userToken}`,
+            },
+          }
+        );
+        if (!approvedDispatchOrdersResponse.ok)
+          throw new Error("Failed to fetch approved Dispatch Orders");
+        const approvedDispatchOrdersData =
+          await approvedDispatchOrdersResponse.json();
+
+        const transformedOrders = approvedDispatchOrdersData
+          .map((item) => {
+            if (item.dispatch_order_id) {
+              const dc = item.delivery_challans?.[0] || item;
+              return {
+                id: item.id,
+                order_id: item.order_id,
+                dc_id: dc.dc_id || item.dispatch_order_id,
+                dispatch_order_number: dc.dispatch_order_id,
+                dc_date: dc.dc_date || item.dispatch_order_date,
+                customer_code: item.customer_code,
+                order_number: item.order_number,
+                dispatch_order_id: item.dispatch_order_id,
+                customer_id: item.contact?.id,
+                dispatch_order: item,
+                type: "dispatch_order",
+                personalDetails: {
+                  first_name: item.shipping_name || item.contact?.first_name,
+                  last_name: item.contact?.last_name || "",
+                  email: item.email || item.contact?.email,
+                  phone_number:
+                    item.shipping_phone_number || item.contact?.phone_number,
+                  gst_number: item.gst_number || item.contact?.gst,
+                  pan_number: item.pan_number || item.contact?.pan_no,
+                },
+                address: {
+                  country: item.country || "India",
+                  state: item.state,
+                  city: item.city,
+                  street: item.street || item.contact?.address?.street,
+                  pincode: item.pincode,
+                  landmark: item.landmark,
+                },
+                items: item.items.map((item) => ({
+                  product_id: item.product_id,
+                  product_name: item.product_name,
+                  quantity: item.quantity,
+                  unit_price: parseFloat(item.total_price) / item.quantity || 0,
+                  purchase_price: item.purchase_price || 0,
+                  offer_purchase_price: item.offer_purchase_price || 0,
+                  rent_price_per_month: item.rent_price_per_month || 0,
+                  offer_rent_price_per_month:
+                    item.offer_rent_price_per_month || 0,
+                  total_price: item.total_price,
+                  product: item.product,
+                  device_ids: item.device_ids || [],
+                  order_id: item.order_id,
+                })),
+                rental_start_date: item.order?.rental_start_date || null,
+                rental_end_date: item.order?.rental_end_date || null,
+                rental_duration: item.order?.rental_duration || null,
+                transaction_type: item.type || "",
+                payment_type: item.payment_type || "",
+              };
+            } else if (item.quotation_id) {
+              return {
+                id: item.id,
+                quotation_id: item.quotation_id,
+                customer_id: item.customer_id,
+                type: "direct_invoice",
+                personalDetails: {
+                  first_name: item.customer_first_name,
+                  last_name: item.customer_last_name,
+                  email: item.customer?.email,
+                  phone_number: item.customer?.phone_number,
+                  gst_number: item.customer?.gst,
+                  pan_number: item.customer?.pan_no,
+                },
+                address: {
+                  country: item.customer?.address?.country || "India",
+                  state: item.customer?.address?.state,
+                  city: item.customer?.address?.city,
+                  street: item.customer?.address?.street,
+                  pincode: item.customer?.address?.pincode,
+                  landmark: "",
+                },
+                items: item.items.map((item) => ({
+                  product_id: item.product_id,
+                  product_name: item.product_name,
+                  quantity: item.quotation_quantity,
+                  unit_price:
+                    item.offer_purchase_price || item.purchase_price || 0,
+                  purchase_price: item.purchase_price || 0,
+                  offer_purchase_price: item.offer_purchase_price || 0,
+                  rent_price_per_month: item.rent_price_per_month || 0,
+                  offer_rent_price_per_month:
+                    item.offer_rent_price_per_month || 0,
+                  total_price:
+                    (item.offer_purchase_price || item.purchase_price || 0) *
+                    item.quotation_quantity,
+                  device_ids: item.device_ids || [],
+                  order_id: item.quotation_id,
+                })),
+                transaction_type: item.transaction_type || "Buy",
+                payment_type: item.payment_type || "",
+                quotation_date: item.quotation_date,
+              };
+            }
+            return null;
+          })
+          .filter(Boolean);
+
+        setOrders(transformedOrders);
+
+        const prodResponse = await fetch(`${API_URL}/product-templete`, {
+          headers: {
+            "Authorization": `Bearer ${userToken}`,
+          },
+        });
+        if (!prodResponse.ok) throw new Error("Failed to fetch products");
+        const prodData = await prodResponse.json();
+        setProducts(prodData);
+
+        const taxResponse = await fetch(`${API_URL}/tax-types`, {
+          headers: {
+            "Authorization": `Bearer ${userToken}`,
+          },
+        });
+        if (!taxResponse.ok) throw new Error("Failed to fetch tax types");
+        const taxData = await taxResponse.json();
+        setTaxTypes(taxData);
       } catch (error) {
         console.error("Error fetching data:", error);
         setSnackbar({
@@ -738,10 +768,9 @@ const InvoicesEditPage = () => {
       }
     };
 
-    fetchInvoiceData();
-  }, [id]);
+    fetchData();
+  }, [userToken]);
 
-  // Reuse the same helper functions from InvoicesAddPage
   const calculateRentalPrice = useCallback((product, months = 0, days = 0) => {
     const perDay = product.rent_price_per_day || 0;
     const perMonth = product.rent_price_per_month || 0;
@@ -770,6 +799,97 @@ const InvoicesEditPage = () => {
     return price;
   }, []);
 
+  const handleReturnQtyChange = useCallback((productId, value) => {
+    setReturnQuantities((prev) => ({
+      ...prev,
+      [productId]: parseInt(value) || 0,
+    }));
+  }, []);
+
+  const incrementReturnQty = useCallback((productId) => {
+    setReturnQuantities((prev) => ({
+      ...prev,
+      [productId]: (prev[productId] || 0) + 1,
+    }));
+  }, []);
+
+  const decrementReturnQty = useCallback((productId) => {
+    setReturnQuantities((prev) => ({
+      ...prev,
+      [productId]: Math.max((prev[productId] || 0) - 1, 0),
+    }));
+  }, []);
+
+  const handleNewDeviceCheckboxChange = (productId, deviceId, isChecked) => {
+    setNewDeviceIds((prev) => {
+      const currentSelected = prev[productId] || [];
+      let updatedSelected;
+
+      if (isChecked) {
+        if (currentSelected.length < (newQuantities[productId] || 0)) {
+          updatedSelected = [...currentSelected, deviceId];
+        } else {
+          return prev;
+        }
+      } else {
+        updatedSelected = currentSelected.filter((id) => id !== deviceId);
+      }
+
+      return {
+        ...prev,
+        [productId]: updatedSelected,
+      };
+    });
+  };
+
+  const handleReturnDeviceCheckboxChange = (productId, deviceId, isChecked) => {
+    setReturnedDeviceIds((prev) => {
+      const currentSelected = prev[productId] || [];
+      let updatedSelected;
+
+      if (isChecked) {
+        if (currentSelected.length < (returnQuantities[productId] || 0)) {
+          updatedSelected = [...currentSelected, deviceId];
+        } else {
+          return prev;
+        }
+      } else {
+        updatedSelected = currentSelected.filter((id) => id !== deviceId);
+      }
+
+      return {
+        ...prev,
+        [productId]: updatedSelected,
+      };
+    });
+  };
+
+  const handleNewQtyChange = useCallback((productId, value) => {
+    const updated = { ...newQuantities, [productId]: parseInt(value) || 0 };
+    setNewQuantities(updated);
+  }, []);
+
+  const incrementNewQty = useCallback((productId) => {
+    setNewQuantities((prev) => ({
+      ...prev,
+      [productId]: (prev[productId] || 0) + 1,
+    }));
+  }, []);
+
+  const decrementNewQty = useCallback((productId) => {
+    setNewQuantities((prev) => ({
+      ...prev,
+      [productId]: Math.max((prev[productId] || 0) - 1, 0),
+    }));
+  }, []);
+
+  const handleSelectReturnId = (productId, id) => {
+    setSelectedReturnIds((prev) => ({
+      ...prev,
+      [productId]: id,
+    }));
+  };
+
   const handleCustomerSelect = useCallback(
     (dispatchOrderId) => {
       const selectedOrder = orders.find(
@@ -779,128 +899,269 @@ const InvoicesEditPage = () => {
 
       setSelectedOrderId(dispatchOrderId);
 
-      const customerId =
-        selectedOrder.contact?.id ||
-        selectedOrder.customer_code ||
-        selectedOrder.dispatch_order?.customer_code;
+      if (selectedOrder.type === "dispatch_order") {
+        const customerId =
+          selectedOrder.contact?.id ||
+          selectedOrder.customer_code ||
+          selectedOrder.dispatch_order?.customer_code;
 
-      const dispatchOrderDate =
-        selectedOrder.dispatch_order?.dispatch_order_date ||
-        selectedOrder.dc_date ||
-        (selectedOrder.created_at
-          ? new Date(selectedOrder.created_at).toISOString().split("T")[0]
-          : "");
+        const dispatchOrderDate =
+          selectedOrder.dispatch_order?.dispatch_order_date ||
+          selectedOrder.dc_date ||
+          (selectedOrder.created_at
+            ? new Date(selectedOrder.created_at).toISOString().split("T")[0]
+            : "");
 
-      const dispatchOrderNumber =
-        selectedOrder.dispatch_order_id || selectedOrder.dispatch_order_number;
+        const dispatchOrderNumber =
+          selectedOrder.dispatch_order_id ||
+          selectedOrder.dispatch_order_number;
 
-      const initialQuantities = {};
-      selectedOrder.items.forEach((item) => {
-        initialQuantities[item.product_id] = item.quantity;
-      });
-      setQuantities(initialQuantities);
+        const initialQuantities = {};
+        selectedOrder.items.forEach((item) => {
+          initialQuantities[item.product_id] = item.quantity;
+        });
+        setQuantities(initialQuantities);
 
-      const personal = selectedOrder.personalDetails;
-      const address = selectedOrder.address;
-      const orderItems = selectedOrder.items || [];
+        const personal = selectedOrder.personalDetails;
+        const address = selectedOrder.address;
+        const orderItems = selectedOrder.items || [];
 
-      const productDeviceMap = {};
-      const productOrderMapLocal = {};
+        const productDeviceMap = {};
+        const productOrderMapLocal = {};
 
-      orderItems.forEach((item) => {
-        if (item.product_id && Array.isArray(item.device_ids)) {
-          productDeviceMap[item.product_id] = item.device_ids;
-        }
-        if (item.product_id && item.order_id) {
-          productOrderMapLocal[item.product_id] = item.order_id;
-        }
-      });
+        orderItems.forEach((item) => {
+          if (item.product_id && Array.isArray(item.device_ids)) {
+            productDeviceMap[item.product_id] = item.device_ids;
+          }
+          if (item.product_id && item.order_id) {
+            productOrderMapLocal[item.product_id] = item.order_id;
+          }
+        });
 
-      setReturnedDeviceIds(productDeviceMap);
-      setProductOrderMap(productOrderMapLocal);
+        setReturnedDeviceIds(productDeviceMap);
+        setProductOrderMap(productOrderMapLocal);
 
-      const productIds = orderItems.map((item) => item.product_id);
-      setSelectedProductIds(productIds);
+        const productIds = orderItems.map((item) => item.product_id);
+        setSelectedProductIds(productIds);
 
-      const selectedProducts = products.filter((product) =>
-        productIds.includes(product.id)
-      );
+        const selectedProducts = products.filter((product) =>
+          productIds.includes(product.id)
+        );
 
-      let amount = 0;
-      const items = selectedProducts.map((product) => {
-        const quantity = initialQuantities[product.id] || 0;
-        let price = product.purchase_price;
+        let amount = 0;
+        const items = selectedProducts.map((product) => {
+          const quantity = initialQuantities[product.id] || 0;
+          let price = product.purchase_price;
 
-        if (selectedOrder.transaction_type === "Rent") {
-          const months = parseInt(selectedOrder.rental_duration) || 0;
-          const days = parseInt(selectedOrder.rental_duration_days) || 0;
-          price = calculateRentalPrice(product, months, days);
-        }
+          if (selectedOrder.transaction_type === "Rent") {
+            const months = parseInt(selectedOrder.rental_duration) || 0;
+            const days = parseInt(selectedOrder.rental_duration_days) || 0;
+            price = calculateRentalPrice(product, months, days);
+          }
 
-        const totalPrice = quantity * price;
-        amount += totalPrice;
+          const totalPrice = quantity * price;
+          amount += totalPrice;
 
-        return {
-          product_id: product.id,
-          product_name: product.product_name,
-          quantity: quantity,
-        };
-      });
+          return {
+            product_id: product.id,
+            product_name: product.product_name,
+            quantity: quantity,
+          };
+        });
 
-      const cgstRate =
-        taxTypes.find((t) => t.tax_type_name === "CGST")?.percentage || 0;
-      const sgstRate =
-        taxTypes.find((t) => t.tax_type_name === "SGST")?.percentage || 0;
-      const cgst = (amount * parseFloat(cgstRate)) / 100;
-      const sgst = (amount * parseFloat(sgstRate)) / 100;
-      const totalTax = cgst + sgst;
-      const totalAmount = amount + totalTax;
+        const cgstRate =
+          taxTypes.find((t) => t.tax_type_name === "CGST")?.percentage || 0;
+        const sgstRate =
+          taxTypes.find((t) => t.tax_type_name === "SGST")?.percentage || 0;
+        const cgst = (amount * parseFloat(cgstRate)) / 100;
+        const sgst = (amount * parseFloat(sgstRate)) / 100;
+        const totalTax = cgst + sgst;
+        const totalAmount = amount + totalTax;
 
-      setFormData((prev) => ({
-        ...prev,
-        customer_id: customerId || "",
-        customer_name: `${personal?.first_name || ""}`,
-        email: personal?.email || "",
-        phone_number: personal?.phone_number || "",
-        customer_gst_number: personal?.gst_number || "",
-        pan_number: selectedOrder.pan_number || personal?.pan_number || "",
-        order_id: selectedOrder.order_id,
-        transaction_type: selectedOrder.transaction_type || "",
-        payment_type: selectedOrder.payment_type || "",
-        rental_duration: selectedOrder.rental_duration || "",
-        rental_duration_days: selectedOrder.rental_duration_days || 0,
-        purchase_order_date: dispatchOrderDate,
-        purchase_order_number: selectedOrder.order_number || "",
-        dc_id: selectedOrder.dc_id || selectedOrder.dispatch_order_id,
-        dispatch_order_number: dispatchOrderNumber,
-        dispatch_order_id: selectedOrder.id,
-        dc_date: dispatchOrderDate,
-        duration: selectedOrder.rental_duration || 0,
-        rental_start_date: selectedOrder.rental_start_date || "",
-        rental_end_date: selectedOrder.rental_end_date || "",
-        amount: amount,
-        cgst: cgst,
-        sgst: sgst,
-        total_tax: totalTax,
-        total_amount: totalAmount,
-        items: items,
-        shippingDetails: {
-          ...prev.shippingDetails,
-          consignee_name: `${personal?.first_name || ""}`,
-          country: address?.country || "India",
-          state: address?.state || "",
-          city: address?.city || "",
-          street: address?.street || "",
-          pincode: address?.pincode || "",
-          phone_number: personal?.phone_number || "",
+        setFormData({
+          ...formData,
+          customer_id: customerId || "",
+          customer_name: `${personal?.first_name || ""}`,
           email: personal?.email || "",
-        },
-      }));
+          phone_number: personal?.phone_number || "",
+          customer_gst_number: personal?.gst_number || "",
+          pan_number: selectedOrder.pan_number || personal?.pan_number || "",
+          order_id: selectedOrder.order_id,
+          transaction_type: selectedOrder.transaction_type || "",
+          payment_type: selectedOrder.payment_type || "",
+          rental_duration: selectedOrder.rental_duration || "",
+          rental_duration_days: selectedOrder.rental_duration_days || 0,
+          purchase_order_date: dispatchOrderDate,
+          purchase_order_number: selectedOrder.order_number || "",
+          dc_id: selectedOrder.dc_id || selectedOrder.dispatch_order_id,
+          dispatch_order_number: dispatchOrderNumber,
+          dispatch_order_id: selectedOrder.id,
+          dc_date: dispatchOrderDate,
+          duration: selectedOrder.rental_duration || 0,
+          rental_start_date: selectedOrder.rental_start_date || "",
+          rental_end_date: selectedOrder.rental_end_date || "",
+          amount: amount,
+          cgst: cgst,
+          sgst: sgst,
+          total_tax: totalTax,
+          total_amount: totalAmount,
+          items: items,
+          shippingDetails: {
+            ...formData.shippingDetails,
+            consignee_name: `${personal?.first_name || ""}`,
+            country: address?.country || "India",
+            state: address?.state || "",
+            city: address?.city || "",
+            street: address?.street || "",
+            pincode: address?.pincode || "",
+            phone_number: personal?.phone_number || "",
+            email: personal?.email || "",
+          },
+        });
+      } else if (selectedOrder.type === "direct_invoice") {
+        const customerId = selectedOrder.customer_id;
+        const quotationDate = selectedOrder.quotation_date;
+        const quotationNumber = selectedOrder.quotation_id;
+
+        const personal = selectedOrder.personalDetails;
+        const address = selectedOrder.address;
+        const orderItems = selectedOrder.items || [];
+
+        const initialQuantities = {};
+        orderItems.forEach((item) => {
+          initialQuantities[item.product_id] = item.quantity;
+        });
+        setQuantities(initialQuantities);
+
+        const productIds = orderItems.map((item) => item.product_id);
+        setSelectedProductIds(productIds);
+
+        const selectedProducts = products.filter((product) =>
+          productIds.includes(product.id)
+        );
+
+        let amount = 0;
+        const items = selectedProducts.map((product) => {
+          const quantity = initialQuantities[product.id] || 0;
+          const price =
+            product.offer_purchase_price || product.purchase_price || 0;
+          const totalPrice = quantity * price;
+          amount += totalPrice;
+
+          return {
+            product_id: product.id,
+            product_name: product.product_name,
+            quantity: quantity,
+          };
+        });
+
+        const cgstRate =
+          taxTypes.find((t) => t.tax_type_name === "CGST")?.percentage || 0;
+        const sgstRate =
+          taxTypes.find((t) => t.tax_type_name === "SGST")?.percentage || 0;
+        const cgst = (amount * parseFloat(cgstRate)) / 100;
+        const sgst = (amount * parseFloat(sgstRate)) / 100;
+        const totalTax = cgst + sgst;
+        const totalAmount = amount + totalTax;
+
+        setFormData({
+          ...formData,
+          customer_id: customerId || "",
+          customer_name: `${personal?.first_name || ""} ${
+            personal?.last_name || ""
+          }`,
+          email: personal?.email || "",
+          phone_number: personal?.phone_number || "",
+          customer_gst_number: personal?.gst_number || "",
+          pan_number: personal?.pan_number || "",
+          transaction_type: selectedOrder.transaction_type || "Buy",
+          payment_type: selectedOrder.payment_type || "",
+          purchase_order_date: quotationDate,
+          purchase_order_number: quotationNumber,
+          dc_id: quotationNumber,
+          dispatch_order_number: quotationNumber,
+          dc_date: quotationDate,
+          amount: amount,
+          cgst: cgst,
+          sgst: sgst,
+          total_tax: totalTax,
+          total_amount: totalAmount,
+          items: items,
+          shippingDetails: {
+            ...formData.shippingDetails,
+            consignee_name: `${personal?.first_name || ""} ${
+              personal?.last_name || ""
+            }`,
+            country: address?.country || "India",
+            state: address?.state || "",
+            city: address?.city || "",
+            street: address?.street || "",
+            pincode: address?.pincode || "",
+            phone_number: personal?.phone_number || "",
+            email: personal?.email || "",
+          },
+        });
+      }
     },
-    [orders, products, taxTypes, calculateRentalPrice]
+    [orders, products, taxTypes, formData, calculateRentalPrice]
   );
 
-  // Reuse the same input handlers from InvoicesAddPage
+  useEffect(() => {
+    if (selectedProductIds.length > 0) {
+      setShowProductTable(true);
+    }
+  }, [selectedProductIds]);
+
+useEffect(() => {
+  const fetchLocationFromPincode = async () => {
+    const pincode = formData.shippingDetails.pincode;
+
+    if (pincode && pincode.length === 6) {
+      try {
+        const response = await fetch(
+          `${POSTAL_API}=${pincode}`
+        );
+        const result = await response.json();
+
+        if (result?.data) {
+          const info = result.data;
+
+          setFormData((prev) => ({
+            ...prev,
+            shippingDetails: {
+              ...prev.shippingDetails,
+              city: info.district_name,
+              state: info.state_name,
+              country: "India",
+            },
+          }));
+        } else {
+          setSnackbar({
+            open: true,
+            message: "Could not find location for this pincode",
+            severity: "warning",
+          });
+        }
+      } catch (error) {
+        console.error("Error fetching location data:", error);
+        setSnackbar({
+          open: true,
+          message:
+            "Error fetching location data. Please check the pincode and try again.",
+          severity: "error",
+        });
+      }
+    }
+  };
+
+  const debounceTimer = setTimeout(() => {
+    fetchLocationFromPincode();
+  }, 500);
+
+  return () => clearTimeout(debounceTimer);
+}, [formData.shippingDetails.pincode]);
+
+
   const handleInputChange = useCallback((e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({
@@ -953,53 +1214,6 @@ const InvoicesEditPage = () => {
     }));
   }, []);
 
-  const handleReturnQtyChange = useCallback((productId, value) => {
-    setReturnQuantities((prev) => ({
-      ...prev,
-      [productId]: parseInt(value) || 0,
-    }));
-  }, []);
-
-  const incrementReturnQty = useCallback((productId) => {
-    setReturnQuantities((prev) => ({
-      ...prev,
-      [productId]: (prev[productId] || 0) + 1,
-    }));
-  }, []);
-
-  const decrementReturnQty = useCallback((productId) => {
-    setReturnQuantities((prev) => ({
-      ...prev,
-      [productId]: Math.max((prev[productId] || 0) - 1, 0),
-    }));
-  }, []);
-
-  const handleNewQtyChange = useCallback((productId, value) => {
-    const updated = { ...newQuantities, [productId]: parseInt(value) || 0 };
-    setNewQuantities(updated);
-  }, []);
-
-  const incrementNewQty = useCallback((productId) => {
-    setNewQuantities((prev) => ({
-      ...prev,
-      [productId]: (prev[productId] || 0) + 1,
-    }));
-  }, []);
-
-  const decrementNewQty = useCallback((productId) => {
-    setNewQuantities((prev) => ({
-      ...prev,
-      [productId]: Math.max((prev[productId] || 0) - 1, 0),
-    }));
-  }, []);
-
-  const handleSelectReturnId = (productId, id) => {
-    setSelectedReturnIds((prev) => ({
-      ...prev,
-      [productId]: id,
-    }));
-  };
-
   const filteredProducts = products.filter(
     (product) =>
       product.product_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -1007,7 +1221,6 @@ const InvoicesEditPage = () => {
       product.description?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  // Reuse the same totals calculation effect
   useEffect(() => {
     const calculateTotals = () => {
       const selectedProducts = products.filter((product) =>
@@ -1109,128 +1322,9 @@ const InvoicesEditPage = () => {
     formData.rental_duration_days,
   ]);
 
-  // // Handle form submission for editing
-  // const handleSubmit = async (e) => {
-  //   e.preventDefault();
-
-  //   // Validate form
-  //   let isValid = true;
-  //   const newErrors = {
-  //     dc_id: "",
-  //   };
-
-  //   if (!selectedOrderId) {
-  //     newErrors.dc_id = "DC selection is required";
-  //     isValid = false;
-  //   }
-
-  //   setErrors(newErrors);
-
-  //   if (!isValid) {
-  //     setSnackbar({
-  //       open: true,
-  //       message: "Please select a DC before submitting",
-  //       severity: "error",
-  //     });
-  //     return;
-  //   }
-
-  //   try {
-  //     const selectedOrder = orders.find(
-  //       (order) => order.id === parseInt(selectedOrderId)
-  //     );
-
-  //     const submissionData = {
-  //       ...formData,
-  //       customer_id: formData.customer_id || selectedOrder?.contact?.id || "",
-  //       dc_id: formData.dc_id,
-  //       dispatch_order_number:
-  //         formData.dispatch_order_number || formData.dispatch_order_id,
-  //       dc_date: formData.dc_date,
-  //       invoice_start_date: dateRanges.invoiceStartDate,
-  //       invoice_end_date: dateRanges.invoiceEndDate,
-  //       previous_delivered_start_date: dateRanges.previousDeliveredStartDate,
-  //       previous_delivered_end_date: dateRanges.previousDeliveredEndDate,
-  //       credit_note_start_date: dateRanges.creditNoteStartDate,
-  //       credit_note_end_date: dateRanges.creditNoteEndDate,
-  //       rental_duration: formData.rental_duration || "0",
-  //       rental_duration_days: formData.rental_duration_days || 0,
-  //       rental_duration_months: formData.rental_duration
-  //         ? parseInt(formData.rental_duration)
-  //         : 0,
-  //       payment_mode: formData.payment_type || "",
-  //       items: formData.items.map((item) => {
-  //         const product = products.find((p) => p.id === item.product_id);
-  //         const unit_price = product
-  //           ? product.offer_rent_price_per_month !== null &&
-  //             product.offer_rent_price_per_month !== ""
-  //             ? product.offer_rent_price_per_month
-  //             : product.rent_price_per_month
-  //           : 0;
-
-  //         const total_price = product
-  //           ? product.offer_purchase_price !== null &&
-  //             product.offer_purchase_price !== ""
-  //             ? product.offer_purchase_price
-  //             : product.purchase_price
-  //           : 0;
-
-  //         return {
-  //           ...item,
-  //           order_id: productOrderMap[item.product_id] || "",
-  //           device_ids: returnedDeviceIds[item.product_id] || [],
-  //           new_device_ids: newDeviceIds[item.product_id] || [],
-  //           returned_device_ids: selectedReturnIds[item.product_id]
-  //             ? [selectedReturnIds[item.product_id]]
-  //             : [],
-  //           rental_duration: formData.rental_duration || "0",
-  //           rental_duration_days: formData.rental_duration_days || 0,
-  //           rental_duration_months: formData.rental_duration
-  //             ? parseInt(formData.rental_duration)
-  //             : 0,
-  //           unit_price: unit_price,
-  //           total_price: total_price,
-  //         };
-  //       }),
-  //     };
-
-  //     const response = await fetch(`${API_URL}/invoices/${id}`, {
-  //       method: "PUT",
-  //       headers: {
-  //         "Content-Type": "application/json",
-  //       },
-  //       body: JSON.stringify(submissionData),
-  //     });
-
-  //     if (!response.ok) {
-  //       const errorData = await response.json();
-  //       throw new Error(errorData.message || "Failed to update invoice");
-  //     }
-
-  //     const result = await response.json();
-  //     setSnackbar({
-  //       open: true,
-  //       message: "Invoice updated successfully!",
-  //       severity: "success",
-  //     });
-
-  //     setTimeout(() => {
-  //       navigate("/dashboard/operations/invoices");
-  //     }, 1500);
-  //   } catch (error) {
-  //     console.error("Error updating invoice:", error);
-  //     setSnackbar({
-  //       open: true,
-  //       message: "Error updating invoice: " + error.message,
-  //       severity: "error",
-  //     });
-  //   }
-  // };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // Validate form
     let isValid = true;
     const newErrors = {
       dc_id: "",
@@ -1257,7 +1351,6 @@ const InvoicesEditPage = () => {
         (order) => order.id === parseInt(selectedOrderId)
       );
 
-      // Create a map of product prices from the dispatch order
       const dispatchOrderProductPrices = {};
       if (selectedOrder && selectedOrder.items) {
         selectedOrder.items.forEach((item) => {
@@ -1275,6 +1368,14 @@ const InvoicesEditPage = () => {
       const submissionData = {
         ...formData,
         customer_id: formData.customer_id || selectedOrder?.contact?.id || "",
+        order_type: selectedOrder?.type || "dispatch_order",
+        is_direct_invoice: selectedOrder?.type === "direct_invoice",
+
+        ...(selectedOrder?.type === "direct_invoice" && {
+          quotation_id: selectedOrder.quotation_id,
+          quotation_date: selectedOrder.quotation_date,
+        }),
+
         dc_id: formData.dc_id,
         dispatch_order_number:
           formData.dispatch_order_number || formData.dispatch_order_id,
@@ -1291,8 +1392,8 @@ const InvoicesEditPage = () => {
           ? parseInt(formData.rental_duration)
           : 0,
         payment_mode: formData.payment_type || "",
+
         items: formData.items.map((item) => {
-          // Get prices from dispatch order instead of product template
           const dispatchPrices =
             dispatchOrderProductPrices[item.product_id] || {};
 
@@ -1304,13 +1405,43 @@ const InvoicesEditPage = () => {
           const offer_rent_price_per_month =
             parseFloat(dispatchPrices.offer_rent_price_per_month) || 0;
 
-          // Simple price assignment as requested
           const total_price =
             offer_purchase_price === 0 ? purchase_price : offer_purchase_price;
           const unit_price =
             offer_rent_price_per_month === 0
               ? rent_price_per_month
               : offer_rent_price_per_month;
+
+          const selectedOrder = orders.find(
+            (order) => order.id === parseInt(selectedOrderId)
+          );
+
+          if (selectedOrder?.type === "direct_invoice") {
+            const orderItem = selectedOrder.items.find(
+              (i) => i.product_id === item.product_id
+            );
+            const deviceIds = orderItem?.device_ids || [];
+
+            return {
+              ...item,
+              order_id:
+                productOrderMap[item.product_id] || selectedOrder.quotation_id,
+              device_ids: deviceIds,
+              new_device_ids: [],
+              returned_device_ids: [],
+              rental_duration: formData.rental_duration || "0",
+              rental_duration_days: formData.rental_duration_days || 0,
+              rental_duration_months: formData.rental_duration
+                ? parseInt(formData.rental_duration)
+                : 0,
+              unit_price: unit_price,
+              total_price: total_price,
+              purchase_price: purchase_price,
+              offer_purchase_price: offer_purchase_price,
+              rent_price_per_month: rent_price_per_month,
+              offer_rent_price_per_month: offer_rent_price_per_month,
+            };
+          }
 
           return {
             ...item,
@@ -1335,6 +1466,7 @@ const InvoicesEditPage = () => {
         }),
       };
 
+      // Use PUT request for updating instead of POST
       const response = await fetch(`${API_URL}/invoices/${id}`, {
         method: "PUT",
         headers: {
@@ -1369,6 +1501,23 @@ const InvoicesEditPage = () => {
     }
   };
 
+  const formatINR = (number) =>
+    new Intl.NumberFormat("en-IN", {
+      style: "currency",
+      currency: "INR",
+      maximumFractionDigits: 2,
+    }).format(number || 0);
+
+  if (isLoading) {
+    return (
+      <div style={containerStyle}>
+        <div style={{ textAlign: "center", padding: "2rem" }}>
+          <Typography variant="h6">Loading invoice data...</Typography>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div style={containerStyle}>
       <Snackbar
@@ -1389,13 +1538,12 @@ const InvoicesEditPage = () => {
       <div style={headerStyle}>
         <h1 style={titleStyle}>Edit Invoice</h1>
         <p style={subtitleStyle}>
-          Update the details below to edit the invoice
+          Edit the details below to update the invoice
         </p>
       </div>
 
       <form onSubmit={handleSubmit}>
         <div style={formContainerStyle}>
-          {/* Basic Details Section */}
           <div style={cardStyle}>
             <div style={cardHeaderContainerStyle}>
               <div style={iconStyle}>📄</div>
@@ -1410,7 +1558,6 @@ const InvoicesEditPage = () => {
                 placeholder="Enter Invoice Id"
                 readOnly
               />
-
               <Field
                 label="Invoice Date"
                 type="date"
@@ -1419,30 +1566,38 @@ const InvoicesEditPage = () => {
                 onChange={handleInputChange}
               />
 
-              <Field
-                label="Select DC"
-                name="dc_id"
-                type="select"
-                value={selectedOrderId || ""}
-                onChange={(e) => {
-                  handleCustomerSelect(e.target.value);
-                  if (errors.dc_id) {
-                    setErrors({ ...errors, dc_id: "" });
-                  }
-                }}
-                placeholder="Select DC"
-                error={errors.dc_id}
-              >
-                <option value="" disabled>
-                  Select DC
-                </option>
-                {orders.map((order) => (
-                  <option key={order.id} value={order.id}>
-                    {order.dispatch_order_id} -{" "}
-                    {order.personalDetails?.first_name || ""}
-                  </option>
-                ))}
-              </Field>
+              <FormControl fullWidth size="small" error={!!errors.dc_id}>
+                <InputLabel>Select DC</InputLabel>
+                <Select
+                  value={selectedOrderId || ""}
+                  onChange={(e) => {
+                    handleCustomerSelect(e.target.value);
+                    if (errors.dc_id) {
+                      setErrors({ ...errors, dc_id: "" });
+                    }
+                  }}
+                  label="Select DC"
+                  displayEmpty
+                  inputProps={{ "aria-label": "Without label" }}
+                  style={{
+                    ...inputStyle,
+                    borderColor: errors.dc_id ? "red" : "#d1d5db",
+                  }}
+                >
+                  {orders.map((order) => (
+                    <MenuItem key={order.id} value={order.id}>
+                      {order.type === "dispatch_order"
+                        ? `${order.dispatch_order_id} - ${order.personalDetails?.first_name}`
+                        : `${order.quotation_id} - ${order.personalDetails?.first_name} ${order.personalDetails?.last_name}`}
+                    </MenuItem>
+                  ))}
+                </Select>
+                {errors.dc_id && (
+                  <Typography color="error" variant="caption">
+                    {errors.dc_id}
+                  </Typography>
+                )}
+              </FormControl>
 
               <Field
                 label="Transaction Type"
@@ -1470,7 +1625,7 @@ const InvoicesEditPage = () => {
                   <Field
                     label="Payment Mode"
                     name="payment_mode"
-                    value={formData.payment_mode}
+                    value={formData.payment_type}
                     onChange={handleInputChange}
                     disabled
                   />
@@ -1550,7 +1705,6 @@ const InvoicesEditPage = () => {
             </div>
           </div>
 
-          {/* Shipping Details Section */}
           <div style={cardStyle}>
             <div style={cardHeaderContainerStyle}>
               <div style={iconStyle}>🏢</div>
@@ -1625,9 +1779,15 @@ const InvoicesEditPage = () => {
               />
             </div>
           </div>
+
+          <div style={cardStyle}>
+            <div style={cardHeaderContainerStyle}>
+              <div style={iconStyle}>📦</div>
+              <h3 style={cardHeaderStyle}>Courier Charges</h3>
+            </div>
+          </div>
         </div>
 
-        {/* Select Products Section */}
         <div style={cardStyle}>
           <div style={cardHeaderContainerStyle}>
             <h3 style={cardHeaderStyle}>Selected Products</h3>
@@ -1651,7 +1811,7 @@ const InvoicesEditPage = () => {
                 marginBottom: "1rem",
               }}
             >
-              {showProductTable ? "Hide Product List" : "Edit Products"}
+              {showProductTable ? "Hide Product List" : "Add Products"}
             </button>
 
             {showProductTable && (
@@ -1810,7 +1970,6 @@ const InvoicesEditPage = () => {
           </div>
         </div>
 
-        {/* Action Buttons */}
         <div style={buttonContainerStyle}>
           <button
             type="button"

@@ -20,7 +20,7 @@ import {
   Button,
 } from "@mui/material";
 import { Add, Remove, Edit } from "@mui/icons-material";
-import API_URL, { IMAGE_API_URL } from "../../../api/Api_url";
+import API_URL, { IMAGE_API_URL, POSTAL_API} from "../../../api/Api_url";
 import { useNavigate } from "react-router-dom";
 import { useSelector } from "react-redux";
 
@@ -245,44 +245,47 @@ const QuotationsAddLayoutPage = () => {
   };
 
   // Fetch location data when pincode changes
-  useEffect(() => {
-    const fetchLocationData = async () => {
-      if (formData.pincode.length === 6) {
-        try {
-          const response = await fetch(
-            `https://api.postalpincode.in/pincode/${formData.pincode}`
-          );
-          const data = await response.json();
+useEffect(() => {
+  const fetchLocationData = async () => {
+    const pincode = formData.pincode;
 
-          if (data && data[0]?.Status === "Success") {
-            const postOffice = data[0].PostOffice[0];
+    if (pincode && pincode.length === 6) {
+      try {
+        const response = await fetch(
+          `${POSTAL_API}=${pincode}`
+        );
+        const result = await response.json();
 
-            setFormData((prev) => ({
-              ...prev,
-              country: "India",
-              state: postOffice.State,
-              city: postOffice.District,
-            }));
-          } else {
-            setSnackbar({
-              open: true,
-              message: "Invalid Pincode. Please enter a valid one.",
-              severity: "error",
-            });
-          }
-        } catch (error) {
-          console.error("Error fetching location:", error);
+        if (result?.data) {
+          const info = result.data;
+
+          setFormData((prev) => ({
+            ...prev,
+            country: "India",
+            state: info.state_name,
+            city: info.district_name,
+          }));
+        } else {
           setSnackbar({
             open: true,
-            message: "Error fetching location. Try again.",
+            message: "Invalid Pincode. Please enter a valid one.",
             severity: "error",
           });
         }
+      } catch (error) {
+        console.error("Error fetching location:", error);
+        setSnackbar({
+          open: true,
+          message: "Error fetching location. Try again.",
+          severity: "error",
+        });
       }
-    };
+    }
+  };
 
-    fetchLocationData();
-  }, [formData.pincode]);
+  fetchLocationData();
+}, [formData.pincode]);
+
 
   const handleOpenEditDialog = (product) => {
     setEditingProduct(product);

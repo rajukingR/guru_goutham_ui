@@ -14,7 +14,7 @@ import {
 import EditIcon from "@mui/icons-material/Edit";
 import Snackbar from "@mui/material/Snackbar";
 import MuiAlert from "@mui/material/Alert";
-import API_URL, { IMAGE_API_URL } from "../../api/Api_url";
+import API_URL, { IMAGE_API_URL, POSTAL_API} from "../../api/Api_url";
 import { useSelector } from "react-redux";
 
 const Alert = React.forwardRef(function Alert(props, ref) {
@@ -125,8 +125,7 @@ const EditProfile = () => {
         },
         method: "PUT",
         body: formDataToSend,
-        // Don't set Content-Type header when using FormData
-        // The browser will set it automatically with the correct boundary
+        
       });
 
       if (response.ok) {
@@ -150,6 +149,46 @@ const EditProfile = () => {
       });
     }
   };
+
+
+
+   // ✅ Auto-fetch location when pincode changes
+  useEffect(() => {
+    const fetchLocationFromPincode = async () => {
+      if (formData.pincode && formData.pincode.length === 6) {
+        try {
+          const response = await fetch(`${POSTAL_API}=${formData.pincode}`);
+          const result = await response.json();
+
+          if (result?.data) {
+            const info = result.data;
+            setFormData((prev) => ({
+              ...prev,
+              country: "India",
+              state: info.state_name,
+              city: info.district_name,
+              street: info.office_name,
+            }));
+          } else {
+            setSnackbar({
+              open: true,
+              message: "Invalid Pincode. Please enter a valid one.",
+              severity: "error",
+            });
+          }
+        } catch (error) {
+          console.error("Error fetching pincode details:", error);
+          setSnackbar({
+            open: true,
+            message: "Error fetching location. Try again.",
+            severity: "error",
+          });
+        }
+      }
+    };
+
+    fetchLocationFromPincode();
+  }, [formData.pincode]);
 
   return (
     <Box
@@ -191,7 +230,7 @@ const EditProfile = () => {
               <Grid container spacing={2} sx={{ mt: 2 }}>
                 <Grid item xs={6}>
                   <TextField
-                    label="First Name*"
+                    label="First Name"
                     name="first_name"
                     fullWidth
                     value={formData.first_name}
@@ -201,24 +240,14 @@ const EditProfile = () => {
                 </Grid>
                 <Grid item xs={6}>
                   <TextField
-                    label="Last Name*"
+                    label="Last Name"
                     name="last_name"
                     fullWidth
                     value={formData.last_name}
                     onChange={handleChange}
-                    required
                   />
                 </Grid>
-                <Grid item xs={12}>
-                  <TextField
-                    label="Full Name*"
-                    name="full_name"
-                    fullWidth
-                    value={formData.full_name}
-                    onChange={handleChange}
-                    required
-                  />
-                </Grid>
+                
                 <Grid item xs={12}>
                   <TextField
                     label="Login ID*"
@@ -229,22 +258,7 @@ const EditProfile = () => {
                     required
                   />
                 </Grid>
-                <Grid item xs={12}>
-                  <TextField
-                    select
-                    label="Branch*"
-                    name="branch"
-                    fullWidth
-                    value={formData.branch}
-                    onChange={handleChange}
-                    required
-                  >
-                    <MenuItem value="New York">New York</MenuItem>
-                    <MenuItem value="Bengaluru">Bengaluru</MenuItem>
-                    <MenuItem value="Mumbai">Mumbai</MenuItem>
-                    <MenuItem value="Delhi">Delhi</MenuItem>
-                  </TextField>
-                </Grid>
+               
                 <Grid item xs={12}>
                   <TextField
                     label="Email ID*"

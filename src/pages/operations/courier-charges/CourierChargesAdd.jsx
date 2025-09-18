@@ -5,7 +5,7 @@ import Snackbar from "@mui/material/Snackbar";
 import MuiAlert from "@mui/material/Alert";
 import { Typography, CircularProgress, IconButton } from "@mui/material";
 import { Add as AddIcon, Delete as DeleteIcon } from "@mui/icons-material";
-import API_URL from "../../../api/Api_url";
+import API_URL, {POSTAL_API} from "../../../api/Api_url";
 import { Server } from "lucide-react";
 import InvoicesAddPage from "../invoices/InvoicesAddPage";
 import { useSelector } from "react-redux";
@@ -197,7 +197,7 @@ const CourierChargesAdd = () => {
       try {
         const token = localStorage.getItem("token");
         const response = await axios.get(`${API_URL}/contacts`, {
-          headers: { "Authorization": `Bearer ${token}` },
+          headers: { "Authorization": `Bearer ${userToken}` },
         });
 
         if (response.status === 200) {
@@ -218,40 +218,41 @@ const CourierChargesAdd = () => {
   };
 
   // Fetch location data when pincode changes for a specific address
-  const fetchLocationData = useCallback(async (pincode, index) => {
-    if (pincode.length === 6 && validatePincode(pincode)) {
-      setLoadingIndex(index);
-      try {
-        const response = await fetch(
-          `https://api.postalpincode.in/pincode/${pincode}`
-        );
-        const data = await response.json();
+const fetchLocationData = useCallback(async (pincode, index) => {
+  if (pincode.length === 6 && validatePincode(pincode)) {
+    setLoadingIndex(index);
+    try {
+      const response = await fetch(
+        `${POSTAL_API}=${pincode}`
+      );
+      const result = await response.json();
 
-        if (data && data[0]?.Status === "Success" && data[0].PostOffice) {
-          const postOffice = data[0].PostOffice[0];
+      if (result?.data) {
+        const info = result.data;
 
-          setAddresses((prevAddresses) => {
-            const updatedAddresses = [...prevAddresses];
-            updatedAddresses[index] = {
-              ...updatedAddresses[index],
-              district: postOffice.District,
-              state: postOffice.State,
-            };
-            return updatedAddresses;
-          });
+        setAddresses((prevAddresses) => {
+          const updatedAddresses = [...prevAddresses];
+          updatedAddresses[index] = {
+            ...updatedAddresses[index],
+            district: info.district_name,
+            state: info.state_name,
+          };
+          return updatedAddresses;
+        });
 
-          showSnackbar("Location details auto-filled successfully", "success");
-        } else {
-          showSnackbar("Invalid Pincode. Please enter a valid one.", "error");
-        }
-      } catch (error) {
-        console.error("Error fetching location:", error);
-        showSnackbar("Error fetching location. Try again.", "error");
-      } finally {
-        setLoadingIndex(-1);
+        showSnackbar("Location details auto-filled successfully", "success");
+      } else {
+        showSnackbar("Invalid Pincode. Please enter a valid one.", "error");
       }
+    } catch (error) {
+      console.error("Error fetching location:", error);
+      showSnackbar("Error fetching location. Try again.", "error");
+    } finally {
+      setLoadingIndex(-1);
     }
-  }, []);
+  }
+}, []);
+
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;

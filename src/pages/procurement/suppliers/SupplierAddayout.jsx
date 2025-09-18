@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import API_URL, { IMAGE_API_URL } from "../../../api/Api_url";
+import  { API_URL,IMAGE_API_URL, POSTAL_API} from "../../../api/Api_url";
 import Snackbar from "@mui/material/Snackbar";
 import Alert from "@mui/material/Alert";
 import { useNavigate } from "react-router-dom";
@@ -303,44 +303,47 @@ const SupplierAddLayout = () => {
     }
   };
 
-  useEffect(() => {
-    const fetchLocationData = async () => {
-      if (formData.address.pincode.length === 6) {
-        try {
-          const response = await fetch(
-            `https://api.postalpincode.in/pincode/${formData.address.pincode}`
-          );
-          const data = await response.json();
+useEffect(() => {
+  const fetchLocationData = async () => {
+    const pincode = formData.address.pincode;
 
-          if (data && data[0]?.Status === "Success") {
-            const postOffice = data[0].PostOffice[0];
+    if (pincode && pincode.length === 6) {
+      try {
+        const response = await fetch(
+          `${POSTAL_API}=${pincode}`
+        );
+        const result = await response.json();
 
-            setFormData((prev) => ({
-              ...prev,
-              address: {
-                ...prev.address,
-                country: "India",
-                state: postOffice.State,
-                city: postOffice.District,
-              },
-            }));
-          } else {
-            setErrors((prev) => ({
-              ...prev,
-              address: {
-                ...prev.address,
-                pincode: "Invalid Pincode",
-              },
-            }));
-          }
-        } catch (error) {
-          console.error("Error fetching location:", error);
+        if (result?.data) {
+          const info = result.data;
+
+          setFormData((prev) => ({
+            ...prev,
+            address: {
+              ...prev.address,
+              country: "India",
+              state: info.state_name,
+              city: info.district_name,
+            },
+          }));
+        } else {
+          setErrors((prev) => ({
+            ...prev,
+            address: {
+              ...prev.address,
+              pincode: "Invalid Pincode",
+            },
+          }));
         }
+      } catch (error) {
+        console.error("Error fetching location:", error);
       }
-    };
+    }
+  };
 
-    fetchLocationData();
-  }, [formData.address.pincode]);
+  fetchLocationData();
+}, [formData.address.pincode]);
+
 
   const validateForm = () => {
     let isValid = true;

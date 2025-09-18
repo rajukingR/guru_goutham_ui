@@ -5,7 +5,7 @@ import Snackbar from "@mui/material/Snackbar";
 import MuiAlert from "@mui/material/Alert";
 import { Typography, CircularProgress, IconButton } from "@mui/material";
 import { Add as AddIcon, Delete as DeleteIcon } from "@mui/icons-material";
-import API_URL from "../../../api/Api_url";
+import API_URL, {POSTAL_API} from "../../../api/Api_url";
 import { Server } from "lucide-react";
 import { useSelector } from "react-redux";
 
@@ -57,10 +57,10 @@ const Field = memo(
             )}
             {options.length > 0
               ? options.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))
               : children}
           </select>
           <div style={selectArrowStyle}>▼</div>
@@ -195,7 +195,7 @@ const ServiceMaintenanceAdd = () => {
       try {
         const token = localStorage.getItem("token");
         const response = await axios.get(`${API_URL}/contacts`, {
-          headers: { "Authorization": `Bearer ${token}` },
+          headers: { "Authorization": `Bearer ${userToken}` },
         });
 
         if (response.status === 200) {
@@ -216,40 +216,41 @@ const ServiceMaintenanceAdd = () => {
   };
 
   // Fetch location data when pincode changes for a specific address
-  const fetchLocationData = useCallback(async (pincode, index) => {
-    if (pincode.length === 6 && validatePincode(pincode)) {
-      setLoadingIndex(index);
-      try {
-        const response = await fetch(
-          `https://api.postalpincode.in/pincode/${pincode}`
-        );
-        const data = await response.json();
+const fetchLocationData = useCallback(async (pincode, index) => {
+  if (pincode.length === 6 && validatePincode(pincode)) {
+    setLoadingIndex(index);
+    try {
+      const response = await fetch(
+        `${POSTAL_API}=${pincode}`
+      );
+      const result = await response.json();
 
-        if (data && data[0]?.Status === "Success" && data[0].PostOffice) {
-          const postOffice = data[0].PostOffice[0];
+      if (result?.data) {
+        const info = result.data;
 
-          setAddresses((prevAddresses) => {
-            const updatedAddresses = [...prevAddresses];
-            updatedAddresses[index] = {
-              ...updatedAddresses[index],
-              district: postOffice.District,
-              state: postOffice.State,
-            };
-            return updatedAddresses;
-          });
+        setAddresses((prevAddresses) => {
+          const updatedAddresses = [...prevAddresses];
+          updatedAddresses[index] = {
+            ...updatedAddresses[index],
+            district: info.district_name,
+            state: info.state_name,
+          };
+          return updatedAddresses;
+        });
 
-          showSnackbar("Location details auto-filled successfully", "success");
-        } else {
-          showSnackbar("Invalid Pincode. Please enter a valid one.", "error");
-        }
-      } catch (error) {
-        console.error("Error fetching location:", error);
-        showSnackbar("Error fetching location. Try again.", "error");
-      } finally {
-        setLoadingIndex(-1);
+        showSnackbar("Location details auto-filled successfully", "success");
+      } else {
+        showSnackbar("Invalid Pincode. Please enter a valid one.", "error");
       }
+    } catch (error) {
+      console.error("Error fetching location:", error);
+      showSnackbar("Error fetching location. Try again.", "error");
+    } finally {
+      setLoadingIndex(-1);
     }
-  }, []);
+  }
+}, []);
+
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -431,9 +432,8 @@ const ServiceMaintenanceAdd = () => {
               error={errors.customer_id}
               options={contacts.map((contact) => ({
                 value: contact.id,
-                label: `${contact.first_name} ${contact.last_name} - ${
-                  contact.company_name || ""
-                }`,
+                label: `${contact.first_name} ${contact.last_name} - ${contact.company_name || ""
+                  }`,
               }))}
             />
 
@@ -553,8 +553,8 @@ const ServiceMaintenanceAdd = () => {
             {/* RIGHT SIDE → Courier Charges */}
             <div style={{ flex: 1, ...cardStyle }}>
               <div style={cardHeaderContainerStyle}>
-                <div style={iconStyle}>🚚</div>
-                <h3 style={cardHeaderStyle}>Courier Charges:</h3>
+                <div style={iconStyle}>🛠</div>
+                <h3 style={cardHeaderStyle}>Service Charges:</h3>
               </div>
 
               <div
@@ -565,10 +565,10 @@ const ServiceMaintenanceAdd = () => {
                 }}
               >
                 <Field
-                  label="Courier Price"
+                  label="Service Price"
                   name="courier_charges_price"
                   type="number"
-                  placeholder="Enter courier price"
+                  placeholder="Enter service price"
                   value={address.courier_charges_price}
                   onChange={(e) => handleAddressChange(index, e)}
                 />

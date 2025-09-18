@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { ChevronDown } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import API_URL, { IMAGE_API_URL } from "../../../api/Api_url";
+import API_URL, { IMAGE_API_URL, POSTAL_API} from "../../../api/Api_url";
 import { useSelector } from "react-redux";
 
 const UsersAddPage = () => {
@@ -88,30 +88,33 @@ const UsersAddPage = () => {
     }
   };
 
-  const fetchAddressFromPincode = async (pincode) => {
-    setIsFetchingPincode(true);
-    try {
-      const response = await fetch(
-        `https://api.postalpincode.in/pincode/${pincode}`
-      );
-      const data = await response.json();
+const fetchAddressFromPincode = async (pincode) => {
+  setIsFetchingPincode(true);
+  try {
+    const response = await fetch(
+      `${POSTAL_API}=${pincode}`
+    );
+    const result = await response.json();
 
-      if (data[0].Status === "Success") {
-        const postOffice = data[0].PostOffice[0];
-        setFormData((prev) => ({
-          ...prev,
-          country: "India", // Assuming all pincodes are from India
-          state: postOffice.State,
-          city: postOffice.District,
-          street: postOffice.Name,
-        }));
-      }
-    } catch (error) {
-      console.error("Error fetching pincode details:", error);
-    } finally {
-      setIsFetchingPincode(false);
+    if (result?.data) {
+      const info = result.data;
+      setFormData((prev) => ({
+        ...prev,
+        country: "India", // Assuming all pincodes are from India
+        state: info.state_name,
+        city: info.district_name,
+        street: info.office_name,
+      }));
+    } else {
+      console.warn("No address found for this pincode");
     }
-  };
+  } catch (error) {
+    console.error("Error fetching pincode details:", error);
+  } finally {
+    setIsFetchingPincode(false);
+  }
+};
+
 
   const handleToggleChange = (field) =>
     setFormData((prev) => ({ ...prev, [field]: !prev[field] }));
@@ -195,7 +198,6 @@ const UsersAddPage = () => {
               placeholder="Enter Last Name"
               value={formData.lastName}
               onChange={(v) => handleInputChange("lastName", v)}
-              required
             />
             <Field
               label="Login ID"
@@ -271,17 +273,11 @@ const UsersAddPage = () => {
             />
             <Field
               label="Country"
-              type="select"
               placeholder="Select Country"
               value={formData.country}
               onChange={(v) => handleInputChange("country", v)}
               required
-              options={[
-                { value: "India", label: "India" },
-                { value: "USA", label: "USA" },
-                { value: "UK", label: "UK" },
-                { value: "Canada", label: "Canada" },
-              ]}
+              
             />
             <Field
               label="State"

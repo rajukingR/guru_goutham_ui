@@ -20,7 +20,7 @@ import {
 } from "@mui/material";
 import { Add, Remove } from "@mui/icons-material";
 import { useParams, useNavigate } from "react-router-dom";
-import API_URL, { IMAGE_API_URL } from "../../../api/Api_url";
+import API_URL, { IMAGE_API_URL, POSTAL_API} from "../../../api/Api_url";
 import { useInventory } from "../../../contexts/InventoryContext";
 import { useSelector } from "react-redux";
 
@@ -326,113 +326,115 @@ const SalesOrdersAddLayoutPage = ({ product }) => {
   };
 
   // Fetch location data when shipping pincode changes
-  useEffect(() => {
-    const fetchShippingLocationFromPincode = async () => {
-      const shippingPincode = formData.address.shipping_pincode;
+useEffect(() => {
+  const fetchShippingLocationFromPincode = async () => {
+    const shippingPincode = formData.address.shipping_pincode;
 
-      // Only make API call if shipping pincode is 6 digits (India specific)
-      if (shippingPincode && shippingPincode.length === 6) {
-        try {
-          const response = await fetch(
-            `https://api.postalpincode.in/pincode/${shippingPincode}`
-          );
-          const data = await response.json();
+    // Only make API call if shipping pincode is 6 digits (India specific)
+    if (shippingPincode && shippingPincode.length === 6) {
+      try {
+        const response = await fetch(
+          `${POSTAL_API}=${shippingPincode}`
+        );
+        const result = await response.json();
 
-          if (data && data[0]?.Status === "Success") {
-            const postOffice = data[0].PostOffice[0];
+        if (result?.data) {
+          const info = result.data;
 
-            setFormData((prev) => ({
-              ...prev,
-              address: {
-                ...prev.address,
-                shipping_city: postOffice.District,
-                shipping_state: postOffice.State,
-                shipping_country: "India",
-              },
-            }));
-          } else {
-            setSnackbar({
-              open: true,
-              message: "Could not find location for this shipping pincode",
-              severity: "warning",
-            });
-          }
-        } catch (error) {
-          console.error("Error fetching shipping location data:", error);
+          setFormData((prev) => ({
+            ...prev,
+            address: {
+              ...prev.address,
+              shipping_city: info.district_name,
+              shipping_state: info.state_name,
+              shipping_country: "India",
+            },
+          }));
+        } else {
           setSnackbar({
             open: true,
-            message:
-              "Error fetching shipping location data. Please check the pincode and try again.",
-            severity: "error",
+            message: "Could not find location for this shipping pincode",
+            severity: "warning",
           });
         }
+      } catch (error) {
+        console.error("Error fetching shipping location data:", error);
+        setSnackbar({
+          open: true,
+          message:
+            "Error fetching shipping location data. Please check the pincode and try again.",
+          severity: "error",
+        });
       }
-    };
+    }
+  };
 
-    // Add debounce to prevent too many API calls
-    const debounceTimer = setTimeout(() => {
-      fetchShippingLocationFromPincode();
-    }, 500);
+  // Add debounce to prevent too many API calls
+  const debounceTimer = setTimeout(() => {
+    fetchShippingLocationFromPincode();
+  }, 500);
 
-    return () => clearTimeout(debounceTimer);
-  }, [formData.address.shipping_pincode]);
+  return () => clearTimeout(debounceTimer);
+}, [formData.address.shipping_pincode]);
+
 
   // Fetch location data when pincode changes
-  useEffect(() => {
-    const fetchLocationFromPincode = async () => {
-      const pincode = formData.address.pincode;
+useEffect(() => {
+  const fetchLocationFromPincode = async () => {
+    const pincode = formData.address.pincode;
 
-      // Only make API call if pincode is 6 digits (India specific)
-      if (pincode && pincode.length === 6) {
-        try {
-          const response = await fetch(
-            `https://api.postalpincode.in/pincode/${pincode}`
-          );
-          const data = await response.json();
+    // Only make API call if pincode is 6 digits (India specific)
+    if (pincode && pincode.length === 6) {
+      try {
+        const response = await fetch(
+          `${POSTAL_API}=${pincode}`
+        );
+        const result = await response.json();
 
-          if (data && data[0]?.Status === "Success") {
-            const postOffice = data[0].PostOffice[0];
+        if (result?.data) {
+          const info = result.data;
 
-            setFormData((prev) => ({
-              ...prev,
-              address: {
-                ...prev.address,
-                country: "India", // Default to India as the API only works for Indian pincodes
-                state: postOffice.State,
-                city: postOffice.District,
-                // Optionally update addresses if they're empty
-                billing_address:
-                  prev.address.billing_address ||
-                  `${postOffice.Name}, ${postOffice.District}`,
-                shipping_address: prev.address.shipping_address,
-              },
-            }));
-          } else {
-            setSnackbar({
-              open: true,
-              message: "Could not find location for this pincode",
-              severity: "warning",
-            });
-          }
-        } catch (error) {
-          console.error("Error fetching location data:", error);
+          setFormData((prev) => ({
+            ...prev,
+            address: {
+              ...prev.address,
+              country: "India", // Default to India
+              state: info.state_name,
+              city: info.district_name,
+              // Optionally update addresses if they're empty
+              billing_address:
+                prev.address.billing_address ||
+                `${info.office_name}, ${info.district_name}`,
+              shipping_address: prev.address.shipping_address,
+            },
+          }));
+        } else {
           setSnackbar({
             open: true,
-            message:
-              "Error fetching location data. Please check the pincode and try again.",
-            severity: "error",
+            message: "Could not find location for this pincode",
+            severity: "warning",
           });
         }
+      } catch (error) {
+        console.error("Error fetching location data:", error);
+        setSnackbar({
+          open: true,
+          message:
+            "Error fetching location data. Please check the pincode and try again.",
+          severity: "error",
+        });
       }
-    };
+    }
+  };
 
-    // Add debounce to prevent too many API calls
-    const debounceTimer = setTimeout(() => {
-      fetchLocationFromPincode();
-    }, 500);
+  // Add debounce to prevent too many API calls
+  const debounceTimer = setTimeout(() => {
+    fetchLocationFromPincode();
+  }, 500);
 
-    return () => clearTimeout(debounceTimer);
-  }, [formData.address.pincode]);
+  return () => clearTimeout(debounceTimer);
+}, [formData.address.pincode]);
+
 
   // Handle form field changes
   const handleChange = (e) => {
