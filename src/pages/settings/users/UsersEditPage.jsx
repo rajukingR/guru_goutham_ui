@@ -121,32 +121,41 @@ const UsersEditPage = () => {
     }
   };
 
+const [postOffices, setPostOffices] = useState([]);
+
 const fetchAddressFromPincode = async (pincode) => {
   setIsFetchingPincode(true);
   try {
-    const response = await fetch(
-      `${POSTAL_API}=${pincode}`
-    );
+    const response = await fetch(`${POSTAL_API}/${pincode}`);
     const result = await response.json();
 
-    if (result?.data) {
-      const info = result.data;
+    // Check if PostOffice exists
+    if (Array.isArray(result) && result.length > 0 && result[0]?.PostOffice?.length > 0) {
+      const firstOffice = result[0].PostOffice[0];
+
+      // Update formData with first post office info
       setFormData((prev) => ({
         ...prev,
-        country: "India", // Assuming all pincodes are from India
-        state: info.state_name,
-        city: info.district_name,
-        street: info.office_name,
+        country: firstOffice.Country || "India",
+        state: firstOffice.State,
+        city: firstOffice.District,
+        street: firstOffice.Name,
       }));
+
+      // Set all post offices for this pincode
+      setPostOffices(result[0].PostOffice);
     } else {
       console.warn("No address found for this pincode");
+      setPostOffices([]);
     }
   } catch (error) {
     console.error("Error fetching pincode details:", error);
+    setPostOffices([]);
   } finally {
     setIsFetchingPincode(false);
   }
 };
+
 
 
   const handleToggleChange = (field) =>

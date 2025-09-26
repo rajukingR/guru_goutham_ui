@@ -303,29 +303,34 @@ const SupplierAddLayout = () => {
     }
   };
 
+const [postOffices, setPostOffices] = useState([]);
+
 useEffect(() => {
   const fetchLocationData = async () => {
     const pincode = formData.address.pincode;
 
     if (pincode && pincode.length === 6) {
       try {
-        const response = await fetch(
-          `${POSTAL_API}=${pincode}`
-        );
+        const response = await fetch(`${POSTAL_API}/${pincode}`);
         const result = await response.json();
 
-        if (result?.data) {
-          const info = result.data;
+        // Check if PostOffice exists
+        if (Array.isArray(result) && result.length > 0 && result[0]?.PostOffice?.length > 0) {
+          const firstOffice = result[0].PostOffice[0];
 
+          // Update formData with first post office info
           setFormData((prev) => ({
             ...prev,
             address: {
               ...prev.address,
-              country: "India",
-              state: info.state_name,
-              city: info.district_name,
+              country: firstOffice.Country || "India",
+              state: firstOffice.State,
+              city: firstOffice.District,
             },
           }));
+
+          // Set all post offices for this pincode
+          setPostOffices(result[0].PostOffice);
         } else {
           setErrors((prev) => ({
             ...prev,
@@ -343,6 +348,7 @@ useEffect(() => {
 
   fetchLocationData();
 }, [formData.address.pincode]);
+
 
 
   const validateForm = () => {

@@ -57,31 +57,41 @@ const BranchEditPage = () => {
 
     fetchBranchData();
   }, [id]);
+
+const [postOffices, setPostOffices] = useState([]);
+
 useEffect(() => {
   const fetchLocation = async () => {
     const pincode = formData.pincode;
 
     if (pincode && pincode.length === 6) {
       try {
-        const response = await axios.get(
-          `${POSTAL_API}=${pincode}`
-        );
-        const info = response.data?.data;
+        const response = await axios.get(`${POSTAL_API}/${pincode}`);
+        const result = response.data;
 
-        if (info) {
+        // Check if PostOffice exists
+        if (Array.isArray(result) && result.length > 0 && result[0]?.PostOffice?.length > 0) {
+          const firstOffice = result[0].PostOffice[0];
+
+          // Update formData with first post office info
           setFormData((prev) => ({
             ...prev,
-            country: "India",
-            state: info.state_name || "",
-            city: info.district_name || "",
+            country: firstOffice.Country || "India",
+            state: firstOffice.State || "",
+            city: firstOffice.District || "",
           }));
+
+          // Set all post offices for this pincode
+          setPostOffices(result[0].PostOffice);
         } else {
+          // Reset if invalid
           setFormData((prev) => ({
             ...prev,
             country: "",
             state: "",
             city: "",
           }));
+          setPostOffices([]);
         }
       } catch (error) {
         console.error("Error fetching location from pincode:", error);
@@ -91,12 +101,14 @@ useEffect(() => {
           state: "",
           city: "",
         }));
+        setPostOffices([]);
       }
     }
   };
 
   fetchLocation();
 }, [formData.pincode]);
+
 
 
 

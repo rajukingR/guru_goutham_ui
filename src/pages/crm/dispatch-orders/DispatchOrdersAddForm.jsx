@@ -644,38 +644,51 @@ const DispatchOrdersAddForm = ({ product }) => {
 
   // Fetch location data when pincode changes
 useEffect(() => {
-  const fetchLocationFromPincode = async () => {
+  const fetchLocationData = async () => {
     const pincode = formData.pincode;
 
-    if (pincode && pincode.length === 6) {
+    if (pincode && pincode.length === 6 && validatePincode(pincode)) {
       try {
-        const response = await fetch(
-          `${POSTAL_API}=${pincode}`
-        );
+        const response = await fetch(`${POSTAL_API}/${pincode}`);
         const result = await response.json();
 
-        if (result?.data) {
-          const info = result.data;
+        // If API returns array with PostOffice
+        if (Array.isArray(result) && result.length > 0 && result[0]?.PostOffice) {
+          const postOffices = result[0].PostOffice;
+          setPostOffices(postOffices);
 
+          const first = postOffices[0];
+          setFormData((prev) => ({
+            ...prev,
+            city: first.District,
+            state: first.State,
+            country: first.Country,
+            street: first.Name,
+          }));
+        }
+        // If API returns object with data
+        else if (result?.data) {
+          const info = result.data;
           setFormData((prev) => ({
             ...prev,
             city: info.district_name,
             state: info.state_name,
             country: "India",
+            street: prev.street || "",
           }));
         } else {
+          setPostOffices([]);
           setSnackbar({
             open: true,
-            message: "Could not find location for this pincode",
-            severity: "warning",
+            message: "Invalid Pincode. Please enter a valid one.",
+            severity: "error",
           });
         }
       } catch (error) {
-        console.error("Error fetching location data:", error);
+        console.error("Error fetching location:", error);
         setSnackbar({
           open: true,
-          message:
-            "Error fetching location data. Please check the pincode and try again.",
+          message: "Error fetching location. Please try again.",
           severity: "error",
         });
       }
@@ -683,11 +696,12 @@ useEffect(() => {
   };
 
   const debounceTimer = setTimeout(() => {
-    fetchLocationFromPincode();
-  }, 500);
+    fetchLocationData();
+  }, 500); // 500ms debounce
 
   return () => clearTimeout(debounceTimer);
 }, [formData.pincode]);
+
 
 
   // Handle form field changes
@@ -1112,13 +1126,13 @@ useEffect(() => {
                 value={formData.shipping_name}
                 onChange={handleInputChange}
               />
-              <Field
+              {/* <Field
                 label="Street"
                 name="street"
                 placeholder="Enter Street"
                 value={formData.street}
                 onChange={handleInputChange}
-              />
+              /> */}
               <Field
                 label="Landmark"
                 name="landmark"

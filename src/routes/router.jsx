@@ -140,6 +140,7 @@ import AssetSwapsAdd from "../pages/inventory/swap-products/AssetSwapsAdd.jsx";
 import AssetSwapsEdit from "../pages/inventory/swap-products/AssetSwapsEdit.jsx";
 import ForgotPasswordContainer from "../pages/auth_page/password-page/ForgotPasswordContainer.jsx";
 import ResetPasswordContainer from "../pages/auth_page/password-page/ResetPasswordContainer.jsx";
+import RemoveItemsLayout from "../pages/operations/asset-items-remove-add/RemoveItemsLayout.jsx";
 const ProtectedRoute = ({ element }) => {
   const user = useSelector((state) => state.auth.user);
   return user ? element : <Navigate to="/signin" replace />;
@@ -496,6 +497,12 @@ const RoutesConfig = () => {
               path="operations/grn/edit/:id"
               element={<CreaditNotesEditFormLayout />}
             />
+
+            <Route
+              path="operations/peripheral-updation-deletion"
+              element={<RemoveItemsLayout />}
+            />
+
 
             {/* settings */}
             <Route path="settings/users" element={<UsersTablePage />} />

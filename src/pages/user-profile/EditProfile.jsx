@@ -14,7 +14,7 @@ import {
 import EditIcon from "@mui/icons-material/Edit";
 import Snackbar from "@mui/material/Snackbar";
 import MuiAlert from "@mui/material/Alert";
-import API_URL, { IMAGE_API_URL, POSTAL_API} from "../../api/Api_url";
+import API_URL, { IMAGE_API_URL, POSTAL_API } from "../../api/Api_url";
 import { useSelector } from "react-redux";
 
 const Alert = React.forwardRef(function Alert(props, ref) {
@@ -125,7 +125,7 @@ const EditProfile = () => {
         },
         method: "PUT",
         body: formDataToSend,
-        
+
       });
 
       if (response.ok) {
@@ -152,29 +152,39 @@ const EditProfile = () => {
 
 
 
-   // ✅ Auto-fetch location when pincode changes
+  const [postOffices, setPostOffices] = useState([]);
+
   useEffect(() => {
     const fetchLocationFromPincode = async () => {
-      if (formData.pincode && formData.pincode.length === 6) {
+      const pincode = formData.pincode;
+
+      if (pincode && pincode.length === 6) {
         try {
-          const response = await fetch(`${POSTAL_API}=${formData.pincode}`);
+          const response = await fetch(`${POSTAL_API}/${pincode}`);
           const result = await response.json();
 
-          if (result?.data) {
-            const info = result.data;
+          // Check if PostOffice exists
+          if (Array.isArray(result) && result.length > 0 && result[0]?.PostOffice?.length > 0) {
+            const firstOffice = result[0].PostOffice[0];
+
+            // Update formData with first post office info
             setFormData((prev) => ({
               ...prev,
-              country: "India",
-              state: info.state_name,
-              city: info.district_name,
-              street: info.office_name,
+              country: firstOffice.Country || "India",
+              state: firstOffice.State,
+              city: firstOffice.District,
+              street: firstOffice.Name,
             }));
+
+            // Set all post offices for this pincode
+            setPostOffices(result[0].PostOffice);
           } else {
             setSnackbar({
               open: true,
               message: "Invalid Pincode. Please enter a valid one.",
               severity: "error",
             });
+            setPostOffices([]);
           }
         } catch (error) {
           console.error("Error fetching pincode details:", error);
@@ -183,12 +193,14 @@ const EditProfile = () => {
             message: "Error fetching location. Try again.",
             severity: "error",
           });
+          setPostOffices([]);
         }
       }
     };
 
     fetchLocationFromPincode();
   }, [formData.pincode]);
+
 
   return (
     <Box
@@ -247,7 +259,7 @@ const EditProfile = () => {
                     onChange={handleChange}
                   />
                 </Grid>
-                
+
                 <Grid item xs={12}>
                   <TextField
                     label="Login ID*"
@@ -258,7 +270,7 @@ const EditProfile = () => {
                     required
                   />
                 </Grid>
-               
+
                 <Grid item xs={12}>
                   <TextField
                     label="Email ID*"

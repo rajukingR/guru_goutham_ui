@@ -325,29 +325,35 @@ const SalesOrdersAddLayoutPage = ({ product }) => {
     }
   };
 
+
+  const [shippingPostOffices, setShippingPostOffices] = useState([]); // Shipping Pincode
+
+
   // Fetch location data when shipping pincode changes
+// Shipping Pincode
 useEffect(() => {
   const fetchShippingLocationFromPincode = async () => {
     const shippingPincode = formData.address.shipping_pincode;
 
-    // Only make API call if shipping pincode is 6 digits (India specific)
     if (shippingPincode && shippingPincode.length === 6) {
       try {
-        const response = await fetch(
-          `${POSTAL_API}=${shippingPincode}`
-        );
+        const response = await fetch(`${POSTAL_API}/${shippingPincode}`);
         const result = await response.json();
 
-        if (result?.data) {
-          const info = result.data;
+        // Set Shipping Post Offices
+        if (Array.isArray(result) && result.length > 0 && result[0]?.PostOffice) {
+          setShippingPostOffices(result[0].PostOffice);
+        }
 
+        if (result[0]?.PostOffice?.length > 0) {
+          const firstOffice = result[0].PostOffice[0];
           setFormData((prev) => ({
             ...prev,
             address: {
               ...prev.address,
-              shipping_city: info.district_name,
-              shipping_state: info.state_name,
-              shipping_country: "India",
+              shipping_city: firstOffice.District,
+              shipping_state: firstOffice.State,
+              shipping_country: firstOffice.Country || "India",
             },
           }));
         } else {
@@ -361,24 +367,21 @@ useEffect(() => {
         console.error("Error fetching shipping location data:", error);
         setSnackbar({
           open: true,
-          message:
-            "Error fetching shipping location data. Please check the pincode and try again.",
+          message: "Error fetching shipping location data. Please check the pincode and try again.",
           severity: "error",
         });
       }
     }
   };
 
-  // Add debounce to prevent too many API calls
-  const debounceTimer = setTimeout(() => {
-    fetchShippingLocationFromPincode();
-  }, 500);
-
+  const debounceTimer = setTimeout(fetchShippingLocationFromPincode, 500);
   return () => clearTimeout(debounceTimer);
 }, [formData.address.shipping_pincode]);
 
 
   // Fetch location data when pincode changes
+const [postOffices, setPostOffices] = useState([]);
+
 useEffect(() => {
   const fetchLocationFromPincode = async () => {
     const pincode = formData.address.pincode;
@@ -386,25 +389,27 @@ useEffect(() => {
     // Only make API call if pincode is 6 digits (India specific)
     if (pincode && pincode.length === 6) {
       try {
-        const response = await fetch(
-          `${POSTAL_API}=${pincode}`
-        );
+        const response = await fetch(`${POSTAL_API}/${pincode}`);
         const result = await response.json();
 
-        if (result?.data) {
-          const info = result.data;
+        // Set Post Offices if available
+        if (Array.isArray(result) && result.length > 0 && result[0]?.PostOffice) {
+          setPostOffices(result[0].PostOffice);
+        }
 
+        // Update formData with first post office info (optional)
+        if (result[0]?.PostOffice?.length > 0) {
+          const firstOffice = result[0].PostOffice[0];
           setFormData((prev) => ({
             ...prev,
             address: {
               ...prev.address,
-              country: "India", // Default to India
-              state: info.state_name,
-              city: info.district_name,
-              // Optionally update addresses if they're empty
+              country: firstOffice.Country || "India",
+              state: firstOffice.State,
+              city: firstOffice.District,
               billing_address:
                 prev.address.billing_address ||
-                `${info.office_name}, ${info.district_name}`,
+                `${firstOffice.Name}, ${firstOffice.District}`,
               shipping_address: prev.address.shipping_address,
             },
           }));
@@ -427,13 +432,14 @@ useEffect(() => {
     }
   };
 
-  // Add debounce to prevent too many API calls
+  // Debounce API calls
   const debounceTimer = setTimeout(() => {
     fetchLocationFromPincode();
   }, 500);
 
   return () => clearTimeout(debounceTimer);
 }, [formData.address.pincode]);
+
 
 
   // Handle form field changes

@@ -1112,29 +1112,34 @@ const InvoicesEditPage = () => {
     }
   }, [selectedProductIds]);
 
+const [shippingPostOffices, setShippingPostOffices] = useState([]);
+
 useEffect(() => {
   const fetchLocationFromPincode = async () => {
     const pincode = formData.shippingDetails.pincode;
 
     if (pincode && pincode.length === 6) {
       try {
-        const response = await fetch(
-          `${POSTAL_API}=${pincode}`
-        );
+        const response = await fetch(`${POSTAL_API}/${pincode}`);
         const result = await response.json();
 
-        if (result?.data) {
-          const info = result.data;
+        // Check if PostOffice exists
+        if (Array.isArray(result) && result.length > 0 && result[0]?.PostOffice?.length > 0) {
+          const firstOffice = result[0].PostOffice[0];
 
+          // Update shippingDetails
           setFormData((prev) => ({
             ...prev,
             shippingDetails: {
               ...prev.shippingDetails,
-              city: info.district_name,
-              state: info.state_name,
-              country: "India",
+              city: firstOffice.District,
+              state: firstOffice.State,
+              country: firstOffice.Country || "India",
             },
           }));
+
+          // Set shipping post offices
+          setShippingPostOffices(result[0].PostOffice);
         } else {
           setSnackbar({
             open: true,
@@ -1143,21 +1148,17 @@ useEffect(() => {
           });
         }
       } catch (error) {
-        console.error("Error fetching location data:", error);
+        console.error("Error fetching shipping location data:", error);
         setSnackbar({
           open: true,
-          message:
-            "Error fetching location data. Please check the pincode and try again.",
+          message: "Error fetching shipping location data. Please check the pincode and try again.",
           severity: "error",
         });
       }
     }
   };
 
-  const debounceTimer = setTimeout(() => {
-    fetchLocationFromPincode();
-  }, 500);
-
+  const debounceTimer = setTimeout(fetchLocationFromPincode, 500);
   return () => clearTimeout(debounceTimer);
 }, [formData.shippingDetails.pincode]);
 

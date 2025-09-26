@@ -346,6 +346,12 @@ const Sidebar = ({ section }) => {
           description: "Invoice management",
         },
         {
+          text: "Peripherals Updation/Deletion",
+          path: "/dashboard/operations/peripheral-updation-deletion",
+          icon: <MemoryIcon />,
+          description: "Peripherals Updation/Deletion",
+        },
+        {
           text: "Client Journey",
           path: "/dashboard/operations/client_journey",
           icon: <TravelExploreIcon />,
@@ -774,28 +780,28 @@ const Sidebar = ({ section }) => {
                     // Enhanced active indicator
                     "&::before": isSelected
                       ? {
-                          content: '""',
-                          position: "absolute",
-                          left: "0",
-                          top: "50%",
-                          transform: "translateY(-50%)",
-                          width: "5px",
-                          height: "32px",
-                          background: `linear-gradient(180deg,
+                        content: '""',
+                        position: "absolute",
+                        left: "0",
+                        top: "50%",
+                        transform: "translateY(-50%)",
+                        width: "5px",
+                        height: "32px",
+                        background: `linear-gradient(180deg,
                             #64b5f6 0%,
                             #42a5f5 25%,
                             #2196f3 50%,
                             #1976d2 75%,
                             #0d47a1 100%
                           )`,
-                          borderRadius: "0 6px 6px 0",
-                          boxShadow: `
+                        borderRadius: "0 6px 6px 0",
+                        boxShadow: `
                             0 0 20px rgba(100, 181, 246, 0.8),
                             0 0 40px rgba(100, 181, 246, 0.4),
                             inset 0 0 10px rgba(255, 255, 255, 0.2)
                           `,
-                          animation: "pulse 2s ease-in-out infinite",
-                        }
+                        animation: "pulse 2s ease-in-out infinite",
+                      }
                       : {},
                     // Dynamic hover glow
                     "&::after": {

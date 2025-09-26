@@ -3,7 +3,7 @@ import Snackbar from "@mui/material/Snackbar";
 import Alert from "@mui/material/Alert";
 import { useNavigate } from "react-router-dom";
 import { useSelector } from "react-redux";
-import API_URL, {POSTAL_API} from "../../../api/Api_url";
+import API_URL, { POSTAL_API } from "../../../api/Api_url";
 
 const generateCustomerId = () => {
   const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
@@ -43,9 +43,10 @@ const validatePincode = (pincode) => {
 
 const ContactsAddLayoutPage = () => {
   const { user, token } = useSelector((state) => state.auth);
-    const userToken = token;
+  const userToken = token;
 
   const LoginUserName = user.full_name;
+  const [postOffices, setPostOffices] = useState([]);
 
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
@@ -194,51 +195,53 @@ const ContactsAddLayoutPage = () => {
     return isValid;
   };
 
-// Fetch location data when pincode changes
-useEffect(() => {
-  const fetchLocationData = async () => {
-    if (
-      formData.address.pincode.length === 6 &&
-      validatePincode(formData.address.pincode)
-    ) {
-      try {
-        const response = await fetch(
-          `${POSTAL_API}=${formData.address.pincode}`
-        );
-        const result = await response.json();
+  // Fetch location data when pincode changes
+  useEffect(() => {
+    const fetchLocationData = async () => {
+      if (formData.address.pincode.length === 6 && validatePincode(formData.address.pincode)) {
+        try {
+          const response = await fetch(`${POSTAL_API}/${formData.address.pincode}`);
+          const result = await response.json();
 
-        if (result?.data) {
-          const info = result.data;
+          // Check if result is an array and has at least one item
+          if (Array.isArray(result) && result.length > 0 && result[0]?.PostOffice) {
+            const postOffices = result[0].PostOffice;
+            setPostOffices(postOffices);
 
-          setFormData((prev) => ({
-            ...prev,
-            address: {
-              ...prev.address,
-              country: "India",
-              state: info.state_name,
-              city: info.district_name,
-              street: info.office_name,
-            },
-          }));
-        } else {
+            // Optionally set default values (first post office)
+            const first = postOffices[0];
+            setFormData((prev) => ({
+              ...prev,
+              address: {
+                ...prev.address,
+                country: first.Country,
+                state: first.State,
+                city: first.District,
+                street: first.Name,
+              },
+            }));
+          } else {
+            setPostOffices([]);
+            setSnackbar({
+              open: true,
+              message: "Invalid Pincode. Please enter a valid one.",
+              severity: "error",
+            });
+          }
+        } catch (error) {
+          console.error("Error fetching location:", error);
           setSnackbar({
             open: true,
-            message: "Invalid Pincode. Please enter a valid one.",
+            message: "Error fetching location. Try again.",
             severity: "error",
           });
         }
-      } catch (error) {
-        console.error("Error fetching location:", error);
-        setSnackbar({
-          open: true,
-          message: "Error fetching location. Try again.",
-          severity: "error",
-        });
       }
-    }
-  };
-  fetchLocationData();
-}, [formData.address.pincode]);
+    };
+
+    fetchLocationData();
+  }, [formData.address.pincode]);
+
 
 
   const handleInputChange = (field, value) => {
@@ -415,13 +418,7 @@ useEffect(() => {
             </div>
 
             <div style={fieldsGridStyle}>
-              <Field
-                label="Street"
-                name="address.street"
-                placeholder="Enter Street"
-                value={formData.address.street}
-                onChange={handleInputChange}
-              />
+
 
               <Field
                 label="Pincode"
@@ -432,7 +429,21 @@ useEffect(() => {
                 errors={errors} // Add this prop
                 required
               />
-
+              <Field
+                label="Area"
+                name="address.street"
+                value={formData.address.street}
+                onChange={handleInputChange}
+                type="select"  // Use type="select" instead of as="select"
+                options={[
+                  { value: "", label: "Select a street" },
+                  ...postOffices.map((po, index) => ({
+                    value: po.Name,
+                    label: po.Name
+                  }))
+                ]}
+                disabled={postOffices.length === 0}
+              />
               <Field
                 label="City"
                 name="address.city"

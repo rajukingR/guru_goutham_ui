@@ -218,27 +218,34 @@ const CourierChargesEdit = () => {
     return /^\d{6}$/.test(pincode);
   };
 
-  // Fetch location data when pincode changes for a specific address
+const [addressesPostOffices, setAddressesPostOffices] = useState([]); // Holds post offices for each address
+
 const fetchLocationData = useCallback(async (pincode, index) => {
   if (pincode.length === 6 && validatePincode(pincode)) {
     setLoadingIndex(index);
     try {
-      const response = await fetch(
-        `${POSTAL_API}=${pincode}`
-      );
+      const response = await fetch(`${POSTAL_API}/${pincode}`);
       const result = await response.json();
 
-      if (result?.data) {
-        const info = result.data;
+      if (Array.isArray(result) && result.length > 0 && result[0]?.PostOffice?.length > 0) {
+        const firstOffice = result[0].PostOffice[0];
 
+        // Update addresses array
         setAddresses((prevAddresses) => {
           const updatedAddresses = [...prevAddresses];
           updatedAddresses[index] = {
             ...updatedAddresses[index],
-            district: info.district_name,
-            state: info.state_name,
+            district: firstOffice.District,
+            state: firstOffice.State,
           };
           return updatedAddresses;
+        });
+
+        // Safely set post offices for this address index
+        setAddressesPostOffices((prev) => {
+          const updatedPostOffices = Array.from({ length: Math.max(prev.length, index + 1) }, (_, i) => prev[i] || []);
+          updatedPostOffices[index] = result[0].PostOffice;
+          return updatedPostOffices;
         });
 
         showSnackbar("Location details auto-filled successfully", "success");
@@ -253,6 +260,8 @@ const fetchLocationData = useCallback(async (pincode, index) => {
     }
   }
 }, []);
+
+
 
 
   const handleInputChange = (e) => {

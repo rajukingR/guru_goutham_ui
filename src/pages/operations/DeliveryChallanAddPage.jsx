@@ -616,25 +616,32 @@ const DeliveryChallanAddPage = ({ product }) => {
     });
     setQuantities(newQuantities);
   };
+
+  const [postOffices, setPostOffices] = useState([]); // Billing/Main Pincode
+
+
 useEffect(() => {
   const fetchLocationFromPincode = async () => {
     const pincode = formData.pincode;
 
     if (pincode && pincode.length === 6) {
       try {
-        const response = await fetch(
-          `${POSTAL_API}=${pincode}`
-        );
+        const response = await fetch(`${POSTAL_API}/${pincode}`);
         const result = await response.json();
 
-        if (result?.data) {
-          const info = result.data;
+        // Set Post Offices if available
+        if (Array.isArray(result) && result.length > 0 && result[0]?.PostOffice) {
+          setPostOffices(result[0].PostOffice);
+        }
 
+        // Update formData with first post office info (optional)
+        if (result[0]?.PostOffice?.length > 0) {
+          const firstOffice = result[0].PostOffice[0];
           setFormData((prev) => ({
             ...prev,
-            city: info.district_name,
-            state: info.state_name,
-            country: "India",
+            city: firstOffice.District,
+            state: firstOffice.State,
+            country: firstOffice.Country || "India",
           }));
         } else {
           setSnackbar({
@@ -647,20 +654,17 @@ useEffect(() => {
         console.error("Error fetching location data:", error);
         setSnackbar({
           open: true,
-          message:
-            "Error fetching location data. Please check the pincode and try again.",
+          message: "Error fetching location data. Please check the pincode and try again.",
           severity: "error",
         });
       }
     }
   };
 
-  const debounceTimer = setTimeout(() => {
-    fetchLocationFromPincode();
-  }, 500);
-
+  const debounceTimer = setTimeout(fetchLocationFromPincode, 500);
   return () => clearTimeout(debounceTimer);
 }, [formData.pincode]);
+
 
 
   const handleInputChange = useCallback((e) => {
