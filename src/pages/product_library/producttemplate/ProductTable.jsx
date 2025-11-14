@@ -211,3 +211,277 @@ const ProductTable = () => {
 };
 
 export default ProductTable;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+//goeducated.com/course/get-all-courses
+// import React, { useEffect, useState } from "react";
+// import axios from "axios";
+// import { useNavigate } from "react-router-dom";
+
+// const CourseTableLayout = () => {
+//   const [data, setData] = useState([]);
+//   const [filteredData, setFilteredData] = useState([]);
+//   const [searchTerm, setSearchTerm] = useState("");
+//   const navigate = useNavigate();
+
+//   const columns = [
+//     { id: "s_no", label: "S.No." },
+//     { id: "courseName", label: "Course Name" },
+//     { id: "courseCategory", label: "Category" },
+//     { id: "subCategories", label: "Sub Category" },
+//     { id: "actions", label: "Actions" },
+//   ];
+
+//   const handleEdit = (course) => {
+//     if (course._id) {
+//       navigate(`/dashboard/product_library/edit/${course._id}`);
+//     } else {
+//       navigate("/edit-course", { state: { courseData: course } });
+//     }
+//   };
+
+//   const handleAddNew = () => {
+//     navigate("/add-course");
+//   };
+
+//   const handleViewDetails = (course) => {
+//     navigate("/course-details", { state: { courseData: course } });
+//   };
+
+//   useEffect(() => {
+//     const fetchCourses = async () => {
+//       try {
+//         const res = await axios.get(`http://localhost:3000/course/get-all-courses`);
+//         const formattedData = res.data.map((item, index) => ({
+//           s_no: index + 1,
+//           courseName: item.courseName,
+//           courseCategory: item.courseCategory,
+//           subCategories: item.subCategories?.join(", "),
+//           originalData: item,
+//           id: item._id || item.id,
+//         }));
+//         setData(formattedData);
+//         setFilteredData(formattedData);
+//       } catch (error) {
+//         console.error("Error fetching course data:", error);
+//       }
+//     };
+
+//     fetchCourses();
+//   }, []);
+
+//   // 🔍 Handle search filtering
+//   const handleSearch = (e) => {
+//     const value = e.target.value.toLowerCase();
+//     setSearchTerm(value);
+
+//     const filtered = data.filter(
+//       (course) =>
+//         course.courseName.toLowerCase().includes(value) ||
+//         course.courseCategory.toLowerCase().includes(value)
+//     );
+//     setFilteredData(filtered);
+//   };
+
+//   return (
+//     <div style={{ padding: "20px" }}>
+//       {/* Header Section */}
+//       <div
+//         style={{
+//           display: "flex",
+//           justifyContent: "space-between",
+//           alignItems: "center",
+//           marginBottom: "20px",
+//           flexWrap: "wrap",
+//           gap: "10px",
+//         }}
+//       >
+//         {/* Left Side: Search Input */}
+//         <div style={{ flex: 1, maxWidth: "400px" }}>
+//           <input
+//             type="text"
+//             placeholder="🔍 Search courses..."
+//             value={searchTerm}
+//             onChange={handleSearch}
+//             style={{
+//               width: "100%",
+//               padding: "10px 14px",
+//               border: "1px solid #ccc",
+//               borderRadius: "6px",
+//               fontSize: "14px",
+//               outline: "none",
+//             }}
+//           />
+//         </div>
+
+//         {/* Right Side: Add New Course Button */}
+//         <button
+//           onClick={handleAddNew}
+//           style={{
+//             padding: "10px 20px",
+//             backgroundColor: "#28a745",
+//             color: "white",
+//             border: "none",
+//             borderRadius: "4px",
+//             cursor: "pointer",
+//             fontSize: "14px",
+//             fontWeight: "500",
+//             whiteSpace: "nowrap",
+//           }}
+//           onMouseOver={(e) => (e.target.style.backgroundColor = "#218838")}
+//           onMouseOut={(e) => (e.target.style.backgroundColor = "#28a745")}
+//         >
+//           + Add New Course
+//         </button>
+//       </div>
+
+//       {/* Table Section */}
+//       <div
+//         style={{
+//           border: "1px solid #ddd",
+//           borderRadius: "8px",
+//           overflow: "hidden",
+//           boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
+//           overflowX: "auto",
+//         }}
+//       >
+//         <table
+//           style={{
+//             width: "100%",
+//             borderCollapse: "collapse",
+//             backgroundColor: "white",
+//             minWidth: "800px",
+//           }}
+//         >
+//           <thead>
+//             <tr style={{ backgroundColor: "#f5f5f5" }}>
+//               {columns.map((column) => (
+//                 <th
+//                   key={column.id}
+//                   style={{
+//                     padding: "12px 16px",
+//                     textAlign: "left",
+//                     borderBottom: "2px solid #ddd",
+//                     fontWeight: "600",
+//                     color: "#333",
+//                   }}
+//                 >
+//                   {column.label}
+//                 </th>
+//               ))}
+//             </tr>
+//           </thead>
+//           <tbody>
+//             {filteredData.length > 0 ? (
+//               filteredData.map((row, index) => (
+//                 <tr
+//                   key={row.id || index}
+//                   style={{
+//                     backgroundColor: index % 2 === 0 ? "white" : "#f9f9f9",
+//                     borderBottom: "1px solid #eee",
+//                   }}
+//                 >
+//                   {columns.map((column) => (
+//                     <td
+//                       key={column.id}
+//                       style={{
+//                         padding: "12px 16px",
+//                         borderBottom: "1px solid #eee",
+//                         verticalAlign: "middle",
+//                       }}
+//                     >
+//                       {column.id === "actions" ? (
+//                         <div style={{ display: "flex", gap: "8px" }}>
+//                           <button
+//                             onClick={() =>
+//                               handleEdit(row.originalData || row)
+//                             }
+//                             style={{
+//                               padding: "6px 12px",
+//                               backgroundColor: "#007bff",
+//                               color: "white",
+//                               border: "none",
+//                               borderRadius: "4px",
+//                               cursor: "pointer",
+//                               fontSize: "14px",
+//                             }}
+//                             onMouseOver={(e) =>
+//                               (e.target.style.backgroundColor = "#0056b3")
+//                             }
+//                             onMouseOut={(e) =>
+//                               (e.target.style.backgroundColor = "#007bff")
+//                             }
+//                           >
+//                             Edit
+//                           </button>
+
+//                           <button
+//                             onClick={() =>
+//                               handleViewDetails(row.originalData || row)
+//                             }
+//                             style={{
+//                               padding: "6px 12px",
+//                               backgroundColor: "#6c757d",
+//                               color: "white",
+//                               border: "none",
+//                               borderRadius: "4px",
+//                               cursor: "pointer",
+//                               fontSize: "14px",
+//                             }}
+//                             onMouseOver={(e) =>
+//                               (e.target.style.backgroundColor = "#545b62")
+//                             }
+//                             onMouseOut={(e) =>
+//                               (e.target.style.backgroundColor = "#6c757d")
+//                             }
+//                           >
+//                             View
+//                           </button>
+//                         </div>
+//                       ) : (
+//                         row[column.id] || "-"
+//                       )}
+//                     </td>
+//                   ))}
+//                 </tr>
+//               ))
+//             ) : (
+//               <tr>
+//                 <td colSpan={columns.length} style={{ textAlign: "center", padding: "40px", color: "#666" }}>
+//                   No courses found
+//                 </td>
+//               </tr>
+//             )}
+//           </tbody>
+//         </table>
+//       </div>
+//     </div>
+//   );
+// };
+
+// export default CourseTableLayout;

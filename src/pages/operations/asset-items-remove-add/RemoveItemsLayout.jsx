@@ -63,6 +63,41 @@ const RemoveItemsLayout = () => {
     const [allowedCategories, setAllowedCategories] = useState([]);
     const [saving, setSaving] = useState(false);
 
+
+
+
+
+
+    // Add this function to filter removed items properly
+    const getFinalRemovedItems = (assetTransactions) => {
+        if (!assetTransactions?.length) return [];
+
+        // Group by asset_id and get the latest status for each
+        const latestStatus = {};
+
+        assetTransactions
+            .sort((a, b) => new Date(b.action_date) - new Date(a.action_date))
+            .forEach(tx => {
+                if (!latestStatus[tx.asset_id]) {
+                    latestStatus[tx.asset_id] = {
+                        status: tx.status,
+                        transaction: tx
+                    };
+                }
+            });
+
+        // Only return items that are finally removed (not re-added later)
+        const finalRemoved = Object.values(latestStatus)
+            .filter(item => item.status === "Removed")
+            .map(item => item.transaction);
+
+        return finalRemoved;
+    };
+
+
+
+
+
     // Form states for main form and dialogs
     const [formData, setFormData] = useState({
         customerId: "",
@@ -252,7 +287,8 @@ const RemoveItemsLayout = () => {
         try {
             setLoading(true);
             const response = await axios.get(
-                `${API_URL}/delivery-challans/peripheral-assets/2`,
+                `${API_URL}/delivery-challans/peripheral-assets/${formData.customerId}`,
+                // `${API_URL}/delivery-challans/peripheral-assets/1`,
                 {
                     headers: {
                         "Authorization": `Bearer ${userToken}`,
@@ -263,19 +299,73 @@ const RemoveItemsLayout = () => {
             const apiData = response.data;
             console.log("Peripheral Assets API Response:", apiData);
 
-            // Extract unique categories from API data and filter allowed ones
-            const categoriesFromApi = [...new Set(apiData.map(item => item.product?.product_category))].filter(Boolean);
-            const filteredCategories = categoriesFromApi.filter(cat =>
-                Object.keys(categoryMapping).includes(cat)
-            );
+            // ✅ STEP 1: Filter out assets whose final status is 'Removed'
+            // (assuming your API returns an "assetTransactions" or similar array)
+            if (productData?.assetTransactions?.length > 0) {
+                const latestStatus = {};
 
-            console.log("Filtered Categories:", filteredCategories);
-            setAllowedCategories(filteredCategories);
+                // Sort by latest date and pick most recent status for each asset
+                productData.assetTransactions
+                    .sort((a, b) => new Date(b.action_date) - new Date(a.action_date))
+                    .forEach(tx => {
+                        if (!latestStatus[tx.asset_id]) {
+                            latestStatus[tx.asset_id] = tx.status;
+                        }
+                    });
 
-            // Transform API data into available upgrades
-            const transformedUpgrades = transformApiDataToUpgrades(apiData, filteredCategories);
-            console.log("Transformed Upgrades:", transformedUpgrades);
-            setAvailableUpgrades(transformedUpgrades);
+                // Get only finally active asset IDs
+                const activeAssetIds = Object.keys(latestStatus).filter(
+                    id => latestStatus[id] === "Added"
+                );
+
+                console.log("Active Asset IDs (finally added):", activeAssetIds);
+
+                // ✅ Filter out items that belong to assets finally removed
+                apiData.forEach(item => {
+                    if (item.device_ids && Array.isArray(item.device_ids)) {
+                        item.device_ids = item.device_ids.filter(id => activeAssetIds.includes(id));
+                    }
+                });
+
+                // Remove items where device_ids became empty
+                const filteredApiData = apiData.filter(
+                    item => item.device_ids && item.device_ids.length > 0
+                );
+
+                console.log("Filtered Peripheral Assets (final added only):", filteredApiData);
+
+                // ✅ Continue transforming categories and upgrades from filtered data
+                const categoriesFromApi = [
+                    ...new Set(filteredApiData.map(item => item.product?.product_category)),
+                ].filter(Boolean);
+
+                const filteredCategories = categoriesFromApi.filter(cat =>
+                    Object.keys(categoryMapping).includes(cat)
+                );
+
+                console.log("Filtered Categories:", filteredCategories);
+                setAllowedCategories(filteredCategories);
+
+                const transformedUpgrades = transformApiDataToUpgrades(
+                    filteredApiData,
+                    filteredCategories
+                );
+                console.log("Transformed Upgrades:", transformedUpgrades);
+                setAvailableUpgrades(transformedUpgrades);
+            } else {
+                // If there are no asset transactions, just show all
+                const categoriesFromApi = [
+                    ...new Set(apiData.map(item => item.product?.product_category)),
+                ].filter(Boolean);
+
+                const filteredCategories = categoriesFromApi.filter(cat =>
+                    Object.keys(categoryMapping).includes(cat)
+                );
+
+                setAllowedCategories(filteredCategories);
+                const transformedUpgrades = transformApiDataToUpgrades(apiData, filteredCategories);
+                setAvailableUpgrades(transformedUpgrades);
+            }
 
         } catch (error) {
             console.error("Error fetching peripheral assets:", error);
@@ -284,6 +374,41 @@ const RemoveItemsLayout = () => {
             setLoading(false);
         }
     };
+
+
+    // Fetch peripheral assets when delivery challan is selected
+    useEffect(() => {
+        if (formData.customerId && formData.dcId) {
+            fetchPeripheralAssets();
+        }
+    }, [formData.customerId, formData.dcId]);
+
+    // 🔹 Filter out finally removed assets from currentItems
+    useEffect(() => {
+        if (productData?.assetTransactions?.length > 0 && currentItems.length > 0) {
+            const latestStatus = {};
+            productData.assetTransactions
+                .sort((a, b) => new Date(b.action_date) - new Date(a.action_date))
+                .forEach(tx => {
+                    if (!latestStatus[tx.asset_id]) {
+                        latestStatus[tx.asset_id] = tx.status;
+                    }
+                });
+
+            const activeAssetIds = Object.keys(latestStatus).filter(
+                id => latestStatus[id] === "Added"
+            );
+
+            const filteredItems = currentItems.filter(item =>
+                !item.assetId || activeAssetIds.includes(item.assetId)
+            );
+
+            if (JSON.stringify(filteredItems) !== JSON.stringify(currentItems)) {
+                setCurrentItems(filteredItems);
+            }
+        }
+    }, [productData, currentItems]);
+
 
     const fetchProductData = async (productId, assetId) => {
         try {
@@ -400,8 +525,16 @@ const RemoveItemsLayout = () => {
             const type = categoryMapping[product.product_category] || '';
             if (!type) return;
 
-            // Get specification based on available fields
-            const specification = product.ram || product.processor_model || product.storage || product.model || product.product_name || '';
+            // ✅ FIX: Get specification based on product category
+            let specification = '';
+
+            if (product.product_category === 'HDD' || product.product_category === 'SSD') {
+                // For HDD/SSD, use capacity field
+                specification = product.capacity || product.storage || product.model || product.product_name || '';
+            } else {
+                // For other categories, use the existing logic
+                specification = product.ram || product.processor_model || product.storage || product.model || product.product_name || '';
+            }
 
             // Handle items with multiple device_ids - split them into individual items
             if (item.device_ids && item.device_ids.length > 0) {
@@ -410,11 +543,11 @@ const RemoveItemsLayout = () => {
                         id: `${item.id}-${index}`,
                         type: type,
                         name: product.product_name,
-                        specification: specification,
+                        specification: specification, // ✅ Now uses correct field for HDD/SSD
                         price: parseFloat(product.rent_price_per_month) || 0,
                         description: `${product.brand} ${product.model}`,
                         assetPrefix: getAssetPrefix(type),
-                        sizes: product.ram || product.storage || product.processor_model || '',
+                        sizes: product.capacity || product.ram || product.storage || product.processor_model || '', // ✅ Also update sizes for consistency
                         quantity: 1,
                         unit_price: parseFloat(item.unit_price) || 0,
                         total_price: parseFloat(item.total_price) || 0,
@@ -433,11 +566,11 @@ const RemoveItemsLayout = () => {
                         id: `${item.id}-${i}`,
                         type: type,
                         name: product.product_name,
-                        specification: specification,
+                        specification: specification, // ✅ Now uses correct field for HDD/SSD
                         price: parseFloat(product.rent_price_per_month) || 0,
                         description: `${product.brand} ${product.model}`,
                         assetPrefix: getAssetPrefix(type),
-                        sizes: product.ram || product.storage || product.processor_model || '',
+                        sizes: product.capacity || product.ram || product.storage || product.processor_model || '', // ✅ Also update sizes for consistency
                         quantity: 1,
                         unit_price: parseFloat(item.unit_price) || 0,
                         total_price: parseFloat(item.total_price) || 0,
@@ -493,7 +626,7 @@ const RemoveItemsLayout = () => {
     const openRemoveDialog = (item) => {
         setRemoveForm({
             parentAssetId: parentAssetId,
-            itemsAssetId: item.assetId || '',
+            itemsAssetId: item.assetId || item.asset_id || '',
             size: item.size || '',
             removingDate: new Date().toISOString().split('T')[0],
             price: item.price,
@@ -582,6 +715,9 @@ const RemoveItemsLayout = () => {
         // If any errors exist, stop submission
         if (Object.keys(newErrors).length > 0) return;
 
+        // ✅ FIX: Use the actual item.isDefault value to determine the status
+        const isDefaultStatus = item.isDefault ? "Default" : "Upgraded";
+
         const removalPayload = {
             customer_id: order?.customer_id,
             product_id: order?.product_id,
@@ -594,9 +730,12 @@ const RemoveItemsLayout = () => {
             itemDetails: {
                 name: item.name,
                 specification: item.specification,
-                type: item.type
+                type: item.type,
+                isDefault: isDefaultStatus // ✅ This will now be "Upgraded" for non-default items
             }
         };
+
+        console.log("Removal Payload:", removalPayload); // Debug log
 
         try {
             const result = await createAssetTransaction(removalPayload);
@@ -643,6 +782,7 @@ const RemoveItemsLayout = () => {
                 name: upgrade.name,
                 specification: upgrade.specification,
                 type: upgrade.type,
+                isDefault: "Upgraded",
             }
         };
 
@@ -700,6 +840,7 @@ const RemoveItemsLayout = () => {
     };
 
     // Remove upgrade item directly
+    // Remove upgrade item directly
     const removeUpgradeItem = async (itemId) => {
         const itemToRemove = currentItems.find(item => item.id === itemId);
 
@@ -707,6 +848,9 @@ const RemoveItemsLayout = () => {
             showSnackbar("Error: Item not found", "error");
             return;
         }
+
+        // ✅ FIX: Use the actual item.isDefault value
+        const isDefaultStatus = itemToRemove.isDefault ? "Default" : "Upgraded";
 
         const removalPayload = {
             customer_id: order?.customer_id,
@@ -720,15 +864,13 @@ const RemoveItemsLayout = () => {
             itemDetails: {
                 name: itemToRemove.name,
                 specification: itemToRemove.specification,
-                type: itemToRemove.type
+                type: itemToRemove.type,
+                isDefault: isDefaultStatus // ✅ This will now be "Upgraded" for non-default items
             }
         };
 
-        console.log("Upgrade Removal Payload:", removalPayload);
-
         try {
             const result = await createAssetTransaction(removalPayload);
-            console.log("Upgrade Remove API Response:", result);
 
             setCurrentItems(currentItems.filter(item => item.id !== itemId));
             showSnackbar(`Removed upgrade: ${itemToRemove.name} ${itemToRemove.specification}`);
@@ -736,6 +878,7 @@ const RemoveItemsLayout = () => {
             showSnackbar("Error removing upgrade. Please try again.", "error");
         }
     };
+
 
     // Save changes - Send all transactions at once
     const saveChanges = async () => {
@@ -752,6 +895,9 @@ const RemoveItemsLayout = () => {
 
         // Add remove transactions
         removedItems.forEach(item => {
+            // ✅ FIX: Use the actual item.isDefault value
+            const isDefaultStatus = item.isDefault ? "Default" : "Upgraded";
+
             transactions.push({
                 customer_id: order?.customer_id,
                 product_id: order?.product_id,
@@ -764,7 +910,8 @@ const RemoveItemsLayout = () => {
                 itemDetails: {
                     name: item.name,
                     specification: item.specification,
-                    type: item.type
+                    type: item.type,
+                    isDefault: isDefaultStatus // ✅ Add this
                 }
             });
         });
@@ -783,7 +930,8 @@ const RemoveItemsLayout = () => {
                 itemDetails: {
                     name: item.name,
                     specification: item.specification,
-                    type: item.type
+                    type: item.type,
+                    isDefault: "Upgraded" // Added items are always upgrades
                 }
             });
         });
@@ -877,7 +1025,7 @@ const RemoveItemsLayout = () => {
     return (
         <Box sx={containerStyle}>
             <Typography variant="h4" gutterBottom sx={{ fontWeight: 600, color: "#1f2937" }}>
-                🚀 Peripheral Updation/Deletion
+                🚀 Peripherals Updation/Deletion
             </Typography>
 
             {/* Customer and Delivery Challan Selection */}
@@ -903,7 +1051,8 @@ const RemoveItemsLayout = () => {
                                     </MenuItem>
                                     {orders.map((order) => (
                                         <MenuItem key={order.id} value={order.id}>
-                                            {order.first_name} {order.last_name} ({order.customer_id})
+                                            {`${order.first_name} ${order.last_name} (${order.company_name})`}
+
                                         </MenuItem>
                                     ))}
                                 </Select>
@@ -1032,6 +1181,8 @@ const RemoveItemsLayout = () => {
                                             <Table>
                                                 <TableHead>
                                                     <TableRow>
+                                                        <TableCell>S.No</TableCell>
+
                                                         <TableCell>Component</TableCell>
                                                         <TableCell>Specification</TableCell>
                                                         <TableCell>Asset ID</TableCell>
@@ -1040,10 +1191,11 @@ const RemoveItemsLayout = () => {
                                                     </TableRow>
                                                 </TableHead>
                                                 <TableBody>
-                                                    {currentItems.map((item) => (
+                                                    {currentItems.map((item, index) => (
                                                         <TableRow key={item.id} sx={{
                                                             backgroundColor: item.isUpgrade ? '#f0f9ff' : 'inherit'
                                                         }}>
+                                                            <TableCell>{index + 1}</TableCell>
                                                             <TableCell>
                                                                 <Typography variant="body2" fontWeight="medium">
                                                                     {item.name}
@@ -1173,6 +1325,76 @@ const RemoveItemsLayout = () => {
                                 </CardContent>
                             </Card>
                         </Grid>
+
+                        {/* Removed Items */}
+                        <Grid item xs={12} md={6}>
+                            <Card elevation={3} sx={{ height: '100%' }}>
+                                <CardContent>
+                                    <Typography variant="h6" gutterBottom sx={{ color: "#374151" }}>
+                                        🗑️ Removed Items
+                                    </Typography>
+
+                                    {productData?.assetTransactions?.filter(item => item.status === 'Removed').length === 0 ? (
+                                        <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', py: 4 }}>
+                                            No items have been removed yet.
+                                        </Typography>
+                                    ) : (
+                                        <TableContainer component={Paper} variant="outlined">
+                                            <Table>
+                                                <TableHead>
+                                                    <TableRow>
+                                                        <TableCell>S.No</TableCell>
+
+                                                        <TableCell>Component</TableCell>
+                                                        <TableCell>Specification</TableCell>
+                                                        <TableCell>Asset ID</TableCell>
+                                                        <TableCell>Size</TableCell>
+                                                        <TableCell>Removed Date</TableCell>
+                                                        {/* <TableCell>Action</TableCell> */}
+                                                    </TableRow>
+                                                </TableHead>
+                                                <TableBody>
+                                                    {getFinalRemovedItems(productData?.assetTransactions)
+                                                        .map((item, index) => (
+                                                            <TableRow key={item.id}>
+                                                                <TableCell>{index + 1}</TableCell>
+                                                                <TableCell>
+                                                                    {item.item_name}
+                                                                    <Chip
+                                                                        label={item.is_default === "Default" ? "Default" : "Upgrade"}
+                                                                        color={item.is_default === "Default" ? "default" : "success"}
+                                                                        size="small"
+                                                                        sx={{ mt: 0.5, ml: 1 }}
+                                                                    />
+                                                                </TableCell>
+                                                                <TableCell>{item.specification}</TableCell>
+                                                                <TableCell>{item.asset_id}</TableCell>
+                                                                <TableCell>{item.size}</TableCell>
+                                                                <TableCell>{new Date(item.action_date).toLocaleDateString()}</TableCell>
+
+                                                                {/* <TableCell>
+                                                                <IconButton
+                                                                    color={item.isDefault ? "error" : "warning"}
+                                                                    size="small"
+                                                                    onClick={() => {
+                                                                        openRemoveDialog(item);
+
+                                                                    }}
+                                                                    title={item.isDefault ? "Remove default item" : "Remove upgrade"}
+                                                                >
+                                                                    <Delete />
+                                                                </IconButton>
+                                                            </TableCell> */}
+                                                            </TableRow>
+                                                        ))}
+                                                </TableBody>
+                                            </Table>
+                                        </TableContainer>
+                                    )}
+                                </CardContent>
+                            </Card>
+                        </Grid>
+
                     </Grid>
 
                     {/* Action Buttons */}

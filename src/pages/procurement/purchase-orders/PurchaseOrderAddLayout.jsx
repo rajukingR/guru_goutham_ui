@@ -92,7 +92,12 @@ const PurchaseOrderAddLayout = () => {
       try {
         // Fetch approved purchase quotations
         const pqResponse = await fetch(
-          `${API_URL}/purchase-quotation/approved`
+          `${API_URL}/purchase-quotation/approved`,
+          {
+            headers: {
+              "Authorization": `Bearer ${userToken}`,
+            },
+          }
         );
         if (!pqResponse.ok)
           throw new Error("Failed to fetch purchase quotations");

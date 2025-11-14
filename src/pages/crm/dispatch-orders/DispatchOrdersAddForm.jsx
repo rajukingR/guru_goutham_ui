@@ -989,7 +989,7 @@ useEffect(() => {
                     value: order.id,
                     label: `${order.order_id} - ${customer.first_name || ""} ${
                       customer.last_name || ""
-                    }`,
+                    } (${order.customer.company_name})`,
                   };
                 })}
               />
@@ -1061,13 +1061,13 @@ useEffect(() => {
                 value={formData.dispatch_order_date}
                 onChange={handleInputChange}
               />
-              <Field
+              {/* <Field
                 label="Other Reference"
                 name="dealer_reference"
                 placeholder="Enter Reference"
                 value={formData.dealer_reference}
                 onChange={handleInputChange}
-              />
+              /> */}
               <Field
                 label="Email"
                 name="email"
@@ -1078,22 +1078,22 @@ useEffect(() => {
                 required
               />
 
-              <Field
+              {/* <Field
                 label="Remarks"
                 name="remarks"
                 placeholder="Enter Remarks"
                 type="textarea"
                 value={formData.remarks}
                 onChange={handleInputChange}
-              />
+              /> */}
 
-              <Field
+              {/* <Field
                 label="Industry"
                 name="industry"
                 placeholder="Enter Industry"
                 value={formData.industry}
                 onChange={handleInputChange}
-              />
+              /> */}
             </div>
           </div>
 

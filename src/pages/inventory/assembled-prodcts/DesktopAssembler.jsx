@@ -293,6 +293,7 @@ const HardwareSelector = () => {
     is_active: true,
   });
 
+
   // Loading states
   const [loading, setLoading] = useState({
     brands: false,
@@ -370,6 +371,17 @@ const HardwareSelector = () => {
   const [cabinetModels, setCabinetModels] = useState([]);
   const [cabinetAssetIds, setCabinetAssetIds] = useState([]);
   const [selectedCabinetAssetId, setSelectedCabinetAssetId] = useState("");
+
+
+  useEffect(() => {
+    if (selectedCabinetAssetId) {
+      setFormData((prev) => ({
+        ...prev,
+        asset_id: selectedCabinetAssetId,
+      }));
+    }
+  }, [selectedCabinetAssetId]);
+
 
   // GPU State
   const [gpuBrand, setGpuBrand] = useState("");
@@ -1502,9 +1514,9 @@ const HardwareSelector = () => {
               <input
                 type="text"
                 style={styles.input}
-                value={formData.asset_id}
-                onChange={(e) => handleInputChange("asset_id", e.target.value)}
-                placeholder="Enter Cabinet asset ID"
+                value={selectedCabinetAssetId} // Show the selected cabinet asset ID
+                readOnly // Make it read-only since it's auto-filled
+                placeholder="Select cabinet above to auto-fill"
               />
             </div>
           </div>
@@ -1568,19 +1580,21 @@ const HardwareSelector = () => {
                   onChange={(e) =>
                     updateRamModule(index, "brand", e.target.value)
                   }
-                  disabled={!ram.type || loading.brands}
+                  disabled={!ram.brands || ram.brands.length === 0}
                 >
-                  <option value="">
-                    {loading.brands ? "Loading..." : "Select Brand"}
-                  </option>
-                  {ram.brands.map((brand, brandIndex) => (
-                    <option
-                      key={`ram-brand-${index}-${brandIndex}`}
-                      value={brand}
-                    >
-                      {brand}
-                    </option>
-                  ))}
+                  <option value="">Select Brand</option>
+                  {(!ram.brands || ram.brands.length === 0) ? (
+                    <option value="no-brand">No Brands Available</option>
+                  ) : (
+                    ram.brands.map((brand, brandIndex) => (
+                      <option
+                        key={`ram-brand-${index}-${brandIndex}`}
+                        value={brand}
+                      >
+                        {brand}
+                      </option>
+                    ))
+                  )}
                 </select>
               </div>
 
@@ -1637,23 +1651,27 @@ const HardwareSelector = () => {
                   onChange={(e) =>
                     updateRamModule(index, "asset_id", e.target.value)
                   }
-                  disabled={ram.assetIds.length === 0 || loading.assets}
+                  disabled={!ram.assetIds || ram.assetIds.length === 0 || loading.assets}
                 >
                   <option value="">
                     {loading.assets
                       ? "Loading..."
-                      : ram.assetIds.length
-                      ? "Select Asset ID"
-                      : "Select options first"}
+                      : ram.assetIds && ram.assetIds.length
+                        ? "Select Asset ID"
+                        : "No Asset ID Available"}
                   </option>
-                  {ram.assetIds.map((asset_id, assetIndex) => (
-                    <option
-                      key={`ram-asset-${index}-${assetIndex}`}
-                      value={asset_id}
-                    >
-                      {asset_id}
-                    </option>
-                  ))}
+                  {(!ram.assetIds || ram.assetIds.length === 0) ? (
+                    <option value="no-asset">No Asset ID</option>
+                  ) : (
+                    ram.assetIds.map((asset_id, assetIndex) => (
+                      <option
+                        key={`ram-asset-${index}-${assetIndex}`}
+                        value={asset_id}
+                      >
+                        {asset_id}
+                      </option>
+                    ))
+                  )}
                 </select>
               </div>
             </div>
@@ -1719,19 +1737,21 @@ const HardwareSelector = () => {
                   onChange={(e) =>
                     updateStorageDrive(index, "brand", e.target.value)
                   }
-                  disabled={!drive.type || loading.brands}
+                  disabled={!drive.brands || drive.brands.length === 0}
                 >
-                  <option value="">
-                    {loading.brands ? "Loading..." : "Select Brand"}
-                  </option>
-                  {drive.brands.map((brand, brandIndex) => (
-                    <option
-                      key={`storage-brand-${index}-${brandIndex}`}
-                      value={brand}
-                    >
-                      {brand}
-                    </option>
-                  ))}
+                  <option value="">Select Brand</option>
+                  {(!drive.brands || drive.brands.length === 0) ? (
+                    <option value="no-brand">No Brands Available</option>
+                  ) : (
+                    drive.brands.map((brand, brandIndex) => (
+                      <option
+                        key={`storage-brand-${index}-${brandIndex}`}
+                        value={brand}
+                      >
+                        {brand}
+                      </option>
+                    ))
+                  )}
                 </select>
               </div>
 
@@ -1791,23 +1811,27 @@ const HardwareSelector = () => {
                   onChange={(e) =>
                     updateStorageDrive(index, "asset_id", e.target.value)
                   }
-                  disabled={drive.assetIds.length === 0 || loading.assets}
+                  disabled={!drive.assetIds || drive.assetIds.length === 0 || loading.assets}
                 >
                   <option value="">
                     {loading.assets
                       ? "Loading..."
-                      : drive.assetIds.length
-                      ? "Select Asset ID"
-                      : "Select options first"}
+                      : drive.assetIds && drive.assetIds.length
+                        ? "Select Asset ID"
+                        : "No Asset ID Available"}
                   </option>
-                  {drive.assetIds.map((asset_id, assetIndex) => (
-                    <option
-                      key={`storage-asset-${index}-${assetIndex}`}
-                      value={asset_id}
-                    >
-                      {asset_id}
-                    </option>
-                  ))}
+                  {(!drive.assetIds || drive.assetIds.length === 0) ? (
+                    <option value="no-asset">No Asset ID</option>
+                  ) : (
+                    drive.assetIds.map((asset_id, assetIndex) => (
+                      <option
+                        key={`storage-asset-${index}-${assetIndex}`}
+                        value={asset_id}
+                      >
+                        {asset_id}
+                      </option>
+                    ))
+                  )}
                 </select>
               </div>
             </div>
@@ -1838,16 +1862,18 @@ const HardwareSelector = () => {
               onChange={(e) => {
                 setProcessorBrand(e.target.value);
               }}
-              disabled={loading.brands}
+              disabled={!processorBrands || processorBrands.length === 0}
             >
-              <option value="">
-                {loading.brands ? "Loading..." : "Select Brand"}
-              </option>
-              {processorBrands.map((brand, index) => (
-                <option key={`processor-brand-${index}`} value={brand}>
-                  {brand}
-                </option>
-              ))}
+              <option value="">Select Brand</option>
+              {(!processorBrands || processorBrands.length === 0) ? (
+                <option value="no-brand">No Brands Available</option>
+              ) : (
+                processorBrands.map((brand, index) => (
+                  <option key={`processor-brand-${index}`} value={brand}>
+                    {brand}
+                  </option>
+                ))
+              )}
             </select>
           </div>
 
@@ -1878,20 +1904,24 @@ const HardwareSelector = () => {
               style={styles.select}
               value={selectedProcessorAssetId}
               onChange={(e) => setSelectedProcessorAssetId(e.target.value)}
-              disabled={processorAssetIds.length === 0 || loading.assets}
+              disabled={!processorAssetIds || processorAssetIds.length === 0 || loading.assets}
             >
               <option value="">
                 {loading.assets
                   ? "Loading..."
-                  : processorAssetIds.length
-                  ? "Select Asset ID"
-                  : "Select options first"}
+                  : processorAssetIds && processorAssetIds.length
+                    ? "Select Asset ID"
+                    : "No Asset ID Available"}
               </option>
-              {processorAssetIds.map((asset_id, index) => (
-                <option key={`processor-asset-${index}`} value={asset_id}>
-                  {asset_id}
-                </option>
-              ))}
+              {(!processorAssetIds || processorAssetIds.length === 0) ? (
+                <option value="no-asset">No Asset ID</option>
+              ) : (
+                processorAssetIds.map((asset_id, index) => (
+                  <option key={`processor-asset-${index}`} value={asset_id}>
+                    {asset_id}
+                  </option>
+                ))
+              )}
             </select>
           </div>
         </div>
@@ -1920,16 +1950,18 @@ const HardwareSelector = () => {
               onChange={(e) => {
                 setMotherboardBrand(e.target.value);
               }}
-              disabled={loading.brands}
+              disabled={!motherboardBrands || motherboardBrands.length === 0}
             >
-              <option value="">
-                {loading.brands ? "Loading..." : "Select Brand"}
-              </option>
-              {motherboardBrands.map((brand, index) => (
-                <option key={`motherboard-brand-${index}`} value={brand}>
-                  {brand}
-                </option>
-              ))}
+              <option value="">Select Brand</option>
+              {(!motherboardBrands || motherboardBrands.length === 0) ? (
+                <option value="no-brand">No Brands Available</option>
+              ) : (
+                motherboardBrands.map((brand, index) => (
+                  <option key={`motherboard-brand-${index}`} value={brand}>
+                    {brand}
+                  </option>
+                ))
+              )}
             </select>
           </div>
 
@@ -1960,22 +1992,27 @@ const HardwareSelector = () => {
               style={styles.select}
               value={selectedMotherboardAssetId}
               onChange={(e) => setSelectedMotherboardAssetId(e.target.value)}
-              disabled={motherboardAssetIds.length === 0 || loading.assets}
+              disabled={!motherboardAssetIds || motherboardAssetIds.length === 0 || loading.assets}
             >
               <option value="">
                 {loading.assets
                   ? "Loading..."
-                  : motherboardAssetIds.length
-                  ? "Select Asset ID"
-                  : "Select options first"}
+                  : motherboardAssetIds && motherboardAssetIds.length
+                    ? "Select Asset ID"
+                    : "No Asset ID Available"}
               </option>
-              {motherboardAssetIds.map((asset_id, index) => (
-                <option key={`motherboard-asset-${index}`} value={asset_id}>
-                  {asset_id}
-                </option>
-              ))}
+              {(!motherboardAssetIds || motherboardAssetIds.length === 0) ? (
+                <option value="no-asset">No Asset ID</option>
+              ) : (
+                motherboardAssetIds.map((asset_id, index) => (
+                  <option key={`motherboard-asset-${index}`} value={asset_id}>
+                    {asset_id}
+                  </option>
+                ))
+              )}
             </select>
           </div>
+
         </div>
 
         {/* Cabinet Selector */}
@@ -2002,16 +2039,18 @@ const HardwareSelector = () => {
               onChange={(e) => {
                 setCabinetBrand(e.target.value);
               }}
-              disabled={loading.brands}
+              disabled={!cabinetBrands || cabinetBrands.length === 0}
             >
-              <option value="">
-                {loading.brands ? "Loading..." : "Select Brand"}
-              </option>
-              {cabinetBrands.map((brand, index) => (
-                <option key={`cabinet-brand-${index}`} value={brand}>
-                  {brand}
-                </option>
-              ))}
+              <option value="">Select Brand</option>
+              {(!cabinetBrands || cabinetBrands.length === 0) ? (
+                <option value="no-brand">No Brands Available</option>
+              ) : (
+                cabinetBrands.map((brand, index) => (
+                  <option key={`cabinet-brand-${index}`} value={brand}>
+                    {brand}
+                  </option>
+                ))
+              )}
             </select>
           </div>
 
@@ -2042,20 +2081,24 @@ const HardwareSelector = () => {
               style={styles.select}
               value={selectedCabinetAssetId}
               onChange={(e) => setSelectedCabinetAssetId(e.target.value)}
-              disabled={cabinetAssetIds.length === 0 || loading.assets}
+              disabled={!cabinetAssetIds || cabinetAssetIds.length === 0 || loading.assets}
             >
               <option value="">
                 {loading.assets
                   ? "Loading..."
-                  : cabinetAssetIds.length
-                  ? "Select Asset ID"
-                  : "Select options first"}
+                  : cabinetAssetIds && cabinetAssetIds.length
+                    ? "Select Asset ID"
+                    : "No Asset ID Available"}
               </option>
-              {cabinetAssetIds.map((asset_id, index) => (
-                <option key={`cabinet-asset-${index}`} value={asset_id}>
-                  {asset_id}
-                </option>
-              ))}
+              {(!cabinetAssetIds || cabinetAssetIds.length === 0) ? (
+                <option value="no-asset">No Asset ID</option>
+              ) : (
+                cabinetAssetIds.map((asset_id, index) => (
+                  <option key={`cabinet-asset-${index}`} value={asset_id}>
+                    {asset_id}
+                  </option>
+                ))
+              )}
             </select>
           </div>
         </div>
@@ -2084,16 +2127,18 @@ const HardwareSelector = () => {
               onChange={(e) => {
                 setGpuBrand(e.target.value);
               }}
-              disabled={loading.brands}
+              disabled={!gpuBrands || gpuBrands.length === 0}
             >
-              <option value="">
-                {loading.brands ? "Loading..." : "Select Brand"}
-              </option>
-              {gpuBrands.map((brand, index) => (
-                <option key={`gpu-brand-${index}`} value={brand}>
-                  {brand}
-                </option>
-              ))}
+              <option value="">Select Brand</option>
+              {(!gpuBrands || gpuBrands.length === 0) ? (
+                <option value="no-brand">No Brands Available</option>
+              ) : (
+                gpuBrands.map((brand, index) => (
+                  <option key={`gpu-brand-${index}`} value={brand}>
+                    {brand}
+                  </option>
+                ))
+              )}
             </select>
           </div>
 
@@ -2124,22 +2169,27 @@ const HardwareSelector = () => {
               style={styles.select}
               value={selectedGpuAssetId}
               onChange={(e) => setSelectedGpuAssetId(e.target.value)}
-              disabled={gpuAssetIds.length === 0 || loading.assets}
+              disabled={!gpuAssetIds || gpuAssetIds.length === 0 || loading.assets}
             >
               <option value="">
                 {loading.assets
                   ? "Loading..."
-                  : gpuAssetIds.length
-                  ? "Select Asset ID"
-                  : "Select options first"}
+                  : gpuAssetIds && gpuAssetIds.length
+                    ? "Select Asset ID"
+                    : "No Asset ID Available"}
               </option>
-              {gpuAssetIds.map((asset_id, index) => (
-                <option key={`gpu-asset-${index}`} value={asset_id}>
-                  {asset_id}
-                </option>
-              ))}
+              {(!gpuAssetIds || gpuAssetIds.length === 0) ? (
+                <option value="no-asset">No Asset ID</option>
+              ) : (
+                gpuAssetIds.map((asset_id, index) => (
+                  <option key={`gpu-asset-${index}`} value={asset_id}>
+                    {asset_id}
+                  </option>
+                ))
+              )}
             </select>
           </div>
+
         </div>
 
         {/* SMPS Selector */}
@@ -2166,18 +2216,21 @@ const HardwareSelector = () => {
               onChange={(e) => {
                 setSmpsBrand(e.target.value);
               }}
-              disabled={loading.brands}
+              disabled={!smpsBrands || smpsBrands.length === 0}
             >
-              <option value="">
-                {loading.brands ? "Loading..." : "Select Brand"}
-              </option>
-              {smpsBrands.map((brand, index) => (
-                <option key={`smps-brand-${index}`} value={brand}>
-                  {brand}
-                </option>
-              ))}
+              <option value="">Select Brand</option>
+              {(!smpsBrands || smpsBrands.length === 0) ? (
+                <option value="no-brand">No Brands Available</option>
+              ) : (
+                smpsBrands.map((brand, index) => (
+                  <option key={`smps-brand-${index}`} value={brand}>
+                    {brand}
+                  </option>
+                ))
+              )}
             </select>
           </div>
+
 
           <div style={styles.fieldWrapper}>
             <label style={styles.label}>Model</label>
@@ -2227,20 +2280,24 @@ const HardwareSelector = () => {
               style={styles.select}
               value={selectedSmpsAssetId}
               onChange={(e) => setSelectedSmpsAssetId(e.target.value)}
-              disabled={smpsAssetIds.length === 0 || loading.assets}
+              disabled={!smpsAssetIds || smpsAssetIds.length === 0 || loading.assets}
             >
               <option value="">
                 {loading.assets
                   ? "Loading..."
-                  : smpsAssetIds.length
-                  ? "Select Asset ID"
-                  : "Select options first"}
+                  : smpsAssetIds && smpsAssetIds.length
+                    ? "Select Asset ID"
+                    : "No Asset ID Available"}
               </option>
-              {smpsAssetIds.map((asset_id, index) => (
-                <option key={`smps-asset-${index}`} value={asset_id}>
-                  {asset_id}
-                </option>
-              ))}
+              {(!smpsAssetIds || smpsAssetIds.length === 0) ? (
+                <option value="no-asset">No Asset ID</option>
+              ) : (
+                smpsAssetIds.map((asset_id, index) => (
+                  <option key={`smps-asset-${index}`} value={asset_id}>
+                    {asset_id}
+                  </option>
+                ))
+              )}
             </select>
           </div>
         </div>
@@ -2269,16 +2326,18 @@ const HardwareSelector = () => {
               onChange={(e) => {
                 setWifiBrand(e.target.value);
               }}
-              disabled={!wifiType || loading.brands}
+              disabled={!wifiBrands || wifiBrands.length === 0}
             >
-              <option value="">
-                {loading.brands ? "Loading..." : "Select Brand"}
-              </option>
-              {wifiBrands.map((brand, index) => (
-                <option key={`wifi-brand-${index}`} value={brand}>
-                  {brand}
-                </option>
-              ))}
+              <option value="">Select Brand</option>
+              {(!wifiBrands || wifiBrands.length === 0) ? (
+                <option value="no-brand">No Brands Available</option>
+              ) : (
+                wifiBrands.map((brand, index) => (
+                  <option key={`wifi-brand-${index}`} value={brand}>
+                    {brand}
+                  </option>
+                ))
+              )}
             </select>
           </div>
 
@@ -2317,8 +2376,8 @@ const HardwareSelector = () => {
                 {loading.details
                   ? "Loading..."
                   : frequencyBands.length
-                  ? "Select Frequency Band"
-                  : "Select model first"}
+                    ? "Select Frequency Band"
+                    : "Select model first"}
               </option>
               {frequencyBands.map((band, index) => (
                 <option key={`wifi-band-${index}`} value={band}>
@@ -2343,8 +2402,8 @@ const HardwareSelector = () => {
                 {loading.details
                   ? "Loading..."
                   : wifiStandards.length
-                  ? "Select WiFi Standard"
-                  : "Select model first"}
+                    ? "Select WiFi Standard"
+                    : "Select model first"}
               </option>
               {wifiStandards.map((standard, index) => (
                 <option key={`wifi-standard-${index}`} value={standard}>
@@ -2360,20 +2419,24 @@ const HardwareSelector = () => {
               style={styles.select}
               value={selectedWifiAssetId}
               onChange={(e) => setSelectedWifiAssetId(e.target.value)}
-              disabled={wifiAssetIds.length === 0 || loading.assets}
+              disabled={!wifiAssetIds || wifiAssetIds.length === 0 || loading.assets}
             >
               <option value="">
                 {loading.assets
                   ? "Loading..."
-                  : wifiAssetIds.length
-                  ? "Select Asset ID"
-                  : "Select options first"}
+                  : wifiAssetIds && wifiAssetIds.length
+                    ? "Select Asset ID"
+                    : "No Asset ID Available"}
               </option>
-              {wifiAssetIds.map((asset_id, index) => (
-                <option key={`wifi-asset-${index}`} value={asset_id}>
-                  {asset_id}
-                </option>
-              ))}
+              {(!wifiAssetIds || wifiAssetIds.length === 0) ? (
+                <option value="no-asset">No Asset ID</option>
+              ) : (
+                wifiAssetIds.map((asset_id, index) => (
+                  <option key={`wifi-asset-${index}`} value={asset_id}>
+                    {asset_id}
+                  </option>
+                ))
+              )}
             </select>
           </div>
         </div>

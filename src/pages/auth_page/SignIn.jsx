@@ -1,11 +1,59 @@
-import React from "react";
+import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { signinRequest } from "../../redux_setup/slices/auth_slice/authSlice";
-import { TextField, Button, Grid, Box, Typography, CircularProgress, Paper, FormControlLabel, Checkbox } from "@mui/material";
+import { 
+  TextField, 
+  Button, 
+  Grid, 
+  Box, 
+  Typography, 
+  CircularProgress, 
+  Paper, 
+  FormControlLabel, 
+  Checkbox,
+  InputAdornment,
+  IconButton 
+} from "@mui/material";
+import { Visibility, VisibilityOff } from "@mui/icons-material";
 import { Formik, Form, Field, ErrorMessage } from "formik";
 import * as Yup from "yup";
 import HomePagePanner from "../../assets/logos/HomePagePanner.svg";
+
+// Custom Password Field Component with Toggle Visibility
+const PasswordField = ({ field, form, ...props }) => {
+  const [showPassword, setShowPassword] = useState(false);
+
+  const handleClickShowPassword = () => {
+    setShowPassword(!showPassword);
+  };
+
+  const handleMouseDownPassword = (event) => {
+    event.preventDefault();
+  };
+
+  return (
+    <TextField
+      {...field}
+      {...props}
+      type={showPassword ? "text" : "password"}
+      InputProps={{
+        endAdornment: (
+          <InputAdornment position="end">
+            <IconButton
+              aria-label="toggle password visibility"
+              onClick={handleClickShowPassword}
+              onMouseDown={handleMouseDownPassword}
+              edge="end"
+            >
+              {showPassword ? <VisibilityOff /> : <Visibility />}
+            </IconButton>
+          </InputAdornment>
+        ),
+      }}
+    />
+  );
+};
 
 const SignIn = () => {
   const dispatch = useDispatch();
@@ -76,17 +124,15 @@ const SignIn = () => {
                 />
 
                 <Field
-                  as={TextField}
                   name="password"
                   label="Password"
-                  type="password"
                   fullWidth
                   margin="normal"
+                  component={PasswordField}
                   error={touched.password && !!errors.password}
                   helperText={<ErrorMessage name="password" />}
                 />
 
-                {/* Remember Me Checkbox and Forgot Password Link */}
                 <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mt: 1 }}>
                   <FormControlLabel
                     control={
@@ -114,9 +160,9 @@ const SignIn = () => {
                   {loading ? <CircularProgress size={24} /> : "Sign In"}
                 </Button>
 
-                {/* <Typography sx={{ mt: 2, textAlign: "center" }}>
+                <Typography sx={{ mt: 2, textAlign: "center" }}>
                   Don't have an account? <Link to="/signup">Sign Up</Link>
-                </Typography> */}
+                </Typography>
               </Form>
             )}
           </Formik>

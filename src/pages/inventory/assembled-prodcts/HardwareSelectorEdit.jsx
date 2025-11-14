@@ -381,6 +381,17 @@ const HardwareSelectorEdit = () => {
   const [selectedCabinetAssetId, setSelectedCabinetAssetId] = useState("");
   const [cabinetProductId, setCabinetProductId] = useState("");
 
+
+  useEffect(() => {
+  if (selectedCabinetAssetId) {
+    setFormData((prev) => ({
+      ...prev,
+      asset_id: selectedCabinetAssetId,
+    }));
+  }
+}, [selectedCabinetAssetId]);
+
+
   // GPU State
   const [gpuType, setGpuType] = useState("");
 
@@ -1665,9 +1676,9 @@ const HardwareSelectorEdit = () => {
               <input
                 type="text"
                 style={styles.input}
-                value={formData.asset_id}
-                onChange={(e) => handleInputChange("asset_id", e.target.value)}
-                placeholder="Enter Cabinet asset ID"
+                value={selectedCabinetAssetId} // Show the selected cabinet asset ID
+                readOnly // Make it read-only since it's auto-filled
+                placeholder="Select cabinet above to auto-fill"
               />
             </div>
           </div>

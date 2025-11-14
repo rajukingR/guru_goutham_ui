@@ -141,6 +141,8 @@ import AssetSwapsEdit from "../pages/inventory/swap-products/AssetSwapsEdit.jsx"
 import ForgotPasswordContainer from "../pages/auth_page/password-page/ForgotPasswordContainer.jsx";
 import ResetPasswordContainer from "../pages/auth_page/password-page/ResetPasswordContainer.jsx";
 import RemoveItemsLayout from "../pages/operations/asset-items-remove-add/RemoveItemsLayout.jsx";
+import CourseEditForm from "../pages/courses/CourseEditForm.jsx";
+
 const ProtectedRoute = ({ element }) => {
   const user = useSelector((state) => state.auth.user);
   return user ? element : <Navigate to="/signin" replace />;
@@ -168,6 +170,10 @@ const RoutesConfig = () => {
             <Route path="profile/edit-profile/:id" element={<EditProfile />} />
             <Route path="product_library" element={<ProductTemplatePage />} />
             <Route path="product_library/add" element={<ProductsAddLayout />} />
+            {/* <Route
+              path="product_library/edit/:id"
+              element={<CourseEditForm />}
+            /> */}
             <Route
               path="product_library/edit/:id"
               element={<ProductsEditLayout />}
@@ -415,10 +421,10 @@ const RoutesConfig = () => {
               path="inventory/client-place"
               element={<ClientPlaceStock />}
             />
-            <Route path="inventory/swap" element={<AssetSwapsTable />} />
-            <Route path="inventory/swap/add" element={<AssetSwapsAdd />} />
+            <Route path="inventory/scrap" element={<AssetSwapsTable />} />
+            <Route path="inventory/scrap/add" element={<AssetSwapsAdd />} />
             <Route
-              path="inventory/swap/edit/:id"
+              path="inventory/scrap/edit/:id"
               element={<AssetSwapsEdit />}
             />
             <Route

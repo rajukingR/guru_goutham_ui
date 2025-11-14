@@ -227,7 +227,7 @@ const Sidebar = ({ section }) => {
         },
         {
           text: "Scrap",
-          path: "/dashboard/inventory/swap",
+          path: "/dashboard/inventory/scrap",
           icon: <IoMdSwap />,
           description: "Clinet Place",
         },
@@ -337,13 +337,13 @@ const Sidebar = ({ section }) => {
           text: "Service & Maintenance",
           path: "/dashboard/operations/service_maintenance",
           icon: <HandymanIcon />,
-          description: "Invoice management",
+          description: "Service & Maintenance",
         },
         {
           text: "Courier Charges",
           path: "/dashboard/operations/courier-charges",
           icon: <AttachMoneyIcon />,
-          description: "Invoice management",
+          description: "Courier Charges",
         },
         {
           text: "Peripherals Updation/Deletion",

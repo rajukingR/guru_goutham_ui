@@ -32,8 +32,12 @@ import ViewDC from "../../assets/logos/ViewDC.png";
 
 import StatusOff from "../../assets/logos/turnoff.png";
 import StatusOn from "../../assets/logos/turnon.png";
-import API_URL from "../../api/Api_url";
+import { API_URL, IMAGE_API_URL } from "../../api/Api_url";
 import { useSelector } from "react-redux";
+import CloudUploadIcon from "@mui/icons-material/CloudUpload";
+import CloudDownloadIcon from "@mui/icons-material/CloudDownload";
+
+
 // API Endpoints Mapping
 const apiEndpoints = {
   settings: `${API_URL}/users`,
@@ -66,7 +70,7 @@ const apiEndpoints = {
   "asset-updation": `${API_URL}/peripheral-assets`,
   "courier-charges": `${API_URL}/courier-charges`,
   service_maintenance: `${API_URL}/service-charges`,
-  swap: `${API_URL}/asset-swaps`,
+  scrap: `${API_URL}/asset-swaps`,
 };
 
 // Delivery Challan Dialog Component
@@ -772,37 +776,57 @@ const DeliveryChallanDialog = ({ open, onClose, dcData }) => {
   };
 
   // Function to render accessories information
-  const renderAccessories = () => {
-    const accessories = [];
+const renderAccessories = () => {
+  const accessories = [];
 
-    // Add standard accessories if they are true
-    if (dcData.mouse) accessories.push("Mouse");
-    if (dcData.cable) accessories.push("Cable");
-    if (dcData.bag) accessories.push("Bag");
-
-    // Add other accessories from the array
-    if (dcData.other_accessory && dcData.other_accessory.length > 0) {
-      accessories.push(...dcData.other_accessory);
-    }
-
-    // Add "Others" if the others field is true but no specific accessories listed
-    if (dcData.others && accessories.length === 0) {
-      accessories.push("Others");
-    }
-
-    return accessories.length > 0 ? (
-      <div style={accessoriesContainerStyle}>
-        <div style={accessoriesTitleStyle}>Accessories Included:</div>
-        <ul style={accessoriesListStyle}>
-          {accessories.map((item, index) => (
-            <li key={index} style={accessoriesListItemStyle}>
-              {item}
-            </li>
-          ))}
-        </ul>
-      </div>
-    ) : null;
+  // Helper function to format accessory with quantity
+  const formatAccessory = (name, quantity) => {
+    return `${name} (Qty: ${quantity})`;
   };
+
+  // Add standard accessories with quantities
+  if (dcData.mouse) {
+    accessories.push(formatAccessory("Mouse", dcData.mouse_qty || 1));
+  }
+  
+  if (dcData.cable) {
+    accessories.push(formatAccessory("Cable", dcData.cable_qty || 1));
+  }
+  
+  if (dcData.bag) {
+    accessories.push(formatAccessory("Bag", dcData.bag_qty || 1));
+  }
+
+  // Add other accessories from the array WITH quantities
+  if (dcData.other_accessory && dcData.other_accessory.length > 0) {
+    const othersQty = dcData.others_qty || 1;
+    
+    if (Array.isArray(dcData.other_accessory)) {
+      // If there are multiple other accessories, show each with the total others quantity
+      dcData.other_accessory.forEach((item) => {
+        accessories.push(formatAccessory(item, othersQty));
+      });
+    }
+  }
+
+  // Add "Others" if the others field is true but no specific accessories listed
+  if (dcData.others && accessories.length === 0) {
+    accessories.push(formatAccessory("Others", dcData.others_qty || 1));
+  }
+
+  return accessories.length > 0 ? (
+    <div style={accessoriesContainerStyle}>
+      <div style={accessoriesTitleStyle}>Accessories Included:</div>
+      <ul style={accessoriesListStyle}>
+        {accessories.map((item, index) => (
+          <li key={index} style={accessoriesListItemStyle}>
+            {item}
+          </li>
+        ))}
+      </ul>
+    </div>
+  ) : null;
+};
 
   return (
     <Dialog open={open} onClose={onClose} maxWidth="lg" fullWidth>
@@ -2401,9 +2425,14 @@ const CreditNoteDialog = ({ open, onClose, creditNoteData }) => {
     );
 
     // Calculate days used (from 1st July to 20th July 2025 = 20 days)
-    const daysUsed = sameMonthFlag
+    const daysInMonth = sameMonthFlag
       ? calculateDaysDifference(creditNoteData.dc_date, returnedDate)
       : calculateDaysDifference(monthStartDate, returnedDate);
+
+
+    const isRemoved = creditNoteData.transaction_type === "Asset Removed";
+    const daysUsed = isRemoved ? daysInMonth - 1 : daysInMonth;
+
 
     // Calculate day difference
     const daysDifference = calculateDaysDifference(returnedDate, endOfMonth);
@@ -2411,6 +2440,7 @@ const CreditNoteDialog = ({ open, onClose, creditNoteData }) => {
     return items.map((item) => {
       const unitPrice = parseFloat(item.unit_price || 0);
       const dailyRate = Math.round((unitPrice / 30) * 100) / 100;
+
       const totalPrice =
         Math.round(daysDifference * item.quantity * dailyRate * 100) / 100;
 
@@ -2638,18 +2668,20 @@ const CreditNoteDialog = ({ open, onClose, creditNoteData }) => {
                   {creditNoteData.transaction_type === "Asset Swap" ? (
                     <>
                       Scrap Date:{" "}
-                      {new Date(
-                        creditNoteData.returned_date
-                      ).toLocaleDateString("en-GB")}
+                      {new Date(creditNoteData.returned_date).toLocaleDateString("en-GB")}
+                    </>
+                  ) : creditNoteData.transaction_type === "Asset Removed" ? (
+                    <>
+                      Removed Date:{" "}
+                      {new Date(creditNoteData.returned_date).toLocaleDateString("en-GB")}
                     </>
                   ) : (
                     <>
                       Return Date:{" "}
-                      {new Date(
-                        creditNoteData.returned_date
-                      ).toLocaleDateString("en-GB")}
+                      {new Date(creditNoteData.returned_date).toLocaleDateString("en-GB")}
                     </>
                   )}
+
                   <br />
                 </div>
               </div>
@@ -4897,6 +4929,7 @@ const InvoiceDialog = ({ open, onClose, invoiceData }) => {
 
         const isFullMonth = isBuyTransaction ? true : days >= 28;
 
+
         // Get returns for this product from all sources
         const returnedDevices =
           allReturnsMap[item.product_id]?.filter(
@@ -5156,70 +5189,496 @@ const InvoiceDialog = ({ open, onClose, invoiceData }) => {
     return parseFloat(rawAmount.toFixed(2));
   };
 
-  // Render product specifications
-  const renderSpecifications = (product) => {
-    if (!product) return null;
-    return (
-      <div
-        style={{
-          fontSize: "12px",
-          color: "#555",
-          textAlign: "justify",
-          lineHeight: "1.4",
-        }}
-      >
-        Specifications:{" "}
-        {product?.brand && (
-          <>
-            {" "}
-            <strong>Brand:</strong> {product.brand}.{" "}
-          </>
-        )}
-        {product?.model && (
-          <>
-            {" "}
-            <strong>Model:</strong> {product.model}.{" "}
-          </>
-        )}
-        {product?.processor && (
-          <>
-            {" "}
-            <strong>Processor:</strong> {product.processor}.{" "}
-          </>
-        )}
-        {product?.ram && (
-          <>
-            {" "}
-            <strong>RAM:</strong> {product.ram}.{" "}
-          </>
-        )}
-        {product?.storage && (
-          <>
-            {" "}
-            <strong>Storage:</strong> {product.storage}.{" "}
-          </>
-        )}
-        {product?.disk_type && (
-          <>
-            {" "}
-            <strong>Disk Type:</strong> {product.disk_type}.{" "}
-          </>
-        )}
-        {product?.graphics && (
-          <>
-            {" "}
-            <strong>Graphics:</strong> {product.graphics}.{" "}
-          </>
-        )}
-        {product?.os && (
-          <>
-            {" "}
-            <strong>OS:</strong> {product.os}.{" "}
-          </>
-        )}
-      </div>
+  // Function to get asset transactions for specific device IDs
+  const getAssetTransactionsForDevices = (deviceIds) => {
+    if (!invoiceData.asset_transactions || !Array.isArray(deviceIds)) return [];
+
+    return invoiceData.asset_transactions.filter(
+      txn => deviceIds.includes(txn.parent_asset_id)
     );
   };
+
+  // Group devices by their final specifications
+  const groupDevicesBySpecifications = (deviceIds, baseProduct) => {
+    const groups = {};
+
+    deviceIds.forEach(deviceId => {
+      // Get final specifications for this device
+      const finalSpecs = getFinalSpecificationsForDevice(deviceId, baseProduct);
+
+      // Create a unique key based on the specifications
+      const specKey = createSpecificationKey(finalSpecs);
+
+      if (!groups[specKey]) {
+        groups[specKey] = {
+          deviceIds: [],
+          specifications: finalSpecs
+        };
+      }
+
+      groups[specKey].deviceIds.push(deviceId);
+    });
+
+    return groups;
+  };
+
+
+
+  // Create a unique key based on specifications
+  const createSpecificationKey = (specs) => {
+    return [
+      specs.ram || '',
+      specs.storage || '',
+      specs.disk_type || '',
+      specs.processor_model || '',
+      specs.graphics || '',
+      specs.os || ''
+    ].join('|');
+  };
+
+
+  const specificationType = (itemType) => {
+    if (!itemType || typeof itemType !== "string") return "";
+
+    switch (itemType.toLowerCase()) {
+      case "ram": return "RAM";
+      case "storage": return "Storage";
+      case "hdd": return "HDD";
+      case "ssd": return "SSD";
+      case "processor": return "Processor";
+      case "graphics": return "Graphics";
+      case "gpu": return "GPU";
+      case "os": return "OS";
+      case "motherboard": return "Motherboard";
+      case "power_supply": return "Power Supply";
+      case "monitor": return "Monitor";
+      default:
+        return itemType.charAt(0).toUpperCase() + itemType.slice(1);
+    }
+  };
+
+
+  // Enhanced specifications renderer
+  // Enhanced specifications renderer for specific devices
+
+
+
+
+
+
+
+  ////10-10-2025
+
+
+  // // Transaction row (only update specs + amount, no duplicate parent ID)
+  // const renderAssetTransactionRow = (txn, product, parentItem) => {
+  //   const productAssetTransactions =
+  //     invoiceData.asset_transactions?.filter(
+  //       (at) => at.product_id === parentItem.product_id
+  //     ) || [];
+
+  //   if (productAssetTransactions.length === 0) return null;
+
+  //   const rows = [];
+
+  //   productAssetTransactions.forEach((assetTxn, index) => {
+
+  //     const actionDate = new Date(assetTxn.action_date);
+  //     const monthStart = new Date(actionDate.getFullYear(), actionDate.getMonth(), 1);
+
+  //     const invoiceStart = new Date(invoiceData.invoice_start_date);
+  //     const invoiceEnd = new Date(invoiceData.invoice_end_date);
+
+  //     const monthDiff =
+  //       (invoiceStart.getFullYear() - actionDate.getFullYear()) * 12 +
+  //       (invoiceStart.getMonth() - actionDate.getMonth());
+
+  //     const isSameMonth =
+  //       actionDate.getFullYear() === invoiceStart.getFullYear() &&
+  //       actionDate.getMonth() === invoiceStart.getMonth();
+
+  //     const isOneMonthApartPrepaid = monthDiff === 1;
+  //     const isOneMonthApartPostpaid = monthDiff === 0;
+  //     const isOneMonthApart = paymentMode
+  //       ? isOneMonthApartPostpaid
+  //       : isOneMonthApartPrepaid;
+
+  //     const isRemovedBeforeInvoice = assetTxn.status === "Removed";
+
+  //     if (isRemovedBeforeInvoice && !paymentMode) return null;
+
+  //     if (!isOneMonthApart) return null;
+
+
+  //     if (renderedAssetIds.has(assetTxn.asset_id)) return;
+  //     renderedAssetIds.add(assetTxn.asset_id);
+
+
+  //     let daysUsed = 0;
+  //     let monthEnd = 0
+  //     if (!isRemovedBeforeInvoice) {
+
+
+  //       if (isOneMonthApart) {
+  //         monthEnd = new Date(
+  //           actionDate.getFullYear(),
+  //           actionDate.getMonth() + 1,
+  //           0
+  //         );
+  //         daysUsed = calculateDays(actionDate, monthEnd);
+  //       } else {
+  //         daysUsed = calculateDays(invoiceStart, invoiceEnd);
+  //       }
+  //     } else {
+  //       daysUsed = calculateDays(monthStart, actionDate) - 1;
+  //     }
+
+  //     const dailyRate = assetTxn.price / 30;
+  //     const amount = parseFloat((daysUsed * dailyRate).toFixed(2));
+
+  //       totalAmount += amount;
+
+
+  //     rows.push(
+  //       <tr
+  //         key={`asset-txn-${assetTxn.id}-${index}`}
+  //         style={++rowCounter % 2 === 0 ? tableRowEvenStyle : tableRowOddStyle}
+  //       >
+  //         <td style={tableCellCenterStyle}>{rowCounter}</td>
+  //         <td style={tableCellStyle}>
+  //           <div style={itemTitleStyle}>
+  //             {parentItem.product_name} - {assetTxn.item_type.toUpperCase()} - {assetTxn.specification}{" "}
+  //             {assetTxn.status}
+  //           </div>
+  //           {/* {renderSpecifications(product, assetTxn)} */}
+  //           <br />
+  //           <div style={itemTitleStyle}>Asset IDs: {assetTxn.parent_asset_id}</div>
+  //           <br />
+  //           {assetTxn.status === "Removed" ? (
+  //             <div style={itemTitleStyle}>
+  //               Billing Start Date: {new Date(assetTxn.action_date).getFullYear()}-
+  //               {String(new Date(assetTxn.action_date).getMonth() + 1).padStart(2, "0")}-01 -
+  //               Billing End Date: {new Date(assetTxn.action_date).toISOString().slice(0, 10)}
+  //             </div>
+  //           ) : (
+  //             <div style={itemTitleStyle}>
+  //               Billing Start Date: {actionDate.toISOString().slice(0, 10)} -
+  //               Billing End Date: {invoiceData.invoice_end_date}
+  //             </div>
+  //           )}
+
+
+
+  //         </td>
+  //         <td style={tableCellCenterStyle}>1</td>
+  //         {invoiceData.transaction_type === "Rent" && (
+  //           <>
+  //             <td style={tableCellCenterStyle}>{daysUsed}</td>
+  //             <td style={tableCellCenterStyle}>
+  //               {formatINRCurrency(dailyRate)}
+  //             </td>
+  //           </>
+  //         )}
+  //         <td style={tableCellRightStyle}>
+  //           {formatINRCurrency(assetTxn.price)}
+  //         </td>
+  //         <td style={tableCellRightStyle}>{formatINRCurrency(amount)}</td>
+  //       </tr>
+  //     );
+  //   });
+
+  //   return rows;
+  // };
+
+
+
+  /// 16-10-2025
+
+  // const renderAssetTransactionRow = (txn, product, parentItem) => {
+  //   const productAssetTransactions =
+  //     invoiceData.asset_transactions?.filter(
+  //       (at) => at.product_id === parentItem.product_id
+  //     ) || [];
+
+  //   if (isBuyTransaction || productAssetTransactions.length === 0) return null;
+
+  //   const rows = [];
+
+  //   productAssetTransactions.forEach((assetTxn, index) => {
+  //     // Prevent duplicate rendering
+  //     if (renderedAssetIds.has(assetTxn.asset_id)) return;
+  //     renderedAssetIds.add(assetTxn.asset_id);
+
+  //     const deviceInfo = findDeviceDcDate(assetTxn.parent_asset_id);
+  //     const deviceDcDate = new Date(deviceInfo.dc_date);
+  //     const actionDate = new Date(assetTxn.action_date);
+  //     const invoiceStart = new Date(invoiceData.invoice_start_date);
+  //     const invoiceEnd = new Date(invoiceData.invoice_end_date);
+
+  //     const timesCreatedInInvoice = deviceInfo.times_created_in_invoice === 2;
+  //     const isRemovedBeforeInvoice = assetTxn.status === "Removed";
+
+  //     const monthDiff =
+  //       (invoiceStart.getFullYear() - actionDate.getFullYear()) * 12 +
+  //       (invoiceStart.getMonth() - actionDate.getMonth());
+
+  //     const isOneMonthApart = paymentMode ? monthDiff === 0 : monthDiff === 1;
+
+  //     const isSpecialCase =
+  //       ((invoiceStart.getFullYear() - deviceDcDate.getFullYear()) * 12 +
+  //         (invoiceStart.getMonth() - deviceDcDate.getMonth())) === 0;
+
+  //     // Skip rows that don't meet criteria
+  //     if (!isOneMonthApart) return;
+  //     if (!paymentMode && timesCreatedInInvoice && isRemovedBeforeInvoice) return;
+  //     if (!paymentMode && !isSpecialCase && monthDiff !== 1) return;
+
+  //     // Billing dates
+  //     let billingStartDate, billingEndDate, daysUsed;
+  //     if (!isRemovedBeforeInvoice) {
+  //       billingStartDate = isOneMonthApart ? actionDate : invoiceStart;
+  //       billingEndDate = isOneMonthApart
+  //         ? new Date(actionDate.getFullYear(), actionDate.getMonth() + 1, 0)
+  //         : invoiceEnd;
+
+  //       daysUsed = calculateDays(billingStartDate, billingEndDate);
+  //     } else {
+  //       billingStartDate = deviceDcDate;
+  //       billingEndDate = actionDate;
+  //       daysUsed = calculateDays(deviceDcDate, actionDate) - 1;
+  //     }
+
+  //     const dailyRate = Math.round((assetTxn.price / 30) * 100) / 100;
+  //     const amount = Math.round(daysUsed * dailyRate * 100) / 100;
+
+  //     // Adjust total amount
+  //     if (isSpecialCase && isRemovedBeforeInvoice) {
+  //       totalAmount -= amount;
+  //     } else {
+  //       totalAmount += amount;
+  //     }
+
+  //     rows.push(
+  //       <tr
+  //         key={`asset-txn-${assetTxn.id}-${index}`}
+  //         style={++rowCounter % 2 === 0 ? tableRowEvenStyle : tableRowOddStyle}
+  //       >
+  //         <td style={tableCellCenterStyle}>{rowCounter}</td>
+  //         <td style={tableCellStyle}>
+  //           <div style={itemTitleStyle}>
+  //             {parentItem.product_name} - {assetTxn.item_type.toUpperCase()} -{" "}
+  //             {assetTxn.specification} ({assetTxn.status})
+  //           </div>
+  //           <div style={itemTitleStyle}>Asset ID: {assetTxn.parent_asset_id}</div>
+  //           <br />
+  //           <div>
+  //             Billing Start Date: {billingStartDate.toLocaleDateString("en-CA")} -{" "}
+  //             Billing End Date: {billingEndDate.toLocaleDateString("en-CA")}
+  //           </div>
+  //         </td>
+  //         <td style={tableCellCenterStyle}>1</td>
+  //         {invoiceData.transaction_type === "Rent" && (
+  //           <>
+  //             <td style={tableCellCenterStyle}>{daysUsed}</td>
+  //             <td style={tableCellCenterStyle}>{formatINRCurrency(dailyRate)}</td>
+  //           </>
+  //         )}
+  //         <td style={tableCellRightStyle}>{formatINRCurrency(assetTxn.price)}</td>
+  //         <td style={tableCellRightStyle}>{formatINRCurrency(amount)}</td>
+  //       </tr>
+  //     );
+  //   });
+
+  //   return rows;
+  // };
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    // Render product specifications
+const renderSpecifications = (product, deviceIds = []) => {
+  if (!product) return null;
+
+  const invoiceStart = new Date(invoiceDate);
+  const deviceAssetTransactions = getAssetTransactionsForDevices(deviceIds);
+
+  const sortedTransactions = [...deviceAssetTransactions].sort(
+    (a, b) => new Date(a.action_date) - new Date(b.action_date)
+  );
+
+  const filteredTransactions = sortedTransactions.filter((txn) => {
+    const actionDate = new Date(txn.action_date);
+    const monthDiff =
+      (actionDate.getFullYear() - invoiceStart.getFullYear()) * 12 +
+      (actionDate.getMonth() - invoiceStart.getMonth());
+    return paymentMode ? monthDiff <= 0 : monthDiff < 0;
+  });
+
+  // ✅ Collect active specs
+  let activeSpecs = {};
+  let ramList = product.ram ? [product.ram] : [];
+  let processorList = product.processor_model ? [product.processor_model] : [];
+  let storageList = product.storage ? [product.storage] : [];
+
+  filteredTransactions.forEach((txn) => {
+    const type = txn.item_type;
+    const value = txn.size || txn.specification;
+
+    switch (type) {
+      case "ram":
+        if (txn.status === "Added") ramList.push(value);
+        else if (txn.status === "Removed") ramList = ramList.filter(r => r !== value);
+        break;
+
+      case "processor":
+        if (txn.status === "Added") processorList.push(value);
+        else if (txn.status === "Removed") processorList = processorList.filter(p => p !== value);
+        break;
+
+      case "storage":
+      case "hdd":
+      case "ssd":
+        if (txn.status === "Added") storageList.push(value);
+        else if (txn.status === "Removed") storageList = storageList.filter(s => s !== value);
+        break;
+
+      default:
+        if (txn.status === "Added") activeSpecs[type] = value;
+        else if (txn.status === "Removed") delete activeSpecs[type];
+        break;
+    }
+  });
+
+  // ✅ Final merged specs
+  let finalSpecs = { ...product };
+  Object.entries(activeSpecs).forEach(([type, value]) => {
+    switch (type) {
+      case "graphics":
+      case "gpu":
+        finalSpecs.graphics = value;
+        break;
+      case "os":
+        finalSpecs.os = value;
+        break;
+      default:
+        if (value) finalSpecs[type] = value;
+        break;
+    }
+  });
+
+  // ✅ Combine all active values
+  let combinedRam = ramList.length > 0 ? ramList.join(" + ") : null;
+  let combinedProcessor = processorList.length > 0 ? processorList.join(" + ") : null;
+  let combinedStorage = storageList.length > 0 ? storageList.join(" + ") : null;
+
+  // ✅ Handle is_default / upgraded logic for RAM, Processor, Storage
+  const handleDefaultUpgrade = (list, type, baseValue) => {
+    if (!list || list.length === 0) {
+      const hasDefaultRemoved = filteredTransactions.some(
+        (txn) => txn.item_type === type && txn.status === "Removed" && txn.is_default === "Default"
+      );
+      const hasUpgradedRemoved = filteredTransactions.some(
+        (txn) => txn.item_type === type && txn.status === "Removed" && txn.is_default === "Upgraded"
+      );
+
+      if (hasDefaultRemoved) return null;
+      else if (hasUpgradedRemoved && baseValue) return baseValue;
+    }
+    return list.length > 0 ? list.join(" + ") : null;
+  };
+
+  combinedRam = handleDefaultUpgrade(ramList, "ram", product.ram);
+  combinedProcessor = handleDefaultUpgrade(processorList, "processor", product.processor_model);
+  combinedStorage = handleDefaultUpgrade(storageList, "storage", product.storage);
+
+  // ✅ Render
+  return (
+    <div
+      style={{
+        fontSize: "12px",
+        color: "#555",
+        textAlign: "justify",
+        lineHeight: "1.4",
+      }}
+    >
+      Specifications:{" "}
+      {finalSpecs?.brand && (
+        <>
+          <strong>Brand:</strong> {finalSpecs.brand}.{" "}
+        </>
+      )}
+      {finalSpecs?.model && (
+        <>
+          <strong>Model:</strong> {finalSpecs.model}.{" "}
+        </>
+      )}
+      {combinedProcessor && (
+        <>
+          <strong>Processor:</strong> {combinedProcessor}.{" "}
+        </>
+      )}
+      {combinedRam && (
+        <>
+          <strong>RAM:</strong> {combinedRam}.{" "}
+        </>
+      )}
+      {combinedStorage && (
+        <>
+          <strong>Storage:</strong> {combinedStorage}.{" "}
+        </>
+      )}
+      {finalSpecs?.disk_type && (
+        <>
+          <strong>Disk Type:</strong> {finalSpecs.disk_type}.{" "}
+        </>
+      )}
+      {finalSpecs?.graphics && (
+        <>
+          <strong>Graphics:</strong> {finalSpecs.graphics}.{" "}
+        </>
+      )}
+      {finalSpecs?.os && (
+        <>
+          <strong>OS:</strong> {finalSpecs.os}.{" "}
+        </>
+      )}
+
+      {/* Additional components */}
+      {filteredTransactions
+        .filter(
+          (txn) =>
+            txn.status === "Added" &&
+            !["ram", "storage", "hdd", "ssd", "processor", "graphics", "gpu", "os"].includes(txn.item_type)
+        )
+        .map((txn, index) => (
+          <span key={index}>
+            {" "}
+            <strong>{specificationType(txn.item_type)}:</strong>{" "}
+            {txn.specification || txn.size}.
+          </span>
+        ))}
+    </div>
+  );
+};
+
+
 
   // Check if a row should be displayed
   // Check if a row should be displayed (updated)
@@ -5237,59 +5696,410 @@ const InvoiceDialog = ({ open, onClose, invoiceData }) => {
       hasSwappedDevices
     );
   };
+
+  
+  
+  
+
   // Render main product row
-  const renderProductRow = (items, product, combinedDeviceIds) => {
-    const quantity = items.reduce((acc, i) => acc + (i.quantity || 0), 0);
-    if (quantity === 0 && combinedDeviceIds.length === 0) return null;
+const renderProductRow = (items, product, combinedDeviceIds) => {
+  const quantity = items.reduce((acc, i) => acc + (i.quantity || 0), 0);
+  if (quantity === 0 && combinedDeviceIds.length === 0) return null;
 
-    const firstItem = items[0];
-    const daysUsed = firstItem.days || 1;
-    const dailyRate = firstItem.dailyRate || firstItem.rate / 30;
-    const baseCount =
-      combinedDeviceIds.length > 0 ? combinedDeviceIds.length : quantity;
-    const amount = calculateAmount(
-      daysUsed,
-      dailyRate,
-      baseCount,
-      firstItem.rate
-    );
+  const firstItem = items[0];
+  const daysUsed = firstItem.days || 1;
+  const rows = [];
 
-    totalAmount += Number(amount) || 0;
+  // Group devices by specifications
+  const devicesBySpecs = groupDevicesBySpecifications(combinedDeviceIds, product);
 
-    return (
-      <tr style={++rowCounter % 2 === 0 ? tableRowEvenStyle : tableRowOddStyle}>
-        <td style={tableCellCenterStyle}>{rowCounter}</td>
-        <td style={tableCellStyle}>
-          <div style={itemTitleStyle}>{firstItem.product_name}</div>
-          {renderSpecifications(product)}
-          {combinedDeviceIds.length > 0 && (
-            <>
-              <br />
-              <div style={itemTitleStyle}>
-                Asset IDs: {combinedDeviceIds.join(", ")}
-              </div>
-            </>
-          )}
-          <br />
+  Object.values(devicesBySpecs).forEach((deviceGroup, groupIndex) => {
+    const deviceIds = deviceGroup.deviceIds;
+    const invoiceStart = new Date(invoiceData.invoice_start_date);
+    const baseMonthly = Number(firstItem.rate || 0);
 
+
+
+    const deviceDcDates = deviceIds.map((deviceId) => findDeviceDcDate(deviceId));
+
+      const dcDateFromat = deviceDcDates.length > 0
+        ? deviceDcDates[0].dc_date
+        : 1;
+
+      const timesCreatedInInvoice = deviceDcDates.length > 0
+        ? deviceDcDates[0].times_created_in_invoice
+        : 1;
+
+
+
+
+      
+
+      
+      const monthDiff123 =
+        (invoiceStart.getFullYear() - dcDateFromat.getFullYear()) * 12 +
+        (invoiceStart.getMonth() - dcDateFromat.getMonth());
+
+      const isSameMonth = paymentMode? monthDiff123 >= 1 : monthDiff123 >= 1;      
+
+    // Helper for safe number conversion
+    const toNum = (v) => Number(v || 0);
+
+    // Helper: month difference
+    const monthDiff = (date1, date2) => {
+      const d1 = new Date(date1);
+      const d2 = new Date(date2);
+      return (
+        d1.getFullYear() * 12 +
+        d1.getMonth() -
+        (d2.getFullYear() * 12 + d2.getMonth())
+      );
+    };
+
+    // 🔹 Calculate per-device rates based on add/remove transactions
+    const perDeviceRates = deviceIds.map((deviceId) => {
+      const transactions = getAssetTransactionsForDevices([deviceId]) || [];
+      const added = transactions.filter((t) => t.status === "Added");
+      const removed = transactions.filter((t) => t.status === "Removed");
+
+      let deviceMonthly = baseMonthly;
+
+      added.forEach((txn) => {
+        const diff = monthDiff(txn.action_date, invoiceStart);
+        if ((paymentMode && diff < 0) || (!paymentMode && diff < 0)) {
+          deviceMonthly += toNum(txn.price);
+        }
+      });
+
+      removed.forEach((txn) => {
+        const diff = monthDiff(txn.action_date, invoiceStart);
+        if ((paymentMode && diff <= 0) || (!paymentMode && diff < 0)) {
+          deviceMonthly -= toNum(txn.price);
+        }
+      });
+
+      deviceMonthly = Math.max(deviceMonthly, 0);
+
+      return {
+        deviceId,
+        deviceMonthly,
+        deviceDaily: deviceMonthly / 30,
+      };
+    });
+
+    // 🔹 Group by identical monthly rate
+    const groupedByRate = perDeviceRates.reduce((acc, cur) => {
+      const key = cur.deviceMonthly.toString();
+      if (!acc[key]) acc[key] = { ...cur, deviceIds: [] };
+      acc[key].deviceIds.push(cur.deviceId);
+      return acc;
+    }, {});
+
+    // 🔹 Render each subgroup (same rate = same row)
+    Object.values(groupedByRate).forEach((subgroup) => {
+      const baseCount = subgroup.deviceIds.length;
+      const monthlyRate = subgroup.deviceMonthly;
+      const dailyRate = subgroup.deviceDaily;
+
+      let amount = isBuyTransaction
+        ? monthlyRate * baseCount
+        : calculateAmount(daysUsed, dailyRate, baseCount, monthlyRate);
+
+      totalAmount += Number(amount) || 0;
+
+      console.log(subgroup.deviceIds, monthlyRate, "after add/remove");
+
+      rows.push(
+        <tr
+          key={`group-${product.id}-${groupIndex}-${monthlyRate}`}
+          style={
+            ++rowCounter % 2 === 0
+              ? tableRowEvenStyle
+              : tableRowOddStyle
+          }
+        >
+          <td style={tableCellCenterStyle}>{rowCounter}</td>
+          <td style={tableCellStyle}>
+            <div style={itemTitleStyle}>{firstItem.product_name}</div>
+
+            {/* Specifications */}
+            {paymentMode ? isSameMonth ? renderSpecifications(product, subgroup.deviceIds) : renderSpecifications(product, []) : isSameMonth ? renderSpecifications(product, subgroup.deviceIds) : renderSpecifications(product, [])}
+
+            <br />
+            <div style={itemTitleStyle}>
+              Asset IDs: {subgroup.deviceIds.join(", ")}
+            </div>
+
+            {invoiceData.transaction_type === "Rent" && (
+              <>
+                <br />
+                <div style={itemTitleStyle}>{firstItem.description}</div>
+              </>
+            )}
+          </td>
+
+          {/* Qty */}
+          <td style={tableCellCenterStyle}>{baseCount}</td>
+
+          {/* Rent Columns */}
           {invoiceData.transaction_type === "Rent" && (
             <>
-              <div style={itemTitleStyle}>{firstItem.description}</div>
+              <td style={tableCellCenterStyle}>{daysUsed}</td>
+              <td style={tableCellCenterStyle}>
+                {formatINRCurrency(dailyRate)}
+              </td>
             </>
           )}
+
+          {/* Monthly Rate */}
+          <td style={tableCellRightStyle}>
+            {formatINRCurrency(monthlyRate)}
+          </td>
+
+          {/* Amount */}
+          <td style={tableCellRightStyle}>
+            {formatINRCurrency(amount)}
+          </td>
+        </tr>
+      );
+    });
+  });
+
+  return rows;
+};
+
+
+
+
+
+
+const renderAssetTransactionRow = (_, product, parentItem) => {
+  const invoiceDate = new Date(invoiceData.invoice_start_date);
+  const paymentMode = invoiceData.payment_mode === "Postpaid";
+
+  // Filter asset transactions only once per product
+  const productAssetTransactions = invoiceData.asset_transactions?.filter(
+    (at) => at.product_id === parentItem.product_id
+  );
+
+  // Avoid duplicates by checking unique IDs
+  const uniqueTransactions = [];
+  productAssetTransactions?.forEach((txn) => {
+    if (!uniqueTransactions.some((t) => t.id === txn.id)) {
+      uniqueTransactions.push(txn);
+    }
+  });
+
+  // Loop through unique asset transactions
+  uniqueTransactions.forEach((assetTxn, index) => {
+
+    const actionDate = new Date(assetTxn.action_date);
+    const monthStartDate = new Date(actionDate.getFullYear(), actionDate.getMonth(), 1);
+    const monthEndDate = new Date(actionDate.getFullYear(), actionDate.getMonth() + 1, 0);
+
+    const deviceInfo = findDeviceDcDate(assetTxn.parent_asset_id);
+    const deviceDcDate = new Date(deviceInfo.dc_date);
+    const timesCreatedInInvoice = deviceInfo.times_created_in_invoice === 0 || deviceInfo.times_created_in_invoice === 1;
+
+    const monthDiff =
+      (invoiceDate.getFullYear() - actionDate.getFullYear()) * 12 +
+      (invoiceDate.getMonth() - actionDate.getMonth());
+
+    const specialCase = paymentMode ? monthDiff === 0 : monthDiff === 1;    
+
+    if(!specialCase) return null;
+
+
+    let daysUsed = 0;
+    let billingStartDate = "";
+    let billingEndDate = "";
+
+
+    // ✅ DaysUsed & Billing period calculation
+    if (assetTxn.status === "Removed") {
+      // Prepaid: show Removed only if timesCreatedInInvoice is true
+      if (!paymentMode && !timesCreatedInInvoice) return; // skip this assetTxn
+
+      daysUsed = specialCase
+        ? calculateDays(monthStartDate, actionDate)
+        : calculateDays(monthStartDate, actionDate);
+      billingStartDate = specialCase ? formatDate(monthStartDate) : formatDate(monthStartDate);
+      billingEndDate = formatDate(actionDate);
+    } else if (assetTxn.status === "Added") {
+      daysUsed = calculateDays(actionDate, monthEndDate);
+      billingStartDate = formatDate(actionDate);
+      billingEndDate = formatDate(monthEndDate);
+    }
+
+    // 💰 Amount calculation
+    const dailyRate = Math.round((assetTxn.price / 30) * 100) / 100;
+    let amount = Math.round(daysUsed * dailyRate * 100) / 100;
+    
+      totalAmount += Number(amount) || 0;
+
+    // 🔹 Push directly to the main rows array
+    rows.push(
+      <tr
+        key={`asset-txn-${assetTxn.id}-${index}`}
+        style={++rowCounter % 2 === 0 ? tableRowEvenStyle : tableRowOddStyle}
+      >
+        <td style={tableCellCenterStyle}>{rowCounter}</td>
+        <td style={tableCellStyle}>
+          <div style={itemTitleStyle}>
+            {parentItem.product_name} - {assetTxn.item_type.toUpperCase()} -{" "}
+            {assetTxn.specification} ({assetTxn.status})
+          </div>
+          <div style={itemTitleStyle}>
+            Asset ID: {assetTxn.parent_asset_id}
+          </div>
+          <br />
+          <div>
+            Billing Start Date: {billingStartDate} - Billing End Date:{" "}
+            {billingEndDate}
+          </div>
         </td>
-        <td style={tableCellCenterStyle}>{baseCount}</td>
+        <td style={tableCellCenterStyle}>1</td>
+
         {invoiceData.transaction_type === "Rent" && (
           <>
             <td style={tableCellCenterStyle}>{daysUsed}</td>
-            <td style={tableCellCenterStyle}>{formatINRCurrency(dailyRate)}</td>
+            <td style={tableCellCenterStyle}>
+              {formatINRCurrency(dailyRate)}
+            </td>
           </>
         )}
-        <td style={tableCellRightStyle}>{formatINRCurrency(firstItem.rate)}</td>
-        <td style={tableCellRightStyle}>{formatINRCurrency(amount)}</td>
+
+        <td style={tableCellRightStyle}>
+          {formatINRCurrency(assetTxn.price)}
+        </td>
+        <td style={tableCellRightStyle}>
+          {formatINRCurrency(amount)}
+        </td>
       </tr>
     );
+  });
+};
+
+
+
+
+  // Helper function to find DC date for specific device
+  const findDeviceDcDate = (deviceId) => {
+    // Check main invoice items
+    const mainItem = invoiceData.items.find(item =>
+      item.device_ids.includes(deviceId)
+    );
+    if (mainItem) {
+      return {
+        dc_date: new Date(invoiceData.dc_date),
+        times_created_in_invoice: invoiceData.times_created_in_invoice
+      };
+    }
+
+    // Check additional delivery challans
+    for (const challan of invoiceData.additional_delivery_challans || []) {
+      const challanItem = challan.items.find(item =>
+        item.device_ids.includes(deviceId)
+      );
+      return {
+        dc_date: new Date(challan.dc_date),
+        times_created_in_invoice: challan.times_created_in_invoice
+      };
+    }
+
+    // Fallback to main DC date or invoice start date
+    return {
+      dc_date: new Date(invoiceData.dc_date || invoiceData.invoice_start_date),
+      times_created_in_invoice: invoiceData.times_created_in_invoice || 1
+    };
   };
+
+  // Update the specifications to handle Removed transactions properly
+  const getFinalSpecificationsForDevice = (deviceId, baseProduct) => {
+    // Start with base product specifications
+    const finalSpecs = { ...baseProduct };
+
+    // Apply asset transactions for this device
+    const deviceTransactions = getAssetTransactionsForDevices([deviceId]);
+
+    // Process transactions in chronological order (by action_date)
+    const sortedTransactions = deviceTransactions.sort((a, b) =>
+      new Date(a.action_date) - new Date(b.action_date)
+    );
+
+    sortedTransactions.forEach(txn => {
+      if (txn.status === "Added") {
+        // Apply added components
+        switch (txn.item_type) {
+          case "ram":
+            finalSpecs.ram = txn.size || txn.specification;
+            break;
+          case "storage":
+          case "hdd":
+          case "ssd":
+            finalSpecs.storage = txn.size || txn.specification;
+            finalSpecs.disk_type = txn.item_type === "ssd" ? "SSD" :
+              txn.item_type === "hdd" ? "HDD" :
+                txn.item_type || finalSpecs.disk_type;
+            break;
+          case "processor":
+            finalSpecs.processor_model = txn.specification;
+            break;
+          case "graphics":
+          case "gpu":
+            finalSpecs.graphics = txn.specification;
+            break;
+          case "os":
+            finalSpecs.os = txn.specification;
+            break;
+          default:
+            break;
+        }
+      } else if (txn.status === "Removed") {
+        // Handle removed components - revert to base product or previous state
+        // For simplicity, we'll revert to base product spec for removed items
+        // In a more complex system, you might track the history
+        switch (txn.item_type) {
+          case "ram":
+            // If RAM is removed, revert to base product RAM
+            finalSpecs.ram = baseProduct.ram;
+            break;
+          case "storage":
+          case "hdd":
+          case "ssd":
+            finalSpecs.storage = baseProduct.storage;
+            finalSpecs.disk_type = baseProduct.disk_type;
+            break;
+          // Add other cases as needed
+          default:
+            break;
+        }
+      }
+    });
+
+    return finalSpecs;
+  };
+
+  // Helper function to check if devices can be grouped (same specifications)
+  const shouldGroupDevices = (deviceIds) => {
+    if (deviceIds.length <= 1) return true;
+
+    // Get specifications for each device
+    const deviceSpecs = deviceIds.map(deviceId => {
+      const transactions = getAssetTransactionsForDevices([deviceId]);
+      const addedTransactions = transactions.filter(txn => txn.status === "Added");
+
+      // Create a specification signature for this device
+      return addedTransactions.map(txn =>
+        `${txn.item_type}-${txn.specification || txn.size}`
+      ).sort().join('|');
+    });
+
+    // Check if all devices have the same specification signature
+    const firstSpec = deviceSpecs[0];
+    return deviceSpecs.every(spec => spec === firstSpec);
+  };
+
 
   const shouldRenderMidMonth = (item, isAdditionalChallan = false) => {
     // If it's an additional challan, NEVER show mid-month data
@@ -5422,7 +6232,6 @@ const InvoiceDialog = ({ open, onClose, invoiceData }) => {
     );
   };
 
-  ////08-09-25
 
   // // Determine mid-month billing
   // const shouldRenderMidMonth = (item) => {
@@ -5634,60 +6443,63 @@ const InvoiceDialog = ({ open, onClose, invoiceData }) => {
   };
 
   // -----------------------------
-  // 🔥 Main rendering loop
-  // -----------------------------
-  const rows = [];
-  const groupedItems = {};
+// 🔥 Main rendering loop
+// -----------------------------
+const rows = [];
+const groupedItems = {};
 
-  // Group items
-  items.forEach((item) => {
-    if (!shouldShowRow(item)) return;
+// Group items
+items.forEach((item) => {
+  if (!shouldShowRow(item)) return;
 
-    const daysUsed = item.isFullMonth ? 30 : item.days || 1;
-    const dailyRate = item.dailyRate || item.rate / 30;
-    const monthlyRate = item.rate;
+  const daysUsed = item.isFullMonth ? 30 : item.days || 1;
+  const dailyRate = item.dailyRate || item.rate / 30;
+  const monthlyRate = item.rate;
 
-    const key = [
-      item.product_name,
-      item.billingPeriod || "full",
-      daysUsed,
-      dailyRate.toFixed(2),
-      monthlyRate,
-    ].join("_");
+  const key = [
+    item.product_name,
+    item.billingPeriod || "full",
+    daysUsed,
+    dailyRate.toFixed(2),
+    monthlyRate,
+  ].join("_");
 
-    if (!groupedItems[key]) groupedItems[key] = [];
-    groupedItems[key].push(item);
-  });
+  if (!groupedItems[key]) groupedItems[key] = [];
+  groupedItems[key].push(item);
+});
 
-  // Render grouped items
-  Object.values(groupedItems).forEach((group) => {
-    const product = group[0].productDetails || group[0].product;
-    const combinedDeviceIds = mergeDeviceIds(group);
+// Render grouped items
+Object.values(groupedItems).forEach((group) => {
+  const product = group[0].productDetails || group[0].product;
+  const combinedDeviceIds = mergeDeviceIds(group);
 
-    // Main row
-    const mainRow = renderProductRow(group, product, combinedDeviceIds);
-    if (mainRow) rows.push(mainRow);
+  // Main row
+  const mainRow = renderProductRow(group, product, combinedDeviceIds);
+  if (mainRow) rows.push(mainRow);
 
-    // Mid-month + Returns + Swaps
-    group.forEach((item) => {
-      if (!isBuyTransaction && !paymentMode && showDcPeriod) {
-        const midRow = renderMidMonthRow(item, product);
-        if (midRow) rows.push(midRow);
-      }
+  // ✅ Asset Transactions (only once per product)
+  renderAssetTransactionRow(null, product, group[0]);
 
-      // Returned devices
-      item.returnedDevices?.forEach((rd) => {
-        const retRow = renderReturnedDeviceRow(item, product, rd);
-        if (retRow) rows.push(retRow);
-      });
+  // Mid-month + Returns + Swaps
+  group.forEach((item) => {
+    if (!isBuyTransaction && !paymentMode && showDcPeriod) {
+      const midRow = renderMidMonthRow(item, product);
+      if (midRow) rows.push(midRow);
+    }
 
-      // Swapped devices
-      item.swappedDevices?.forEach((sd) => {
-        const swapRow = renderSwappedDeviceRow(item, product, sd);
-        if (swapRow) rows.push(swapRow);
-      });
+    // Returned devices
+    item.returnedDevices?.forEach((rd) => {
+      const retRow = renderReturnedDeviceRow(item, product, rd);
+      if (retRow) rows.push(retRow);
+    });
+
+    // Swapped devices
+    item.swappedDevices?.forEach((sd) => {
+      const swapRow = renderSwappedDeviceRow(item, product, sd);
+      if (swapRow) rows.push(swapRow);
     });
   });
+});
 
   // // 🔥 Main rendering loop
   // const rows = [];
@@ -7692,11 +8504,73 @@ const DynamicTable = ({
       case "product_categories":
         return "Add Category";
       case "asset-updation":
-        return "Add Asset"; // Specific text for asset updation
+        return "Add Asset";
+      case "dispatch-orders":
+        return "Add Order Preparation";
       default:
         return `Add ${tableType.charAt(0).toUpperCase() + tableType.slice(1)}`;
     }
   };
+
+
+
+  const handleUploadDC = async (row) => {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = ".pdf,.jpg,.png"; // adjust allowed formats
+
+    input.onchange = async (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      const formData = new FormData();
+      formData.append("file", file);                 // file
+      formData.append("dc_status", "Delivered");    // add dc_status
+
+      try {
+        const response = await fetch(`${API_URL}/delivery-challans/${row.id}`, {
+          method: "PUT",
+          headers: {
+            Authorization: `Bearer ${userToken}`, // Do NOT set Content-Type for FormData
+          },
+          body: formData,
+        });
+
+        if (!response.ok) {
+          const err = await response.text();
+          console.error("Upload failed:", err);
+          alert("Upload failed!");
+          return;
+        }
+
+        const data = await response.json();
+        setData((prev) =>
+          prev.map((r) => (r.id === row.id ? { ...r, uploaded_dc: file.name, dc_status: "Delivered" } : r))
+        );
+
+        alert("File uploaded successfully!");
+      } catch (error) {
+        console.error("Error uploading:", error);
+        alert("Error uploading file!");
+      }
+    };
+
+    input.click();
+  };
+
+
+
+  const handleViewUploadedDC = (row) => {
+    if (row.uploaded_dc) {
+      const fileUrl = `${IMAGE_API_URL}/${row.uploaded_dc}`;
+      window.open(fileUrl, "_blank"); // Opens in new tab
+    } else {
+      alert("No DC file uploaded yet!");
+    }
+  };
+
+
+
 
   return (
     <Box>
@@ -7713,7 +8587,13 @@ const DynamicTable = ({
           variant="outlined"
           size="small"
           onChange={(e) => setSearchTerm(e.target.value)}
+          sx={{
+            '& .MuiOutlinedInput-root': {
+              borderRadius: '14px',
+            },
+          }}
         />
+
         {tableType !== "inventory" &&
           tableType !== "asset" &&
           tableType !== "plain-grn" &&
@@ -7730,7 +8610,7 @@ const DynamicTable = ({
                 padding: "8px 16px",
                 fontWeight: "bold",
                 fontSize: "14px",
-                borderRadius: "6px",
+                borderRadius: "14px",
                 boxShadow: "0 2px 4px rgba(0,0,0,0.2)",
                 textTransform: "none",
                 "&:hover": {
@@ -7789,7 +8669,7 @@ const DynamicTable = ({
                 "client-place",
                 "courier-charges",
                 "service_maintenance",
-                "swap",
+                "scrap",
               ].includes(tableType) === false && (
                   <TableCell align="center" sx={{ fontWeight: "bold" }}>
                     Active Status
@@ -7817,6 +8697,18 @@ const DynamicTable = ({
               {tableType === "operations" && (
                 <TableCell align="center" sx={{ fontWeight: "bold" }}>
                   View DC
+                </TableCell>
+              )}
+
+              {tableType === "operations" && (
+                <TableCell align="center" sx={{ fontWeight: "bold" }}>
+                  Upload DC
+                </TableCell>
+              )}
+
+              {tableType === "operations" && (
+                <TableCell align="center" sx={{ fontWeight: "bold" }}>
+                  Uploaded DC
                 </TableCell>
               )}
 
@@ -7919,7 +8811,7 @@ const DynamicTable = ({
                           {row[column.id]}
                         </Typography>
                       ) : (
-                        row[column.id] || "N/A"
+                        row[column.id] || "0"
                       )}
                     </TableCell>
                   ))}
@@ -7946,7 +8838,7 @@ const DynamicTable = ({
                     "asset-updation",
                     "courier-charges",
                     "service_maintenance",
-                    "swap",
+                    "scrap",
                   ].includes(tableType) === false && (
                       <TableCell align="center">
                         <Button onClick={() => toggleStatus(rowIndex)}>
@@ -8048,6 +8940,53 @@ const DynamicTable = ({
                       </Button>
                     </TableCell>
                   )}
+
+
+
+
+                  {tableType === "operations" && (
+                    <TableCell align="center">
+                      <Button
+                        variant="outlined"
+                        color="primary"
+                        onClick={() => handleUploadDC(row)}
+                        sx={{
+                          minWidth: "30px",
+                          p: 0.5,
+                          borderRadius: "8px",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                        }}
+                      >
+                        <CloudUploadIcon sx={{ width: 24, height: 24 }} />
+                      </Button>
+                    </TableCell>
+                  )}
+
+
+                  {tableType === "operations" && (
+                    <TableCell align="center">
+                      {row.uploaded_dc ? (
+                        <Button
+                          variant="outlined"
+                          color="primary"
+                          onClick={() => handleViewUploadedDC(row)}
+                          sx={{
+                            minWidth: "30px",
+                            p: 0.5,
+                            borderRadius: "8px",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                          }}
+                        >
+                          <CloudDownloadIcon sx={{ width: 24, height: 24 }} />
+                        </Button>
+                      ) : null}
+                    </TableCell>
+                  )}
+
 
                   {/* View DC for operations */}
                   {tableType === "quotations" && (

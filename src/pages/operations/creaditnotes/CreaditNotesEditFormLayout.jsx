@@ -412,16 +412,16 @@ const CreaditNotesEditFormLayout = () => {
 
   const filteredProducts = selectedOrder
     ? selectedOrder.items
-        .map((item) => products.find((p) => p.id === item.product_id))
-        .filter(Boolean)
-        .filter(
-          (product) =>
-            product.product_name
-              .toLowerCase()
-              .includes(searchTerm.toLowerCase()) ||
-            product.brand.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            product.model.toLowerCase().includes(searchTerm.toLowerCase())
-        )
+      .map((item) => products.find((p) => p.id === item.product_id))
+      .filter(Boolean)
+      .filter(
+        (product) =>
+          product.product_name
+            .toLowerCase()
+            .includes(searchTerm.toLowerCase()) ||
+          product.brand.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          product.model.toLowerCase().includes(searchTerm.toLowerCase())
+      )
     : [];
 
   const handleInputChange = (e) => {
@@ -632,7 +632,7 @@ const CreaditNotesEditFormLayout = () => {
       console.error("Error updating grn:", error);
       setSnackbarMessage(
         "Failed to update grn: " +
-          (error.response?.data?.message || error.message)
+        (error.response?.data?.message || error.message)
       );
       setSnackbarSeverity("error");
       setOpenSnackbar(true);
@@ -792,7 +792,7 @@ const CreaditNotesEditFormLayout = () => {
                   </MenuItem>
                   {orders.map((order) => (
                     <MenuItem key={order.id} value={order.id}>
-                      {order.first_name} {order.last_name} ({order.customer_id})
+                      {`${order.first_name} ${order.last_name} (${order.company_name})`}
                     </MenuItem>
                   ))}
                 </Select>
@@ -1077,13 +1077,13 @@ const CreaditNotesEditFormLayout = () => {
                             sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
                             checked={
                               selectedProductIds.length ===
-                                filteredProducts.length &&
+                              filteredProducts.length &&
                               filteredProducts.length > 0
                             }
                             indeterminate={
                               selectedProductIds.length > 0 &&
                               selectedProductIds.length <
-                                filteredProducts.length
+                              filteredProducts.length
                             }
                             onChange={() => {
                               if (
@@ -1222,9 +1222,9 @@ const CreaditNotesEditFormLayout = () => {
                                   }
                                   helperText={
                                     deviceIdErrors[product.id] &&
-                                    deviceIdErrors[product.id].includes(
-                                      "quantity"
-                                    )
+                                      deviceIdErrors[product.id].includes(
+                                        "quantity"
+                                      )
                                       ? deviceIdErrors[product.id]
                                       : ""
                                   }
@@ -1240,7 +1240,7 @@ const CreaditNotesEditFormLayout = () => {
                                   disabled={
                                     !selectedProductIds.includes(product.id) ||
                                     (quantities[product.id] || 1) >=
-                                      invoiceItem.quantity
+                                    invoiceItem.quantity
                                   }
                                 >
                                   <Add fontSize="small" />
@@ -1274,8 +1274,8 @@ const CreaditNotesEditFormLayout = () => {
                                               const newIds = isChecked
                                                 ? [...currentIds, assetId]
                                                 : currentIds.filter(
-                                                    (id) => id !== assetId
-                                                  );
+                                                  (id) => id !== assetId
+                                                );
 
                                               // Validate after change
                                               validateDeviceIds(
@@ -1298,7 +1298,7 @@ const CreaditNotesEditFormLayout = () => {
                                             ).includes(assetId) &&
                                               (deviceIds[product.id] || [])
                                                 .length >=
-                                                (quantities[product.id] || 0))
+                                              (quantities[product.id] || 0))
                                           }
                                         />
                                         <Typography>{assetId}</Typography>

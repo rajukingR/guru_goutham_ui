@@ -21,7 +21,7 @@ import {
   Typography,
 } from "@mui/material";
 import { Add, Remove } from "@mui/icons-material";
-import API_URL, { IMAGE_API_URL, POSTAL_API} from "../../../api/Api_url";
+import API_URL, { IMAGE_API_URL, POSTAL_API } from "../../../api/Api_url";
 import { useNavigate, useParams } from "react-router-dom";
 import { useSelector } from "react-redux";
 
@@ -272,10 +272,10 @@ const Field = memo(
 
             {options.length > 0
               ? options.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))
               : children}
           </select>
           <div style={selectArrowStyle}>▼</div>
@@ -489,6 +489,17 @@ const InvoicesEditPage = () => {
     dc_id: "",
   });
 
+
+  const getCompanyName = (order) => {
+    if (order.type === "dispatch_order") {
+      return order.dispatch_order?.contact?.company_name || 'No Company';
+    } else if (order.type === "direct_invoice") {
+      return order.contact?.company_name || 'No Company';
+    }
+    return 'No Company';
+  };
+
+
   const [formData, setFormData] = useState({
     invoice_number: "",
     invoice_title: "",
@@ -570,11 +581,11 @@ const InvoicesEditPage = () => {
             "Authorization": `Bearer ${userToken}`,
           },
         });
-        
+
         if (!response.ok) throw new Error("Failed to fetch invoice");
-        
+
         const invoiceData = await response.json();
-        
+
         // Set form data with existing invoice data
         setFormData({
           ...formData,
@@ -582,17 +593,17 @@ const InvoicesEditPage = () => {
           shippingDetails: invoiceData.shippingDetails || formData.shippingDetails,
           items: invoiceData.items || [],
         });
-        
+
         // Set selected products and quantities
         const productIds = invoiceData.items.map(item => item.product_id);
         setSelectedProductIds(productIds);
-        
+
         const initialQuantities = {};
         invoiceData.items.forEach(item => {
           initialQuantities[item.product_id] = item.quantity;
         });
         setQuantities(initialQuantities);
-        
+
         // Set date ranges if they exist
         if (invoiceData.invoice_start_date) {
           setDateRanges({
@@ -604,7 +615,7 @@ const InvoicesEditPage = () => {
             creditNoteEndDate: invoiceData.credit_note_end_date,
           });
         }
-        
+
         setIsLoading(false);
       } catch (error) {
         console.error("Error fetching invoice:", error);
@@ -616,7 +627,7 @@ const InvoicesEditPage = () => {
         setIsLoading(false);
       }
     };
-    
+
     fetchInvoiceData();
   }, [id, userToken]);
 
@@ -1067,9 +1078,8 @@ const InvoicesEditPage = () => {
         setFormData({
           ...formData,
           customer_id: customerId || "",
-          customer_name: `${personal?.first_name || ""} ${
-            personal?.last_name || ""
-          }`,
+          customer_name: `${personal?.first_name || ""} ${personal?.last_name || ""
+            }`,
           email: personal?.email || "",
           phone_number: personal?.phone_number || "",
           customer_gst_number: personal?.gst_number || "",
@@ -1089,9 +1099,8 @@ const InvoicesEditPage = () => {
           items: items,
           shippingDetails: {
             ...formData.shippingDetails,
-            consignee_name: `${personal?.first_name || ""} ${
-              personal?.last_name || ""
-            }`,
+            consignee_name: `${personal?.first_name || ""} ${personal?.last_name || ""
+              }`,
             country: address?.country || "India",
             state: address?.state || "",
             city: address?.city || "",
@@ -1112,55 +1121,55 @@ const InvoicesEditPage = () => {
     }
   }, [selectedProductIds]);
 
-const [shippingPostOffices, setShippingPostOffices] = useState([]);
+  const [shippingPostOffices, setShippingPostOffices] = useState([]);
 
-useEffect(() => {
-  const fetchLocationFromPincode = async () => {
-    const pincode = formData.shippingDetails.pincode;
+  useEffect(() => {
+    const fetchLocationFromPincode = async () => {
+      const pincode = formData.shippingDetails.pincode;
 
-    if (pincode && pincode.length === 6) {
-      try {
-        const response = await fetch(`${POSTAL_API}/${pincode}`);
-        const result = await response.json();
+      if (pincode && pincode.length === 6) {
+        try {
+          const response = await fetch(`${POSTAL_API}/${pincode}`);
+          const result = await response.json();
 
-        // Check if PostOffice exists
-        if (Array.isArray(result) && result.length > 0 && result[0]?.PostOffice?.length > 0) {
-          const firstOffice = result[0].PostOffice[0];
+          // Check if PostOffice exists
+          if (Array.isArray(result) && result.length > 0 && result[0]?.PostOffice?.length > 0) {
+            const firstOffice = result[0].PostOffice[0];
 
-          // Update shippingDetails
-          setFormData((prev) => ({
-            ...prev,
-            shippingDetails: {
-              ...prev.shippingDetails,
-              city: firstOffice.District,
-              state: firstOffice.State,
-              country: firstOffice.Country || "India",
-            },
-          }));
+            // Update shippingDetails
+            setFormData((prev) => ({
+              ...prev,
+              shippingDetails: {
+                ...prev.shippingDetails,
+                city: firstOffice.District,
+                state: firstOffice.State,
+                country: firstOffice.Country || "India",
+              },
+            }));
 
-          // Set shipping post offices
-          setShippingPostOffices(result[0].PostOffice);
-        } else {
+            // Set shipping post offices
+            setShippingPostOffices(result[0].PostOffice);
+          } else {
+            setSnackbar({
+              open: true,
+              message: "Could not find location for this pincode",
+              severity: "warning",
+            });
+          }
+        } catch (error) {
+          console.error("Error fetching shipping location data:", error);
           setSnackbar({
             open: true,
-            message: "Could not find location for this pincode",
-            severity: "warning",
+            message: "Error fetching shipping location data. Please check the pincode and try again.",
+            severity: "error",
           });
         }
-      } catch (error) {
-        console.error("Error fetching shipping location data:", error);
-        setSnackbar({
-          open: true,
-          message: "Error fetching shipping location data. Please check the pincode and try again.",
-          severity: "error",
-        });
       }
-    }
-  };
+    };
 
-  const debounceTimer = setTimeout(fetchLocationFromPincode, 500);
-  return () => clearTimeout(debounceTimer);
-}, [formData.shippingDetails.pincode]);
+    const debounceTimer = setTimeout(fetchLocationFromPincode, 500);
+    return () => clearTimeout(debounceTimer);
+  }, [formData.shippingDetails.pincode]);
 
 
   const handleInputChange = useCallback((e) => {
@@ -1263,11 +1272,11 @@ useEffect(() => {
             const monthPrice =
               months === 6
                 ? product.rent_price_6_months ||
-                  (product.rent_price_per_month || 0) * 6
+                (product.rent_price_per_month || 0) * 6
                 : months === 12
-                ? product.rent_price_1_year ||
+                  ? product.rent_price_1_year ||
                   (product.rent_price_per_month || 0) * 12
-                : (product.rent_price_per_month || 0) * months;
+                  : (product.rent_price_per_month || 0) * months;
 
             const dayPrice = (product.rent_price_per_day || 0) * days;
             price = monthPrice + dayPrice;
@@ -1588,8 +1597,8 @@ useEffect(() => {
                   {orders.map((order) => (
                     <MenuItem key={order.id} value={order.id}>
                       {order.type === "dispatch_order"
-                        ? `${order.dispatch_order_id} - ${order.personalDetails?.first_name}`
-                        : `${order.quotation_id} - ${order.personalDetails?.first_name} ${order.personalDetails?.last_name}`}
+                        ? `${order.dispatch_order_id} - ${order.personalDetails?.first_name} (${getCompanyName(order)})`
+                        : `${order.quotation_id} - ${order.personalDetails?.first_name} ${order.personalDetails?.last_name} (${getCompanyName(order)})`}
                     </MenuItem>
                   ))}
                 </Select>
@@ -1619,6 +1628,7 @@ useEffect(() => {
                   { value: "Rent", label: "Rent" },
                   { value: "Buy", label: "Sale" },
                 ]}
+                disabled
               />
 
               {formData.transaction_type === "Rent" && (
@@ -1846,13 +1856,13 @@ useEffect(() => {
                             sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
                             checked={
                               selectedProductIds.length ===
-                                filteredProducts.length &&
+                              filteredProducts.length &&
                               filteredProducts.length > 0
                             }
                             indeterminate={
                               selectedProductIds.length > 0 &&
                               selectedProductIds.length <
-                                filteredProducts.length
+                              filteredProducts.length
                             }
                             onChange={() => {
                               if (

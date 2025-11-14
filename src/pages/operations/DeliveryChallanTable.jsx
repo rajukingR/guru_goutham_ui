@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import DynamicTable from "../../components/table-format/DynamicTable";
 import axios from "axios";
 import API_URL from "../../api/Api_url";
-  import { useSelector } from "react-redux";
+import { useSelector } from "react-redux";
 
 // Badge formatter for delivery status
 const getStatusBadge = (status) => {
@@ -11,9 +11,9 @@ const getStatusBadge = (status) => {
       return (
         <span style={{ color: "green", fontWeight: "bold" }}>Delivered</span>
       );
-    case "Dispatched":
+    case "Rejected":
       return (
-        <span style={{ color: "orange", fontWeight: "bold" }}>Dispatched</span>
+        <span style={{ color: "red", fontWeight: "bold" }}>Rejected</span>
       );
     default:
       return (
@@ -27,9 +27,9 @@ const DeliveryChallanTable = () => {
 
 
 
-    const { user, token } = useSelector((state) => state.auth);
-  
-    const userToken = token;
+  const { user, token } = useSelector((state) => state.auth);
+
+  const userToken = token;
 
   const [data, setData] = useState([]);
 
@@ -69,6 +69,7 @@ const DeliveryChallanTable = () => {
             payment_type: item.payment_type === "" ? "Buy" : item.payment_type,
 
             dc_status: getStatusBadge(item.dc_status), // format status here
+            dc_status_raw: item.dc_status,
           }));
           setData(formatted);
         }

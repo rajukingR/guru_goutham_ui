@@ -341,7 +341,7 @@ const AssetSwapsEdit = () => {
       // First fetch the specific asset swap
       const response = await axios.get(`${API_URL}/asset-swaps/${swapId}`, {
         headers: {
-          "Authorization": `Bearer ${token}`,
+          "Authorization": `Bearer ${userToken}`,
         },
       });
       const swapData = response.data;
@@ -391,7 +391,7 @@ const AssetSwapsEdit = () => {
         `${API_URL}/goods-receipts/approved-receipt-products`,
         {
           headers: {
-            "Authorization": `Bearer ${token}`,
+            "Authorization": `Bearer ${userToken}`,
           },
         }
       );
@@ -559,16 +559,16 @@ const AssetSwapsEdit = () => {
             "Authorization": `Bearer ${userToken}`,
           },
         });
-        showSnackbar("Asset swap created successfully", "success");
+        showSnackbar("Asset scrap created successfully", "success");
       }
 
       setTimeout(() => {
-        navigate("/dashboard/inventory/swap");
+        navigate("/dashboard/inventory/scrap");
       }, 1500);
     } catch (err) {
       console.error(err);
       showSnackbar(
-        err.response?.data?.message || "Failed to save asset swap",
+        err.response?.data?.message || "Failed to save asset scrap",
         "error"
       );
     }

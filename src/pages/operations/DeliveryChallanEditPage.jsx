@@ -17,7 +17,7 @@ import {
 } from "@mui/material";
 import { Add, Remove } from "@mui/icons-material";
 import { useNavigate, useParams } from "react-router-dom";
-import API_URL, {POSTAL_API} from "../../api/Api_url";
+import API_URL, { POSTAL_API } from "../../api/Api_url";
 import { useInventory } from "../../contexts/InventoryContext";
 import { useSelector } from "react-redux";
 
@@ -424,6 +424,10 @@ const DeliveryChallanEditPage = () => {
     cable: false,
     bag: false,
     others: false,
+    mouse_qty: 0,
+    cable_qty: 0,
+    bag_qty: 0,
+    others_qty: 0,
   });
 
   const [dispatchOrders, setDispatchOrders] = useState([]);
@@ -439,6 +443,7 @@ const DeliveryChallanEditPage = () => {
   // Add these state variables near the other state declarations
   const [showOtherAccessory, setShowOtherAccessory] = useState(false);
   const [otherAccessory, setOtherAccessory] = useState("");
+  const [accessoryErrors, setAccessoryErrors] = useState({});
 
   const [snackbar, setSnackbar] = useState({
     open: false,
@@ -488,6 +493,10 @@ const DeliveryChallanEditPage = () => {
           dc_date: dcData.dc_date
             ? dcData.dc_date.split("T")[0]
             : new Date().toISOString().split("T")[0],
+          mouse_qty: dcData.mouse_qty || 0,
+          cable_qty: dcData.cable_qty || 0,
+          bag_qty: dcData.bag_qty || 0,
+          others_qty: dcData.others_qty || 0,
         });
 
         // Initialize other accessory state
@@ -526,34 +535,65 @@ const DeliveryChallanEditPage = () => {
     fetchData();
   }, [id]);
 
+
   const validateForm = () => {
     const newErrors = {};
+    const newAccessoryErrors = {};
 
+    // Existing validations
     if (!formData.order_id) {
       newErrors.order_id = "Dispatch Order is required";
     }
     if (!formData.dc_status) {
       newErrors.dc_status = "DC Status is required";
     }
-
     if (!formData.delivery_person_name) {
       newErrors.delivery_person_name = "Delivery Person Name is required";
     }
     if (!formData.delivery_person_phone_number) {
-      newErrors.delivery_person_phone_number =
-        "Delivery Person Phone is required";
+      newErrors.delivery_person_phone_number = "Delivery Person Phone is required";
     }
-
     if (!formData.receiver_name) {
-      newErrors.receiver_name = "Receiver Person Name is required";
+      newErrors.receiver_name = "Receiver Name is required";
     }
     if (!formData.receiver_phone_number) {
-      newErrors.receiver_phone_number = "Receiver Person Number is required";
+      newErrors.receiver_phone_number = "Receiver Phone number is required";
+    }
+
+    // Accessory quantity validations
+    const accessoryFields = ["mouse", "cable", "bag", "others"];
+    accessoryFields.forEach(field => {
+      if (formData[field]) {
+        const qtyField = `${field}_qty`;
+        const quantity = formData[qtyField] || 0;
+
+        if (quantity < 1) {
+          newAccessoryErrors[field] = `Quantity must be at least 1 for ${field}`;
+        }
+      }
+    });
+
+    // Updated validation for "others" accessory name
+    if (formData.others && showOtherAccessory) {
+      // Check if otherAccessory is array or string and handle accordingly
+      if (Array.isArray(otherAccessory)) {
+        if (otherAccessory.length === 0 || otherAccessory.some(item => !item.trim())) {
+          newAccessoryErrors.others = "Please specify at least one other accessory name";
+        }
+      } else {
+        // Handle string case (backward compatibility)
+        if (!otherAccessory || !otherAccessory.trim()) {
+          newAccessoryErrors.others = "Please specify the other accessory name";
+        }
+      }
     }
 
     setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+    setAccessoryErrors(newAccessoryErrors);
+
+    return Object.keys(newErrors).length === 0 && Object.keys(newAccessoryErrors).length === 0;
   };
+
 
   const handleOrderSelect = (orderId) => {
     const selectedOrder = dispatchOrders.find(
@@ -615,50 +655,50 @@ const DeliveryChallanEditPage = () => {
   const [postOffices, setPostOffices] = useState([]); // Billing/Main Pincode
 
 
-useEffect(() => {
-  const fetchLocationFromPincode = async () => {
-    const pincode = formData.pincode;
+  useEffect(() => {
+    const fetchLocationFromPincode = async () => {
+      const pincode = formData.pincode;
 
-    if (pincode && pincode.length === 6) {
-      try {
-        const response = await fetch(`${POSTAL_API}/${pincode}`);
-        const result = await response.json();
+      if (pincode && pincode.length === 6) {
+        try {
+          const response = await fetch(`${POSTAL_API}/${pincode}`);
+          const result = await response.json();
 
-        // Set Post Offices if available
-        if (Array.isArray(result) && result.length > 0 && result[0]?.PostOffice) {
-          setPostOffices(result[0].PostOffice);
-        }
+          // Set Post Offices if available
+          if (Array.isArray(result) && result.length > 0 && result[0]?.PostOffice) {
+            setPostOffices(result[0].PostOffice);
+          }
 
-        // Update formData with first post office info (optional)
-        if (result[0]?.PostOffice?.length > 0) {
-          const firstOffice = result[0].PostOffice[0];
-          setFormData((prev) => ({
-            ...prev,
-            city: firstOffice.District,
-            state: firstOffice.State,
-            country: firstOffice.Country || "India",
-          }));
-        } else {
+          // Update formData with first post office info (optional)
+          if (result[0]?.PostOffice?.length > 0) {
+            const firstOffice = result[0].PostOffice[0];
+            setFormData((prev) => ({
+              ...prev,
+              city: firstOffice.District,
+              state: firstOffice.State,
+              country: firstOffice.Country || "India",
+            }));
+          } else {
+            setSnackbar({
+              open: true,
+              message: "Could not find location for this pincode",
+              severity: "warning",
+            });
+          }
+        } catch (error) {
+          console.error("Error fetching location data:", error);
           setSnackbar({
             open: true,
-            message: "Could not find location for this pincode",
-            severity: "warning",
+            message: "Error fetching location data. Please check the pincode and try again.",
+            severity: "error",
           });
         }
-      } catch (error) {
-        console.error("Error fetching location data:", error);
-        setSnackbar({
-          open: true,
-          message: "Error fetching location data. Please check the pincode and try again.",
-          severity: "error",
-        });
       }
-    }
-  };
+    };
 
-  const debounceTimer = setTimeout(fetchLocationFromPincode, 500);
-  return () => clearTimeout(debounceTimer);
-}, [formData.pincode]);
+    const debounceTimer = setTimeout(fetchLocationFromPincode, 500);
+    return () => clearTimeout(debounceTimer);
+  }, [formData.pincode]);
 
   // Update the handleInputChange function to handle the "others" checkbox
   const handleInputChange = useCallback((e) => {
@@ -669,18 +709,104 @@ useEffect(() => {
         ...prev,
         [name]: checked,
       }));
-      // Show/hide the other accessory input based on checkbox state
       setShowOtherAccessory(checked);
+
       if (!checked) {
-        setOtherAccessory(""); // Clear the other accessory field when unchecked
+        setOtherAccessory("");
+        setFormData((prev) => ({ ...prev, others_qty: 0 }));
+        // Clear others error when unchecked
+        setAccessoryErrors(prev => {
+          const newErrors = { ...prev };
+          delete newErrors.others;
+          return newErrors;
+        });
       }
+    } else if (name.endsWith('_qty')) {
+      // Handle quantity changes
+      const qtyValue = Math.max(0, parseInt(value) || 0);
+      setFormData((prev) => ({
+        ...prev,
+        [name]: qtyValue
+      }));
     } else {
       setFormData((prev) => ({
         ...prev,
         [name]: type === "checkbox" ? checked : value,
       }));
+
+      // When unchecking a checkbox, clear its error
+      if (type === "checkbox" && !checked && accessoryErrors[name]) {
+        setAccessoryErrors(prev => {
+          const newErrors = { ...prev };
+          delete newErrors[name];
+          return newErrors;
+        });
+      }
     }
-  }, []);
+  }, [accessoryErrors]);
+
+  // Update handleAccessoryQtyChange to clear errors when quantity becomes valid
+  const handleAccessoryQtyChange = useCallback((accessoryName, value) => {
+    const qtyField = `${accessoryName}_qty`;
+    const qtyValue = Math.max(0, parseInt(value) || 0);
+
+    setFormData((prev) => ({
+      ...prev,
+      [qtyField]: qtyValue
+    }));
+
+    // Clear error when user starts typing valid quantity
+    if (qtyValue >= 1 && accessoryErrors[accessoryName]) {
+      setAccessoryErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors[accessoryName];
+        return newErrors;
+      });
+    }
+  }, [accessoryErrors]);
+
+  // Update increment/decrement functions to handle validation
+  const incrementAccessoryQty = useCallback((accessoryName) => {
+    const qtyField = `${accessoryName}_qty`;
+    setFormData((prev) => ({
+      ...prev,
+      [qtyField]: (prev[qtyField] || 0) + 1
+    }));
+
+    // Clear error when incrementing
+    if (accessoryErrors[accessoryName]) {
+      setAccessoryErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors[accessoryName];
+        return newErrors;
+      });
+    }
+  }, [accessoryErrors]);
+
+  const decrementAccessoryQty = useCallback((accessoryName) => {
+    const qtyField = `${accessoryName}_qty`;
+    const newQty = Math.max(0, (formData[qtyField] || 0) - 1);
+
+    setFormData((prev) => ({
+      ...prev,
+      [qtyField]: newQty
+    }));
+
+    // Set error if quantity becomes 0
+    if (newQty === 0) {
+      setAccessoryErrors(prev => ({
+        ...prev,
+        [accessoryName]: `Quantity must be at least 1 for ${accessoryName}`
+      }));
+    } else if (accessoryErrors[accessoryName]) {
+      // Clear error if quantity becomes valid
+      setAccessoryErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors[accessoryName];
+        return newErrors;
+      });
+    }
+  }, [formData, accessoryErrors]);
 
   const handleProductSelection = useCallback((productId) => {
     setSelectedProductIds((prev) => {
@@ -739,8 +865,6 @@ useEffect(() => {
         const selectedDeviceIds = deviceIds[productId] || [];
         const orderItem = formData.items.find((item) => item.product_id === productId);
 
-        
-
         const total_price = orderItem.total_price;
         const unit_price = orderItem.unit_price;
 
@@ -754,10 +878,28 @@ useEffect(() => {
         };
       });
 
+      // Prepare accessories data for API
+      const accessoriesData = {
+        mouse: formData.mouse ? { included: true, quantity: formData.mouse_qty || 0 } : { included: false, quantity: 0 },
+        cable: formData.cable ? { included: true, quantity: formData.cable_qty || 0 } : { included: false, quantity: 0 },
+        bag: formData.bag ? { included: true, quantity: formData.bag_qty || 0 } : { included: false, quantity: 0 },
+        others: formData.others ? {
+          included: true,
+          quantity: formData.others_qty || 0,
+          name: otherAccessory
+        } : { included: false, quantity: 0, name: "" }
+      };
+
       const payload = {
         ...formData,
         items,
+        accessories: accessoriesData,
         other_accessory: showOtherAccessory ? otherAccessory : "",
+        // Include individual quantity fields in the payload
+        mouse_qty: formData.mouse_qty || 0,
+        cable_qty: formData.cable_qty || 0,
+        bag_qty: formData.bag_qty || 0,
+        others_qty: formData.others_qty || 0,
       };
 
       console.log("Updating payload:", payload);
@@ -844,10 +986,10 @@ useEffect(() => {
               />
 
               <Field
-                label="Select Dispatch Order"
+                label="Select Order Preparation"
                 name="order_id"
                 type="select"
-                placeholder="Select Dispatch Order"
+                placeholder="Select Order Preparation"
                 value={formData.order_id}
                 onChange={(e) => {
                   handleOrderSelect(e.target.value);
@@ -858,9 +1000,7 @@ useEffect(() => {
                 error={errors.order_id}
                 options={dispatchOrders.map((order) => ({
                   value: order.id,
-                  label: `${order.dispatch_order_id} - ${
-                    order.shipping_name || ""
-                  }`,
+                  label: `${order.dispatch_order_id} - ${order.shipping_name || "" } (${order.contact.company_name || ""})`,
                 }))}
               />
 
@@ -904,24 +1044,30 @@ useEffect(() => {
                   disabled
                 />
               )}
-              <Field
-                label="DC Status"
-                name="dc_status"
-                type="select"
-                placeholder="Select Status"
-                value={formData.dc_status}
-                onChange={(e) => {
-                  handleInputChange(e);
-                  if (errors.dc_status) {
-                    setErrors({ ...errors, dc_status: "" });
-                  }
-                }}
-                error={errors.dc_status}
-                options={[
-                  { value: "Pending", label: "Pending" },
-                  { value: "Delivered", label: "Delivered" },
-                ]}
-              />
+
+              {(formData.dc_status === "Pending" || formData.dc_status === "Rejected") && (
+                <Field
+                  label="DC Status"
+                  name="dc_status"
+                  type="select"
+                  placeholder="Select Status"
+                  value={formData.dc_status}
+                  onChange={(e) => {
+                    handleInputChange(e);
+                    if (errors.dc_status) {
+                      setErrors({ ...errors, dc_status: "" });
+                    }
+                  }}
+                  error={errors.dc_status}
+                  options={[
+                    { value: "Pending", label: "Pending" },
+
+                    { value: "Rejected", label: "Rejected" },
+                  ]}
+                />
+              )
+              }
+
               <Field
                 label="DC Date"
                 name="dc_date"
@@ -929,13 +1075,13 @@ useEffect(() => {
                 value={formData.dc_date}
                 onChange={handleInputChange}
               />
-              <Field
+              {/* <Field
                 label="Other Reference"
                 name="dealer_reference"
                 placeholder="Enter Reference"
                 value={formData.dealer_reference}
                 onChange={handleInputChange}
-              />
+              /> */}
               <Field
                 label="Email"
                 name="email"
@@ -945,7 +1091,7 @@ useEffect(() => {
                 onChange={handleInputChange}
               />
 
-              <Field
+              {/* <Field
                 label="Industry"
                 name="industry"
                 placeholder="Enter Industry"
@@ -959,7 +1105,7 @@ useEffect(() => {
                 type="textarea"
                 value={formData.remarks}
                 onChange={handleInputChange}
-              />
+              /> */}
             </div>
           </div>
 
@@ -1152,32 +1298,97 @@ useEffect(() => {
               </div>
             </div>
 
-            {/* Accessories Checkboxes */}
             <div style={fieldContainerStyle}>
               <label style={labelStyle}>Included Accessories:</label>
               <div style={checkboxGroupStyle}>
                 {["mouse", "cable", "bag", "others"].map((field) => (
-                  <label
-                    key={field}
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      marginRight: "15px",
-                    }}
-                  >
-                    <input
-                      type="checkbox"
-                      name={field}
-                      checked={formData[field]}
-                      onChange={handleInputChange}
-                      style={{ marginRight: "5px" }}
-                    />
-                    {field.charAt(0).toUpperCase() + field.slice(1)}
-                  </label>
+                  <div key={field} style={{ marginBottom: "10px" }}>
+                    <label
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        marginRight: "15px",
+                      }}
+                    >
+                      <input
+                        type="checkbox"
+                        name={field}
+                        checked={formData[field]}
+                        onChange={handleInputChange}
+                        style={{ marginRight: "5px" }}
+                      />
+                      {field.charAt(0).toUpperCase() + field.slice(1)}
+                    </label>
+
+                    {/* Quantity input that appears when checkbox is checked */}
+                    {formData[field] && (
+                      <div style={{ marginLeft: "20px", marginTop: "5px" }}>
+                        <label style={{ fontSize: "12px", marginRight: "5px" }}>
+                          Quantity:
+                        </label>
+                        <div style={{ display: "flex", alignItems: "center", gap: "5px" }}>
+                          <button
+                            type="button"
+                            onClick={() => decrementAccessoryQty(field)}
+                            style={{
+                              padding: "2px 6px",
+                              fontSize: "12px",
+                              backgroundColor: "#f0f0f0",
+                              border: "1px solid #ccc",
+                              borderRadius: "3px",
+                              cursor: "pointer"
+                            }}
+                          >
+                            -
+                          </button>
+                          <input
+                            type="number"
+                            name={`${field}_qty`}
+                            value={formData[`${field}_qty`] || 0}
+                            onChange={(e) => handleAccessoryQtyChange(field, e.target.value)}
+                            min="0"
+                            style={{
+                              width: "60px",
+                              padding: "2px 5px",
+                              height: "30px",
+                              fontSize: "12px",
+                              border: accessoryErrors[field] ? "1px solid red" : "1px solid #ccc",
+                              borderRadius: "3px"
+                            }}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => incrementAccessoryQty(field)}
+                            style={{
+                              padding: "2px 6px",
+                              fontSize: "12px",
+                              backgroundColor: "#f0f0f0",
+                              border: "1px solid #ccc",
+                              borderRadius: "3px",
+                              cursor: "pointer"
+                            }}
+                          >
+                            +
+                          </button>
+                        </div>
+                        {/* Error message for accessory quantity */}
+                        {accessoryErrors[field] && (
+                          <div style={{
+                            color: "red",
+                            fontSize: "12px",
+                            marginTop: "2px",
+                            marginLeft: "5px"
+                          }}>
+                            {accessoryErrors[field]}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
                 ))}
               </div>
 
-              {/* Add the Other Accessory input field that appears when "others" is checked */}
+              {/* Other Accessory input field */}
               {showOtherAccessory && (
                 <div style={{ marginTop: "10px" }}>
                   <Field
@@ -1185,7 +1396,18 @@ useEffect(() => {
                     name="other_accessory"
                     placeholder="Enter accessory name"
                     value={otherAccessory}
-                    onChange={(e) => setOtherAccessory(e.target.value)}
+                    onChange={(e) => {
+                      setOtherAccessory(e.target.value);
+                      // Clear error when user starts typing
+                      if (e.target.value.trim() && accessoryErrors.others) {
+                        setAccessoryErrors(prev => {
+                          const newErrors = { ...prev };
+                          delete newErrors.others;
+                          return newErrors;
+                        });
+                      }
+                    }}
+                    error={accessoryErrors.others}
                   />
                 </div>
               )}
@@ -1251,13 +1473,13 @@ useEffect(() => {
                             sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
                             checked={
                               selectedProductIds.length ===
-                                filteredProducts.length &&
+                              filteredProducts.length &&
                               filteredProducts.length > 0
                             }
                             indeterminate={
                               selectedProductIds.length > 0 &&
                               selectedProductIds.length <
-                                filteredProducts.length
+                              filteredProducts.length
                             }
                             onChange={() => {
                               if (

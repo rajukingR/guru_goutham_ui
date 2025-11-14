@@ -33,33 +33,38 @@ const CreditNotesTableLayout = () => {
     // { id: "created_by", label: "Created By" },
   ];
 
-  useEffect(() => {
-    const fetchCreditNotes = async () => {
-      try {
-        const token = localStorage.getItem("token");
-        const response = await axios.get(`${API_URL}/credit-notes`, {
-          headers: {
-            "Authorization": `Bearer ${userToken}`,
-          },
-        });
-        if (response.status === 200) {
-          const formatted = response.data
-            // 🚫 Exclude Asset Swap transaction type
-            .filter((item) => item.transaction_type !== "Asset Swap")
-            .map((item, index) => ({
-              s_id: index + 1,
-              ...item,
-            }));
+useEffect(() => {
+  const fetchCreditNotes = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const response = await axios.get(`${API_URL}/credit-notes`, {
+        headers: {
+          Authorization: `Bearer ${userToken}`,
+        },
+      });
+      if (response.status === 200) {
+        const formatted = response.data
+          // 🚫 Exclude Asset Swap & Asset Removed transaction types
+          .filter(
+            (item) =>
+              item.transaction_type !== "Asset Swap" &&
+              item.transaction_type !== "Asset Removed"
+          )
+          .map((item, index) => ({
+            s_id: index + 1,
+            ...item,
+          }));
 
-          setData(formatted);
-        }
-      } catch (error) {
-        console.error("Failed to fetch credit notes:", error);
+        setData(formatted);
       }
-    };
+    } catch (error) {
+      console.error("Failed to fetch credit notes:", error);
+    }
+  };
 
-    fetchCreditNotes();
-  }, []);
+  fetchCreditNotes();
+}, []);
+
 
   return (
     <div>

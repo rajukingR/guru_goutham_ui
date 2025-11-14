@@ -469,12 +469,12 @@ const AssetSwapsAdd = () => {
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.message || "Failed to create swap record");
+        throw new Error(errorData.message || "Failed to create scrap record");
       }
 
-      showSnackbar("Asset swap created successfully", "success");
+      showSnackbar("Asset scrap created successfully", "success");
       setTimeout(() => {
-        navigate("/dashboard/inventory/swap");
+        navigate("/dashboard/inventory/scrap");
       }, 1500);
     } catch (err) {
       console.error(err);

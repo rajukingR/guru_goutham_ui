@@ -15,7 +15,7 @@ const InvoicesTablePage = () => {
   const columns = [
     { id: "s_id", label: "S.No." },
     { id: "invoice_number", label: "Invoice Number" },
-    { id: "dispatch_order_number", label: "Order Number" },
+    // { id: "dispatch_order_number", label: "Order Number" },
 
     { id: "customer_name", label: "Customer Name" },
         // { id: "customer_id", label: "Customer ID" },
@@ -24,11 +24,11 @@ const InvoicesTablePage = () => {
         { id: "transaction_type", label: "Transaction Type" },
         { id: "payment_mode", label: "Paymenet Type" },
 
-    { id: "email", label: "Email" },
-    { id: "phone_number", label: "Phone" },
-    { id: "customer_gst_number", label: "GST No." },
+    { id: "email", label: "Email ID" },
+    { id: "phone_number", label: "Phone No" },
+    // { id: "customer_gst_number", label: "GST No." },
 
-    { id: "pan_number", label: "PAN No." },
+    // { id: "pan_number", label: "PAN No." },
     // { id: "transaction_type", label: "Transaction Type" },
     // { id: "payment_mode", label: "Payment Mode" },
   ];

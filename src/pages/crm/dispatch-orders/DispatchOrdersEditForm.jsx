@@ -21,7 +21,7 @@ import {
 } from "@mui/material";
 import { Add, Remove, Edit } from "@mui/icons-material";
 import { useNavigate, useParams } from "react-router-dom";
-import API_URL, {POSTAL_API} from "../../../api/Api_url";
+import API_URL, { POSTAL_API } from "../../../api/Api_url";
 import { useInventory } from "../../../contexts/InventoryContext";
 import { useSelector } from "react-redux";
 
@@ -433,7 +433,7 @@ const DispatchOrdersEditForm = () => {
   const [assetSearchTerms, setAssetSearchTerms] = useState({});
   const [addedDates, setAddedDates] = useState({});
   const [approvedReceiptProducts, setApprovedReceiptProducts] = useState([]);
-const [postOffices, setPostOffices] = useState([]);
+  const [postOffices, setPostOffices] = useState([]);
   const [showAssetSelection, setShowAssetSelection] = useState({});
 
   const getAvailableQty = (productId) => {
@@ -719,64 +719,64 @@ const [postOffices, setPostOffices] = useState([]);
     setQuantities(newQuantities);
   };
 
-useEffect(() => {
-  const fetchLocationFromPincode = async () => {
-    const pincode = formData.pincode;
+  useEffect(() => {
+    const fetchLocationFromPincode = async () => {
+      const pincode = formData.pincode;
 
-    if (pincode && pincode.length === 6) {
-      try {
-        const response = await fetch(`${POSTAL_API}/${pincode}`);
-        const result = await response.json();
+      if (pincode && pincode.length === 6) {
+        try {
+          const response = await fetch(`${POSTAL_API}/${pincode}`);
+          const result = await response.json();
 
-        // If API returns PostOffice array
-        if (Array.isArray(result) && result.length > 0 && result[0]?.PostOffice) {
-          const postOffices = result[0].PostOffice;
-          setPostOffices(postOffices);
+          // If API returns PostOffice array
+          if (Array.isArray(result) && result.length > 0 && result[0]?.PostOffice) {
+            const postOffices = result[0].PostOffice;
+            setPostOffices(postOffices);
 
-          const first = postOffices[0];
-          setFormData((prev) => ({
-            ...prev,
-            city: first.District || "",
-            state: first.State || "",
-            country: first.Country || "India",
-            street: first.Name || "",
-          }));
-        } 
-        // If API returns result.data format
-        else if (result?.data) {
-          const info = result.data;
-          setFormData((prev) => ({
-            ...prev,
-            city: info.district_name || "",
-            state: info.state_name || "",
-            country: "India",
-          }));
-        } else {
-          setPostOffices([]);
+            const first = postOffices[0];
+            setFormData((prev) => ({
+              ...prev,
+              city: first.District || "",
+              state: first.State || "",
+              country: first.Country || "India",
+              street: first.Name || "",
+            }));
+          }
+          // If API returns result.data format
+          else if (result?.data) {
+            const info = result.data;
+            setFormData((prev) => ({
+              ...prev,
+              city: info.district_name || "",
+              state: info.state_name || "",
+              country: "India",
+            }));
+          } else {
+            setPostOffices([]);
+            setSnackbar({
+              open: true,
+              message: "Could not find location for this pincode",
+              severity: "warning",
+            });
+          }
+        } catch (error) {
+          console.error("Error fetching location data:", error);
           setSnackbar({
             open: true,
-            message: "Could not find location for this pincode",
-            severity: "warning",
+            message:
+              "Error fetching location data. Please check the pincode and try again.",
+            severity: "error",
           });
         }
-      } catch (error) {
-        console.error("Error fetching location data:", error);
-        setSnackbar({
-          open: true,
-          message:
-            "Error fetching location data. Please check the pincode and try again.",
-          severity: "error",
-        });
       }
-    }
-  };
+    };
 
-  const debounceTimer = setTimeout(() => {
-    fetchLocationFromPincode();
-  }, 500);
+    const debounceTimer = setTimeout(() => {
+      fetchLocationFromPincode();
+    }, 500);
 
-  return () => clearTimeout(debounceTimer);
-}, [formData.pincode]);
+    return () => clearTimeout(debounceTimer);
+  }, [formData.pincode]);
 
 
 
@@ -963,10 +963,10 @@ useEffect(() => {
       const rentalPeriod =
         formData.transaction_type === "Rent" && selectedOrder
           ? {
-              rental_start_date: selectedOrder.rental_start_date,
-              rental_end_date: selectedOrder.rental_end_date,
-              rental_duration: selectedOrder.rental_duration,
-            }
+            rental_start_date: selectedOrder.rental_start_date,
+            rental_end_date: selectedOrder.rental_end_date,
+            rental_duration: selectedOrder.rental_duration,
+          }
           : null;
 
       // Prepare items data with updated prices
@@ -991,7 +991,7 @@ useEffect(() => {
           } else {
             const monthlyPrice =
               product?.offer_rent_price_per_month &&
-              product.offer_rent_price_per_month !== ""
+                product.offer_rent_price_per_month !== ""
                 ? Number(product.offer_rent_price_per_month)
                 : Number(product?.rent_price_per_month || 0);
 
@@ -1180,9 +1180,7 @@ useEffect(() => {
                     order.personalDetails || order.personal_details || {};
                   return {
                     value: order.id,
-                    label: `${order.order_id} - ${customer.first_name || ""} ${
-                      customer.last_name || ""
-                    }`,
+                    label: `${order.order_id} - ${customer.first_name || ""} ${customer.last_name || "" } (${order.customer.company_name})`,
                   };
                 })}
               />
@@ -1215,6 +1213,7 @@ useEffect(() => {
                   { value: "Rent", label: "Rent" },
                   { value: "Buy", label: "Sale" },
                 ]}
+                disabled
               />
 
               {/* <Field
@@ -1228,7 +1227,7 @@ useEffect(() => {
                 }}
                 options={[{ value: "Buy", label: "Buy" }]}
               /> */}
-
+              {/* 
               {formData.convert_rent_to_sale === "Buy" && (
                 <Field
                   label="Sale Date"
@@ -1237,7 +1236,7 @@ useEffect(() => {
                   value={formData.order_sale_date}
                   onChange={handleInputChange}
                 />
-              )}
+              )} */}
 
               {formData.type === "Rent" && (
                 <Field
@@ -1273,13 +1272,13 @@ useEffect(() => {
                 value={formData.dispatch_order_date}
                 onChange={handleInputChange}
               />
-              <Field
+              {/* <Field
                 label="Other Reference"
                 name="dealer_reference"
                 placeholder="Enter Reference"
                 value={formData.dealer_reference}
                 onChange={handleInputChange}
-              />
+              /> */}
               <Field
                 label="Email"
                 name="email"
@@ -1290,7 +1289,7 @@ useEffect(() => {
                 required
               />
 
-              <Field
+              {/* <Field
                 label="Remarks"
                 name="remarks"
                 placeholder="Enter Remarks"
@@ -1305,7 +1304,7 @@ useEffect(() => {
                 placeholder="Enter Industry"
                 value={formData.industry}
                 onChange={handleInputChange}
-              />
+              /> */}
             </div>
           </div>
 
@@ -1467,13 +1466,13 @@ useEffect(() => {
                             sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
                             checked={
                               selectedProductIds.length ===
-                                filteredProducts.length &&
+                              filteredProducts.length &&
                               filteredProducts.length > 0
                             }
                             indeterminate={
                               selectedProductIds.length > 0 &&
                               selectedProductIds.length <
-                                filteredProducts.length
+                              filteredProducts.length
                             }
                             onChange={() => {
                               if (
@@ -1605,14 +1604,14 @@ useEffect(() => {
                                   </div>
                                   {productPrices[product.id]
                                     ?.offer_purchase_price && (
-                                    <div>
-                                      <strong>Offer Price:</strong> ₹
-                                      {
-                                        productPrices[product.id]
-                                          ?.offer_purchase_price
-                                      }
-                                    </div>
-                                  )}
+                                      <div>
+                                        <strong>Offer Price:</strong> ₹
+                                        {
+                                          productPrices[product.id]
+                                            ?.offer_purchase_price
+                                        }
+                                      </div>
+                                    )}
                                 </TableCell>
 
                                 <TableCell>

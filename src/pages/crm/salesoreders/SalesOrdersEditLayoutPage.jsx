@@ -674,7 +674,7 @@ useEffect(() => {
                 }
               /> */}
               <Field
-                label="Quotation Details"
+                label="Select Quotation"
                 type="select"
                 placeholder="Select Quotation"
                 value={formData.quotation_id}
@@ -685,7 +685,7 @@ useEffect(() => {
                 }
                 options={quotations.map((q) => ({
                   value: q.id,
-                  label: `${q.quotation_id} - ${q.quotation_title}`,
+                  label: `${q.quotation_id} - ${q.customer_first_name} ${q.customer_last_name} (${q.customer.company_name})`,
                 }))}
               />
               <Field

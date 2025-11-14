@@ -515,7 +515,7 @@ const ContactsEditLayoutPage = () => {
         {/* Bottom Section */}
         <div style={formContainerStyle}>
           {/* Other Information */}
-          <div style={cardStyle}>
+          {/* <div style={cardStyle}>
             <div style={cardHeaderContainerStyle}>
               <div style={iconStyle}>ℹ️</div>
               <h3 style={cardHeaderStyle}>Other Information</h3>
@@ -548,7 +548,7 @@ const ContactsEditLayoutPage = () => {
                 disabled
               />
             </div>
-          </div>
+          </div> */}
 
           {/* Control */}
           <div style={cardStyle}>
