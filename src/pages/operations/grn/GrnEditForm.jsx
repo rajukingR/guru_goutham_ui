@@ -492,9 +492,8 @@ const GrnEditForm = () => {
               onChange={(name, value) => handleCustomerSelect(Number(value))}
               options={deliveryChallans.map((challan) => ({
                 value: challan.id,
-                label: `${challan.dc_id} - ${
-                  challan.client_details?.first_name || ""
-                } ${challan.client_details?.last_name || ""}`,
+                label: `${challan.dc_id} - ${challan.client_details?.first_name || ""
+                  } ${challan.client_details?.last_name || ""}`,
               }))}
             />
 
@@ -519,8 +518,8 @@ const GrnEditForm = () => {
                 useGrnPhone
                   ? formData.phone
                   : selectedChallan?.client_details?.phone_number ||
-                    selectedChallan?.phone_number ||
-                    formData.phone
+                  selectedChallan?.phone_number ||
+                  formData.phone
               }
               onChange={(v) => {
                 handleInputChange("phone", v);
@@ -699,15 +698,15 @@ const GrnEditForm = () => {
 
           {showProductTable && (
             <Box p={2}>
-              <Box display="flex" gap={2} mb={2} alignItems="center">
+              <Box className="search-wrapper" mb={2}>
                 <TextField
                   size="small"
                   placeholder="Search products"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  fullWidth
                 />
               </Box>
+
 
               <TableContainer component={Paper}>
                 <Table size="small">
@@ -718,7 +717,7 @@ const GrnEditForm = () => {
                           sx={{ color: "#fff" }}
                           checked={
                             selectedProductIds.length ===
-                              filteredProducts.length &&
+                            filteredProducts.length &&
                             filteredProducts.length > 0
                           }
                           indeterminate={

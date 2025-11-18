@@ -2724,15 +2724,15 @@ const CreaditNotesAddFormLayout = () => {
 
             {showProductTable && (
               <Box p={2}>
-                <Box display="flex" gap={2} mb={2} alignItems="center">
+                <Box className="search-wrapper" mb={2}>
                   <TextField
                     size="small"
                     placeholder="Search products"
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    fullWidth
                   />
                 </Box>
+
 
                 <TableContainer component={Paper}>
                   <Table size="small">

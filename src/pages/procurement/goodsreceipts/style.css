@@ -1,0 +1,11 @@
+.css-1blp12k-MuiInputBase-root-MuiOutlinedInput-root {
+  width: 100%; /* Mobile default */
+}
+
+@media (min-width: 1024px) {
+  .css-1blp12k-MuiInputBase-root-MuiOutlinedInput-root {
+    width: 25%; /* Desktop */
+  }
+}
+
+

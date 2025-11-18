@@ -1000,7 +1000,7 @@ const DeliveryChallanEditPage = () => {
                 error={errors.order_id}
                 options={dispatchOrders.map((order) => ({
                   value: order.id,
-                  label: `${order.dispatch_order_id} - ${order.shipping_name || "" } (${order.contact.company_name || ""})`,
+                  label: `${order.dispatch_order_id} - ${order.shipping_name || ""} (${order.contact.company_name || ""})`,
                 }))}
               />
 
@@ -1444,15 +1444,16 @@ const DeliveryChallanEditPage = () => {
 
             {showProductTable && (
               <Box p={2}>
-                <Box display="flex" gap={2} mb={2} alignItems="center">
+                <Box className="search-wrapper" mb={2}>
                   <TextField
                     size="small"
                     placeholder="Search products"
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    fullWidth
                   />
                 </Box>
+
+
 
                 <TableContainer
                   component={Paper}

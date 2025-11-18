@@ -20,7 +20,7 @@ import {
   Button,
 } from "@mui/material";
 import { Add, Remove, Edit } from "@mui/icons-material";
-import API_URL, { IMAGE_API_URL, POSTAL_API} from "../../../api/Api_url";
+import API_URL, { IMAGE_API_URL, POSTAL_API } from "../../../api/Api_url";
 import { useNavigate } from "react-router-dom";
 import { useSelector } from "react-redux";
 
@@ -39,7 +39,7 @@ const QuotationsAddLayoutPage = () => {
   const { user, token } = useSelector((state) => state.auth);
 
   const userToken = token;
-const [postOffices, setPostOffices] = useState([]);
+  const [postOffices, setPostOffices] = useState([]);
 
   const [leads, setLeads] = useState([]);
   const [products, setProducts] = useState([]);
@@ -246,64 +246,64 @@ const [postOffices, setPostOffices] = useState([]);
   };
 
   // Fetch location data when pincode changes
-useEffect(() => {
-  const fetchLocationData = async () => {
-    const pincode = formData.pincode;
+  useEffect(() => {
+    const fetchLocationData = async () => {
+      const pincode = formData.pincode;
 
-    if (pincode && pincode.length === 6) {
-      try {
-        const response = await fetch(`${POSTAL_API}/${pincode}`);
-        const result = await response.json();
+      if (pincode && pincode.length === 6) {
+        try {
+          const response = await fetch(`${POSTAL_API}/${pincode}`);
+          const result = await response.json();
 
-        // If API returns PostOffice array
-        if (Array.isArray(result) && result.length > 0 && result[0]?.PostOffice) {
-          const postOffices = result[0].PostOffice;
-          setPostOffices(postOffices);
+          // If API returns PostOffice array
+          if (Array.isArray(result) && result.length > 0 && result[0]?.PostOffice) {
+            const postOffices = result[0].PostOffice;
+            setPostOffices(postOffices);
 
-          const first = postOffices[0];
-          setFormData((prev) => ({
-            ...prev,
-            city: first.District || "",
-            state: first.State || "",
-            country: first.Country || "India",
-            street: first.Name || "",
-          }));
-        } 
-        // If API returns result.data format
-        else if (result?.data) {
-          const info = result.data;
-          setFormData((prev) => ({
-            ...prev,
-            city: info.district_name || "",
-            state: info.state_name || "",
-            country: "India",
-          }));
-        } else {
-          setPostOffices([]);
+            const first = postOffices[0];
+            setFormData((prev) => ({
+              ...prev,
+              city: first.District || "",
+              state: first.State || "",
+              country: first.Country || "India",
+              street: first.Name || "",
+            }));
+          }
+          // If API returns result.data format
+          else if (result?.data) {
+            const info = result.data;
+            setFormData((prev) => ({
+              ...prev,
+              city: info.district_name || "",
+              state: info.state_name || "",
+              country: "India",
+            }));
+          } else {
+            setPostOffices([]);
+            setSnackbar({
+              open: true,
+              message: "Could not find location for this pincode",
+              severity: "warning",
+            });
+          }
+        } catch (error) {
+          console.error("Error fetching location data:", error);
           setSnackbar({
             open: true,
-            message: "Could not find location for this pincode",
-            severity: "warning",
+            message:
+              "Error fetching location data. Please check the pincode and try again.",
+            severity: "error",
           });
         }
-      } catch (error) {
-        console.error("Error fetching location data:", error);
-        setSnackbar({
-          open: true,
-          message:
-            "Error fetching location data. Please check the pincode and try again.",
-          severity: "error",
-        });
       }
-    }
-  };
+    };
 
-  const debounceTimer = setTimeout(() => {
-    fetchLocationData();
-  }, 500);
+    const debounceTimer = setTimeout(() => {
+      fetchLocationData();
+    }, 500);
 
-  return () => clearTimeout(debounceTimer);
-}, [formData.pincode]);
+    return () => clearTimeout(debounceTimer);
+  }, [formData.pincode]);
 
 
   const handleOpenEditDialog = (product) => {
@@ -487,9 +487,8 @@ useEffect(() => {
 
           // Check if we have the right number of asset IDs
           if (productAssetIds.length !== qty) {
-            errors[productId] = `Please provide ${qty} asset ID(s) for ${
-              product?.product_name || "this product"
-            }`;
+            errors[productId] = `Please provide ${qty} asset ID(s) for ${product?.product_name || "this product"
+              }`;
             isValid = false;
             continue;
           }
@@ -649,8 +648,8 @@ useEffect(() => {
 
           const leadProduct = selectedLeadId
             ? leads
-                .find((lead) => lead.id === parseInt(selectedLeadId))
-                ?.lead_products?.find((lp) => lp.product_id === productId)
+              .find((lead) => lead.id === parseInt(selectedLeadId))
+              ?.lead_products?.find((lp) => lp.product_id === productId)
             : null;
 
           const asset_ids = formData.is_direct_invoice
@@ -1076,15 +1075,15 @@ useEffect(() => {
 
             {showProductTable && (
               <Box p={2}>
-                <Box display="flex" gap={2} mb={2} alignItems="center">
+                <Box className="search-wrapper" mb={2}>
                   <TextField
                     size="small"
                     placeholder="Search products"
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    fullWidth
                   />
                 </Box>
+
 
                 <TableContainer
                   component={Paper}
@@ -1277,24 +1276,24 @@ useEffect(() => {
                                   {/* Add Button OUTSIDE */}
                                   {(assetIds[product.id]?.length || 0) <
                                     (quantities[product.id] || 0) && (
-                                    <Box mt={1}>
-                                      <Button
-                                        size="small"
-                                        variant="outlined"
-                                        onClick={() =>
-                                          setAssetIds((prev) => ({
-                                            ...prev,
-                                            [product.id]: [
-                                              ...(prev[product.id] || []),
-                                              "",
-                                            ],
-                                          }))
-                                        }
-                                      >
-                                        + Add Asset ID
-                                      </Button>
-                                    </Box>
-                                  )}
+                                      <Box mt={1}>
+                                        <Button
+                                          size="small"
+                                          variant="outlined"
+                                          onClick={() =>
+                                            setAssetIds((prev) => ({
+                                              ...prev,
+                                              [product.id]: [
+                                                ...(prev[product.id] || []),
+                                                "",
+                                              ],
+                                            }))
+                                          }
+                                        >
+                                          + Add Asset ID
+                                        </Button>
+                                      </Box>
+                                    )}
                                 </Box>
                               )}
                             </TableCell>

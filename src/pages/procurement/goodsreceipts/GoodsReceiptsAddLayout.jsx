@@ -15,6 +15,8 @@ import {
   Snackbar,
   Alert,
   Button,
+  FormControlLabel,
+  Switch,
 } from "@mui/material";
 import { Add, Remove } from "@mui/icons-material";
 import API_URL, { IMAGE_API_URL } from "../../../api/Api_url";
@@ -31,7 +33,6 @@ const generateRandomId = () => {
 
 const GoodsReceiptsAddLayout = () => {
   const { user, token } = useSelector((state) => state.auth);
-
   const userToken = token;
 
   const [purchaseOrders, setPurchaseOrders] = useState([]);
@@ -41,6 +42,7 @@ const GoodsReceiptsAddLayout = () => {
   const navigate = useNavigate();
   const [assetIds, setAssetIds] = useState({});
   const [assetIdErrors, setAssetIdErrors] = useState({});
+  const [usePurchaseOrder, setUsePurchaseOrder] = useState(false);
   const [validationErrors, setValidationErrors] = useState({
     purchaseOrderId: "",
     goodsReceiptStatus: "",
@@ -139,19 +141,20 @@ const GoodsReceiptsAddLayout = () => {
 
   const validateForm = () => {
     const errors = {
-      purchaseOrderId: !formData.purchaseOrderId
-        ? "Purchase Order is required"
-        : "",
       goodsReceiptStatus: !formData.goodsReceiptStatus
         ? "Status is required"
         : "",
-      // owner: !formData.owner ? "Owner is required" : "",
-      // vendorInvoiceNumber: !formData.vendorInvoiceNumber ? "Vendor Invoice Number is required" : "",
       products:
         selectedProductIds.length === 0
           ? "At least one product is required"
           : "",
     };
+
+    if (usePurchaseOrder) {
+      errors.purchaseOrderId = !formData.purchaseOrderId
+        ? "Purchase Order is required"
+        : "";
+    }
 
     setValidationErrors(errors);
     return !Object.values(errors).some((error) => error !== "");
@@ -191,6 +194,32 @@ const GoodsReceiptsAddLayout = () => {
     return isValid;
   };
 
+  const handlePurchaseOrderToggle = (usePO) => {
+    setUsePurchaseOrder(usePO);
+
+    if (!usePO) {
+      // Reset purchase order related data when switching to manual mode
+      setSelectedPurchaseOrder(null);
+      setFormData((prev) => ({
+        ...prev,
+        purchaseOrderId: "",
+        purchaseOrderStatus: "",
+        supplier_id: "",
+        supplierName: "",
+        description: "",
+        isSupplierLocked: false,
+      }));
+      setSelectedProductIds([]);
+      setQuantities({});
+      setAssetIds({});
+    } else {
+      // Reset manual selections when switching to PO mode
+      setSelectedProductIds([]);
+      setQuantities({});
+      setAssetIds({});
+    }
+  };
+
   const handlePurchaseOrderChange = (e) => {
     const selectedId = e.target.value;
     setValidationErrors((prev) => ({ ...prev, purchaseOrderId: "" }));
@@ -207,6 +236,8 @@ const GoodsReceiptsAddLayout = () => {
         isSupplierLocked: false,
       }));
       setSelectedProductIds([]);
+      setQuantities({});
+      setAssetIds({});
       return;
     }
 
@@ -277,6 +308,28 @@ const GoodsReceiptsAddLayout = () => {
     }));
   };
 
+  const handleManualProductSelection = (productId) => {
+    setSelectedProductIds((prev) =>
+      prev.includes(productId)
+        ? prev.filter((id) => id !== productId)
+        : [...prev, productId]
+    );
+
+    // Reset quantity when deselecting product
+    if (selectedProductIds.includes(productId)) {
+      setQuantities((prev) => {
+        const newQuantities = { ...prev };
+        delete newQuantities[productId];
+        return newQuantities;
+      });
+      setAssetIds((prev) => {
+        const newAssetIds = { ...prev };
+        delete newAssetIds[productId];
+        return newAssetIds;
+      });
+    }
+  };
+
   const handleSubmit = async () => {
     if (!validateForm()) {
       setSnackbar({
@@ -297,21 +350,41 @@ const GoodsReceiptsAddLayout = () => {
     }
 
     try {
-      // Prepare items array
-      const items = selectedPurchaseOrder.selected_products
-        .filter((item) => quantities[item.product_id] > 0)
-        .map((item) => {
-          const product = products.find((p) => p.id === item.product_id);
-          const quantity = quantities[item.product_id] || 0;
-          const productAssetIds = assetIds[item.product_id] || [];
+      let items = [];
 
-          return {
-            product_id: item.product_id,
-            product_name: product?.product_name || "",
-            quantity: quantity,
-            asset_ids: productAssetIds.filter((id) => id.trim() !== ""),
-          };
-        });
+      if (usePurchaseOrder && selectedPurchaseOrder) {
+        // With Purchase Order - use PO products
+        items = selectedPurchaseOrder.selected_products
+          .filter((item) => quantities[item.product_id] > 0)
+          .map((item) => {
+            const product = products.find((p) => p.id === item.product_id);
+            const quantity = quantities[item.product_id] || 0;
+            const productAssetIds = assetIds[item.product_id] || [];
+
+            return {
+              product_id: item.product_id,
+              product_name: product?.product_name || "",
+              quantity: quantity,
+              asset_ids: productAssetIds.filter((id) => id.trim() !== ""),
+            };
+          });
+      } else {
+        // Without Purchase Order - use manually selected products
+        items = selectedProductIds
+          .filter((productId) => quantities[productId] > 0)
+          .map((productId) => {
+            const product = products.find((p) => p.id === productId);
+            const quantity = quantities[productId] || 0;
+            const productAssetIds = assetIds[productId] || [];
+
+            return {
+              product_id: productId,
+              product_name: product?.product_name || "",
+              quantity: quantity,
+              asset_ids: productAssetIds.filter((id) => id.trim() !== ""),
+            };
+          });
+      }
 
       if (items.length === 0) {
         throw new Error("Please add at least one product with quantity > 0");
@@ -333,15 +406,20 @@ const GoodsReceiptsAddLayout = () => {
       const payload = {
         goods_receipt_id: formData.goodsReceiptId,
         vendor_invoice_number: formData.vendorInvoiceNumber,
-        purchase_order_id: selectedPurchaseOrder.purchase_order_id,
         supplier_id: formData.supplier_id,
-        purchase_order_status: formData.purchaseOrderStatus,
         goods_receipt_date: formData.goodsReceiptDate,
         purchase_type: formData.purchaseType,
         goods_receipt_status: formData.goodsReceiptStatus,
         description: formData.description,
+        owner: formData.owner,
         items,
       };
+
+      // Add purchase order data if using PO
+      if (usePurchaseOrder && selectedPurchaseOrder) {
+        payload.purchase_order_id = selectedPurchaseOrder.purchase_order_id;
+        payload.purchase_order_status = selectedPurchaseOrder.po_status;
+      }
 
       const response = await fetch(`${API_URL}/goods-receipts/create`, {
         method: "POST",
@@ -386,6 +464,18 @@ const GoodsReceiptsAddLayout = () => {
     }
   };
 
+  const getProductsToDisplay = () => {
+    if (usePurchaseOrder && selectedPurchaseOrder) {
+      // Show only products from the selected purchase order
+      return products.filter((product) =>
+        selectedProductIds.includes(product.id)
+      );
+    } else {
+      // Show all filtered products for manual selection
+      return filteredProducts;
+    }
+  };
+
   return (
     <div style={containerStyle}>
       <Snackbar
@@ -404,6 +494,8 @@ const GoodsReceiptsAddLayout = () => {
       </Snackbar>
 
       <div style={formContainerStyle}>
+
+
         {/* Goods Receipt Details */}
         <div style={cardStyle}>
           <div style={cardHeaderContainerStyle}>
@@ -420,7 +512,7 @@ const GoodsReceiptsAddLayout = () => {
               }
               disabled
             />
-            {/* <Field
+            <Field
               label="Vendor Invoice Number"
               placeholder="Enter Vendor Invoice Number"
               value={formData.vendorInvoiceNumber}
@@ -428,32 +520,59 @@ const GoodsReceiptsAddLayout = () => {
                 handleInputChange("vendorInvoiceNumber", e.target.value)
               }
               error={validationErrors.vendorInvoiceNumber}
-            /> */}
-            <Field
-              label="Purchase Order"
-              type="select"
-              value={selectedPurchaseOrder?.id || ""}
-              onChange={handlePurchaseOrderChange}
-              error={validationErrors.purchaseOrderId}
-              required
-            >
-              <option value="">Select Purchase Order</option>
-              {purchaseOrders.map((order) => (
-                <option key={order.id} value={order.id}>
-                  {order.purchase_order_id} - {order.supplier.supplier_name}
-                </option>
-              ))}
-            </Field>
-            <Field
-              label="Purchase Order ID"
-              value={formData.purchaseOrderId}
-              disabled
             />
-            <Field
-              label="Purchase Order Status"
-              value={formData.purchaseOrderStatus}
-              disabled
-            />
+
+            <div style={fieldsGridStyle}>
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={usePurchaseOrder}
+                    onChange={(e) => handlePurchaseOrderToggle(e.target.checked)}
+                    color="primary"
+                  />
+                }
+                label={usePurchaseOrder ? "Using Purchase Order" : "Manual Product Selection"}
+              />
+              <div style={{ fontSize: "0.875rem", color: "#666", marginTop: "0.5rem" }}>
+                {usePurchaseOrder
+                  ? "Products will be auto-selected from the chosen Purchase Order"
+                  : "Manually select products from the product catalog"}
+              </div>
+            </div>
+
+            {usePurchaseOrder && (
+              <Field
+                label="Purchase Order"
+                type="select"
+                value={selectedPurchaseOrder?.id || ""}
+                onChange={handlePurchaseOrderChange}
+                error={validationErrors.purchaseOrderId}
+                required
+              >
+                <option value="">Select Purchase Order</option>
+                {purchaseOrders.map((order) => (
+                  <option key={order.id} value={order.id}>
+                    {order.purchase_order_id} - {order.supplier.supplier_name}
+                  </option>
+                ))}
+              </Field>
+            )}
+
+            {usePurchaseOrder && selectedPurchaseOrder && (
+              <>
+                <Field
+                  label="Purchase Order ID"
+                  value={formData.purchaseOrderId}
+                  disabled
+                />
+                <Field
+                  label="Purchase Order Status"
+                  value={formData.purchaseOrderStatus}
+                  disabled
+                />
+              </>
+            )}
+
             <Field
               label="Goods Receipt Date"
               type="date"
@@ -465,7 +584,8 @@ const GoodsReceiptsAddLayout = () => {
             <Field
               label="Purchase Type"
               value={formData.purchaseType}
-              disabled
+              onChange={(e) => handleInputChange("purchaseType", e.target.value)}
+              disabled={usePurchaseOrder && selectedPurchaseOrder}
             />
             <Field
               label="Goods Receipt Status"
@@ -536,15 +656,25 @@ const GoodsReceiptsAddLayout = () => {
         </div>
       </div>
 
+      {/* Products Section */}
       <div style={cardStyle}>
         <div style={cardHeaderContainerStyle}>
-          <h3 style={cardHeaderStyle}>Selected Products</h3>
+          <h3 style={cardHeaderStyle}>
+            {usePurchaseOrder ? "Products from Purchase Order" : "Select Products"}
+          </h3>
         </div>
         {validationErrors.products && (
           <div style={{ color: "red", margin: "0 0 1rem 1rem" }}>
             {validationErrors.products}
           </div>
         )}
+
+        {usePurchaseOrder && !selectedPurchaseOrder && (
+          <div style={{ color: "#666", margin: "0 0 1rem 1rem" }}>
+            Please select a Purchase Order to view products
+          </div>
+        )}
+
         <div style={{ marginBottom: "1.5rem" }}>
           <button
             onClick={() => setShowProductTable(!showProductTable)}
@@ -561,26 +691,34 @@ const GoodsReceiptsAddLayout = () => {
               outline: "none",
               marginBottom: "1rem",
             }}
+            disabled={usePurchaseOrder && !selectedPurchaseOrder}
           >
-            {showProductTable ? "Hide Product List" : "Add Products"}
+            {showProductTable
+              ? "Hide Product List"
+              : usePurchaseOrder
+                ? "View PO Products"
+                : "Add Products"
+            }
           </button>
 
           {showProductTable && (
             <Box p={2}>
-              <Box display="flex" gap={2} mb={2} alignItems="center">
-                <TextField
-                  size="small"
-                  placeholder="Search products"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  fullWidth
-                />
-              </Box>
+              {!usePurchaseOrder && (
+                <Box className="search-wrapper" mb={2}>
+                  <TextField
+                    size="small"
+                    placeholder="Search products"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                  />
+                </Box>
+
+              )}
 
               <TableContainer
                 component={Paper}
                 sx={{
-                  maxHeight: "400px", // or whatever height you prefer
+                  maxHeight: "400px",
                   overflow: "auto",
                   position: "relative",
                 }}
@@ -588,14 +726,16 @@ const GoodsReceiptsAddLayout = () => {
                 <Table size="small" stickyHeader>
                   <TableHead>
                     <TableRow sx={{ backgroundColor: "#0d47a1" }}>
-                      <TableCell
-                        padding="checkbox"
-                        sx={{ backgroundColor: "#0d47a1" }}
-                      >
-                        <Checkbox
-                          sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
-                        />
-                      </TableCell>
+                      {!usePurchaseOrder && (
+                        <TableCell
+                          padding="checkbox"
+                          sx={{ backgroundColor: "#0d47a1" }}
+                        >
+                          <Checkbox
+                            sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
+                          />
+                        </TableCell>
+                      )}
                       <TableCell
                         sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
                       >
@@ -629,115 +769,107 @@ const GoodsReceiptsAddLayout = () => {
                     </TableRow>
                   </TableHead>
                   <TableBody>
-                    {filteredProducts
-                      .filter((product) =>
-                        selectedProductIds.includes(product.id)
-                      )
-                      .map((product) => (
-                        <TableRow key={product.id}>
+                    {getProductsToDisplay().map((product) => (
+                      <TableRow key={product.id}>
+                        {!usePurchaseOrder && (
                           <TableCell padding="checkbox">
                             <Checkbox
                               checked={selectedProductIds.includes(product.id)}
-                              onChange={() => {
-                                setSelectedProductIds((prev) =>
-                                  prev.includes(product.id)
-                                    ? prev.filter((id) => id !== product.id)
-                                    : [...prev, product.id]
-                                );
-                              }}
+                              onChange={() => handleManualProductSelection(product.id)}
                             />
                           </TableCell>
-                          <TableCell>{product.product_name}</TableCell>
-                          <TableCell>{product.brand}</TableCell>
-                          <TableCell>
-                            <div>
-                              <strong>Model:</strong> {product.model}
-                            </div>
-                            <div>
-                              <strong>Processor:</strong> {product.processor}
-                            </div>
-                            <div>
-                              <strong>RAM:</strong> {product.ram}
-                            </div>
-                            <div>
-                              <strong>Storage:</strong> {product.storage}
-                            </div>
-                            <div>
-                              <strong>Graphics:</strong> {product.graphics}
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <div>
-                              <strong>Month:</strong> ₹
-                              {product.rent_price_per_month}
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <Box display="flex" alignItems="center">
-                              <IconButton
-                                size="small"
-                                onClick={() => decrementQty(product.id)}
-                              >
-                                <Remove fontSize="small" />
-                              </IconButton>
-                              <TextField
-                                type="number"
-                                size="small"
-                                value={quantities[product.id] || ""}
-                                onChange={(e) =>
-                                  handleQtyChange(product.id, e.target.value)
-                                }
-                                inputProps={{
-                                  min: 0,
-                                  style: { width: 50, textAlign: "center" },
-                                }}
-                              />
-                              <IconButton
-                                size="small"
-                                onClick={() => incrementQty(product.id)}
-                              >
-                                <Add fontSize="small" />
-                              </IconButton>
-                            </Box>
-                          </TableCell>
-                          <TableCell>
-                            {quantities[product.id] > 0 && (
-                              <Box
-                                display="flex"
-                                flexDirection="column"
-                                gap={1}
-                              >
-                                {(assetIds[product.id] || []).map((id, idx) => (
-                                  <TextField
-                                    key={idx}
-                                    size="small"
-                                    placeholder={`Asset ID ${idx + 1}`}
-                                    value={id}
-                                    onChange={(e) => {
-                                      const updated = [
-                                        ...(assetIds[product.id] || []),
-                                      ];
-                                      updated[idx] = e.target.value;
-                                      setAssetIds((prev) => ({
-                                        ...prev,
-                                        [product.id]: updated,
-                                      }));
-                                      if (assetIdErrors[product.id]) {
-                                        setAssetIdErrors((prev) => {
-                                          const newErrors = { ...prev };
-                                          delete newErrors[product.id];
-                                          return newErrors;
-                                        });
-                                      }
-                                    }}
-                                    error={Boolean(assetIdErrors[product.id])}
-                                    helperText={
-                                      idx === 0 ? assetIdErrors[product.id] : ""
+                        )}
+                        <TableCell>{product.product_name}</TableCell>
+                        <TableCell>{product.brand}</TableCell>
+                        <TableCell>
+                          <div>
+                            <strong>Model:</strong> {product.model}
+                          </div>
+                          <div>
+                            <strong>Processor:</strong> {product.processor}
+                          </div>
+                          <div>
+                            <strong>RAM:</strong> {product.ram}
+                          </div>
+                          <div>
+                            <strong>Storage:</strong> {product.storage}
+                          </div>
+                          <div>
+                            <strong>Graphics:</strong> {product.graphics}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div>
+                            <strong>Month:</strong> ₹
+                            {product.rent_price_per_month}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Box display="flex" alignItems="center">
+                            <IconButton
+                              size="small"
+                              onClick={() => decrementQty(product.id)}
+                            >
+                              <Remove fontSize="small" />
+                            </IconButton>
+                            <TextField
+                              type="number"
+                              size="small"
+                              value={quantities[product.id] || ""}
+                              onChange={(e) =>
+                                handleQtyChange(product.id, e.target.value)
+                              }
+                              inputProps={{
+                                min: 0,
+                                style: { width: 50, textAlign: "center" },
+                              }}
+                            />
+                            <IconButton
+                              size="small"
+                              onClick={() => incrementQty(product.id)}
+                            >
+                              <Add fontSize="small" />
+                            </IconButton>
+                          </Box>
+                        </TableCell>
+                        <TableCell>
+                          {quantities[product.id] > 0 && (
+                            <Box
+                              display="flex"
+                              flexDirection="column"
+                              gap={1}
+                            >
+                              {(assetIds[product.id] || []).map((id, idx) => (
+                                <TextField
+                                  key={idx}
+                                  size="small"
+                                  placeholder={`Asset ID ${idx + 1}`}
+                                  value={id}
+                                  onChange={(e) => {
+                                    const updated = [
+                                      ...(assetIds[product.id] || []),
+                                    ];
+                                    updated[idx] = e.target.value;
+                                    setAssetIds((prev) => ({
+                                      ...prev,
+                                      [product.id]: updated,
+                                    }));
+                                    if (assetIdErrors[product.id]) {
+                                      setAssetIdErrors((prev) => {
+                                        const newErrors = { ...prev };
+                                        delete newErrors[product.id];
+                                        return newErrors;
+                                      });
                                     }
-                                  />
-                                ))}
-                                {(assetIds[product.id]?.length || 0) <
-                                  (quantities[product.id] || 0) && (
+                                  }}
+                                  error={Boolean(assetIdErrors[product.id])}
+                                  helperText={
+                                    idx === 0 ? assetIdErrors[product.id] : ""
+                                  }
+                                />
+                              ))}
+                              {(assetIds[product.id]?.length || 0) <
+                                (quantities[product.id] || 0) && (
                                   <Button
                                     size="small"
                                     variant="outlined"
@@ -754,11 +886,11 @@ const GoodsReceiptsAddLayout = () => {
                                     + Add Asset ID
                                   </Button>
                                 )}
-                              </Box>
-                            )}
-                          </TableCell>
-                        </TableRow>
-                      ))}
+                            </Box>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    ))}
                   </TableBody>
                 </Table>
               </TableContainer>
@@ -776,88 +908,12 @@ const GoodsReceiptsAddLayout = () => {
           Cancel
         </button>
         <button style={createBtnStyle} onClick={handleSubmit}>
-          Create
+          Create Goods Receipt
         </button>
       </div>
     </div>
   );
 };
-
-const Field = ({
-  label,
-  placeholder,
-  type = "text",
-  value = "",
-  disabled = false,
-  options = [],
-  onChange,
-  children,
-  error = "",
-  required = false,
-}) => (
-  <div style={fieldContainerStyle}>
-    <label style={labelStyle}>
-      {label}
-      {required && <span style={{ color: "red" }}>*</span>}
-    </label>
-    {type === "select" ? (
-      <div style={selectWrapperStyle}>
-        <select
-          style={{
-            ...selectStyle,
-            borderColor: error ? "red" : "#cbd5e1",
-          }}
-          disabled={disabled}
-          value={value}
-          onChange={onChange}
-        >
-          {placeholder && (
-            <option value="" disabled>
-              {placeholder}
-            </option>
-          )}
-          {options.length > 0
-            ? options.map((opt, idx) => (
-                <option key={idx} value={opt}>
-                  {opt}
-                </option>
-              ))
-            : children}
-        </select>
-        <div style={selectArrowStyle}>▼</div>
-      </div>
-    ) : type === "textarea" ? (
-      <textarea
-        placeholder={placeholder}
-        value={value}
-        disabled={disabled}
-        style={{
-          ...inputStyle,
-          height: "80px",
-          borderColor: error ? "red" : "#cbd5e1",
-        }}
-        onChange={onChange}
-      />
-    ) : (
-      <input
-        type={type}
-        placeholder={placeholder}
-        value={value}
-        disabled={disabled}
-        style={{
-          ...inputStyle,
-          borderColor: error ? "red" : "#cbd5e1",
-        }}
-        onChange={onChange}
-      />
-    )}
-    {error && (
-      <div style={{ color: "red", fontSize: "0.75rem", marginTop: "4px" }}>
-        {error}
-      </div>
-    )}
-  </div>
-);
 
 // Styles (same as before)
 const containerStyle = {
@@ -975,5 +1031,82 @@ const createBtnStyle = {
   fontWeight: "500",
   fontSize: "0.875rem",
 };
+
+// Field component (same as before)
+const Field = ({
+  label,
+  placeholder,
+  type = "text",
+  value = "",
+  disabled = false,
+  options = [],
+  onChange,
+  children,
+  error = "",
+  required = false,
+}) => (
+  <div style={fieldContainerStyle}>
+    <label style={labelStyle}>
+      {label}
+      {required && <span style={{ color: "red" }}>*</span>}
+    </label>
+    {type === "select" ? (
+      <div style={selectWrapperStyle}>
+        <select
+          style={{
+            ...selectStyle,
+            borderColor: error ? "red" : "#cbd5e1",
+          }}
+          disabled={disabled}
+          value={value}
+          onChange={onChange}
+        >
+          {placeholder && (
+            <option value="" disabled>
+              {placeholder}
+            </option>
+          )}
+          {options.length > 0
+            ? options.map((opt, idx) => (
+              <option key={idx} value={opt}>
+                {opt}
+              </option>
+            ))
+            : children}
+        </select>
+        <div style={selectArrowStyle}>▼</div>
+      </div>
+    ) : type === "textarea" ? (
+      <textarea
+        placeholder={placeholder}
+        value={value}
+        disabled={disabled}
+        style={{
+          ...inputStyle,
+          height: "80px",
+          borderColor: error ? "red" : "#cbd5e1",
+        }}
+        onChange={onChange}
+      />
+    ) : (
+      <input
+        type={type}
+        placeholder={placeholder}
+        value={value}
+        disabled={disabled}
+        style={{
+          ...inputStyle,
+          borderColor: error ? "red" : "#cbd5e1",
+        }}
+        onChange={onChange}
+      />
+    )}
+    {error && (
+      <div style={{ color: "red", fontSize: "0.75rem", marginTop: "4px" }}>
+        {error}
+      </div>
+    )}
+  </div>
+);
 
 export default GoodsReceiptsAddLayout;

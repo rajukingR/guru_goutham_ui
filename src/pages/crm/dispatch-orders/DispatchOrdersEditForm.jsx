@@ -1180,7 +1180,7 @@ const DispatchOrdersEditForm = () => {
                     order.personalDetails || order.personal_details || {};
                   return {
                     value: order.id,
-                    label: `${order.order_id} - ${customer.first_name || ""} ${customer.last_name || "" } (${order.customer.company_name})`,
+                    label: `${order.order_id} - ${customer.first_name || ""} ${customer.last_name || ""} (${order.customer.company_name})`,
                   };
                 })}
               />
@@ -1437,15 +1437,15 @@ const DispatchOrdersEditForm = () => {
 
             {showProductTable && (
               <Box p={2}>
-                <Box display="flex" gap={2} mb={2} alignItems="center">
+                <Box className="search-wrapper" mb={2}>
                   <TextField
                     size="small"
                     placeholder="Search products"
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    fullWidth
                   />
                 </Box>
+
 
                 <TableContainer
                   component={Paper}

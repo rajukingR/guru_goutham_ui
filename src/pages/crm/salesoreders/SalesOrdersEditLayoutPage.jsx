@@ -21,7 +21,7 @@ import {
 } from "@mui/material";
 import { Add, Remove } from "@mui/icons-material";
 import { useSelector } from "react-redux";
-import API_URL, { IMAGE_API_URL, POSTAL_API} from "../../../api/Api_url";
+import API_URL, { IMAGE_API_URL, POSTAL_API } from "../../../api/Api_url";
 import { useInventory } from "../../../contexts/InventoryContext";
 
 const SalesOrdersEditLayoutPage = ({ product }) => {
@@ -315,119 +315,119 @@ const SalesOrdersEditLayoutPage = ({ product }) => {
   };
 
   // Fetch location data when shipping pincode changes
- const [shippingPostOffices, setShippingPostOffices] = useState([]); // Shipping Pincode
+  const [shippingPostOffices, setShippingPostOffices] = useState([]); // Shipping Pincode
 
 
   // Fetch location data when shipping pincode changes
-// Shipping Pincode
-useEffect(() => {
-  const fetchShippingLocationFromPincode = async () => {
-    const shippingPincode = formData.address.shipping_pincode;
+  // Shipping Pincode
+  useEffect(() => {
+    const fetchShippingLocationFromPincode = async () => {
+      const shippingPincode = formData.address.shipping_pincode;
 
-    if (shippingPincode && shippingPincode.length === 6) {
-      try {
-        const response = await fetch(`${POSTAL_API}/${shippingPincode}`);
-        const result = await response.json();
+      if (shippingPincode && shippingPincode.length === 6) {
+        try {
+          const response = await fetch(`${POSTAL_API}/${shippingPincode}`);
+          const result = await response.json();
 
-        // Set Shipping Post Offices
-        if (Array.isArray(result) && result.length > 0 && result[0]?.PostOffice) {
-          setShippingPostOffices(result[0].PostOffice);
-        }
+          // Set Shipping Post Offices
+          if (Array.isArray(result) && result.length > 0 && result[0]?.PostOffice) {
+            setShippingPostOffices(result[0].PostOffice);
+          }
 
-        if (result[0]?.PostOffice?.length > 0) {
-          const firstOffice = result[0].PostOffice[0];
-          setFormData((prev) => ({
-            ...prev,
-            address: {
-              ...prev.address,
-              shipping_city: firstOffice.District,
-              shipping_state: firstOffice.State,
-              shipping_country: firstOffice.Country || "India",
-            },
-          }));
-        } else {
+          if (result[0]?.PostOffice?.length > 0) {
+            const firstOffice = result[0].PostOffice[0];
+            setFormData((prev) => ({
+              ...prev,
+              address: {
+                ...prev.address,
+                shipping_city: firstOffice.District,
+                shipping_state: firstOffice.State,
+                shipping_country: firstOffice.Country || "India",
+              },
+            }));
+          } else {
+            setSnackbar({
+              open: true,
+              message: "Could not find location for this shipping pincode",
+              severity: "warning",
+            });
+          }
+        } catch (error) {
+          console.error("Error fetching shipping location data:", error);
           setSnackbar({
             open: true,
-            message: "Could not find location for this shipping pincode",
-            severity: "warning",
+            message: "Error fetching shipping location data. Please check the pincode and try again.",
+            severity: "error",
           });
         }
-      } catch (error) {
-        console.error("Error fetching shipping location data:", error);
-        setSnackbar({
-          open: true,
-          message: "Error fetching shipping location data. Please check the pincode and try again.",
-          severity: "error",
-        });
       }
-    }
-  };
+    };
 
-  const debounceTimer = setTimeout(fetchShippingLocationFromPincode, 500);
-  return () => clearTimeout(debounceTimer);
-}, [formData.address.shipping_pincode]);
+    const debounceTimer = setTimeout(fetchShippingLocationFromPincode, 500);
+    return () => clearTimeout(debounceTimer);
+  }, [formData.address.shipping_pincode]);
 
 
   // Fetch location data when pincode changes
-const [postOffices, setPostOffices] = useState([]);
+  const [postOffices, setPostOffices] = useState([]);
 
-useEffect(() => {
-  const fetchLocationFromPincode = async () => {
-    const pincode = formData.address.pincode;
+  useEffect(() => {
+    const fetchLocationFromPincode = async () => {
+      const pincode = formData.address.pincode;
 
-    // Only make API call if pincode is 6 digits (India specific)
-    if (pincode && pincode.length === 6) {
-      try {
-        const response = await fetch(`${POSTAL_API}/${pincode}`);
-        const result = await response.json();
+      // Only make API call if pincode is 6 digits (India specific)
+      if (pincode && pincode.length === 6) {
+        try {
+          const response = await fetch(`${POSTAL_API}/${pincode}`);
+          const result = await response.json();
 
-        // Set Post Offices if available
-        if (Array.isArray(result) && result.length > 0 && result[0]?.PostOffice) {
-          setPostOffices(result[0].PostOffice);
-        }
+          // Set Post Offices if available
+          if (Array.isArray(result) && result.length > 0 && result[0]?.PostOffice) {
+            setPostOffices(result[0].PostOffice);
+          }
 
-        // Update formData with first post office info (optional)
-        if (result[0]?.PostOffice?.length > 0) {
-          const firstOffice = result[0].PostOffice[0];
-          setFormData((prev) => ({
-            ...prev,
-            address: {
-              ...prev.address,
-              country: firstOffice.Country || "India",
-              state: firstOffice.State,
-              city: firstOffice.District,
-              billing_address:
-                prev.address.billing_address ||
-                `${firstOffice.Name}, ${firstOffice.District}`,
-              shipping_address: prev.address.shipping_address,
-            },
-          }));
-        } else {
+          // Update formData with first post office info (optional)
+          if (result[0]?.PostOffice?.length > 0) {
+            const firstOffice = result[0].PostOffice[0];
+            setFormData((prev) => ({
+              ...prev,
+              address: {
+                ...prev.address,
+                country: firstOffice.Country || "India",
+                state: firstOffice.State,
+                city: firstOffice.District,
+                billing_address:
+                  prev.address.billing_address ||
+                  `${firstOffice.Name}, ${firstOffice.District}`,
+                shipping_address: prev.address.shipping_address,
+              },
+            }));
+          } else {
+            setSnackbar({
+              open: true,
+              message: "Could not find location for this pincode",
+              severity: "warning",
+            });
+          }
+        } catch (error) {
+          console.error("Error fetching location data:", error);
           setSnackbar({
             open: true,
-            message: "Could not find location for this pincode",
-            severity: "warning",
+            message:
+              "Error fetching location data. Please check the pincode and try again.",
+            severity: "error",
           });
         }
-      } catch (error) {
-        console.error("Error fetching location data:", error);
-        setSnackbar({
-          open: true,
-          message:
-            "Error fetching location data. Please check the pincode and try again.",
-          severity: "error",
-        });
       }
-    }
-  };
+    };
 
-  // Debounce API calls
-  const debounceTimer = setTimeout(() => {
-    fetchLocationFromPincode();
-  }, 500);
+    // Debounce API calls
+    const debounceTimer = setTimeout(() => {
+      fetchLocationFromPincode();
+    }, 500);
 
-  return () => clearTimeout(debounceTimer);
-}, [formData.address.pincode]);
+    return () => clearTimeout(debounceTimer);
+  }, [formData.address.pincode]);
 
 
   // Handle form field changes
@@ -1144,15 +1144,15 @@ useEffect(() => {
 
             {showProductTable && (
               <Box p={2}>
-                <Box display="flex" gap={2} mb={2} alignItems="center">
+                <Box className="search-wrapper" mb={2}>
                   <TextField
                     size="small"
                     placeholder="Search products"
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    fullWidth
                   />
                 </Box>
+
 
                 <TableContainer
                   component={Paper}
@@ -1174,12 +1174,12 @@ useEffect(() => {
                             checked={
                               selectedProductIds.length > 0 &&
                               selectedProductIds.length ===
-                                filteredProducts.length
+                              filteredProducts.length
                             }
                             indeterminate={
                               selectedProductIds.length > 0 &&
                               selectedProductIds.length <
-                                filteredProducts.length
+                              filteredProducts.length
                             }
                             onChange={(e) => {
                               if (e.target.checked) {

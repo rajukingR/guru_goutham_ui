@@ -19,7 +19,7 @@ import {
   Alert,
 } from "@mui/material";
 import { Add, Remove } from "@mui/icons-material";
-import API_URL, { IMAGE_API_URL, POSTAL_API} from "../../../api/Api_url";
+import API_URL, { IMAGE_API_URL, POSTAL_API } from "../../../api/Api_url";
 import { useNavigate } from "react-router-dom";
 
 const generateLeadId = () => {
@@ -38,7 +38,7 @@ const LeadsLayoutAddPage = () => {
 
   const LoginUserName = user.full_name;
   const navigate = useNavigate();
-const [postOffices, setPostOffices] = useState([]);
+  const [postOffices, setPostOffices] = useState([]);
 
   const [formData, setFormData] = useState({
     leadId: "",
@@ -279,64 +279,64 @@ const [postOffices, setPostOffices] = useState([]);
   };
 
   // Fetch location data when pincode changes
-useEffect(() => {
-  const fetchLocationData = async () => {
-    const pincode = formData.pincode;
+  useEffect(() => {
+    const fetchLocationData = async () => {
+      const pincode = formData.pincode;
 
-    if (pincode && pincode.length === 6) {
-      try {
-        const response = await fetch(`${POSTAL_API}/${pincode}`);
-        const result = await response.json();
+      if (pincode && pincode.length === 6) {
+        try {
+          const response = await fetch(`${POSTAL_API}/${pincode}`);
+          const result = await response.json();
 
-        // If API returns PostOffice array
-        if (Array.isArray(result) && result.length > 0 && result[0]?.PostOffice) {
-          const postOffices = result[0].PostOffice;
-          setPostOffices(postOffices);
+          // If API returns PostOffice array
+          if (Array.isArray(result) && result.length > 0 && result[0]?.PostOffice) {
+            const postOffices = result[0].PostOffice;
+            setPostOffices(postOffices);
 
-          const first = postOffices[0];
-          setFormData((prev) => ({
-            ...prev,
-            city: first.District || "",
-            state: first.State || "",
-            country: first.Country || "India",
-            street: first.Name || "",
-          }));
-        } 
-        // If API returns result.data format
-        else if (result?.data) {
-          const info = result.data;
-          setFormData((prev) => ({
-            ...prev,
-            city: info.district_name || "",
-            state: info.state_name || "",
-            country: "India",
-          }));
-        } else {
-          setPostOffices([]);
+            const first = postOffices[0];
+            setFormData((prev) => ({
+              ...prev,
+              city: first.District || "",
+              state: first.State || "",
+              country: first.Country || "India",
+              street: first.Name || "",
+            }));
+          }
+          // If API returns result.data format
+          else if (result?.data) {
+            const info = result.data;
+            setFormData((prev) => ({
+              ...prev,
+              city: info.district_name || "",
+              state: info.state_name || "",
+              country: "India",
+            }));
+          } else {
+            setPostOffices([]);
+            setSnackbar({
+              open: true,
+              message: "Could not find location for this pincode",
+              severity: "warning",
+            });
+          }
+        } catch (error) {
+          console.error("Error fetching location data:", error);
           setSnackbar({
             open: true,
-            message: "Could not find location for this pincode",
-            severity: "warning",
+            message:
+              "Error fetching location data. Please check the pincode and try again.",
+            severity: "error",
           });
         }
-      } catch (error) {
-        console.error("Error fetching location data:", error);
-        setSnackbar({
-          open: true,
-          message:
-            "Error fetching location data. Please check the pincode and try again.",
-          severity: "error",
-        });
       }
-    }
-  };
+    };
 
-  const debounceTimer = setTimeout(() => {
-    fetchLocationData();
-  }, 500);
+    const debounceTimer = setTimeout(() => {
+      fetchLocationData();
+    }, 500);
 
-  return () => clearTimeout(debounceTimer);
-}, [formData.pincode]);
+    return () => clearTimeout(debounceTimer);
+  }, [formData.pincode]);
 
 
 
@@ -780,15 +780,15 @@ useEffect(() => {
 
           {showProductTable && (
             <Box p={2}>
-              <Box display="flex" gap={2} mb={2} alignItems="center">
+              <Box className="search-wrapper" mb={2}>
                 <TextField
                   size="small"
                   placeholder="Search products"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  fullWidth
                 />
               </Box>
+
 
               <TableContainer
                 component={Paper}

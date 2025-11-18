@@ -17,7 +17,7 @@ import {
 } from "@mui/material";
 import { Add, Remove } from "@mui/icons-material";
 import { useNavigate } from "react-router-dom";
-import API_URL, {POSTAL_API} from "../../../api/Api_url";
+import API_URL, { POSTAL_API } from "../../../api/Api_url";
 import { useSelector } from "react-redux";
 
 // Styles (same as in your original code)
@@ -643,64 +643,64 @@ const DispatchOrdersAddForm = ({ product }) => {
   };
 
   // Fetch location data when pincode changes
-useEffect(() => {
-  const fetchLocationData = async () => {
-    const pincode = formData.pincode;
+  useEffect(() => {
+    const fetchLocationData = async () => {
+      const pincode = formData.pincode;
 
-    if (pincode && pincode.length === 6 && validatePincode(pincode)) {
-      try {
-        const response = await fetch(`${POSTAL_API}/${pincode}`);
-        const result = await response.json();
+      if (pincode && pincode.length === 6 && validatePincode(pincode)) {
+        try {
+          const response = await fetch(`${POSTAL_API}/${pincode}`);
+          const result = await response.json();
 
-        // If API returns array with PostOffice
-        if (Array.isArray(result) && result.length > 0 && result[0]?.PostOffice) {
-          const postOffices = result[0].PostOffice;
-          setPostOffices(postOffices);
+          // If API returns array with PostOffice
+          if (Array.isArray(result) && result.length > 0 && result[0]?.PostOffice) {
+            const postOffices = result[0].PostOffice;
+            setPostOffices(postOffices);
 
-          const first = postOffices[0];
-          setFormData((prev) => ({
-            ...prev,
-            city: first.District,
-            state: first.State,
-            country: first.Country,
-            street: first.Name,
-          }));
-        }
-        // If API returns object with data
-        else if (result?.data) {
-          const info = result.data;
-          setFormData((prev) => ({
-            ...prev,
-            city: info.district_name,
-            state: info.state_name,
-            country: "India",
-            street: prev.street || "",
-          }));
-        } else {
-          setPostOffices([]);
+            const first = postOffices[0];
+            setFormData((prev) => ({
+              ...prev,
+              city: first.District,
+              state: first.State,
+              country: first.Country,
+              street: first.Name,
+            }));
+          }
+          // If API returns object with data
+          else if (result?.data) {
+            const info = result.data;
+            setFormData((prev) => ({
+              ...prev,
+              city: info.district_name,
+              state: info.state_name,
+              country: "India",
+              street: prev.street || "",
+            }));
+          } else {
+            setPostOffices([]);
+            setSnackbar({
+              open: true,
+              message: "Invalid Pincode. Please enter a valid one.",
+              severity: "error",
+            });
+          }
+        } catch (error) {
+          console.error("Error fetching location:", error);
           setSnackbar({
             open: true,
-            message: "Invalid Pincode. Please enter a valid one.",
+            message: "Error fetching location. Please try again.",
             severity: "error",
           });
         }
-      } catch (error) {
-        console.error("Error fetching location:", error);
-        setSnackbar({
-          open: true,
-          message: "Error fetching location. Please try again.",
-          severity: "error",
-        });
       }
-    }
-  };
+    };
 
-  const debounceTimer = setTimeout(() => {
-    fetchLocationData();
-  }, 500); // 500ms debounce
+    const debounceTimer = setTimeout(() => {
+      fetchLocationData();
+    }, 500); // 500ms debounce
 
-  return () => clearTimeout(debounceTimer);
-}, [formData.pincode]);
+    return () => clearTimeout(debounceTimer);
+  }, [formData.pincode]);
 
 
 
@@ -831,10 +831,10 @@ useEffect(() => {
       const rentalPeriod =
         formData.transaction_type === "Rent" && selectedOrder
           ? {
-              rental_start_date: selectedOrder.rental_start_date,
-              rental_end_date: selectedOrder.rental_end_date,
-              rental_duration: selectedOrder.rental_duration,
-            }
+            rental_start_date: selectedOrder.rental_start_date,
+            rental_end_date: selectedOrder.rental_end_date,
+            rental_duration: selectedOrder.rental_duration,
+          }
           : null;
 
       // Prepare items data
@@ -858,7 +858,7 @@ useEffect(() => {
           } else {
             const monthlyPrice =
               product?.offer_rent_price_per_month &&
-              product.offer_rent_price_per_month !== ""
+                product.offer_rent_price_per_month !== ""
                 ? Number(product.offer_rent_price_per_month)
                 : Number(product?.rent_price_per_month || 0);
 
@@ -987,9 +987,8 @@ useEffect(() => {
                     order.personalDetails || order.personal_details || {};
                   return {
                     value: order.id,
-                    label: `${order.order_id} - ${customer.first_name || ""} ${
-                      customer.last_name || ""
-                    } (${order.customer.company_name})`,
+                    label: `${order.order_id} - ${customer.first_name || ""} ${customer.last_name || ""
+                      } (${order.customer.company_name})`,
                   };
                 })}
               />
@@ -1226,15 +1225,15 @@ useEffect(() => {
 
             {showProductTable && (
               <Box p={2}>
-                <Box display="flex" gap={2} mb={2} alignItems="center">
+                <Box className="search-wrapper" mb={2}>
                   <TextField
                     size="small"
                     placeholder="Search products"
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    fullWidth
                   />
                 </Box>
+
 
                 <TableContainer
                   component={Paper}
@@ -1255,13 +1254,13 @@ useEffect(() => {
                             sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
                             checked={
                               selectedProductIds.length ===
-                                filteredProducts.length &&
+                              filteredProducts.length &&
                               filteredProducts.length > 0
                             }
                             indeterminate={
                               selectedProductIds.length > 0 &&
                               selectedProductIds.length <
-                                filteredProducts.length
+                              filteredProducts.length
                             }
                             onChange={() => {
                               if (
@@ -1393,90 +1392,90 @@ useEffect(() => {
                                   {(
                                     assetSearchTerms[product.id] || ""
                                   ).trim() !== "" && (
-                                    <Box
-                                      sx={{
-                                        maxHeight: 150,
-                                        overflowY: "auto",
-                                        border: "1px solid #e0e0e0",
-                                        borderRadius: 1,
-                                        p: 1,
-                                      }}
-                                    >
-                                      {getAvailableAssetIds(product.id)
-                                        .filter((assetId) =>
-                                          assetId
-                                            .toLowerCase()
-                                            .includes(
-                                              (
-                                                assetSearchTerms[product.id] ||
-                                                ""
-                                              ).toLowerCase()
-                                            )
-                                        )
-                                        .map((assetId) => (
-                                          <Box
-                                            key={assetId}
-                                            onClick={() => {
-                                              const currentDeviceIds =
-                                                deviceIds[product.id] || [];
-                                              const maxQty =
-                                                quantities[product.id] || 0;
+                                      <Box
+                                        sx={{
+                                          maxHeight: 150,
+                                          overflowY: "auto",
+                                          border: "1px solid #e0e0e0",
+                                          borderRadius: 1,
+                                          p: 1,
+                                        }}
+                                      >
+                                        {getAvailableAssetIds(product.id)
+                                          .filter((assetId) =>
+                                            assetId
+                                              .toLowerCase()
+                                              .includes(
+                                                (
+                                                  assetSearchTerms[product.id] ||
+                                                  ""
+                                                ).toLowerCase()
+                                              )
+                                          )
+                                          .map((assetId) => (
+                                            <Box
+                                              key={assetId}
+                                              onClick={() => {
+                                                const currentDeviceIds =
+                                                  deviceIds[product.id] || [];
+                                                const maxQty =
+                                                  quantities[product.id] || 0;
 
-                                              if (
-                                                currentDeviceIds.includes(
-                                                  assetId
-                                                )
-                                              ) {
-                                                setDeviceIdErrors((prev) => ({
+                                                if (
+                                                  currentDeviceIds.includes(
+                                                    assetId
+                                                  )
+                                                ) {
+                                                  setDeviceIdErrors((prev) => ({
+                                                    ...prev,
+                                                    [product.id]: `Asset ID "${assetId}" is already selected.`,
+                                                  }));
+                                                  return;
+                                                }
+
+                                                if (
+                                                  currentDeviceIds.length >=
+                                                  maxQty
+                                                ) {
+                                                  setDeviceIdErrors((prev) => ({
+                                                    ...prev,
+                                                    [product.id]: `Only ${maxQty} asset ID(s) allowed.`,
+                                                  }));
+                                                  return;
+                                                }
+
+                                                setDeviceIdErrors((prev) => {
+                                                  const newErrors = { ...prev };
+                                                  delete newErrors[product.id];
+                                                  return newErrors;
+                                                });
+
+                                                setDeviceIds((prev) => ({
                                                   ...prev,
-                                                  [product.id]: `Asset ID "${assetId}" is already selected.`,
+                                                  [product.id]: [
+                                                    ...currentDeviceIds,
+                                                    assetId,
+                                                  ],
                                                 }));
-                                                return;
-                                              }
-
-                                              if (
-                                                currentDeviceIds.length >=
-                                                maxQty
-                                              ) {
-                                                setDeviceIdErrors((prev) => ({
-                                                  ...prev,
-                                                  [product.id]: `Only ${maxQty} asset ID(s) allowed.`,
-                                                }));
-                                                return;
-                                              }
-
-                                              setDeviceIdErrors((prev) => {
-                                                const newErrors = { ...prev };
-                                                delete newErrors[product.id];
-                                                return newErrors;
-                                              });
-
-                                              setDeviceIds((prev) => ({
-                                                ...prev,
-                                                [product.id]: [
-                                                  ...currentDeviceIds,
-                                                  assetId,
-                                                ],
-                                              }));
-                                            }}
-                                            sx={{
-                                              p: 0.5,
-                                              cursor: "pointer",
-                                              backgroundColor: (
-                                                deviceIds[product.id] || []
-                                              ).includes(assetId)
-                                                ? "#e3f2fd"
-                                                : "transparent",
-                                              "&:hover": {
-                                                backgroundColor: "#f5f5f5",
-                                              },
-                                            }}
-                                          >
-                                            {assetId}
-                                          </Box>
-                                        ))}
-                                    </Box>
-                                  )}
+                                              }}
+                                              sx={{
+                                                p: 0.5,
+                                                cursor: "pointer",
+                                                backgroundColor: (
+                                                  deviceIds[product.id] || []
+                                                ).includes(assetId)
+                                                  ? "#e3f2fd"
+                                                  : "transparent",
+                                                "&:hover": {
+                                                  backgroundColor: "#f5f5f5",
+                                                },
+                                              }}
+                                            >
+                                              {assetId}
+                                            </Box>
+                                          ))}
+                                      </Box>
+                                    )}
 
                                   {deviceIdErrors[product.id] && (
                                     <Typography color="error" variant="caption">

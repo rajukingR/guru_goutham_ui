@@ -15,6 +15,8 @@ import {
   Snackbar,
   Alert,
   Button,
+  FormControlLabel,
+  Switch,
 } from "@mui/material";
 import { Add, Remove } from "@mui/icons-material";
 import { useSelector } from "react-redux";
@@ -22,7 +24,6 @@ import API_URL, { IMAGE_API_URL } from "../../../api/Api_url";
 
 const GoodsReceiptsEditLayout = () => {
   const { user, token } = useSelector((state) => state.auth);
-
   const userToken = token;
 
   const { id } = useParams();
@@ -34,6 +35,9 @@ const GoodsReceiptsEditLayout = () => {
   const [assetIds, setAssetIds] = useState({});
   const [assetIdErrors, setAssetIdErrors] = useState({});
   const [supplierName, setSupplierName] = useState("");
+  const [usePurchaseOrder, setUsePurchaseOrder] = useState(false);
+  const [selectedPurchaseOrder, setSelectedPurchaseOrder] = useState(null);
+
   const [formData, setFormData] = useState({
     goods_receipt_id: "",
     vendor_invoice_number: "",
@@ -44,6 +48,7 @@ const GoodsReceiptsEditLayout = () => {
     goods_receipt_status: "Pending",
     supplier_id: "",
     description: "",
+    owner: "",
   });
 
   const [selectedProductIds, setSelectedProductIds] = useState([]);
@@ -81,17 +86,22 @@ const GoodsReceiptsEditLayout = () => {
         const grData = await grResponse.json();
         setGoodsReceipt(grData);
 
+        // Determine if using purchase order based on existing data
+        const hasPurchaseOrder = !!grData.purchase_order_id;
+        setUsePurchaseOrder(hasPurchaseOrder);
+
         // Pre-fill form with existing goods receipt data
         setFormData({
           goods_receipt_id: grData.goods_receipt_id,
-          vendor_invoice_number: grData.vendor_invoice_number,
-          purchase_order_id: grData.purchase_order_id,
-          purchase_order_status: grData.purchase_order_status,
+          vendor_invoice_number: grData.vendor_invoice_number || "",
+          purchase_order_id: grData.purchase_order_id || "",
+          purchase_order_status: grData.purchase_order_status || "",
           goods_receipt_date: grData.goods_receipt_date.split("T")[0],
           purchase_type: grData.purchase_type || "Buy",
           goods_receipt_status: grData.goods_receipt_status || "Pending",
           supplier_id: grData.supplier_id,
-          description: grData.description,
+          description: grData.description || "",
+          owner: grData.owner || "",
         });
 
         // Initialize quantities, selected products, and asset IDs
@@ -118,7 +128,7 @@ const GoodsReceiptsEditLayout = () => {
         setAssetIds(newAssetIds);
 
         // Fetch purchase orders
-        const poResponse = await fetch(`${API_URL}/purchase-orders`, {
+        const poResponse = await fetch(`${API_URL}/purchase-orders/approved`, {
           headers: {
             "Authorization": `Bearer ${userToken}`,
           },
@@ -126,6 +136,24 @@ const GoodsReceiptsEditLayout = () => {
         if (!poResponse.ok) throw new Error("Failed to fetch purchase orders");
         const poData = await poResponse.json();
         setPurchaseOrders(poData);
+
+        // Set selected purchase order if exists
+        if (hasPurchaseOrder) {
+          const existingPO = poData.find(
+            (order) => order.purchase_order_id === grData.purchase_order_id
+          );
+          setSelectedPurchaseOrder(existingPO);
+        }
+
+        // Fetch suppliers
+        const supResponse = await fetch(`${API_URL}/supplier`, {
+          headers: {
+            "Authorization": `Bearer ${userToken}`,
+          },
+        });
+        if (!supResponse.ok) throw new Error("Failed to fetch suppliers");
+        const supData = await supResponse.json();
+        setSuppliers(supData);
 
         // Fetch supplier name if supplier_id exists
         if (grData.supplier_id) {
@@ -142,6 +170,7 @@ const GoodsReceiptsEditLayout = () => {
             setSupplierName(supplierData.supplier_name);
           }
         }
+
         // Fetch products
         const prodResponse = await fetch(`${API_URL}/product-templete`, {
           headers: {
@@ -178,9 +207,29 @@ const GoodsReceiptsEditLayout = () => {
     fetchData();
   }, [id]);
 
+  const handlePurchaseOrderToggle = (usePO) => {
+    setUsePurchaseOrder(usePO);
+
+    if (!usePO) {
+      // Reset purchase order related data when switching to manual mode
+      setSelectedPurchaseOrder(null);
+      setFormData((prev) => ({
+        ...prev,
+        purchase_order_id: "",
+        purchase_order_status: "",
+      }));
+    } else {
+      // Reset manual selections when switching to PO mode
+      setSelectedProductIds([]);
+      setQuantities({});
+      setAssetIds({});
+    }
+  };
+
   const handlePurchaseOrderChange = (e) => {
     const selectedId = e.target.value;
     if (!selectedId) {
+      setSelectedPurchaseOrder(null);
       setFormData((prev) => ({
         ...prev,
         purchase_order_id: "",
@@ -189,12 +238,15 @@ const GoodsReceiptsEditLayout = () => {
         description: "",
       }));
       setSelectedProductIds([]);
+      setQuantities({});
+      setAssetIds({});
       return;
     }
 
     const selectedOrder = purchaseOrders.find(
-      (order) => order.purchase_order_id === selectedId
+      (order) => order.id.toString() === selectedId
     );
+    setSelectedPurchaseOrder(selectedOrder);
 
     if (selectedOrder) {
       setFormData((prev) => ({
@@ -203,9 +255,11 @@ const GoodsReceiptsEditLayout = () => {
         purchase_order_status: selectedOrder.po_status,
         supplier_id: selectedOrder.supplier_id,
         description: selectedOrder.description,
+        owner: selectedOrder.owner,
+        purchase_type: selectedOrder.purchase_type,
       }));
 
-      // Initialize quantities and selected products
+      // Initialize quantities and selected products from PO
       const newQuantities = {};
       const newSelectedProducts = [];
       const newAssetIds = {};
@@ -279,6 +333,32 @@ const GoodsReceiptsEditLayout = () => {
     }
   };
 
+  const handleManualProductSelection = (productId) => {
+    setSelectedProductIds((prev) =>
+      prev.includes(productId)
+        ? prev.filter((id) => id !== productId)
+        : [...prev, productId]
+    );
+
+    // Reset quantity when deselecting product
+    if (selectedProductIds.includes(productId)) {
+      setQuantities((prev) => {
+        const newQuantities = { ...prev };
+        delete newQuantities[productId];
+        return newQuantities;
+      });
+      setAssetIds((prev) => {
+        const newAssetIds = { ...prev };
+        delete newAssetIds[productId];
+        return newAssetIds;
+      });
+    } else {
+      // Initialize with quantity 1 when selecting product
+      setQuantities((prev) => ({ ...prev, [productId]: 1 }));
+      setAssetIds((prev) => ({ ...prev, [productId]: [""] }));
+    }
+  };
+
   const validateAssetIds = () => {
     const errors = {};
     let isValid = true;
@@ -323,26 +403,48 @@ const GoodsReceiptsEditLayout = () => {
         throw new Error("Please fix all asset ID errors before submitting");
       }
 
-      // 1. Prepare items with asset IDs
-      const items = selectedProductIds
-        .filter((productId) => quantities[productId] > 0)
-        .map((productId) => {
-          const product = products.find((p) => p.id === productId);
-          return {
-            product_id: productId,
-            product_name: product?.product_name || "",
-            quantity: quantities[productId] || 0,
-            asset_ids: (assetIds[productId] || []).filter(
-              (id) => id.trim() !== ""
-            ),
-          };
-        });
+      // Prepare items array based on mode
+      let items = [];
+
+      if (usePurchaseOrder && selectedPurchaseOrder) {
+        // With Purchase Order - use PO products
+        items = selectedPurchaseOrder.selected_products
+          .filter((item) => quantities[item.product_id] > 0)
+          .map((item) => {
+            const product = products.find((p) => p.id === item.product_id);
+            const quantity = quantities[item.product_id] || 0;
+            const productAssetIds = assetIds[item.product_id] || [];
+
+            return {
+              product_id: item.product_id,
+              product_name: product?.product_name || "",
+              quantity: quantity,
+              asset_ids: productAssetIds.filter((id) => id.trim() !== ""),
+            };
+          });
+      } else {
+        // Without Purchase Order - use manually selected products
+        items = selectedProductIds
+          .filter((productId) => quantities[productId] > 0)
+          .map((productId) => {
+            const product = products.find((p) => p.id === productId);
+            const quantity = quantities[productId] || 0;
+            const productAssetIds = assetIds[productId] || [];
+
+            return {
+              product_id: productId,
+              product_name: product?.product_name || "",
+              quantity: quantity,
+              asset_ids: productAssetIds.filter((id) => id.trim() !== ""),
+            };
+          });
+      }
 
       if (items.length === 0) {
         throw new Error("Please add at least one product with quantity > 0");
       }
 
-      // 2. Frontend duplicate check within form
+      // Frontend duplicate check within form
       const allAssetIds = items.flatMap((item) => item.asset_ids);
       const duplicateInForm = allAssetIds.filter(
         (id, index, arr) => arr.indexOf(id) !== index
@@ -353,13 +455,19 @@ const GoodsReceiptsEditLayout = () => {
         );
       }
 
-      // 3. Prepare payload
+      // Prepare payload
       const payload = {
         ...formData,
         items,
       };
 
-      // 4. Send update request
+      // Remove purchase order data if not using PO
+      if (!usePurchaseOrder) {
+        payload.purchase_order_id = "";
+        payload.purchase_order_status = "";
+      }
+
+      // Send update request
       const response = await fetch(`${API_URL}/goods-receipts/${id}`, {
         method: "PUT",
         headers: {
@@ -403,6 +511,18 @@ const GoodsReceiptsEditLayout = () => {
     }
   };
 
+  const getProductsToDisplay = () => {
+    if (usePurchaseOrder && selectedPurchaseOrder) {
+      // Show only products from the selected purchase order
+      return products.filter((product) =>
+        selectedProductIds.includes(product.id)
+      );
+    } else {
+      // Show all filtered products for manual selection
+      return filteredProducts;
+    }
+  };
+
   if (loading.goodsReceipt) {
     return <div>Loading goods receipt data...</div>;
   }
@@ -429,6 +549,7 @@ const GoodsReceiptsEditLayout = () => {
       </Snackbar>
 
       <div style={formContainerStyle}>
+
         {/* Goods Receipt Details */}
         <div style={cardStyle}>
           <div style={cardHeaderContainerStyle}>
@@ -444,31 +565,63 @@ const GoodsReceiptsEditLayout = () => {
                 handleInputChange("goods_receipt_id", e.target.value)
               }
             />
-            {/* <Field 
-              label="Vendor Invoice Number" 
-              placeholder="Enter Vendor Invoice Number" 
+            <Field
+              label="Vendor Invoice Number"
+              placeholder="Enter Vendor Invoice Number"
               value={formData.vendor_invoice_number}
               onChange={(e) => handleInputChange("vendor_invoice_number", e.target.value)}
-            /> */}
-            <Field
-              label="Purchase Order"
-              type="select"
-              placeholder="Select Purchase Order"
-              value={formData.purchase_order_id}
-              onChange={handlePurchaseOrderChange}
-            >
-              <option value="">Select Purchase Order</option>
-              {purchaseOrders.map((order) => (
-                <option key={order.id} value={order.purchase_order_id}>
-                  {order.purchase_order_id}
-                </option>
-              ))}
-            </Field>
-            <Field
-              label="Purchase Order Status"
-              value={formData.purchase_order_status}
-              disabled
             />
+
+            <div style={fieldsGridStyle}>
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={usePurchaseOrder}
+                    onChange={(e) => handlePurchaseOrderToggle(e.target.checked)}
+                    color="primary"
+                  />
+                }
+                label={usePurchaseOrder ? "Using Purchase Order" : "Manual Product Selection"}
+              />
+              <div style={{ fontSize: "0.875rem", color: "#666", marginTop: "0.5rem" }}>
+                {usePurchaseOrder
+                  ? "Products will be auto-selected from the chosen Purchase Order"
+                  : "Manually select products from the product catalog"}
+              </div>
+            </div>
+
+            {usePurchaseOrder && (
+              <Field
+                label="Purchase Order"
+                type="select"
+                placeholder="Select Purchase Order"
+                value={selectedPurchaseOrder?.id || ""}
+                onChange={handlePurchaseOrderChange}
+              >
+                <option value="">Select Purchase Order</option>
+                {purchaseOrders.map((order) => (
+                  <option key={order.id} value={order.id}>
+                    {order.purchase_order_id} - {order.supplier?.supplier_name}
+                  </option>
+                ))}
+              </Field>
+            )}
+
+            {usePurchaseOrder && selectedPurchaseOrder && (
+              <>
+                <Field
+                  label="Purchase Order ID"
+                  value={formData.purchase_order_id}
+                  disabled
+                />
+                <Field
+                  label="Purchase Order Status"
+                  value={formData.purchase_order_status}
+                  disabled
+                />
+              </>
+            )}
+
             <Field
               label="Goods Receipt Date"
               type="date"
@@ -480,10 +633,11 @@ const GoodsReceiptsEditLayout = () => {
             <Field
               label="Purchase Type"
               value={formData.purchase_type}
-              disabled
+              onChange={(e) => handleInputChange("purchase_type", e.target.value)}
+              disabled={usePurchaseOrder && selectedPurchaseOrder}
             />
             <Field
-              label="Goods Receipt Status*"
+              label="Goods Receipt Status"
               type="select"
               placeholder="Select Status"
               options={["Pending", "Approved", "Rejected"]}
@@ -492,10 +646,16 @@ const GoodsReceiptsEditLayout = () => {
                 handleInputChange("goods_receipt_status", e.target.value)
               }
             />
+            <Field
+              label="Owner"
+              placeholder="Enter Owner"
+              value={formData.owner}
+              onChange={(e) => handleInputChange("owner", e.target.value)}
+            />
           </div>
         </div>
 
-        {/* Column 2: Supplier Details */}
+        {/* Supplier Details */}
         <div style={cardStyle}>
           <div style={cardHeaderContainerStyle}>
             <div style={iconStyle}>🏢</div>
@@ -507,6 +667,7 @@ const GoodsReceiptsEditLayout = () => {
               type="select"
               value={formData.supplier_id}
               onChange={(e) => handleInputChange("supplier_id", e.target.value)}
+              disabled={usePurchaseOrder && selectedPurchaseOrder}
             >
               <option value="">Select Supplier</option>
               {suppliers.map((supplier) => (
@@ -536,144 +697,160 @@ const GoodsReceiptsEditLayout = () => {
               placeholder="Enter Description"
               value={formData.description}
               onChange={(e) => handleInputChange("description", e.target.value)}
-              multiline
-              rows={4}
+              type="textarea"
             />
           </div>
         </div>
       </div>
 
-      {/* Select Products Section */}
-      <Box mt={4}>
-        <Button
-          variant="contained"
-          onClick={() => setShowProductTable(!showProductTable)}
-          sx={{ mb: 2 }}
-        >
-          {showProductTable ? "Hide Product List" : "Edit Products"}
-        </Button>
+      {/* Products Section */}
+      <div style={cardStyle}>
+        <div style={cardHeaderContainerStyle}>
+          <h3 style={cardHeaderStyle}>
+            {usePurchaseOrder ? "Products from Purchase Order" : "Select Products"}
+          </h3>
+        </div>
 
-        {showProductTable && (
-          <Box p={2} border={1} borderColor="divider" borderRadius={1}>
-            <Box display="flex" gap={2} mb={2} alignItems="center">
-              <TextField
-                size="small"
-                placeholder="Search products"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                fullWidth
-              />
-            </Box>
+        {usePurchaseOrder && !selectedPurchaseOrder && (
+          <div style={{ color: "#666", margin: "0 0 1rem 1rem" }}>
+            Please select a Purchase Order to view products
+          </div>
+        )}
 
-            <TableContainer
-              component={Paper}
-              sx={{
-                maxHeight: "400px", // or whatever height you prefer
-                overflow: "auto",
-                position: "relative",
-              }}
-            >
-              <Table size="small" stickyHeader>
-                <TableHead>
-                  <TableRow sx={{ backgroundColor: "#0d47a1" }}>
-                    <TableCell
-                      padding="checkbox"
-                      sx={{ backgroundColor: "#0d47a1" }}
-                    >
-                      <Checkbox
-                        sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
-                      />
-                    </TableCell>
-                    <TableCell
-                      sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
-                    >
-                      Product Name
-                    </TableCell>
-                    <TableCell
-                      sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
-                    >
-                      Brand
-                    </TableCell>
-                    <TableCell
-                      sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
-                    >
-                      Model
-                    </TableCell>
-                    <TableCell
-                      sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
-                    >
-                      Processor
-                    </TableCell>
-                    <TableCell
-                      sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
-                    >
-                      RAM
-                    </TableCell>
-                    <TableCell
-                      sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
-                    >
-                      Storage
-                    </TableCell>
-                    <TableCell
-                      sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
-                    >
-                      Graphics
-                    </TableCell>
-                    <TableCell
-                      sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
-                    >
-                      Quantity
-                    </TableCell>
-                    <TableCell
-                      sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
-                    >
-                      Asset IDs
-                    </TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {filteredProducts
-                    .filter((product) =>
-                      selectedProductIds.includes(product.id)
-                    ) // Show only selected products
-                    .map((product) => (
-                      <TableRow key={product.id}>
-                        <TableCell padding="checkbox">
+        <div style={{ marginBottom: "1.5rem" }}>
+          <button
+            onClick={() => setShowProductTable(!showProductTable)}
+            style={{
+              padding: "0.75rem 1.5rem",
+              backgroundColor: showProductTable ? "#f3f4f6" : "#2563eb",
+              color: showProductTable ? "#374151" : "white",
+              border: "1px solid #d1d5db",
+              borderRadius: "8px",
+              cursor: "pointer",
+              fontSize: "0.875rem",
+              fontWeight: "500",
+              transition: "all 0.2s ease",
+              outline: "none",
+              marginBottom: "1rem",
+            }}
+            disabled={usePurchaseOrder && !selectedPurchaseOrder}
+          >
+            {showProductTable
+              ? "Hide Product List"
+              : usePurchaseOrder
+                ? "View Products"
+                : "Edit Products"
+            }
+          </button>
+
+          {showProductTable && (
+            <Box p={2}>
+              {!usePurchaseOrder && (
+                <Box className="search-wrapper" mb={2}>
+                  <TextField
+                    size="small"
+                    placeholder="Search products"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                  />
+                </Box>
+
+              )}
+
+              <TableContainer
+                component={Paper}
+                sx={{
+                  maxHeight: "400px",
+                  overflow: "auto",
+                  position: "relative",
+                }}
+              >
+                <Table size="small" stickyHeader>
+                  <TableHead>
+                    <TableRow sx={{ backgroundColor: "#0d47a1" }}>
+                      {!usePurchaseOrder && (
+                        <TableCell
+                          padding="checkbox"
+                          sx={{ backgroundColor: "#0d47a1" }}
+                        >
                           <Checkbox
-                            checked={selectedProductIds.includes(product.id)}
-                            onChange={() => {
-                              setSelectedProductIds((prev) =>
-                                prev.includes(product.id)
-                                  ? prev.filter((id) => id !== product.id)
-                                  : [...prev, product.id]
-                              );
-                              // Initialize asset IDs when selecting a product
-                              if (!selectedProductIds.includes(product.id)) {
-                                setAssetIds((prev) => ({
-                                  ...prev,
-                                  [product.id]: Array(
-                                    quantities[product.id] || 1
-                                  ).fill(""),
-                                }));
-                              }
-                            }}
+                            sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
                           />
                         </TableCell>
+                      )}
+                      <TableCell
+                        sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
+                      >
+                        Product Name
+                      </TableCell>
+                      <TableCell
+                        sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
+                      >
+                        Brand
+                      </TableCell>
+                      <TableCell
+                        sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
+                      >
+                        Specifications
+                      </TableCell>
+                      <TableCell
+                        sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
+                      >
+                        Price per Piece
+                      </TableCell>
+                      <TableCell
+                        sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
+                      >
+                        Quantity
+                      </TableCell>
+                      <TableCell
+                        sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
+                      >
+                        Asset IDs
+                      </TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {getProductsToDisplay().map((product) => (
+                      <TableRow key={product.id}>
+                        {!usePurchaseOrder && (
+                          <TableCell padding="checkbox">
+                            <Checkbox
+                              checked={selectedProductIds.includes(product.id)}
+                              onChange={() => handleManualProductSelection(product.id)}
+                            />
+                          </TableCell>
+                        )}
                         <TableCell>{product.product_name}</TableCell>
                         <TableCell>{product.brand}</TableCell>
-                        <TableCell>{product.model}</TableCell>
-                        <TableCell>{product.processor}</TableCell>
-                        <TableCell>{product.ram}</TableCell>
-                        <TableCell>{product.storage}</TableCell>
-                        <TableCell>{product.graphics}</TableCell>
+                        <TableCell>
+                          <div>
+                            <strong>Model:</strong> {product.model}
+                          </div>
+                          <div>
+                            <strong>Processor:</strong> {product.processor}
+                          </div>
+                          <div>
+                            <strong>RAM:</strong> {product.ram}
+                          </div>
+                          <div>
+                            <strong>Storage:</strong> {product.storage}
+                          </div>
+                          <div>
+                            <strong>Graphics:</strong> {product.graphics}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div>
+                            <strong>Month:</strong> ₹
+                            {product.rent_price_per_month}
+                          </div>
+                        </TableCell>
                         <TableCell>
                           <Box display="flex" alignItems="center">
                             <IconButton
                               size="small"
                               onClick={() => decrementQty(product.id)}
-                              disabled={
-                                !selectedProductIds.includes(product.id)
-                              }
                             >
                               <Remove fontSize="small" />
                             </IconButton>
@@ -688,61 +865,54 @@ const GoodsReceiptsEditLayout = () => {
                                 min: 0,
                                 style: { width: 50, textAlign: "center" },
                               }}
-                              disabled={
-                                !selectedProductIds.includes(product.id)
-                              }
                             />
                             <IconButton
                               size="small"
                               onClick={() => incrementQty(product.id)}
-                              disabled={
-                                !selectedProductIds.includes(product.id)
-                              }
                             >
                               <Add fontSize="small" />
                             </IconButton>
                           </Box>
                         </TableCell>
                         <TableCell>
-                          {selectedProductIds.includes(product.id) &&
-                            quantities[product.id] > 0 && (
-                              <Box
-                                display="flex"
-                                flexDirection="column"
-                                gap={1}
-                              >
-                                {(assetIds[product.id] || []).map((id, idx) => (
-                                  <TextField
-                                    key={idx}
-                                    size="small"
-                                    placeholder={`Asset ID ${idx + 1}`}
-                                    value={id}
-                                    onChange={(e) => {
-                                      const updated = [
-                                        ...(assetIds[product.id] || []),
-                                      ];
-                                      updated[idx] = e.target.value;
-                                      setAssetIds((prev) => ({
-                                        ...prev,
-                                        [product.id]: updated,
-                                      }));
-                                      // Clear error when user types
-                                      if (assetIdErrors[product.id]) {
-                                        setAssetIdErrors((prev) => {
-                                          const newErrors = { ...prev };
-                                          delete newErrors[product.id];
-                                          return newErrors;
-                                        });
-                                      }
-                                    }}
-                                    error={Boolean(assetIdErrors[product.id])}
-                                    helperText={
-                                      idx === 0 ? assetIdErrors[product.id] : ""
+                          {quantities[product.id] > 0 && (
+                            <Box
+                              display="flex"
+                              flexDirection="column"
+                              gap={1}
+                            >
+                              {(assetIds[product.id] || []).map((id, idx) => (
+                                <TextField
+                                  key={idx}
+                                  size="small"
+                                  placeholder={`Asset ID ${idx + 1}`}
+                                  value={id}
+                                  onChange={(e) => {
+                                    const updated = [
+                                      ...(assetIds[product.id] || []),
+                                    ];
+                                    updated[idx] = e.target.value;
+                                    setAssetIds((prev) => ({
+                                      ...prev,
+                                      [product.id]: updated,
+                                    }));
+                                    // Clear error when user types
+                                    if (assetIdErrors[product.id]) {
+                                      setAssetIdErrors((prev) => {
+                                        const newErrors = { ...prev };
+                                        delete newErrors[product.id];
+                                        return newErrors;
+                                      });
                                     }
-                                  />
-                                ))}
-                                {(assetIds[product.id]?.length || 0) <
-                                  (quantities[product.id] || 0) && (
+                                  }}
+                                  error={Boolean(assetIdErrors[product.id])}
+                                  helperText={
+                                    idx === 0 ? assetIdErrors[product.id] : ""
+                                  }
+                                />
+                              ))}
+                              {(assetIds[product.id]?.length || 0) <
+                                (quantities[product.id] || 0) && (
                                   <Button
                                     size="small"
                                     variant="outlined"
@@ -759,17 +929,18 @@ const GoodsReceiptsEditLayout = () => {
                                     + Add Asset ID
                                   </Button>
                                 )}
-                              </Box>
-                            )}
+                            </Box>
+                          )}
                         </TableCell>
                       </TableRow>
                     ))}
-                </TableBody>
-              </Table>
-            </TableContainer>
-          </Box>
-        )}
-      </Box>
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            </Box>
+          )}
+        </div>
+      </div>
 
       {/* Action Buttons */}
       <div style={buttonContainerStyle}>
@@ -787,6 +958,7 @@ const GoodsReceiptsEditLayout = () => {
   );
 };
 
+// Field component and styles (same as before)
 const Field = ({
   label,
   placeholder,
@@ -796,15 +968,21 @@ const Field = ({
   options = [],
   onChange,
   children,
-  multiline = false,
-  rows = 1,
+  error = "",
+  required = false,
 }) => (
   <div style={fieldContainerStyle}>
-    <label style={labelStyle}>{label}</label>
+    <label style={labelStyle}>
+      {label}
+      {required && <span style={{ color: "red" }}>*</span>}
+    </label>
     {type === "select" ? (
       <div style={selectWrapperStyle}>
         <select
-          style={selectStyle}
+          style={{
+            ...selectStyle,
+            borderColor: error ? "red" : "#cbd5e1",
+          }}
           disabled={disabled}
           value={value}
           onChange={onChange}
@@ -816,31 +994,48 @@ const Field = ({
           )}
           {options.length > 0
             ? options.map((opt, idx) => (
-                <option key={idx} value={opt}>
-                  {opt}
-                </option>
-              ))
+              <option key={idx} value={opt}>
+                {opt}
+              </option>
+            ))
             : children}
         </select>
         <div style={selectArrowStyle}>▼</div>
       </div>
+    ) : type === "textarea" ? (
+      <textarea
+        placeholder={placeholder}
+        value={value}
+        disabled={disabled}
+        style={{
+          ...inputStyle,
+          height: "80px",
+          borderColor: error ? "red" : "#cbd5e1",
+        }}
+        onChange={onChange}
+      />
     ) : (
       <input
         type={type}
         placeholder={placeholder}
         value={value}
         disabled={disabled}
-        style={multiline ? textareaStyle : inputStyle}
+        style={{
+          ...inputStyle,
+          borderColor: error ? "red" : "#cbd5e1",
+        }}
         onChange={onChange}
-        rows={rows}
-        multiline={multiline ? "true" : undefined}
-        as={multiline ? "textarea" : undefined}
       />
+    )}
+    {error && (
+      <div style={{ color: "red", fontSize: "0.75rem", marginTop: "4px" }}>
+        {error}
+      </div>
     )}
   </div>
 );
 
-// Styles
+// Styles (same as before)
 const containerStyle = {
   padding: "2rem",
   fontFamily: '"Inter", "Segoe UI", sans-serif',
@@ -904,12 +1099,6 @@ const inputStyle = {
   width: "100%",
 };
 
-const textareaStyle = {
-  ...inputStyle,
-  minHeight: "80px",
-  resize: "vertical",
-};
-
 const selectWrapperStyle = {
   position: "relative",
   width: "100%",
@@ -950,7 +1139,6 @@ const cancelBtnStyle = {
   cursor: "pointer",
   fontWeight: "500",
   fontSize: "0.875rem",
-  transition: "all 0.2s ease",
 };
 
 const createBtnStyle = {
@@ -962,7 +1150,6 @@ const createBtnStyle = {
   cursor: "pointer",
   fontWeight: "500",
   fontSize: "0.875rem",
-  transition: "all 0.2s ease",
 };
 
 export default GoodsReceiptsEditLayout;

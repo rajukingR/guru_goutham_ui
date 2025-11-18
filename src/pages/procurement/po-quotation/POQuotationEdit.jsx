@@ -523,15 +523,15 @@ const POQuotationEdit = () => {
             p={2}
             style={{ border: "1px solid #e0e0e0", borderRadius: "8px" }}
           >
-            <Box display="flex" gap={2} mb={2} alignItems="center">
+            <Box className="search-wrapper" mb={2}>
               <TextField
                 size="small"
                 placeholder="Search products"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                fullWidth
               />
             </Box>
+
 
             <TableContainer
               component={Paper}
