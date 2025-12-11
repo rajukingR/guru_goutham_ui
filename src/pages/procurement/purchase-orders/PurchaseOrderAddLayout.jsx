@@ -115,7 +115,7 @@ const PurchaseOrderAddLayout = () => {
         setSuppliers(supData);
 
         // Fetch products
-        const prodResponse = await fetch(`${API_URL}/product-templete`, {
+        const prodResponse = await fetch(`${API_URL}/product-templete/without-active`, {
           headers: {
             "Authorization": `Bearer ${userToken}`,
           },

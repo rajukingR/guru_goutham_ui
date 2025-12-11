@@ -242,15 +242,15 @@ const EditProfile = () => {
               <Grid container spacing={2} sx={{ mt: 2 }}>
                 <Grid item xs={6}>
                   <TextField
-                    label="First Name"
-                    name="first_name"
+                    label="Full Name"
+                    name="full_name"
                     fullWidth
-                    value={formData.first_name}
+                    value={formData.full_name}
                     onChange={handleChange}
                     required
                   />
                 </Grid>
-                <Grid item xs={6}>
+                {/* <Grid item xs={6}>
                   <TextField
                     label="Last Name"
                     name="last_name"
@@ -258,9 +258,20 @@ const EditProfile = () => {
                     value={formData.last_name}
                     onChange={handleChange}
                   />
+                </Grid> */}
+
+                <Grid item xs={6}>
+                  <TextField
+                    label="Phone Number*"
+                    name="phone_number"
+                    fullWidth
+                    value={formData.phone_number}
+                    onChange={handleChange}
+                    required
+                  />
                 </Grid>
 
-                <Grid item xs={12}>
+                {/* <Grid item xs={12}>
                   <TextField
                     label="Login ID*"
                     name="login_id"
@@ -269,7 +280,7 @@ const EditProfile = () => {
                     onChange={handleChange}
                     required
                   />
-                </Grid>
+                </Grid> */}
 
                 <Grid item xs={12}>
                   <TextField
@@ -282,37 +293,24 @@ const EditProfile = () => {
                     type="email"
                   />
                 </Grid>
-                <Grid item xs={12}>
-                  <TextField
-                    label="Phone Number*"
-                    name="phone_number"
-                    fullWidth
-                    value={formData.phone_number}
-                    onChange={handleChange}
-                    required
-                  />
-                </Grid>
+
               </Grid>
             </Grid>
             <Grid item xs={12} md={6}>
               <Typography variant="h6">Address:</Typography>
+
               <TextField
-                label="Street"
-                name="street"
+                label="Pincode*"
+                name="pincode"
                 fullWidth
-                value={formData.street}
+                value={formData.pincode}
                 onChange={handleChange}
                 sx={{ mt: 2 }}
+
                 required
               />
-              <TextField
-                label="Landmark"
-                name="landmark"
-                fullWidth
-                value={formData.landmark}
-                onChange={handleChange}
-                sx={{ mt: 2 }}
-              />
+
+
               <Grid container spacing={2} sx={{ mt: 2 }}>
                 <Grid item xs={6}>
                   <TextField
@@ -346,12 +344,22 @@ const EditProfile = () => {
                 </Grid>
                 <Grid item xs={6}>
                   <TextField
-                    label="Pincode*"
-                    name="pincode"
+                    label="Street"
+                    name="street"
                     fullWidth
-                    value={formData.pincode}
+                    value={formData.street}
                     onChange={handleChange}
                     required
+                  />
+                </Grid>
+
+                <Grid item xs={6}>
+                  <TextField
+                    label="Landmark"
+                    name="landmark"
+                    fullWidth
+                    value={formData.landmark}
+                    onChange={handleChange}
                   />
                 </Grid>
               </Grid>

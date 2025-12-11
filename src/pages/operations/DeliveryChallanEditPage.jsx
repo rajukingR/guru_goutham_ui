@@ -1597,7 +1597,6 @@ const DeliveryChallanEditPage = () => {
           >
             Cancel
           </button>
-          <Box mt={4}>
             <button
               type="submit"
               style={{
@@ -1612,7 +1611,6 @@ const DeliveryChallanEditPage = () => {
             >
               Update Delivery Challan
             </button>
-          </Box>
         </div>
       </form>
     </div>

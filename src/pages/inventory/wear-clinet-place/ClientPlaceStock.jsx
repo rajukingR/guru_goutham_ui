@@ -224,15 +224,13 @@ const ClientPlaceStock = () => {
             backgroundColor: "#f9f9f9",
           }}
         >
-          <Typography variant="h6" gutterBottom>
+          {/* <Typography variant="h6" gutterBottom>
             Client Place Asset Inventory Summary
-          </Typography>
+          </Typography> */}
 
-          <Box sx={{ display: "flex", gap: 3, mt: 1 }}>
             <Typography variant="body1">
               Total Assets: <strong>{summary.totalAssets}</strong>
             </Typography>
-          </Box>
         </Box>
       )}
 

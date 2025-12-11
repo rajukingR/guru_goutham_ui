@@ -7,9 +7,9 @@ import { useSelector } from "react-redux";
 const ContactsTable = () => {
   const [data, setData] = useState([]);
 
-    const { user, token } = useSelector((state) => state.auth);
-  
-    const userToken = token;
+  const { user, token } = useSelector((state) => state.auth);
+
+  const userToken = token;
   const columns = [
     { id: "s_id", label: "S.No." },
     { id: "full_name", label: "Full Name" },
@@ -18,7 +18,7 @@ const ContactsTable = () => {
     { id: "company_name", label: "Company" },
     { id: "industry", label: "Industry" },
     // { id: "payment_type", label: "Payment Type" },
-    { id: "owner", label: "Owner" }
+    // { id: "owner", label: "Owner" }
   ];
 
   useEffect(() => {
@@ -34,9 +34,10 @@ const ContactsTable = () => {
 
         if (response.status === 200) {
           const dataWithSno = response.data.map((item, index) => ({
+            ...item,
             s_id: index + 1,
             full_name: `${item.first_name} ${item.last_name || ""}`.trim(),
-            ...item,
+            status: item.is_active ? "Active" : "Inactive",
           }));
           setData(dataWithSno);
         }

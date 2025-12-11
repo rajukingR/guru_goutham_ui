@@ -16,6 +16,7 @@ import {
   Tooltip,
   IconButton,
 } from "@mui/material";
+  import { useSelector } from "react-redux";
 
 import { Link, useLocation } from "react-router-dom";
 import { IoMdSwap } from "react-icons/io";
@@ -104,6 +105,11 @@ import { RiCurrencyFill } from "react-icons/ri";
 const drawerWidth = 320;
 
 const Sidebar = ({ section }) => {
+
+
+  const { user, token } = useSelector((state) => state.auth);
+  const loginRoleName = user.role_name === "Admin";
+
   const theme = useTheme();
   const location = useLocation();
   const [hoverIndex, setHoverIndex] = useState(null);
@@ -123,19 +129,19 @@ const Sidebar = ({ section }) => {
           text: "Product Template",
           path: "/dashboard/product_library",
           icon: <ListAltIcon />,
-          description: "Manage product templates",
+          description: "Product templates",
         },
         {
           text: "Brands",
           path: "/dashboard/product_library/brands",
           icon: <SellIcon />,
-          description: "Brand management",
+          description: "Brands",
         },
         {
           text: "Product Categories",
           path: "/dashboard/product_library/product_categories",
           icon: <CategoryIcon />,
-          description: "Category organization",
+          description: "Product categories",
         },
         // {
         //   text: "Stock Locations",
@@ -151,35 +157,35 @@ const Sidebar = ({ section }) => {
       sectionIcon = <ShoppingCartIcon />;
       menuItems = [
         {
-          text: "Supplier",
+          text: "Suppliers",
           path: "/dashboard/procurement/supplier",
           icon: <FactoryIcon />,
-          description: "Supplier management",
+          description: "Suppliers",
         },
         {
           text: "Purchase Requests",
           path: "/dashboard/procurement/purchase-requests",
           icon: <AssignmentIcon />,
-          description: "New purchase requests",
+          description: "Purchase requests",
           // badge: "12",
         },
         {
           text: "PO Quotations",
           path: "/dashboard/procurement/po-quotations",
           icon: <DescriptionIcon />,
-          description: "Purchase order quotes",
+          description: "Purchase order quotations",
         },
         {
           text: "Purchase Orders",
           path: "/dashboard/procurement/purchase-orders",
           icon: <AssignmentTurnedInIcon />,
-          description: "Active purchase orders",
+          description: "Purchase orders",
         },
         {
           text: "Goods Receipt",
           path: "/dashboard/procurement/goodsreceipt",
           icon: <InventoryIcon />,
-          description: "Received goods tracking",
+          description: "Goods receipt",
         },
         // {
         //   text: "Asset-IDs",
@@ -198,14 +204,14 @@ const Sidebar = ({ section }) => {
           text: "Product List",
           path: "/dashboard/inventory",
           icon: <PlaylistAddCheckIcon />,
-          description: "All inventory items",
+          description: "Product list",
         },
 
         {
           text: "Assembled Products",
           path: "/dashboard/inventory/assembled-products",
           icon: <BuildIcon />,
-          description: "All inventory items",
+          description: "Assembled products",
         },
         // {
         //   text: "Assets Modifications",
@@ -217,19 +223,19 @@ const Sidebar = ({ section }) => {
           text: "Wear House",
           path: "/dashboard/inventory/wear-house",
           icon: <HomeWorkIcon />,
-          description: "Wear House",
+          description: "Wear house",
         },
         {
           text: "Clinet Place",
           path: "/dashboard/inventory/client-place",
           icon: <BusinessIcon />,
-          description: "Clinet Place",
+          description: "Clinet place",
         },
         {
           text: "Scrap",
           path: "/dashboard/inventory/scrap",
           icon: <IoMdSwap />,
-          description: "Clinet Place",
+          description: "Scrap",
         },
       ];
       break;
@@ -239,36 +245,36 @@ const Sidebar = ({ section }) => {
       sectionIcon = <GroupIcon />;
       menuItems = [
         {
-          text: "Client List",
+          text: "Clients",
           path: "/dashboard/crm/client-list",
           icon: <ContactPhoneIcon />,
-          description: "Customer database",
+          description: "Clients",
         },
         {
           text: "Leads",
           path: "/dashboard/crm/lead",
           icon: <StarOutlineIcon />,
-          description: "Potential customers",
+          description: "Leads",
           // badge: "New",
         },
         {
           text: "Quotations",
           path: "/dashboard/crm/quotations",
           icon: <RequestQuoteIcon />,
-          description: "Price quotations",
+          description: "Quotations",
         },
         {
           text: "Sales Orders",
           path: "/dashboard/crm/orders",
           icon: <PointOfSaleIcon />,
-          description: "Customer orders",
+          description: "Sales orders",
         },
 
         {
           text: "Order Preparations",
           path: "/dashboard/crm/dispatch-orders",
           icon: <ExitToAppIcon />,
-          description: "Order Preparations",
+          description: "Order preparations",
         },
         //  {
         //   text: "Return Orders",
@@ -291,10 +297,10 @@ const Sidebar = ({ section }) => {
       sectionIcon = <SettingsIcon />;
       menuItems = [
         {
-          text: "Delivery Challan",
+          text: "Delivery Challans",
           path: "/dashboard/operations",
           icon: <LocalShippingIcon />,
-          description: "Delivery documents",
+          description: "Delivery challans",
         },
         // {
         //   text: "Assets Modifications",
@@ -309,7 +315,7 @@ const Sidebar = ({ section }) => {
           description: "Invoice management",
         },
         {
-          text: "Credit Notes",
+          text: "Credit Note",
           path: "/dashboard/operations/credit-notes",
           icon: <AssignmentReturnIcon />,
           description: "Credit note management",
@@ -343,7 +349,7 @@ const Sidebar = ({ section }) => {
           text: "Courier Charges",
           path: "/dashboard/operations/courier-charges",
           icon: <AttachMoneyIcon />,
-          description: "Courier Charges",
+          description: "Courier charges",
         },
         {
           text: "Peripherals Updation/Deletion",
@@ -412,21 +418,35 @@ const Sidebar = ({ section }) => {
       break;
 
     case "settings":
-      sectionTitle = "Settings";
-      sectionIcon = <SettingsIcon />;
-      menuItems = [
-        {
-          text: "Users",
-          path: "/dashboard/settings/users",
-          icon: <PeopleIcon />,
-          description: "User management",
-        },
-        {
-          text: "Roles",
-          path: "/dashboard/settings/roles",
-          icon: <VpnKeyIcon />,
-          description: "Role permissions",
-        },
+  sectionTitle = "Settings";
+  sectionIcon = <SettingsIcon />;
+
+  menuItems = [
+    {
+      text: "Users",
+      path: "/dashboard/settings/users",
+      icon: <PeopleIcon />,
+      description: "Users",
+    },
+
+    // ⭐ Add these ONLY if Admin
+    ...(loginRoleName
+      ? [
+          {
+            text: "Roles",
+            path: "/dashboard/settings/roles",
+            icon: <VpnKeyIcon />,
+            description: "Roles",
+          },
+          {
+            text: "Branch",
+            path: "/dashboard/settings/branches",
+            icon: <AccountTreeIcon />,
+            description: "Branches",
+          },
+        ]
+      : []),
+        
         // {
         //   text: "Address",
         //   path: "/dashboard/settings/address",
@@ -445,12 +465,7 @@ const Sidebar = ({ section }) => {
         //   icon: <ReceiptIcon />,
         //   description: "Tax configuration",
         // },
-        {
-          text: "Branch",
-          path: "/dashboard/settings/branches",
-          icon: <AccountTreeIcon />,
-          description: "Branch management",
-        },
+       
         // {
         //   text: "RAM",
         //   path: "/dashboard/settings/ram",

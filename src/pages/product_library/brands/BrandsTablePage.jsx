@@ -30,7 +30,7 @@ const { user, token } = useSelector((state) => state.auth);
           const formattedData = response.data.map((item, index) => ({
             s_no: index + 1,
             ...item,
-            status: item.active_status ? "Active" : "Inactive",
+            status: item.is_active ? "Active" : "Inactive",
           }));
 
           setData(formattedData);

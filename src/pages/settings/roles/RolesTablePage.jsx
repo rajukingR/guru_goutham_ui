@@ -33,6 +33,7 @@ const RolesTablePage = () => {
             s_id: index + 1,
             ...item,
             status: item.is_active === true ? "Active" : "Inactive",
+            description: item.description || "N/A",
           }));
           setData(formatted);
         }

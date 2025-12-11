@@ -22,7 +22,7 @@ const LeadsTable = () => {
     { id: "contact_name", label: "Contact Name" },
     { id: "contact_phone", label: "Phone" },
     { id: "contact_company", label: "Company" },
-    { id: "owner", label: "Owner" },
+    // { id: "owner", label: "Owner" },
     // { id: "status", label: "Status" },
   ];
 

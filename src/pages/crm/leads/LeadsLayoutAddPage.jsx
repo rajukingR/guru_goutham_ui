@@ -196,7 +196,7 @@ const LeadsLayoutAddPage = () => {
   useEffect(() => {
     const fetchProducts = async () => {
       try {
-        const response = await fetch(`${API_URL}/product-templete`, {
+        const response = await fetch(`${API_URL}/product-templete/without-active`, {
           headers: {
             "Authorization": `Bearer ${userToken}`,
           },

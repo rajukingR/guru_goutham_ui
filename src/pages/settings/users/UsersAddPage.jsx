@@ -6,12 +6,13 @@ import { useSelector } from "react-redux";
 
 const UsersAddPage = () => {
   const { user, token } = useSelector((state) => state.auth);
+  const loginSuperiorId = user.id;
+  const loginRoleName = user.role_name !== "Admin";
 
   const userToken = token;
 
   const [formData, setFormData] = useState({
-    firstName: "",
-    lastName: "",
+    fullName: "",
     loginId: "",
     password: "",
     roleId: "",
@@ -138,9 +139,8 @@ const fetchAddressFromPincode = async (pincode) => {
     setIsSubmitting(true);
     try {
       const payload = {
-        first_name: formData.firstName,
-        last_name: formData.lastName,
-        full_name: `${formData.firstName} ${formData.lastName}`,
+       
+        full_name: formData.fullName,
         email: formData.emailId,
         password: formData.password,
         role_id: parseInt(formData.roleId),
@@ -155,6 +155,7 @@ const fetchAddressFromPincode = async (pincode) => {
         landmark: formData.landmark,
         street: formData.street,
         is_active: formData.activeStatus,
+        superior_id: loginSuperiorId,
       };
 
       const roleObj = roles.find((r) => r.id === payload.role_id);
@@ -196,33 +197,26 @@ const fetchAddressFromPincode = async (pincode) => {
           </div>
           <div style={fieldsGridStyle}>
             <Field
-              label="First Name"
-              placeholder="Enter First Name"
-              value={formData.firstName}
-              onChange={(v) => handleInputChange("firstName", v)}
+              label="Full Name"
+              placeholder="Enter Full Name"
+              value={formData.fullName}
+              onChange={(v) => handleInputChange("fullName", v)}
               required
             />
-            <Field
+            {/* <Field
               label="Last Name"
               placeholder="Enter Last Name"
               value={formData.lastName}
               onChange={(v) => handleInputChange("lastName", v)}
-            />
-            <Field
+            /> */}
+            {/* <Field
               label="Login ID"
               placeholder="Enter Login ID"
               value={formData.loginId}
               onChange={(v) => handleInputChange("loginId", v)}
               required
-            />
-            <Field
-              label="Password"
-              type="password"
-              placeholder="Enter Password"
-              value={formData.password}
-              onChange={(v) => handleInputChange("password", v)}
-              required
-            />
+            /> */}
+            
 
             <Field
               label="Role Name"
@@ -252,6 +246,15 @@ const fetchAddressFromPincode = async (pincode) => {
               placeholder="Enter Email ID"
               value={formData.emailId}
               onChange={(v) => handleInputChange("emailId", v)}
+              required
+            />
+
+            <Field
+              label="Password"
+              type="password"
+              placeholder="Enter Password"
+              value={formData.password}
+              onChange={(v) => handleInputChange("password", v)}
               required
             />
             <Field

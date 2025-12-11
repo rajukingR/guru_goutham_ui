@@ -4,15 +4,16 @@ import DynamicTable from "../../../components/table-format/DynamicTable";
 import API_URL, { IMAGE_API_URL } from "../../../api/Api_url";
 import { Box, Chip, Typography } from "@mui/material";
 import { useSelector } from "react-redux";
+import DefaultImage from "../../../assets/logos/default.jpg";
 
 const AssembledProductsTable = () => {
   const [data, setData] = useState([]);
 
 
 
-    const { user, token } = useSelector((state) => state.auth);
-  
-    const userToken = token;
+  const { user, token } = useSelector((state) => state.auth);
+
+  const userToken = token;
   const columns = [
     { id: "s_no", label: "S.No." },
     { id: "product_image", label: "Image" },
@@ -89,67 +90,74 @@ const AssembledProductsTable = () => {
     return specText || "No specifications available";
   };
 
-useEffect(() => {
-  const fetchAssembledAssets = async () => {
-    try {
-      const token = localStorage.getItem("token");
-      
-      const res = await axios.get(`${API_URL}/assembled-assets`, {
-        headers: {
-          "Authorization": `Bearer ${userToken}`,
-        },
-      });
+  useEffect(() => {
+    const fetchAssembledAssets = async () => {
+      try {
+        const token = localStorage.getItem("token");
 
-      const formattedData = res.data.map((item, index) => ({
-        id: item.id,
-        s_no: index + 1,
-        product_image: item.product_image ? (
-          <img
-            src={`${IMAGE_API_URL}/${item.product_image}`}
-            alt={item.assembled_name}
-            style={{
-              width: "65px",
-              height: "65px",
-              objectFit: "contain",
-              border: "2px solid rgb(13, 18, 24)",
-              borderRadius: "6px",
-            }}
-          />
-        ) : (
-          "No Image"
-        ),
-        assembled_name: item.assembled_name,
-        parent_asset_id: item.parent_asset_id,
-        specifications: (
-          <Box sx={{ maxWidth: 300 }}>
-            <Typography
-              variant="body2"
-              sx={{
-                display: "-webkit-box",
-                WebkitLineClamp: 2,
-                WebkitBoxOrient: "vertical",
-                overflow: "hidden",
-                textOverflow: "ellipsis",
+        const res = await axios.get(`${API_URL}/assembled-assets`, {
+          headers: {
+            "Authorization": `Bearer ${userToken}`,
+          },
+        });
+
+        const formattedData = res.data.map((item, index) => ({
+          id: item.id,
+          s_no: index + 1,
+          ...item,
+          product_image: (
+            <img
+              src={
+                item.product_image
+                  ? `${IMAGE_API_URL}/${item.product_image}`
+                  : DefaultImage
+              }
+              alt={item.assembled_name}
+              style={{
+                    width: "65px",
+                    height: "65px",
+                    objectFit: "contain",
+                    border: "2px solid gray",
+                    borderRadius: "6px",
+                  }}
+              onError={(e) => {
+                e.target.onerror = null;
+                e.target.src = DefaultImage;
               }}
-            >
-              {formatSpecifications(item.components)}
-            </Typography>
-          </Box>
-        ),
-        component_types: [
-          ...new Set(item.components.map((comp) => comp.component_type)),
-        ].join(", "),
-        status: item.is_active ? "Active" : "Inactive",
-      }));
+            />
+          ),
+          assembled_name: item.assembled_name,
+          parent_asset_id: item.parent_asset_id,
+          specifications: (
+            <Box sx={{ maxWidth: 300 }}>
+              <Typography
+                variant="body2"
+                sx={{
+                  display: "-webkit-box",
+                  WebkitLineClamp: 2,
+                  WebkitBoxOrient: "vertical",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                }}
+              >
+                {formatSpecifications(item.components)}
+              </Typography>
+            </Box>
+          ),
+          component_types: [
+            ...new Set(item.components.map((comp) => comp.component_type)),
+          ].join(", "),
+          is_active: item.is_active ? "Active" : "Inactive",
+        }));
 
-      setData(formattedData);
-    } catch (err) {
-      console.error("❌ Failed to fetch assembled assets:", err);
-    }
-  };
+        setData(formattedData);
+      } catch (err) {
+        console.error("❌ Failed to fetch assembled assets:", err);
+      }
+    };
 
-  fetchAssembledAssets();
-}, []);
+    fetchAssembledAssets();
+  }, []);
 
 
   return (

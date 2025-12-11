@@ -772,6 +772,7 @@ const RemoveItemsLayout = () => {
         const addPayload = {
             customer_id: order?.customer_id,
             product_id: order?.product_id,
+            peripheral_asset_id_product_id: upgrade.productDetails.id,
             parent_asset_id: addForm.parentAssetId,
             asset_id: addForm.addItemsAssetId,
             size: addForm.size,
@@ -802,7 +803,8 @@ const RemoveItemsLayout = () => {
                 parentAssetId: addForm.parentAssetId,
                 size: addForm.size,
                 installedDate: addForm.addingDate,
-                originalUpgradeId: upgrade.id
+                originalUpgradeId: upgrade.id,
+                originalPeripheralProductId: upgrade.productDetails.id 
             };
 
             setCurrentItems([...currentItems, newItem]);
@@ -855,6 +857,8 @@ const RemoveItemsLayout = () => {
         const removalPayload = {
             customer_id: order?.customer_id,
             product_id: order?.product_id,
+                peripheral_asset_id_product_id: removeDialog.item.originalPeripheralProductId || null, // ⭐ ADD THIS
+
             parent_asset_id: parentAssetId,
             asset_id: itemToRemove.assetId,
             size: itemToRemove.size,
@@ -901,6 +905,7 @@ const RemoveItemsLayout = () => {
             transactions.push({
                 customer_id: order?.customer_id,
                 product_id: order?.product_id,
+                peripheral_asset_id_product_id: item.originalPeripheralProductId || null,
                 parent_asset_id: parentAssetId,
                 asset_id: item.assetId || '',
                 size: item.size || '',
@@ -921,6 +926,7 @@ const RemoveItemsLayout = () => {
             transactions.push({
                 customer_id: order?.customer_id,
                 product_id: order?.product_id,
+                peripheral_asset_id_product_id: item.originalPeripheralProductId,
                 parent_asset_id: parentAssetId,
                 asset_id: item.assetId || '',
                 size: item.size || '',
@@ -1008,7 +1014,8 @@ const RemoveItemsLayout = () => {
     const labelStyle = {
         fontWeight: 500,
         fontSize: "0.875rem",
-        color: "#374151"
+        color: "#374151",
+        marginBottom: "6px",
     };
 
     const requiredStyle = {

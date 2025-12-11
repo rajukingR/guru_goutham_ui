@@ -78,7 +78,7 @@ const POQuotationEdit = () => {
               "Authorization": `Bearer ${userToken}`,
             },
           }),
-          fetch(`${API_URL}/product-templete`, {
+          fetch(`${API_URL}/product-templete/without-active`, {
             headers: {
               "Authorization": `Bearer ${userToken}`,
             },

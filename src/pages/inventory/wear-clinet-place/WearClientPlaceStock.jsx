@@ -131,9 +131,9 @@ const WearClientPlaceStock = () => {
     <div>
       {summary && (
         <div>
-          <Typography variant="h6" gutterBottom>
+          {/* <Typography variant="h6" gutterBottom>
             Asset Inventory Summary
-          </Typography>
+          </Typography> */}
           <Box sx={{ display: "flex", gap: 3 }}>
             <Typography>
               Total Available Assets: <strong>{data.length}</strong>

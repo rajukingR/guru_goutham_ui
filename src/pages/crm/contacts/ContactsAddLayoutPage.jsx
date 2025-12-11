@@ -43,6 +43,8 @@ const validatePincode = (pincode) => {
 
 const ContactsAddLayoutPage = () => {
   const { user, token } = useSelector((state) => state.auth);
+  const loginRoleName = user.role_name === "Admin";
+  const loginSuperiorId = user.id;
   const userToken = token;
 
   const LoginUserName = user.full_name;
@@ -50,6 +52,7 @@ const ContactsAddLayoutPage = () => {
 
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
+    superior_id: loginSuperiorId,
     first_name: "",
     last_name: "",
     email: "",
@@ -71,6 +74,7 @@ const ContactsAddLayoutPage = () => {
     owner: "",
     remarks: "",
     contact_generated_by: "",
+    is_active: true,
     status: "Inactive",
   });
 
@@ -109,10 +113,10 @@ const ContactsAddLayoutPage = () => {
     severity: "success",
   });
 
-  // Fix the checkbox handler
   const handleStatusChange = (e) => {
-    handleInputChange("status", e.target.checked ? "Active" : "Inactive");
+    handleInputChange("is_active", e.target.checked);
   };
+
 
   const validateField = (name, value) => {
     let error = "";
@@ -330,7 +334,7 @@ const ContactsAddLayoutPage = () => {
       </Snackbar>
 
       <div style={headerContainerStyle}>
-        <h1 style={titleStyle}>Create a new Contact</h1>
+        <h1 style={titleStyle}>Create a new Client</h1>
       </div>
 
       <form onSubmit={handleSubmit}>
@@ -550,27 +554,24 @@ const ContactsAddLayoutPage = () => {
                 <input
                   type="checkbox"
                   style={checkboxStyle}
-                  checked={formData.status === "Active"}
+                  checked={formData.is_active}
                   onChange={handleStatusChange}
                 />
                 <div
                   style={{
                     ...checkboxCustomStyle,
-                    backgroundColor:
-                      formData.status === "Active" ? "#3b82f6" : "#ffffff",
-                    borderColor:
-                      formData.status === "Active" ? "#3b82f6" : "#d1d5db",
+                    backgroundColor: formData.is_active ? "#3b82f6" : "#ffffff",
+                    borderColor: formData.is_active ? "#3b82f6" : "#d1d5db",
                   }}
                 >
-                  {formData.status === "Active" && (
-                    <span style={checkmarkStyle}>✓</span>
-                  )}
+                  {formData.is_active && <span style={checkmarkStyle}>✓</span>}
                 </div>
                 <div>
                   <span style={checkboxTextStyle}>Active Status</span>
                 </div>
               </label>
             </div>
+
           </div>
         </div>
 

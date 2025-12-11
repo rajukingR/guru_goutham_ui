@@ -579,7 +579,7 @@ const DispatchOrdersEditForm = () => {
         setOrders(orderData);
 
         // Fetch products
-        const prodResponse = await fetch(`${API_URL}/product-templete`, {
+        const prodResponse = await fetch(`${API_URL}/product-templete/without-active`, {
           headers: {
             "Authorization": `Bearer ${userToken}`,
           },
@@ -1148,7 +1148,7 @@ const DispatchOrdersEditForm = () => {
       </Dialog>
 
       <div style={headerStyle}>
-        <h1 style={titleStyle}>Edit Dispatch Order</h1>
+        <h1 style={titleStyle}>Update Order Preparation</h1>
       </div>
 
       <form onSubmit={handleSubmit}>
@@ -1259,9 +1259,9 @@ const DispatchOrdersEditForm = () => {
                 options={[
                   { value: "Pending", label: "Pending" },
                   { value: "Approved", label: "Approved" },
-                  { value: "Dispatched", label: "Dispatched" },
-                  { value: "Delivered", label: "Delivered" },
-                  { value: "Cancelled", label: "Cancelled" },
+                  // { value: "Dispatched", label: "Dispatched" },
+                  // { value: "Delivered", label: "Delivered" },
+                  // { value: "Cancelled", label: "Cancelled" },
                 ]}
                 required
               />
@@ -1663,7 +1663,6 @@ const DispatchOrdersEditForm = () => {
           >
             Cancel
           </button>
-          <Box mt={4}>
             <button
               type="submit"
               style={{
@@ -1676,9 +1675,8 @@ const DispatchOrdersEditForm = () => {
                 fontSize: "1rem",
               }}
             >
-              Update Dispatch Order
+              Update Order Preparation
             </button>
-          </Box>
         </div>
       </form>
     </div>

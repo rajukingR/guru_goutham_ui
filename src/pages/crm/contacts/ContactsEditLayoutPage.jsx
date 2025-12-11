@@ -64,6 +64,7 @@ const ContactsEditLayoutPage = () => {
     owner: "",
     remarks: "",
     contact_generated_by: "",
+    is_active: false,
     status: "Inactive",
   });
 
@@ -562,22 +563,21 @@ const ContactsEditLayoutPage = () => {
                 <input
                   type="checkbox"
                   style={checkboxStyle}
-                  checked={formData.status === "Active"}
-                  onChange={handleStatusChange}
+                  checked={formData.is_active}
+                  onChange={(e) => handleInputChange("is_active", e.target.checked)}
                 />
+
                 <div
                   style={{
                     ...checkboxCustomStyle,
-                    backgroundColor:
-                      formData.status === "Active" ? "#3b82f6" : "#ffffff",
-                    borderColor:
-                      formData.status === "Active" ? "#3b82f6" : "#d1d5db",
+                    backgroundColor: formData.is_active ? "#3b82f6" : "#ffffff",
+                    borderColor: formData.is_active ? "#3b82f6" : "#d1d5db",
                   }}
                 >
-                  {formData.status === "Active" && (
-                    <span style={checkmarkStyle}>✓</span>
-                  )}
+                  {formData.is_active && <span style={checkmarkStyle}>✓</span>}
                 </div>
+
+
                 <div>
                   <span style={checkboxTextStyle}>Active Status</span>
                 </div>

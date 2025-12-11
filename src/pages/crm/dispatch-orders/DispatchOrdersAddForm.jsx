@@ -560,7 +560,7 @@ const DispatchOrdersAddForm = ({ product }) => {
         setOrders(orderData);
 
         // Fetch products
-        const prodResponse = await fetch(`${API_URL}/product-templete`, {
+        const prodResponse = await fetch(`${API_URL}/product-templete/without-active`, {
           headers: {
             "Authorization": `Bearer ${userToken}`,
           },
@@ -949,7 +949,7 @@ const DispatchOrdersAddForm = ({ product }) => {
       </Snackbar>
 
       <div style={headerStyle}>
-        <h1 style={titleStyle}>Create Dispatch Order</h1>
+        <h1 style={titleStyle}>Create Order Preparation</h1>
       </div>
 
       <form onSubmit={handleSubmit}>
@@ -1505,7 +1505,6 @@ const DispatchOrdersAddForm = ({ product }) => {
           >
             Cancel
           </button>
-          <Box mt={4}>
             <button
               type="submit"
               style={{
@@ -1518,9 +1517,8 @@ const DispatchOrdersAddForm = ({ product }) => {
                 fontSize: "1rem",
               }}
             >
-              Create Dispatch Order
+              Create Order Preparation
             </button>
-          </Box>
         </div>
       </form>
     </div>

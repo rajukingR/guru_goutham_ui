@@ -54,7 +54,7 @@ const CreditNoteInvoice = () => {
               const monthDiff =
                 yearDiff * 12 + (returned.getMonth() - invoiceStart.getMonth());
 
-              return monthDiff === 0 || monthDiff === 1;
+              return monthDiff === 0 || monthDiff >= 1;
             })
             .map((item, index) => ({
               s_id: index + 1,

@@ -173,7 +173,7 @@ const ProductTable = () => {
                     width: "65px",
                     height: "65px",
                     objectFit: "contain",
-                    border: "2px solid rgb(13, 18, 24)",
+                    border: "2px solid gray",
                     borderRadius: "6px",
                   }}
                   onError={(e) => {

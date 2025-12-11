@@ -1634,7 +1634,6 @@ const DeliveryChallanAddPage = ({ product }) => {
           >
             Cancel
           </button>
-          <Box mt={4}>
             <button
               type="submit"
               style={{
@@ -1649,7 +1648,6 @@ const DeliveryChallanAddPage = ({ product }) => {
             >
               Create Delivery Challan
             </button>
-          </Box>
         </div>
       </form>
     </div>

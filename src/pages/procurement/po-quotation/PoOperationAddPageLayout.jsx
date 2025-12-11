@@ -103,7 +103,7 @@ const PoOperationAddPageLayout = () => {
         const supData = await supResponse.json();
         setSuppliers(supData);
 
-        const prodResponse = await fetch(`${API_URL}/product-templete`, {
+        const prodResponse = await fetch(`${API_URL}/product-templete/without-active`, {
           headers: {
             "Authorization": `Bearer ${userToken}`,
           },

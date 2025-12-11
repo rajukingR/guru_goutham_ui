@@ -776,57 +776,57 @@ const DeliveryChallanDialog = ({ open, onClose, dcData }) => {
   };
 
   // Function to render accessories information
-const renderAccessories = () => {
-  const accessories = [];
+  const renderAccessories = () => {
+    const accessories = [];
 
-  // Helper function to format accessory with quantity
-  const formatAccessory = (name, quantity) => {
-    return `${name} (Qty: ${quantity})`;
-  };
+    // Helper function to format accessory with quantity
+    const formatAccessory = (name, quantity) => {
+      return `${name} (Qty: ${quantity})`;
+    };
 
-  // Add standard accessories with quantities
-  if (dcData.mouse) {
-    accessories.push(formatAccessory("Mouse", dcData.mouse_qty || 1));
-  }
-  
-  if (dcData.cable) {
-    accessories.push(formatAccessory("Cable", dcData.cable_qty || 1));
-  }
-  
-  if (dcData.bag) {
-    accessories.push(formatAccessory("Bag", dcData.bag_qty || 1));
-  }
-
-  // Add other accessories from the array WITH quantities
-  if (dcData.other_accessory && dcData.other_accessory.length > 0) {
-    const othersQty = dcData.others_qty || 1;
-    
-    if (Array.isArray(dcData.other_accessory)) {
-      // If there are multiple other accessories, show each with the total others quantity
-      dcData.other_accessory.forEach((item) => {
-        accessories.push(formatAccessory(item, othersQty));
-      });
+    // Add standard accessories with quantities
+    if (dcData.mouse) {
+      accessories.push(formatAccessory("Mouse", dcData.mouse_qty || 1));
     }
-  }
 
-  // Add "Others" if the others field is true but no specific accessories listed
-  if (dcData.others && accessories.length === 0) {
-    accessories.push(formatAccessory("Others", dcData.others_qty || 1));
-  }
+    if (dcData.cable) {
+      accessories.push(formatAccessory("Cable", dcData.cable_qty || 1));
+    }
 
-  return accessories.length > 0 ? (
-    <div style={accessoriesContainerStyle}>
-      <div style={accessoriesTitleStyle}>Accessories Included:</div>
-      <ul style={accessoriesListStyle}>
-        {accessories.map((item, index) => (
-          <li key={index} style={accessoriesListItemStyle}>
-            {item}
-          </li>
-        ))}
-      </ul>
-    </div>
-  ) : null;
-};
+    if (dcData.bag) {
+      accessories.push(formatAccessory("Bag", dcData.bag_qty || 1));
+    }
+
+    // Add other accessories from the array WITH quantities
+    if (dcData.other_accessory && dcData.other_accessory.length > 0) {
+      const othersQty = dcData.others_qty || 1;
+
+      if (Array.isArray(dcData.other_accessory)) {
+        // If there are multiple other accessories, show each with the total others quantity
+        dcData.other_accessory.forEach((item) => {
+          accessories.push(formatAccessory(item, othersQty));
+        });
+      }
+    }
+
+    // Add "Others" if the others field is true but no specific accessories listed
+    if (dcData.others && accessories.length === 0) {
+      accessories.push(formatAccessory("Others", dcData.others_qty || 1));
+    }
+
+    return accessories.length > 0 ? (
+      <div style={accessoriesContainerStyle}>
+        <div style={accessoriesTitleStyle}>Accessories Included:</div>
+        <ul style={accessoriesListStyle}>
+          {accessories.map((item, index) => (
+            <li key={index} style={accessoriesListItemStyle}>
+              {item}
+            </li>
+          ))}
+        </ul>
+      </div>
+    ) : null;
+  };
 
   return (
     <Dialog open={open} onClose={onClose} maxWidth="lg" fullWidth>
@@ -953,12 +953,12 @@ const renderAccessories = () => {
                         }}
                       >
                         <strong>Specifications:</strong> Brand:{" "}
-                        {item.product?.brand}. Model: {item.product?.model}.
-                        Processor: {item.product?.processor}. RAM:{" "}
-                        {item.product?.ram}. Storage: {item.product?.storage}.
+                        {item.product?.brand}, Model: {item.product?.model},
+                        Processor: {item.product?.processor}, RAM:{" "}
+                        {item.product?.ram}, Storage: {item.product?.storage},
                         <br />
-                        Disk Type: {item.product?.disk_type}. Graphics:{" "}
-                        {item.product?.graphics}. OS: {item.product?.os}.
+                        Disk Type: {item.product?.disk_type}, Graphics:{" "}
+                        {item.product?.graphics}, OS: {item.product?.os}.
                       </div>
                       <br />
                       {item.device_ids?.length > 0 && (
@@ -1382,12 +1382,12 @@ const QuotationDialog = ({ open, onClose, quotationData }) => {
                           }}
                         >
                           <strong>Specifications:</strong> Brand:{" "}
-                          {item.product?.brand}. Model: {item.product?.model}.
-                          Processor: {item.product?.processor}. RAM:{" "}
-                          {item.product?.ram}. Storage: {item.product?.storage}.
+                          {item.product?.brand}, Model: {item.product?.model},
+                          Processor: {item.product?.processor_model}, RAM:{" "}
+                          {item.product?.ram}, Storage: {item.product?.storage},
                           <br />
-                          Disk Type: {item.product?.disk_type}. Graphics:{" "}
-                          {item.product?.graphics}. OS: {item.product?.os}.
+                          Disk Type: {item.product?.disk_type}, Graphics:{" "}
+                          {item.product?.graphics}, OS: {item.product?.os}.
                         </div>
                         <br />
                       </td>
@@ -2771,40 +2771,40 @@ const CreditNoteDialog = ({ open, onClose, creditNoteData }) => {
                         Specifications:{" "}
                         {item.product?.brand && (
                           <>
-                            <strong>Brand:</strong> {item.product.brand}.{" "}
+                            <strong>Brand:</strong> {item.product.brand},{" "}
                           </>
                         )}
                         {item.product?.model && (
                           <>
-                            <strong>Model:</strong> {item.product.model}.{" "}
+                            <strong>Model:</strong> {item.product.model},{" "}
                           </>
                         )}
                         {item.product?.processor && (
                           <>
                             <strong>Processor:</strong> {item.product.processor}
-                            .{" "}
+                            ,{" "}
                           </>
                         )}
                         {item.product?.ram && (
                           <>
-                            <strong>RAM:</strong> {item.product.ram}.{" "}
+                            <strong>RAM:</strong> {item.product.ram},{" "}
                           </>
                         )}
                         <br />
                         {item.product?.storage && (
                           <>
-                            <strong>Storage:</strong> {item.product.storage}.{" "}
+                            <strong>Storage:</strong> {item.product.storage},{" "}
                           </>
                         )}
                         {item.product?.disk_type && (
                           <>
                             <strong>Disk Type:</strong> {item.product.disk_type}
-                            .{" "}
+                            ,{" "}
                           </>
                         )}
                         {item.product?.graphics && (
                           <>
-                            <strong>Graphics:</strong> {item.product.graphics}.{" "}
+                            <strong>Graphics:</strong> {item.product.graphics},{" "}
                           </>
                         )}
                         {item.product?.os && (
@@ -5512,171 +5512,171 @@ const InvoiceDialog = ({ open, onClose, invoiceData }) => {
 
 
 
-    // Render product specifications
-const renderSpecifications = (product, deviceIds = []) => {
-  if (!product) return null;
+  // Render product specifications
+  const renderSpecifications = (product, deviceIds = []) => {
+    if (!product) return null;
 
-  const invoiceStart = new Date(invoiceDate);
-  const deviceAssetTransactions = getAssetTransactionsForDevices(deviceIds);
+    const invoiceStart = new Date(invoiceDate);
+    const deviceAssetTransactions = getAssetTransactionsForDevices(deviceIds);
 
-  const sortedTransactions = [...deviceAssetTransactions].sort(
-    (a, b) => new Date(a.action_date) - new Date(b.action_date)
-  );
+    const sortedTransactions = [...deviceAssetTransactions].sort(
+      (a, b) => new Date(a.action_date) - new Date(b.action_date)
+    );
 
-  const filteredTransactions = sortedTransactions.filter((txn) => {
-    const actionDate = new Date(txn.action_date);
-    const monthDiff =
-      (actionDate.getFullYear() - invoiceStart.getFullYear()) * 12 +
-      (actionDate.getMonth() - invoiceStart.getMonth());
-    return paymentMode ? monthDiff <= 0 : monthDiff < 0;
-  });
+    const filteredTransactions = sortedTransactions.filter((txn) => {
+      const actionDate = new Date(txn.action_date);
+      const monthDiff =
+        (actionDate.getFullYear() - invoiceStart.getFullYear()) * 12 +
+        (actionDate.getMonth() - invoiceStart.getMonth());
+      return paymentMode ? monthDiff <= 0 : monthDiff < 0;
+    });
 
-  // ✅ Collect active specs
-  let activeSpecs = {};
-  let ramList = product.ram ? [product.ram] : [];
-  let processorList = product.processor_model ? [product.processor_model] : [];
-  let storageList = product.storage ? [product.storage] : [];
+    // ✅ Collect active specs
+    let activeSpecs = {};
+    let ramList = product.ram ? [product.ram] : [];
+    let processorList = product.processor_model ? [product.processor_model] : [];
+    let storageList = product.storage ? [product.storage] : [];
 
-  filteredTransactions.forEach((txn) => {
-    const type = txn.item_type;
-    const value = txn.size || txn.specification;
+    filteredTransactions.forEach((txn) => {
+      const type = txn.item_type;
+      const value = txn.size || txn.specification;
 
-    switch (type) {
-      case "ram":
-        if (txn.status === "Added") ramList.push(value);
-        else if (txn.status === "Removed") ramList = ramList.filter(r => r !== value);
-        break;
+      switch (type) {
+        case "ram":
+          if (txn.status === "Added") ramList.push(value);
+          else if (txn.status === "Removed") ramList = ramList.filter(r => r !== value);
+          break;
 
-      case "processor":
-        if (txn.status === "Added") processorList.push(value);
-        else if (txn.status === "Removed") processorList = processorList.filter(p => p !== value);
-        break;
+        case "processor":
+          if (txn.status === "Added") processorList.push(value);
+          else if (txn.status === "Removed") processorList = processorList.filter(p => p !== value);
+          break;
 
-      case "storage":
-      case "hdd":
-      case "ssd":
-        if (txn.status === "Added") storageList.push(value);
-        else if (txn.status === "Removed") storageList = storageList.filter(s => s !== value);
-        break;
+        case "storage":
+        case "hdd":
+        case "ssd":
+          if (txn.status === "Added") storageList.push(value);
+          else if (txn.status === "Removed") storageList = storageList.filter(s => s !== value);
+          break;
 
-      default:
-        if (txn.status === "Added") activeSpecs[type] = value;
-        else if (txn.status === "Removed") delete activeSpecs[type];
-        break;
-    }
-  });
+        default:
+          if (txn.status === "Added") activeSpecs[type] = value;
+          else if (txn.status === "Removed") delete activeSpecs[type];
+          break;
+      }
+    });
 
-  // ✅ Final merged specs
-  let finalSpecs = { ...product };
-  Object.entries(activeSpecs).forEach(([type, value]) => {
-    switch (type) {
-      case "graphics":
-      case "gpu":
-        finalSpecs.graphics = value;
-        break;
-      case "os":
-        finalSpecs.os = value;
-        break;
-      default:
-        if (value) finalSpecs[type] = value;
-        break;
-    }
-  });
+    // ✅ Final merged specs
+    let finalSpecs = { ...product };
+    Object.entries(activeSpecs).forEach(([type, value]) => {
+      switch (type) {
+        case "graphics":
+        case "gpu":
+          finalSpecs.graphics = value;
+          break;
+        case "os":
+          finalSpecs.os = value;
+          break;
+        default:
+          if (value) finalSpecs[type] = value;
+          break;
+      }
+    });
 
-  // ✅ Combine all active values
-  let combinedRam = ramList.length > 0 ? ramList.join(" + ") : null;
-  let combinedProcessor = processorList.length > 0 ? processorList.join(" + ") : null;
-  let combinedStorage = storageList.length > 0 ? storageList.join(" + ") : null;
+    // ✅ Combine all active values
+    let combinedRam = ramList.length > 0 ? ramList.join(" + ") : null;
+    let combinedProcessor = processorList.length > 0 ? processorList.join(" + ") : null;
+    let combinedStorage = storageList.length > 0 ? storageList.join(" + ") : null;
 
-  // ✅ Handle is_default / upgraded logic for RAM, Processor, Storage
-  const handleDefaultUpgrade = (list, type, baseValue) => {
-    if (!list || list.length === 0) {
-      const hasDefaultRemoved = filteredTransactions.some(
-        (txn) => txn.item_type === type && txn.status === "Removed" && txn.is_default === "Default"
-      );
-      const hasUpgradedRemoved = filteredTransactions.some(
-        (txn) => txn.item_type === type && txn.status === "Removed" && txn.is_default === "Upgraded"
-      );
+    // ✅ Handle is_default / upgraded logic for RAM, Processor, Storage
+    const handleDefaultUpgrade = (list, type, baseValue) => {
+      if (!list || list.length === 0) {
+        const hasDefaultRemoved = filteredTransactions.some(
+          (txn) => txn.item_type === type && txn.status === "Removed" && txn.is_default === "Default"
+        );
+        const hasUpgradedRemoved = filteredTransactions.some(
+          (txn) => txn.item_type === type && txn.status === "Removed" && txn.is_default === "Upgraded"
+        );
 
-      if (hasDefaultRemoved) return null;
-      else if (hasUpgradedRemoved && baseValue) return baseValue;
-    }
-    return list.length > 0 ? list.join(" + ") : null;
+        if (hasDefaultRemoved) return null;
+        else if (hasUpgradedRemoved && baseValue) return baseValue;
+      }
+      return list.length > 0 ? list.join(" + ") : null;
+    };
+
+    combinedRam = handleDefaultUpgrade(ramList, "ram", product.ram);
+    combinedProcessor = handleDefaultUpgrade(processorList, "processor", product.processor_model);
+    combinedStorage = handleDefaultUpgrade(storageList, "storage", product.storage);
+
+    // ✅ Render
+    return (
+      <div
+        style={{
+          fontSize: "12px",
+          color: "#555",
+          textAlign: "justify",
+          lineHeight: "1.4",
+        }}
+      >
+        Specifications:{" "}
+        {finalSpecs?.brand && (
+          <>
+            <strong>Brand:</strong> {finalSpecs.brand},{" "}
+          </>
+        )}
+        {finalSpecs?.model && (
+          <>
+            <strong>Model:</strong> {finalSpecs.model},{" "}
+          </>
+        )}
+        {combinedProcessor && (
+          <>
+            <strong>Processor:</strong> {combinedProcessor},{" "}
+          </>
+        )}
+        {combinedRam && (
+          <>
+            <strong>RAM:</strong> {combinedRam},{" "}
+          </>
+        )}
+        {combinedStorage && (
+          <>
+            <strong>Storage:</strong> {combinedStorage},{" "}
+          </>
+        )}
+        {finalSpecs?.disk_type && (
+          <>
+            <strong>Disk Type:</strong> {finalSpecs.disk_type},{" "}
+          </>
+        )}
+        {finalSpecs?.graphics && (
+          <>
+            <strong>Graphics:</strong> {finalSpecs.graphics},{" "}
+          </>
+        )}
+        {finalSpecs?.os && (
+          <>
+            <strong>OS:</strong> {finalSpecs.os}.{" "}
+          </>
+        )}
+
+        {/* Additional components */}
+        {filteredTransactions
+          .filter(
+            (txn) =>
+              txn.status === "Added" &&
+              !["ram", "storage", "hdd", "ssd", "processor", "graphics", "gpu", "os"].includes(txn.item_type)
+          )
+          .map((txn, index) => (
+            <span key={index}>
+              {" "}
+              <strong>{specificationType(txn.item_type)}:</strong>{" "}
+              {txn.specification || txn.size}.
+            </span>
+          ))}
+      </div>
+    );
   };
-
-  combinedRam = handleDefaultUpgrade(ramList, "ram", product.ram);
-  combinedProcessor = handleDefaultUpgrade(processorList, "processor", product.processor_model);
-  combinedStorage = handleDefaultUpgrade(storageList, "storage", product.storage);
-
-  // ✅ Render
-  return (
-    <div
-      style={{
-        fontSize: "12px",
-        color: "#555",
-        textAlign: "justify",
-        lineHeight: "1.4",
-      }}
-    >
-      Specifications:{" "}
-      {finalSpecs?.brand && (
-        <>
-          <strong>Brand:</strong> {finalSpecs.brand}.{" "}
-        </>
-      )}
-      {finalSpecs?.model && (
-        <>
-          <strong>Model:</strong> {finalSpecs.model}.{" "}
-        </>
-      )}
-      {combinedProcessor && (
-        <>
-          <strong>Processor:</strong> {combinedProcessor}.{" "}
-        </>
-      )}
-      {combinedRam && (
-        <>
-          <strong>RAM:</strong> {combinedRam}.{" "}
-        </>
-      )}
-      {combinedStorage && (
-        <>
-          <strong>Storage:</strong> {combinedStorage}.{" "}
-        </>
-      )}
-      {finalSpecs?.disk_type && (
-        <>
-          <strong>Disk Type:</strong> {finalSpecs.disk_type}.{" "}
-        </>
-      )}
-      {finalSpecs?.graphics && (
-        <>
-          <strong>Graphics:</strong> {finalSpecs.graphics}.{" "}
-        </>
-      )}
-      {finalSpecs?.os && (
-        <>
-          <strong>OS:</strong> {finalSpecs.os}.{" "}
-        </>
-      )}
-
-      {/* Additional components */}
-      {filteredTransactions
-        .filter(
-          (txn) =>
-            txn.status === "Added" &&
-            !["ram", "storage", "hdd", "ssd", "processor", "graphics", "gpu", "os"].includes(txn.item_type)
-        )
-        .map((txn, index) => (
-          <span key={index}>
-            {" "}
-            <strong>{specificationType(txn.item_type)}:</strong>{" "}
-            {txn.specification || txn.size}.
-          </span>
-        ))}
-    </div>
-  );
-};
 
 
 
@@ -5697,30 +5697,30 @@ const renderSpecifications = (product, deviceIds = []) => {
     );
   };
 
-  
-  
-  
 
-  // Render main product row
-const renderProductRow = (items, product, combinedDeviceIds) => {
-  const quantity = items.reduce((acc, i) => acc + (i.quantity || 0), 0);
-  if (quantity === 0 && combinedDeviceIds.length === 0) return null;
-
-  const firstItem = items[0];
-  const daysUsed = firstItem.days || 1;
-  const rows = [];
-
-  // Group devices by specifications
-  const devicesBySpecs = groupDevicesBySpecifications(combinedDeviceIds, product);
-
-  Object.values(devicesBySpecs).forEach((deviceGroup, groupIndex) => {
-    const deviceIds = deviceGroup.deviceIds;
-    const invoiceStart = new Date(invoiceData.invoice_start_date);
-    const baseMonthly = Number(firstItem.rate || 0);
 
 
 
-    const deviceDcDates = deviceIds.map((deviceId) => findDeviceDcDate(deviceId));
+  // Render main product row
+  const renderProductRow = (items, product, combinedDeviceIds) => {
+    const quantity = items.reduce((acc, i) => acc + (i.quantity || 0), 0);
+    if (quantity === 0 && combinedDeviceIds.length === 0) return null;
+
+    const firstItem = items[0];
+    const daysUsed = firstItem.days || 1;
+    const rows = [];
+
+    // Group devices by specifications
+    const devicesBySpecs = groupDevicesBySpecifications(combinedDeviceIds, product);
+
+    Object.values(devicesBySpecs).forEach((deviceGroup, groupIndex) => {
+      const deviceIds = deviceGroup.deviceIds;
+      const invoiceStart = new Date(invoiceData.invoice_start_date);
+      const baseMonthly = Number(firstItem.rate || 0);
+
+
+
+      const deviceDcDates = deviceIds.map((deviceId) => findDeviceDcDate(deviceId));
 
       const dcDateFromat = deviceDcDates.length > 0
         ? deviceDcDates[0].dc_date
@@ -5733,115 +5733,233 @@ const renderProductRow = (items, product, combinedDeviceIds) => {
 
 
 
-      
 
-      
+
+
       const monthDiff123 =
         (invoiceStart.getFullYear() - dcDateFromat.getFullYear()) * 12 +
         (invoiceStart.getMonth() - dcDateFromat.getMonth());
 
-      const isSameMonth = paymentMode? monthDiff123 >= 1 : monthDiff123 >= 1;      
+      const isSameMonth = paymentMode ? monthDiff123 >= 1 : monthDiff123 >= 1;
 
-    // Helper for safe number conversion
-    const toNum = (v) => Number(v || 0);
+      // Helper for safe number conversion
+      const toNum = (v) => Number(v || 0);
 
-    // Helper: month difference
-    const monthDiff = (date1, date2) => {
-      const d1 = new Date(date1);
-      const d2 = new Date(date2);
-      return (
-        d1.getFullYear() * 12 +
-        d1.getMonth() -
-        (d2.getFullYear() * 12 + d2.getMonth())
-      );
-    };
-
-    // 🔹 Calculate per-device rates based on add/remove transactions
-    const perDeviceRates = deviceIds.map((deviceId) => {
-      const transactions = getAssetTransactionsForDevices([deviceId]) || [];
-      const added = transactions.filter((t) => t.status === "Added");
-      const removed = transactions.filter((t) => t.status === "Removed");
-
-      let deviceMonthly = baseMonthly;
-
-      added.forEach((txn) => {
-        const diff = monthDiff(txn.action_date, invoiceStart);
-        if ((paymentMode && diff < 0) || (!paymentMode && diff < 0)) {
-          deviceMonthly += toNum(txn.price);
-        }
-      });
-
-      removed.forEach((txn) => {
-        const diff = monthDiff(txn.action_date, invoiceStart);
-        if ((paymentMode && diff <= 0) || (!paymentMode && diff < 0)) {
-          deviceMonthly -= toNum(txn.price);
-        }
-      });
-
-      deviceMonthly = Math.max(deviceMonthly, 0);
-
-      return {
-        deviceId,
-        deviceMonthly,
-        deviceDaily: deviceMonthly / 30,
+      // Helper: month difference
+      const monthDiff = (date1, date2) => {
+        const d1 = new Date(date1);
+        const d2 = new Date(date2);
+        return (
+          d1.getFullYear() * 12 +
+          d1.getMonth() -
+          (d2.getFullYear() * 12 + d2.getMonth())
+        );
       };
+
+      // 🔹 Calculate per-device rates based on add/remove transactions
+      const perDeviceRates = deviceIds.map((deviceId) => {
+        const transactions = getAssetTransactionsForDevices([deviceId]) || [];
+        const added = transactions.filter((t) => t.status === "Added");
+        const removed = transactions.filter((t) => t.status === "Removed");
+
+        let deviceMonthly = baseMonthly;
+
+        added.forEach((txn) => {
+          const diff = monthDiff(txn.action_date, invoiceStart);
+          if ((paymentMode && diff < 0) || (!paymentMode && diff < 0)) {
+            deviceMonthly += toNum(txn.price);
+          }
+        });
+
+        removed.forEach((txn) => {
+          const diff = monthDiff(txn.action_date, invoiceStart);
+          if ((paymentMode && diff <= 0) || (!paymentMode && diff < 0)) {
+            deviceMonthly -= toNum(txn.price);
+          }
+        });
+
+        deviceMonthly = Math.max(deviceMonthly, 0);
+
+        return {
+          deviceId,
+          deviceMonthly,
+          deviceDaily: deviceMonthly / 30,
+        };
+      });
+
+      // 🔹 Group by identical monthly rate
+      const groupedByRate = perDeviceRates.reduce((acc, cur) => {
+        const key = cur.deviceMonthly.toString();
+        if (!acc[key]) acc[key] = { ...cur, deviceIds: [] };
+        acc[key].deviceIds.push(cur.deviceId);
+        return acc;
+      }, {});
+
+      // 🔹 Render each subgroup (same rate = same row)
+      Object.values(groupedByRate).forEach((subgroup) => {
+        const baseCount = subgroup.deviceIds.length;
+        const monthlyRate = subgroup.deviceMonthly;
+        const dailyRate = subgroup.deviceDaily;
+
+        let amount = isBuyTransaction
+          ? monthlyRate * baseCount
+          : calculateAmount(daysUsed, dailyRate, baseCount, monthlyRate);
+
+        totalAmount += Number(amount) || 0;
+
+        console.log(subgroup.deviceIds, monthlyRate, "after add/remove");
+
+        rows.push(
+          <tr
+            key={`group-${product.id}-${groupIndex}-${monthlyRate}`}
+            style={
+              ++rowCounter % 2 === 0
+                ? tableRowEvenStyle
+                : tableRowOddStyle
+            }
+          >
+            <td style={tableCellCenterStyle}>{rowCounter}</td>
+            <td style={tableCellStyle}>
+              <div style={itemTitleStyle}>{firstItem.product_name}</div>
+
+              {/* Specifications */}
+              {paymentMode ? isSameMonth ? renderSpecifications(product, subgroup.deviceIds) : renderSpecifications(product, []) : isSameMonth ? renderSpecifications(product, subgroup.deviceIds) : renderSpecifications(product, [])}
+
+              <br />
+              <div style={itemTitleStyle}>
+                Asset IDs: {subgroup.deviceIds.join(", ")}
+              </div>
+
+              {invoiceData.transaction_type === "Rent" && (
+                <>
+                  <br />
+                  <div style={itemTitleStyle}>{firstItem.description}</div>
+                </>
+              )}
+            </td>
+
+            {/* Qty */}
+            <td style={tableCellCenterStyle}>{baseCount}</td>
+
+            {/* Rent Columns */}
+            {invoiceData.transaction_type === "Rent" && (
+              <>
+                <td style={tableCellCenterStyle}>{daysUsed}</td>
+                <td style={tableCellCenterStyle}>
+                  {formatINRCurrency(dailyRate)}
+                </td>
+              </>
+            )}
+
+            {/* Monthly Rate */}
+            <td style={tableCellRightStyle}>
+              {formatINRCurrency(monthlyRate)}
+            </td>
+
+            {/* Amount */}
+            <td style={tableCellRightStyle}>
+              {formatINRCurrency(amount)}
+            </td>
+          </tr>
+        );
+      });
     });
 
-    // 🔹 Group by identical monthly rate
-    const groupedByRate = perDeviceRates.reduce((acc, cur) => {
-      const key = cur.deviceMonthly.toString();
-      if (!acc[key]) acc[key] = { ...cur, deviceIds: [] };
-      acc[key].deviceIds.push(cur.deviceId);
-      return acc;
-    }, {});
+    return rows;
+  };
 
-    // 🔹 Render each subgroup (same rate = same row)
-    Object.values(groupedByRate).forEach((subgroup) => {
-      const baseCount = subgroup.deviceIds.length;
-      const monthlyRate = subgroup.deviceMonthly;
-      const dailyRate = subgroup.deviceDaily;
 
-      let amount = isBuyTransaction
-        ? monthlyRate * baseCount
-        : calculateAmount(daysUsed, dailyRate, baseCount, monthlyRate);
+
+
+
+
+  const renderAssetTransactionRow = (_, product, parentItem) => {
+    const invoiceDate = new Date(invoiceData.invoice_start_date);
+    const paymentMode = invoiceData.payment_mode === "Postpaid";
+
+    // Filter asset transactions only once per product
+    const productAssetTransactions = invoiceData.asset_transactions?.filter(
+      (at) => at.product_id === parentItem.product_id
+    );
+
+    // Avoid duplicates by checking unique IDs
+    const uniqueTransactions = [];
+    productAssetTransactions?.forEach((txn) => {
+      if (!uniqueTransactions.some((t) => t.id === txn.id)) {
+        uniqueTransactions.push(txn);
+      }
+    });
+
+    // Loop through unique asset transactions
+    uniqueTransactions.forEach((assetTxn, index) => {
+
+      const actionDate = new Date(assetTxn.action_date);
+      const monthStartDate = new Date(actionDate.getFullYear(), actionDate.getMonth(), 1);
+      const monthEndDate = new Date(actionDate.getFullYear(), actionDate.getMonth() + 1, 0);
+
+      const deviceInfo = findDeviceDcDate(assetTxn.parent_asset_id);
+      const deviceDcDate = new Date(deviceInfo.dc_date);
+      const timesCreatedInInvoice = deviceInfo.times_created_in_invoice === 0 || deviceInfo.times_created_in_invoice === 1;
+
+      const monthDiff =
+        (invoiceDate.getFullYear() - actionDate.getFullYear()) * 12 +
+        (invoiceDate.getMonth() - actionDate.getMonth());
+
+      const specialCase = paymentMode ? monthDiff === 0 : monthDiff === 1;
+
+      if (!specialCase) return null;
+
+
+      let daysUsed = 0;
+      let billingStartDate = "";
+      let billingEndDate = "";
+
+
+      // ✅ DaysUsed & Billing period calculation
+      if (assetTxn.status === "Removed") {
+        // Prepaid: show Removed only if timesCreatedInInvoice is true
+        if (!paymentMode && !timesCreatedInInvoice) return; // skip this assetTxn
+
+        daysUsed = specialCase
+          ? calculateDays(monthStartDate, actionDate)
+          : calculateDays(monthStartDate, actionDate);
+        billingStartDate = specialCase ? formatDate(monthStartDate) : formatDate(monthStartDate);
+        billingEndDate = formatDate(actionDate);
+      } else if (assetTxn.status === "Added") {
+        daysUsed = calculateDays(actionDate, monthEndDate);
+        billingStartDate = formatDate(actionDate);
+        billingEndDate = formatDate(monthEndDate);
+      }
+
+      // 💰 Amount calculation
+      const dailyRate = Math.round((assetTxn.price / 30) * 100) / 100;
+      let amount = Math.round(daysUsed * dailyRate * 100) / 100;
 
       totalAmount += Number(amount) || 0;
 
-      console.log(subgroup.deviceIds, monthlyRate, "after add/remove");
-
+      // 🔹 Push directly to the main rows array
       rows.push(
         <tr
-          key={`group-${product.id}-${groupIndex}-${monthlyRate}`}
-          style={
-            ++rowCounter % 2 === 0
-              ? tableRowEvenStyle
-              : tableRowOddStyle
-          }
+          key={`asset-txn-${assetTxn.id}-${index}`}
+          style={++rowCounter % 2 === 0 ? tableRowEvenStyle : tableRowOddStyle}
         >
           <td style={tableCellCenterStyle}>{rowCounter}</td>
           <td style={tableCellStyle}>
-            <div style={itemTitleStyle}>{firstItem.product_name}</div>
-
-            {/* Specifications */}
-            {paymentMode ? isSameMonth ? renderSpecifications(product, subgroup.deviceIds) : renderSpecifications(product, []) : isSameMonth ? renderSpecifications(product, subgroup.deviceIds) : renderSpecifications(product, [])}
-
-            <br />
             <div style={itemTitleStyle}>
-              Asset IDs: {subgroup.deviceIds.join(", ")}
+              {parentItem.product_name} - {assetTxn.item_type.toUpperCase()} -{" "}
+              {assetTxn.specification} ({assetTxn.status})
             </div>
-
-            {invoiceData.transaction_type === "Rent" && (
-              <>
-                <br />
-                <div style={itemTitleStyle}>{firstItem.description}</div>
-              </>
-            )}
+            <div style={itemTitleStyle}>
+              Asset ID: {assetTxn.parent_asset_id}
+            </div>
+            <br />
+            <div>
+              Billing Start Date: {billingStartDate} - Billing End Date:{" "}
+              {billingEndDate}
+            </div>
           </td>
+          <td style={tableCellCenterStyle}>1</td>
 
-          {/* Qty */}
-          <td style={tableCellCenterStyle}>{baseCount}</td>
-
-          {/* Rent Columns */}
           {invoiceData.transaction_type === "Rent" && (
             <>
               <td style={tableCellCenterStyle}>{daysUsed}</td>
@@ -5851,134 +5969,16 @@ const renderProductRow = (items, product, combinedDeviceIds) => {
             </>
           )}
 
-          {/* Monthly Rate */}
           <td style={tableCellRightStyle}>
-            {formatINRCurrency(monthlyRate)}
+            {formatINRCurrency(assetTxn.price)}
           </td>
-
-          {/* Amount */}
           <td style={tableCellRightStyle}>
             {formatINRCurrency(amount)}
           </td>
         </tr>
       );
     });
-  });
-
-  return rows;
-};
-
-
-
-
-
-
-const renderAssetTransactionRow = (_, product, parentItem) => {
-  const invoiceDate = new Date(invoiceData.invoice_start_date);
-  const paymentMode = invoiceData.payment_mode === "Postpaid";
-
-  // Filter asset transactions only once per product
-  const productAssetTransactions = invoiceData.asset_transactions?.filter(
-    (at) => at.product_id === parentItem.product_id
-  );
-
-  // Avoid duplicates by checking unique IDs
-  const uniqueTransactions = [];
-  productAssetTransactions?.forEach((txn) => {
-    if (!uniqueTransactions.some((t) => t.id === txn.id)) {
-      uniqueTransactions.push(txn);
-    }
-  });
-
-  // Loop through unique asset transactions
-  uniqueTransactions.forEach((assetTxn, index) => {
-
-    const actionDate = new Date(assetTxn.action_date);
-    const monthStartDate = new Date(actionDate.getFullYear(), actionDate.getMonth(), 1);
-    const monthEndDate = new Date(actionDate.getFullYear(), actionDate.getMonth() + 1, 0);
-
-    const deviceInfo = findDeviceDcDate(assetTxn.parent_asset_id);
-    const deviceDcDate = new Date(deviceInfo.dc_date);
-    const timesCreatedInInvoice = deviceInfo.times_created_in_invoice === 0 || deviceInfo.times_created_in_invoice === 1;
-
-    const monthDiff =
-      (invoiceDate.getFullYear() - actionDate.getFullYear()) * 12 +
-      (invoiceDate.getMonth() - actionDate.getMonth());
-
-    const specialCase = paymentMode ? monthDiff === 0 : monthDiff === 1;    
-
-    if(!specialCase) return null;
-
-
-    let daysUsed = 0;
-    let billingStartDate = "";
-    let billingEndDate = "";
-
-
-    // ✅ DaysUsed & Billing period calculation
-    if (assetTxn.status === "Removed") {
-      // Prepaid: show Removed only if timesCreatedInInvoice is true
-      if (!paymentMode && !timesCreatedInInvoice) return; // skip this assetTxn
-
-      daysUsed = specialCase
-        ? calculateDays(monthStartDate, actionDate)
-        : calculateDays(monthStartDate, actionDate);
-      billingStartDate = specialCase ? formatDate(monthStartDate) : formatDate(monthStartDate);
-      billingEndDate = formatDate(actionDate);
-    } else if (assetTxn.status === "Added") {
-      daysUsed = calculateDays(actionDate, monthEndDate);
-      billingStartDate = formatDate(actionDate);
-      billingEndDate = formatDate(monthEndDate);
-    }
-
-    // 💰 Amount calculation
-    const dailyRate = Math.round((assetTxn.price / 30) * 100) / 100;
-    let amount = Math.round(daysUsed * dailyRate * 100) / 100;
-    
-      totalAmount += Number(amount) || 0;
-
-    // 🔹 Push directly to the main rows array
-    rows.push(
-      <tr
-        key={`asset-txn-${assetTxn.id}-${index}`}
-        style={++rowCounter % 2 === 0 ? tableRowEvenStyle : tableRowOddStyle}
-      >
-        <td style={tableCellCenterStyle}>{rowCounter}</td>
-        <td style={tableCellStyle}>
-          <div style={itemTitleStyle}>
-            {parentItem.product_name} - {assetTxn.item_type.toUpperCase()} -{" "}
-            {assetTxn.specification} ({assetTxn.status})
-          </div>
-          <div style={itemTitleStyle}>
-            Asset ID: {assetTxn.parent_asset_id}
-          </div>
-          <br />
-          <div>
-            Billing Start Date: {billingStartDate} - Billing End Date:{" "}
-            {billingEndDate}
-          </div>
-        </td>
-        <td style={tableCellCenterStyle}>1</td>
-
-        {invoiceData.transaction_type === "Rent" && (
-          <>
-            <td style={tableCellCenterStyle}>{daysUsed}</td>
-            <td style={tableCellCenterStyle}>
-              {formatINRCurrency(dailyRate)}
-            </td>
-          </>
-        )}
-
-        <td style={tableCellRightStyle}>
-          {formatINRCurrency(assetTxn.price)}
-        </td>
-        <td style={tableCellRightStyle}>
-          {formatINRCurrency(amount)}
-        </td>
-      </tr>
-    );
-  });
-};
+  };
 
 
 
@@ -6443,63 +6443,63 @@ const renderAssetTransactionRow = (_, product, parentItem) => {
   };
 
   // -----------------------------
-// 🔥 Main rendering loop
-// -----------------------------
-const rows = [];
-const groupedItems = {};
+  // 🔥 Main rendering loop
+  // -----------------------------
+  const rows = [];
+  const groupedItems = {};
 
-// Group items
-items.forEach((item) => {
-  if (!shouldShowRow(item)) return;
+  // Group items
+  items.forEach((item) => {
+    if (!shouldShowRow(item)) return;
 
-  const daysUsed = item.isFullMonth ? 30 : item.days || 1;
-  const dailyRate = item.dailyRate || item.rate / 30;
-  const monthlyRate = item.rate;
+    const daysUsed = item.isFullMonth ? 30 : item.days || 1;
+    const dailyRate = item.dailyRate || item.rate / 30;
+    const monthlyRate = item.rate;
 
-  const key = [
-    item.product_name,
-    item.billingPeriod || "full",
-    daysUsed,
-    dailyRate.toFixed(2),
-    monthlyRate,
-  ].join("_");
+    const key = [
+      item.product_name,
+      item.billingPeriod || "full",
+      daysUsed,
+      dailyRate.toFixed(2),
+      monthlyRate,
+    ].join("_");
 
-  if (!groupedItems[key]) groupedItems[key] = [];
-  groupedItems[key].push(item);
-});
+    if (!groupedItems[key]) groupedItems[key] = [];
+    groupedItems[key].push(item);
+  });
 
-// Render grouped items
-Object.values(groupedItems).forEach((group) => {
-  const product = group[0].productDetails || group[0].product;
-  const combinedDeviceIds = mergeDeviceIds(group);
+  // Render grouped items
+  Object.values(groupedItems).forEach((group) => {
+    const product = group[0].productDetails || group[0].product;
+    const combinedDeviceIds = mergeDeviceIds(group);
 
-  // Main row
-  const mainRow = renderProductRow(group, product, combinedDeviceIds);
-  if (mainRow) rows.push(mainRow);
+    // Main row
+    const mainRow = renderProductRow(group, product, combinedDeviceIds);
+    if (mainRow) rows.push(mainRow);
 
-  // ✅ Asset Transactions (only once per product)
-  renderAssetTransactionRow(null, product, group[0]);
+    // ✅ Asset Transactions (only once per product)
+    renderAssetTransactionRow(null, product, group[0]);
 
-  // Mid-month + Returns + Swaps
-  group.forEach((item) => {
-    if (!isBuyTransaction && !paymentMode && showDcPeriod) {
-      const midRow = renderMidMonthRow(item, product);
-      if (midRow) rows.push(midRow);
-    }
+    // Mid-month + Returns + Swaps
+    group.forEach((item) => {
+      if (!isBuyTransaction && !paymentMode && showDcPeriod) {
+        const midRow = renderMidMonthRow(item, product);
+        if (midRow) rows.push(midRow);
+      }
 
-    // Returned devices
-    item.returnedDevices?.forEach((rd) => {
-      const retRow = renderReturnedDeviceRow(item, product, rd);
-      if (retRow) rows.push(retRow);
-    });
+      // Returned devices
+      item.returnedDevices?.forEach((rd) => {
+        const retRow = renderReturnedDeviceRow(item, product, rd);
+        if (retRow) rows.push(retRow);
+      });
 
-    // Swapped devices
-    item.swappedDevices?.forEach((sd) => {
-      const swapRow = renderSwappedDeviceRow(item, product, sd);
-      if (swapRow) rows.push(swapRow);
+      // Swapped devices
+      item.swappedDevices?.forEach((sd) => {
+        const swapRow = renderSwappedDeviceRow(item, product, sd);
+        if (swapRow) rows.push(swapRow);
+      });
     });
   });
-});
 
   // // 🔥 Main rendering loop
   // const rows = [];
@@ -8192,6 +8192,7 @@ const DynamicTable = ({
   const location = useLocation();
   const tableType = location.pathname.split("/").pop();
   const deleteApiUrl = apiEndpoints[tableType];
+  const updateApiUrl = apiEndpoints[tableType];
 
   const { user, token } = useSelector((state) => state.auth);
 
@@ -8220,13 +8221,38 @@ const DynamicTable = ({
     }
   }, [initialData]);
 
-  const toggleStatus = (index) => {
-    setStatus((prevStatus) => {
-      const updatedStatus = [...prevStatus];
-      updatedStatus[index] = !updatedStatus[index];
-      return updatedStatus;
-    });
+  const toggleStatus = async (id) => {
+
+    try {
+      const row = data.find(item => item.id === id);
+      if (!row) return;
+
+      const newStatus = !row.is_active;
+
+      if (!updateApiUrl) return;
+
+      // Update UI
+      setData(prev =>
+        prev.map(item =>
+          item.id === id ? { ...item, is_active: newStatus } : item
+        )
+      );
+
+      // API call
+      await fetch(`${updateApiUrl}/${id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${userToken}`,
+        },
+        body: JSON.stringify({ is_active: newStatus }),
+      });
+
+    } catch (error) {
+      console.error("Toggle status error:", error);
+    }
   };
+
 
   // Filter Data Based on Search
   const filteredData = data.filter((row) =>
@@ -8670,6 +8696,7 @@ const DynamicTable = ({
                 "courier-charges",
                 "service_maintenance",
                 "scrap",
+                "plain-grn"
               ].includes(tableType) === false && (
                   <TableCell align="center" sx={{ fontWeight: "bold" }}>
                     Active Status
@@ -8841,10 +8868,11 @@ const DynamicTable = ({
                     "scrap",
                   ].includes(tableType) === false && (
                       <TableCell align="center">
-                        <Button onClick={() => toggleStatus(rowIndex)}>
+                        <Button onClick={() => toggleStatus(row.id)}>
+
                           <img
-                            src={status[rowIndex] ? StatusOn : StatusOff}
-                            alt={status[rowIndex] ? "Active" : "Inactive"}
+                            src={row.is_active ? StatusOn : StatusOff}
+                            alt={row.is_active ? "Active" : "Inactive"}
                             width="40"
                             height="24"
                           />
