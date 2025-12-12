@@ -8518,7 +8518,7 @@ const DynamicTable = ({
       case "job_description":
         return "Add Job Description";
       case "goodsreceipt":
-        return "Add Receipt";
+        return "Add Goods Receipt";
       case "purchase-orders":
         return "Add Order";
       case "po-quotations":

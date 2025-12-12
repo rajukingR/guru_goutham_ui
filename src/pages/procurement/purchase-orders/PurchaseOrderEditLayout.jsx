@@ -19,6 +19,8 @@ import {
 import { Add, Remove } from "@mui/icons-material";
 import { useNavigate } from "react-router-dom";
 import { useSelector } from "react-redux";
+import { generateSpecifications } from "../../../utils/generateSpecifications";
+
 const PurchaseOrderEditLayout = () => {
   const { user, token } = useSelector((state) => state.auth);
 
@@ -62,11 +64,159 @@ const PurchaseOrderEditLayout = () => {
     suppliers: "",
     products: "",
   });
+  const [errors, setErrors] = useState({
+    purchaseQuotation: "",
+    poStatus: "",
+    owner: "",
+    products: "",
+    quantities: {},
+  });
   const [snackbar, setSnackbar] = useState({
     open: false,
     message: "",
     severity: "success",
   });
+
+  // Validation functions
+  const validateField = (name, value) => {
+    let error = "";
+
+    switch (name) {
+      case "poStatus":
+        if (!value) error = "PO status is required";
+        break;
+      case "products":
+        if (selectedProductIds.length === 0)
+          error = "At least one product must be selected";
+        break;
+      default:
+        break;
+    }
+
+    return error;
+  };
+
+  const validateQuantity = (productId, quantity) => {
+    if (selectedProductIds.includes(productId)) {
+      if (!quantity || quantity === "" || quantity === null || quantity === undefined) {
+        return "Quantity is required";
+      }
+      if (quantity <= 0) {
+        return "Quantity must be at least 1";
+      }
+      if (!Number.isInteger(Number(quantity))) {
+        return "Quantity must be a whole number";
+      }
+    }
+    return "";
+  };
+
+  const handleQtyChange = (id, value) => {
+    // Ensure we get a valid number or empty string
+    let qty;
+    if (value === "" || value === null || value === undefined) {
+      qty = "";
+    } else {
+      // Parse the value to integer, default to 0 if NaN
+      qty = parseInt(value) || 0;
+    }
+
+    // Validate the quantity
+    const quantityError = validateQuantity(id, qty);
+
+    setQuantities({ ...quantities, [id]: qty });
+    setErrors((prev) => ({
+      ...prev,
+      quantities: {
+        ...prev.quantities,
+        [id]: quantityError,
+      },
+    }));
+  };
+
+  const incrementQty = (id) => {
+    const currentQty = quantities[id] || 0;
+    const newQty = currentQty + 1;
+    handleQtyChange(id, newQty);
+  };
+
+  const decrementQty = (id) => {
+    const currentQty = quantities[id] || 0;
+    const newQty = Math.max(1, currentQty - 1); // Don't go below 1
+    handleQtyChange(id, newQty);
+  };
+
+  const handleProductSelection = (productId) => {
+    const newSelected = selectedProductIds.includes(productId)
+      ? selectedProductIds.filter((id) => id !== productId)
+      : [...selectedProductIds, productId];
+
+    setSelectedProductIds(newSelected);
+
+    // Validate products selection
+    const productsError = validateField("products", newSelected);
+    setErrors((prev) => ({ ...prev, products: productsError }));
+
+    // When adding a new product, initialize quantity to 1
+    if (!selectedProductIds.includes(productId)) {
+      handleQtyChange(productId, 1);
+    } else {
+      // When removing a product, clear its quantity error
+      setErrors((prev) => ({
+        ...prev,
+        quantities: {
+          ...prev.quantities,
+          [productId]: "",
+        },
+      }));
+    }
+  };
+
+  const validateForm = () => {
+    let isValid = true;
+    const newErrors = { ...errors };
+
+    // Validate required fields
+    const fieldsToValidate = ["poStatus"];
+    fieldsToValidate.forEach((field) => {
+      const error = validateField(field, formData[field]);
+      newErrors[field] = error;
+      if (error) isValid = false;
+    });
+
+    // Validate at least one product is selected
+    const productsError = validateField("products", selectedProductIds);
+    newErrors.products = productsError;
+    if (productsError) isValid = false;
+
+    // Validate quantities for selected products
+    const quantityErrors = {};
+    selectedProductIds.forEach((id) => {
+      const quantity = quantities[id];
+      const error = validateQuantity(id, quantity);
+      quantityErrors[id] = error;
+      if (error) {
+        isValid = false;
+        // Also show a general snackbar error for better UX
+        setSnackbar({
+          open: true,
+          message: `Please enter valid quantity (minimum 1) for all selected products`,
+          severity: "error",
+        });
+      }
+    });
+    newErrors.quantities = quantityErrors;
+
+    setErrors(newErrors);
+    return isValid;
+  };
+
+  const areAllQuantitiesValid = () => {
+    return selectedProductIds.every(id => {
+      const quantity = quantities[id];
+      return quantity && quantity >= 1;
+    });
+  };
 
   useEffect(() => {
     const fetchData = async () => {
@@ -217,12 +367,14 @@ const PurchaseOrderEditLayout = () => {
 
     const newQuantities = {};
     selectedQuotation.selected_products.forEach((item) => {
-      newQuantities[item.product_id] = item.quantity;
+      newQuantities[item.product_id] = item.quantity || 1;
     });
     setQuantities(newQuantities);
   };
 
   const handleInputChange = (field, value) => {
+    const error = validateField(field, value);
+    setErrors((prev) => ({ ...prev, [field]: error }));
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
@@ -233,23 +385,44 @@ const PurchaseOrderEditLayout = () => {
       product.description?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const handleQtyChange = (id, value) => {
-    const qty = Math.max(0, parseInt(value) || 0);
-    setQuantities({ ...quantities, [id]: qty });
-  };
-
-  const incrementQty = (id) => {
-    setQuantities((prev) => ({ ...prev, [id]: (prev[id] || 0) + 1 }));
-  };
-
-  const decrementQty = (id) => {
-    setQuantities((prev) => ({
-      ...prev,
-      [id]: Math.max(0, (prev[id] || 0) - 1),
-    }));
-  };
-
   const handleSubmit = async () => {
+    // First check if all selected products have valid quantities
+    const hasInvalidQuantities = selectedProductIds.some(id => {
+      const quantity = quantities[id];
+      return !quantity || quantity < 1;
+    });
+
+    if (hasInvalidQuantities) {
+      setSnackbar({
+        open: true,
+        message: "Please ensure all selected products have a quantity of at least 1",
+        severity: "error",
+      });
+
+      // Trigger validation for all selected products
+      selectedProductIds.forEach(id => {
+        const error = validateQuantity(id, quantities[id]);
+        setErrors(prev => ({
+          ...prev,
+          quantities: {
+            ...prev.quantities,
+            [id]: error,
+          },
+        }));
+      });
+
+      return;
+    }
+
+    if (!validateForm()) {
+      setSnackbar({
+        open: true,
+        message: "Please fix all validation errors before submitting",
+        severity: "error",
+      });
+      return;
+    }
+
     try {
       const selectedProducts = selectedProductIds.map((id) => {
         const product = products.find((p) => p.id === id);
@@ -258,12 +431,12 @@ const PurchaseOrderEditLayout = () => {
         );
         return {
           product_id: id,
-          quantity: quantities[id] || poProduct?.quantity || 0,
+          quantity: quantities[id] || poProduct?.quantity || 1,
           price_per_unit: poProduct?.price_per_unit || product?.price || 0,
           gst_percentage:
             poProduct?.gst_percentage || product?.gst_percentage || 0,
           total_price:
-            (quantities[id] || poProduct?.quantity || 0) *
+            (quantities[id] || poProduct?.quantity || 1) *
             (poProduct?.price_per_unit || product?.price || 0),
         };
       });
@@ -414,6 +587,8 @@ const PurchaseOrderEditLayout = () => {
                 { value: "Rejected", label: "Rejected" },
                 { value: "Completed", label: "Completed" },
               ]}
+              error={errors.poStatus}
+              required
             />
             <Field
               label="Owner"
@@ -464,6 +639,17 @@ const PurchaseOrderEditLayout = () => {
       <div style={cardStyle}>
         <div style={cardHeaderContainerStyle}>
           <h3 style={cardHeaderStyle}>Selected Products</h3>
+          {errors.products && (
+            <span
+              style={{
+                color: "#ef4444",
+                marginLeft: "1rem",
+                fontSize: "0.875rem",
+              }}
+            >
+              {errors.products}
+            </span>
+          )}
         </div>
         <div style={{ marginBottom: "1.5rem" }}>
           <button
@@ -485,6 +671,21 @@ const PurchaseOrderEditLayout = () => {
             {showProductTable ? "Hide Product List" : "Edit Products"}
           </button>
 
+          {/* Quantity validation warning */}
+          {selectedProductIds.length > 0 && !areAllQuantitiesValid() && (
+            <div style={{
+              padding: '8px 12px',
+              backgroundColor: '#fee',
+              border: '1px solid #fcc',
+              borderRadius: '4px',
+              marginBottom: '16px',
+              color: '#d00',
+              fontSize: '0.875rem'
+            }}>
+              ⚠️ Please ensure all selected products have a quantity of at least 1
+            </div>
+          )}
+
           {showProductTable && (
             <Box p={2}>
               <Box className="search-wrapper" mb={2}>
@@ -496,11 +697,10 @@ const PurchaseOrderEditLayout = () => {
                 />
               </Box>
 
-
               <TableContainer
                 component={Paper}
                 sx={{
-                  maxHeight: "400px", // or whatever height you prefer
+                  maxHeight: "400px",
                   overflow: "auto",
                   position: "relative",
                 }}
@@ -560,32 +760,7 @@ const PurchaseOrderEditLayout = () => {
                       <TableCell
                         sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
                       >
-                        Brand
-                      </TableCell>
-                      <TableCell
-                        sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
-                      >
-                        Model
-                      </TableCell>
-                      <TableCell
-                        sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
-                      >
-                        Processor
-                      </TableCell>
-                      <TableCell
-                        sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
-                      >
-                        RAM
-                      </TableCell>
-                      <TableCell
-                        sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
-                      >
-                        Storage
-                      </TableCell>
-                      <TableCell
-                        sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
-                      >
-                        Graphics
+                        Specifications
                       </TableCell>
                       <TableCell
                         sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
@@ -595,57 +770,87 @@ const PurchaseOrderEditLayout = () => {
                     </TableRow>
                   </TableHead>
                   <TableBody>
-                    {filteredProducts.map((product) => (
-                      <TableRow key={product.id}>
-                        <TableCell padding="checkbox">
-                          <Checkbox
-                            checked={selectedProductIds.includes(product.id)}
-                            onChange={() => {
-                              setSelectedProductIds((prev) =>
-                                prev.includes(product.id)
-                                  ? prev.filter((id) => id !== product.id)
-                                  : [...prev, product.id]
-                              );
-                            }}
-                          />
-                        </TableCell>
-                        <TableCell>{product.product_name}</TableCell>
-                        <TableCell>{product.brand}</TableCell>
-                        <TableCell>{product.model}</TableCell>
-                        <TableCell>{product.processor}</TableCell>
-                        <TableCell>{product.ram}</TableCell>
-                        <TableCell>{product.storage}</TableCell>
-                        <TableCell>{product.graphics}</TableCell>
-                        <TableCell>
-                          <Box display="flex" alignItems="center">
-                            <IconButton
-                              size="small"
-                              onClick={() => decrementQty(product.id)}
-                            >
-                              <Remove fontSize="small" />
-                            </IconButton>
-                            <TextField
-                              type="number"
-                              size="small"
-                              value={quantities[product.id] || ""}
-                              onChange={(e) =>
-                                handleQtyChange(product.id, e.target.value)
-                              }
-                              inputProps={{
-                                min: 0,
-                                style: { width: 50, textAlign: "center" },
-                              }}
+                    {filteredProducts
+                      .slice()
+                      .sort((a, b) => {
+                        const aSelected = selectedProductIds.includes(a.id);
+                        const bSelected = selectedProductIds.includes(b.id);
+
+                        if (aSelected === bSelected) return 0;
+                        if (aSelected && !bSelected) return -1;
+                        return 1;
+                      })
+                      .map((product) => (
+                        <TableRow key={product.id}>
+                          <TableCell padding="checkbox">
+                            <Checkbox
+                              checked={selectedProductIds.includes(product.id)}
+                              onChange={() => handleProductSelection(product.id)}
                             />
-                            <IconButton
-                              size="small"
-                              onClick={() => incrementQty(product.id)}
-                            >
-                              <Add fontSize="small" />
-                            </IconButton>
-                          </Box>
-                        </TableCell>
-                      </TableRow>
-                    ))}
+                          </TableCell>
+                          <TableCell>{product.product_name}</TableCell>
+                          <TableCell>{generateSpecifications(product)}</TableCell>
+                          <TableCell>
+                            <Box display="flex" alignItems="center">
+                              <IconButton
+                                size="small"
+                                onClick={() => decrementQty(product.id)}
+                                disabled={
+                                  !selectedProductIds.includes(product.id)
+                                }
+                              >
+                                <Remove fontSize="small" />
+                              </IconButton>
+                              <TextField
+                                type="number"
+                                size="small"
+                                value={
+                                  selectedProductIds.includes(product.id)
+                                    ? quantities[product.id] || ""
+                                    : ""
+                                }
+                                onChange={(e) => {
+                                  // Allow empty string for better UX
+                                  const value = e.target.value;
+                                  if (value === "" || parseInt(value) >= 1) {
+                                    handleQtyChange(product.id, value);
+                                  } else {
+                                    // Show error immediately for values less than 1
+                                    handleQtyChange(product.id, value);
+                                  }
+                                }}
+                                onBlur={(e) => {
+                                  // When user leaves the field, ensure it's at least 1
+                                  if (selectedProductIds.includes(product.id)) {
+                                    const value = e.target.value;
+                                    if (value === "" || value < 1) {
+                                      handleQtyChange(product.id, 1);
+                                    }
+                                  }
+                                }}
+                                inputProps={{
+                                  min: 1,
+                                  style: { width: 50, textAlign: "center" },
+                                }}
+                                disabled={
+                                  !selectedProductIds.includes(product.id)
+                                }
+                                error={!!errors.quantities[product.id]}
+                                helperText={errors.quantities[product.id]}
+                              />
+                              <IconButton
+                                size="small"
+                                onClick={() => incrementQty(product.id)}
+                                disabled={
+                                  !selectedProductIds.includes(product.id)
+                                }
+                              >
+                                <Add fontSize="small" />
+                              </IconButton>
+                            </Box>
+                          </TableCell>
+                        </TableRow>
+                      ))}
                   </TableBody>
                 </Table>
               </TableContainer>

@@ -18,6 +18,8 @@ import {
   IconButton,
   Snackbar,
   Alert,
+  FormControl,
+  Select,
 } from "@mui/material";
 import { Add, Remove } from "@mui/icons-material";
 import { useSelector } from "react-redux";
@@ -82,12 +84,21 @@ const SalesOrdersEditLayoutPage = ({ product }) => {
     items: [],
   });
 
+
+  const [errors, setErrors] = useState({
+    selectedQuotation: "",
+    rentalDuration: "",
+    rentalStartDate: "",
+    rentalEndDate: "",
+  });
+
   // State for data fetching
   const [quotations, setQuotations] = useState([]);
   const [products, setProducts] = useState([]);
   const [deviceIds, setDeviceIds] = useState({});
   const [deviceIdErrors, setDeviceIdErrors] = useState({});
   const [originalOrderItems, setOriginalOrderItems] = useState([]);
+  const [quotationSearchTerm, setQuotationSearchTerm] = useState("");
 
   const [loading, setLoading] = useState({
     order: true,
@@ -673,21 +684,95 @@ const SalesOrdersEditLayoutPage = ({ product }) => {
                   })
                 }
               /> */}
-              <Field
-                label="Select Quotation"
-                type="select"
-                placeholder="Select Quotation"
-                value={formData.quotation_id}
-                onChange={(e) =>
-                  handleChange({
-                    target: { name: "quotation_id", value: e.target.value },
-                  })
-                }
-                options={quotations.map((q) => ({
-                  value: q.id,
-                  label: `${q.quotation_id} - ${q.customer_first_name} ${q.customer_last_name} (${q.customer.company_name})`,
-                }))}
-              />
+              <div style={fieldContainerStyle}>
+                <label style={labelStyle}>
+                  Select Quotation
+                </label>
+
+                <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                  <FormControl fullWidth size="small">
+                    <Select
+                      value={formData.quotation_id?.toString() || ""}   // ✅ Ensure string match
+                      displayEmpty
+                      onChange={(e) => {
+                        const val = e.target.value.toString();          // 🔥 ALWAYS store as string
+                        handleChange({
+                          target: { name: "quotation_id", value: val },
+                        });
+
+                        setQuotationSearchTerm("");                     // 🔥 Reset search on select
+
+                        if (errors.selectedQuotation) {
+                          setErrors((prev) => ({ ...prev, selectedQuotation: "" }));
+                        }
+                      }}
+                      style={{
+                        ...inputStyle,
+                        borderColor: errors.selectedQuotation ? "red" : "#d1d5db",
+                      }}
+                      MenuProps={{
+                        PaperProps: { style: { maxHeight: 300 } },
+                        onEntered: () => setQuotationSearchTerm(""),     // 🔥 Reset search when dropdown opens
+                      }}
+                      renderValue={(selected) => {
+                        if (!selected) return <em>Select Quotation</em>;
+
+                        const q = quotations.find((x) => x.id.toString() === selected);
+
+                        return q
+                          ? `${q.quotation_id} - ${q.customer_first_name} ${q.customer_last_name} (${q.customer.company_name})`
+                          : "Select Quotation";
+                      }}
+                    >
+                      {/* 🔍 Search box inside menu */}
+                      <div
+                        style={{
+                          padding: "8px",
+                          position: "sticky",
+                          top: 0,
+                          backgroundColor: "#fff",
+                          zIndex: 1,
+                        }}
+                      >
+                        <TextField
+                          fullWidth
+                          size="small"
+                          placeholder="Search Quotation..."
+                          value={quotationSearchTerm}
+                          onChange={(e) => setQuotationSearchTerm(e.target.value)}
+                          onClick={(e) => e.stopPropagation()}           // Prevent closing when clicking
+                          onKeyDown={(e) => e.stopPropagation()}         // Allow typing
+                        />
+                      </div>
+
+                      {/* 🔥 Multi-word smart search */}
+                      {quotations
+                        .filter((q) => {
+                          const term = quotationSearchTerm.trim().toLowerCase();
+                          const words = term.split(" ").filter(Boolean);
+
+                          const fullText = `${q.quotation_id} ${q.customer_first_name} ${q.customer_last_name} ${q.customer.company_name}`
+                            .toLowerCase();
+
+                          return words.every((w) => fullText.includes(w));
+                        })
+                        .map((q) => (
+                          <MenuItem key={q.id} value={q.id.toString()}>
+                            {q.quotation_id} - {q.customer_first_name} {q.customer_last_name} (
+                            {q.customer.company_name})
+                          </MenuItem>
+                        ))}
+                    </Select>
+                  </FormControl>
+
+                  {errors.selectedQuotation && (
+                    <span style={{ color: "red", fontSize: "0.75rem" }}>
+                      {errors.selectedQuotation}
+                    </span>
+                  )}
+                </div>
+              </div>
+
               <Field
                 label="Quotation ID"
                 placeholder="Quotation ID"

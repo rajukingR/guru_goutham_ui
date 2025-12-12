@@ -19,6 +19,9 @@ import API_URL, { IMAGE_API_URL } from "../../../api/Api_url";
 import { useNavigate } from "react-router-dom";
 import { Snackbar, Alert } from "@mui/material";
 import { useSelector } from "react-redux";
+import { generateSpecifications } from "../../../utils/generateSpecifications";
+
+
 const generateRandomId = () => {
   const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
   let code = "";
@@ -511,11 +514,11 @@ const PurchaseRequestAdd = () => {
                           sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
                         />
                       </TableCell>
-                      <TableCell
+                      {/* <TableCell
                         sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
                       >
                         Product ID
-                      </TableCell>
+                      </TableCell> */}
                       <TableCell
                         sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
                       >
@@ -524,33 +527,9 @@ const PurchaseRequestAdd = () => {
                       <TableCell
                         sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
                       >
-                        Brand
+                        Specifications
                       </TableCell>
-                      <TableCell
-                        sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
-                      >
-                        Model
-                      </TableCell>
-                      <TableCell
-                        sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
-                      >
-                        Processor
-                      </TableCell>
-                      <TableCell
-                        sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
-                      >
-                        RAM
-                      </TableCell>
-                      <TableCell
-                        sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
-                      >
-                        Storage
-                      </TableCell>
-                      <TableCell
-                        sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
-                      >
-                        Graphics
-                      </TableCell>
+
                       <TableCell
                         sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
                       >
@@ -559,67 +538,72 @@ const PurchaseRequestAdd = () => {
                     </TableRow>
                   </TableHead>
                   <TableBody>
-                    {filteredProducts.map((product) => (
-                      <TableRow key={product.id}>
-                        <TableCell padding="checkbox">
-                          <Checkbox
-                            checked={selectedProductIds.includes(product.id)}
-                            onChange={() => handleProductSelection(product.id)}
-                          />
-                        </TableCell>
-                        <TableCell>{product.product_id}</TableCell>
-                        <TableCell>{product.product_name}</TableCell>
-                        <TableCell>{product.brand}</TableCell>
-                        <TableCell>{product.model}</TableCell>
-                        <TableCell>{product.processor}</TableCell>
-                        <TableCell>{product.ram}</TableCell>
-                        <TableCell>{product.storage}</TableCell>
-                        <TableCell>{product.graphics}</TableCell>
-                        <TableCell>
-                          <Box display="flex" alignItems="center">
-                            <IconButton
-                              size="small"
-                              onClick={() => decrementQty(product.id)}
-                              disabled={
-                                !selectedProductIds.includes(product.id)
-                              }
-                            >
-                              <Remove fontSize="small" />
-                            </IconButton>
-                            <TextField
-                              type="number"
-                              size="small"
-                              value={
-                                selectedProductIds.includes(product.id)
-                                  ? quantities[product.id] || ""
-                                  : ""
-                              }
-                              onChange={(e) =>
-                                handleQtyChange(product.id, e.target.value)
-                              }
-                              inputProps={{
-                                min: 1,
-                                style: { width: 50, textAlign: "center" },
-                              }}
-                              disabled={
-                                !selectedProductIds.includes(product.id)
-                              }
-                              error={!!errors.quantities[product.id]}
-                              helperText={errors.quantities[product.id]}
+                    {filteredProducts
+                      .slice()
+                      .sort((a, b) => {
+                        const aSelected = selectedProductIds.includes(a.id);
+                        const bSelected = selectedProductIds.includes(b.id);
+
+                        if (aSelected === bSelected) return 0;
+                        if (aSelected && !bSelected) return -1;
+                        return 1;
+                      })
+                      .map((product) => (
+                        <TableRow key={product.id}>
+                          <TableCell padding="checkbox">
+                            <Checkbox
+                              checked={selectedProductIds.includes(product.id)}
+                              onChange={() => handleProductSelection(product.id)}
                             />
-                            <IconButton
-                              size="small"
-                              onClick={() => incrementQty(product.id)}
-                              disabled={
-                                !selectedProductIds.includes(product.id)
-                              }
-                            >
-                              <Add fontSize="small" />
-                            </IconButton>
-                          </Box>
-                        </TableCell>
-                      </TableRow>
-                    ))}
+                          </TableCell>
+                          <TableCell>{product.product_name}</TableCell>
+                          <TableCell>{generateSpecifications(product)}</TableCell>
+
+                          <TableCell>
+                            <Box display="flex" alignItems="center">
+                              <IconButton
+                                size="small"
+                                onClick={() => decrementQty(product.id)}
+                                disabled={
+                                  !selectedProductIds.includes(product.id)
+                                }
+                              >
+                                <Remove fontSize="small" />
+                              </IconButton>
+                              <TextField
+                                type="number"
+                                size="small"
+                                value={
+                                  selectedProductIds.includes(product.id)
+                                    ? quantities[product.id] || ""
+                                    : ""
+                                }
+                                onChange={(e) =>
+                                  handleQtyChange(product.id, e.target.value)
+                                }
+                                inputProps={{
+                                  min: 1,
+                                  style: { width: 50, textAlign: "center" },
+                                }}
+                                disabled={
+                                  !selectedProductIds.includes(product.id)
+                                }
+                                error={!!errors.quantities[product.id]}
+                                helperText={errors.quantities[product.id]}
+                              />
+                              <IconButton
+                                size="small"
+                                onClick={() => incrementQty(product.id)}
+                                disabled={
+                                  !selectedProductIds.includes(product.id)
+                                }
+                              >
+                                <Add fontSize="small" />
+                              </IconButton>
+                            </Box>
+                          </TableCell>
+                        </TableRow>
+                      ))}
                   </TableBody>
                 </Table>
               </TableContainer>

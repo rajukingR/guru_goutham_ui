@@ -17,6 +17,9 @@ import {
   DialogContent,
   DialogActions,
   Button,
+  FormControl,
+  Select,
+  MenuItem
 } from "@mui/material";
 import { Add, Remove, Edit } from "@mui/icons-material";
 import API_URL, { IMAGE_API_URL, POSTAL_API } from "../../../api/Api_url";
@@ -49,6 +52,8 @@ const QuotationsEditLayoutPage = () => {
     message: "",
     severity: "info",
   });
+  const [leadSearchTerm, setLeadSearchTerm] = useState("");
+
   const [showProductTable, setShowProductTable] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedProductIds, setSelectedProductIds] = useState([]);
@@ -852,23 +857,97 @@ const QuotationsEditLayoutPage = () => {
                 }
               />
 
-              <Field
-                label="Select Lead"
-                type="select"
-                placeholder="Select Lead"
-                value={selectedLeadId || ""}
-                onChange={(e) => {
-                  handleLeadChange(e.target.value);
-                  if (errors.selectedLead) {
-                    setErrors({ ...errors, selectedLead: "" });
-                  }
-                }}
-                options={leads.map((lead) => ({
-                  value: lead.id,
-                  label: `${lead.lead_id} - ${lead.contact.first_name} ${lead.contact.last_name} (${lead.contact.company_name})`,
-                }))}
-                error={errors.selectedLead}
-              />
+              <div style={fieldContainerStyle}>
+                <label style={labelStyle}>
+                  Select Lead
+                </label>
+
+                <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                  <FormControl fullWidth size="small">
+                    <Select
+                      value={selectedLeadId || ""}
+                      onChange={(e) => {
+                        handleLeadChange(e.target.value);
+
+                        // reset search
+                        setLeadSearchTerm("");
+
+                        // clear error
+                        if (errors.selectedLead) {
+                          setErrors((prev) => ({ ...prev, selectedLead: "" }));
+                        }
+                      }}
+                      displayEmpty
+                      style={{
+                        ...inputStyle,
+                        borderColor: errors.selectedLead ? "red" : "#d1d5db",
+                      }}
+                      MenuProps={{
+                        PaperProps: { style: { maxHeight: 300 } },
+
+                        // 🔥 clear search every time dropdown opens
+                        onEntered: () => setLeadSearchTerm(""),
+                      }}
+                      renderValue={(selected) => {
+                        if (!selected) return <em>Select Lead</em>;
+
+                        const lead = leads.find((l) => l.id === selected);
+
+                        return lead
+                          ? `${lead.lead_id} - ${lead.contact.first_name} ${lead.contact.last_name} (${lead.contact.company_name})`
+                          : "Select Lead";
+                      }}
+                    >
+                      {/* 🔍 Search box inside dropdown */}
+                      <div
+                        style={{
+                          padding: "8px",
+                          position: "sticky",
+                          top: 0,
+                          background: "#fff",
+                          zIndex: 1,
+                        }}
+                      >
+                        <TextField
+                          fullWidth
+                          size="small"
+                          placeholder="Search Lead..."
+                          value={leadSearchTerm}
+                          onChange={(e) => setLeadSearchTerm(e.target.value)}
+                          onClick={(e) => e.stopPropagation()}
+                          onKeyDown={(e) => e.stopPropagation()}
+                        />
+                      </div>
+
+                      {/* ⭐ Smart multi-word search filter */}
+                      {leads
+                        .filter((lead) => {
+                          const term = leadSearchTerm.trim().toLowerCase();
+                          const words = term.split(" ").filter(Boolean);
+
+                          const text = `${lead.lead_id} ${lead.contact.first_name} ${lead.contact.last_name} ${lead.contact.company_name}`
+                            .toLowerCase();
+
+                          return words.every((w) => text.includes(w));
+                        })
+                        .map((lead) => (
+                          <MenuItem key={lead.id} value={lead.id}>
+                            {lead.lead_id} - {lead.contact.first_name} {lead.contact.last_name} (
+                            {lead.contact.company_name})
+                          </MenuItem>
+                        ))}
+                    </Select>
+                  </FormControl>
+
+                  {/* Error Message */}
+                  {errors.selectedLead && (
+                    <span style={{ color: "red", fontSize: "0.75rem" }}>
+                      {errors.selectedLead}
+                    </span>
+                  )}
+                </div>
+              </div>
+
               <Field
                 label="Lead ID"
                 placeholder="Enter Lead ID"

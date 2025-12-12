@@ -20,6 +20,8 @@ import {
 import { Add, Remove } from "@mui/icons-material";
 import API_URL, { IMAGE_API_URL } from "../../../api/Api_url";
 import { useSelector } from "react-redux";
+import { generateSpecifications } from "../../../utils/generateSpecifications";
+
 const POQuotationEdit = () => {
   const { user, token } = useSelector((state) => state.auth);
 
@@ -542,136 +544,116 @@ const POQuotationEdit = () => {
               }}
             >
               <Table size="small" stickyHeader>
-                <TableHead>
-                  <TableRow sx={{ backgroundColor: "#0d47a1" }}>
-                    <TableCell
-                      padding="checkbox"
-                      sx={{ backgroundColor: "#0d47a1" }}
-                    >
-                      <Checkbox
-                        sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
-                        indeterminate={
-                          selectedProductIds.length > 0 &&
-                          selectedProductIds.length < products.length
-                        }
-                        checked={
-                          selectedProductIds.length === products.length &&
-                          products.length > 0
-                        }
-                        onChange={(e) => {
-                          if (e.target.checked) {
-                            setSelectedProductIds(products.map((p) => p.id));
-                          } else {
-                            setSelectedProductIds([]);
-                          }
-                        }}
-                      />
-                    </TableCell>
-                    <TableCell
-                      sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
-                    >
-                      Product Name
-                    </TableCell>
-                    <TableCell
-                      sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
-                    >
-                      Brand
-                    </TableCell>
-                    <TableCell
-                      sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
-                    >
-                      Specifications
-                    </TableCell>
-                    <TableCell
-                      sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
-                    >
-                      Price per Piece
-                    </TableCell>
-                    {/* ✅ New column */}
-                    <TableCell
-                      sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
-                    >
-                      Quantity
-                    </TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {filteredProducts.map((product) => (
-                    <TableRow key={product.id}>
-                      <TableCell padding="checkbox">
-                        <Checkbox
-                          checked={selectedProductIds.includes(product.id)}
-                          onChange={() => {
-                            setSelectedProductIds((prev) =>
-                              prev.includes(product.id)
-                                ? prev.filter((id) => id !== product.id)
-                                : [...prev, product.id]
-                            );
-                          }}
-                        />
-                      </TableCell>
-                      <TableCell>{product.product_name}</TableCell>
-                      <TableCell>{product.brand}</TableCell>
-                      <TableCell>
-                        <div>
-                          <strong>Model:</strong> {product.model}
-                        </div>
-                        <div>
-                          <strong>Processor:</strong> {product.processor}
-                        </div>
-                        <div>
-                          <strong>RAM:</strong> {product.ram}
-                        </div>
-                        <div>
-                          <strong>Storage:</strong> {product.storage}
-                        </div>
-                        <div>
-                          <strong>Graphics:</strong> {product.graphics}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <>
-                          {/* <div><strong>Day:</strong> ₹{product.rent_price_per_day}</div> */}
-                          <div>
-                            <strong>Purchase Price:</strong> ₹
-                            {product.purchase_price}
-                          </div>
-                          {/* <div><strong>6 Months:</strong> ₹{product.rent_price_6_months}</div>
-                         <div><strong>1 Year:</strong> ₹{product.rent_price_1_year}</div> */}
-                        </>
-                      </TableCell>
-                      <TableCell>
-                        <Box display="flex" alignItems="center">
-                          <IconButton
-                            size="small"
-                            onClick={() => decrementQty(product.id)}
-                          >
-                            <Remove fontSize="small" />
-                          </IconButton>
-                          <TextField
-                            type="number"
-                            size="small"
-                            value={quantities[product.id] || ""}
-                            onChange={(e) =>
-                              handleQtyChange(product.id, e.target.value)
-                            }
-                            inputProps={{
-                              min: 0,
-                              style: { width: 50, textAlign: "center" },
-                            }}
-                          />
-                          <IconButton
-                            size="small"
-                            onClick={() => incrementQty(product.id)}
-                          >
-                            <Add fontSize="small" />
-                          </IconButton>
-                        </Box>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+  <TableHead>
+    <TableRow sx={{ backgroundColor: "#0d47a1" }}>
+      <TableCell
+        padding="checkbox"
+        sx={{ backgroundColor: "#0d47a1" }}
+      >
+        <Checkbox
+          sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
+          indeterminate={
+            selectedProductIds.length > 0 &&
+            selectedProductIds.length < products.length
+          }
+          checked={
+            selectedProductIds.length === products.length &&
+            products.length > 0
+          }
+          onChange={(e) => {
+            if (e.target.checked) {
+              setSelectedProductIds(products.map((p) => p.id));
+            } else {
+              setSelectedProductIds([]);
+            }
+          }}
+        />
+      </TableCell>
+      <TableCell sx={{ backgroundColor: "#0d47a1", color: "#fff" }}>
+        Product Name
+      </TableCell>
+      <TableCell sx={{ backgroundColor: "#0d47a1", color: "#fff" }}>
+        Specifications
+      </TableCell>
+      <TableCell sx={{ backgroundColor: "#0d47a1", color: "#fff" }}>
+        Price per Piece
+      </TableCell>
+      {/* ✅ New column */}
+      <TableCell sx={{ backgroundColor: "#0d47a1", color: "#fff" }}>
+        Quantity
+      </TableCell>
+    </TableRow>
+  </TableHead>
+  <TableBody>
+    {/* Sort products: selected first, then unselected */}
+    {filteredProducts
+      .slice() // Create a copy to avoid mutating the original
+      .sort((a, b) => {
+        const aSelected = selectedProductIds.includes(a.id);
+        const bSelected = selectedProductIds.includes(b.id);
+        
+        // If both are selected or both are unselected, maintain original order
+        if (aSelected === bSelected) return 0;
+        
+        // If a is selected and b is not, a comes first
+        if (aSelected && !bSelected) return -1;
+        
+        // If b is selected and a is not, b comes first
+        return 1;
+      })
+      .map((product) => (
+        <TableRow key={product.id}>
+          <TableCell padding="checkbox">
+            <Checkbox
+              checked={selectedProductIds.includes(product.id)}
+              onChange={() => {
+                setSelectedProductIds((prev) =>
+                  prev.includes(product.id)
+                    ? prev.filter((id) => id !== product.id)
+                    : [...prev, product.id]
+                );
+              }}
+            />
+          </TableCell>
+          <TableCell>{product.product_name}</TableCell>
+          <TableCell>{generateSpecifications(product)}</TableCell>
+          <TableCell>
+            <>
+              {product.purchase_price}
+            </>
+          </TableCell>
+          <TableCell>
+            <Box display="flex" alignItems="center">
+              <IconButton
+                size="small"
+                onClick={() => decrementQty(product.id)}
+              >
+                <Remove fontSize="small" />
+              </IconButton>
+              <TextField
+                type="number"
+                size="small"
+                value={quantities[product.id] || ""}
+                onChange={(e) =>
+                  handleQtyChange(product.id, e.target.value)
+                }
+                inputProps={{
+                  min: 0,
+                  style: { width: 50, textAlign: "center" },
+                }}
+              />
+              <IconButton
+                size="small"
+                onClick={() => incrementQty(product.id)}
+              >
+                <Add fontSize="small" />
+              </IconButton>
+            </Box>
+          </TableCell>
+        </TableRow>
+      ))}
+  </TableBody>
+</Table>
             </TableContainer>
           </Box>
         )}

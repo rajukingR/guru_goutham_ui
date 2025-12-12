@@ -17,6 +17,8 @@ import {
   IconButton,
   Snackbar,
   Alert,
+    FormControl,
+    Select,
 } from "@mui/material";
 import { Add, Remove } from "@mui/icons-material";
 import { useParams, useNavigate } from "react-router-dom";
@@ -44,6 +46,9 @@ const SalesOrdersAddLayoutPage = ({ product }) => {
     const entry = inventoryData.find((item) => item.id === productId);
     return entry ? entry.available_quantity : "N/A";
   };
+
+  const [quotationSearchTerm, setQuotationSearchTerm] = useState("");
+
 
   const [errors, setErrors] = useState({
     selectedQuotation: "",
@@ -698,26 +703,98 @@ useEffect(() => {
                   })
                 }
               /> */}
-              <Field
-                label="Select Quotation"
-                type="select"
-                placeholder="Select Quotation"
-                value={formData.quotation_id}
-                onChange={(e) => {
-                  handleChange({
-                    target: { name: "quotation_id", value: e.target.value },
-                  });
-                  // Clear error when a selection is made
-                  if (errors.selectedQuotation) {
-                    setErrors({ ...errors, selectedQuotation: "" });
-                  }
-                }}
-                error={errors.selectedQuotation}
-                options={quotations.map((q) => ({
-                  value: q.id,
-                  label: `${q.quotation_id} - ${q.customer_first_name} ${q.customer_last_name} (${q.customer.company_name})`,
-                }))}
-              />
+              <div style={fieldContainerStyle}>
+  <label style={labelStyle}>
+    Select Quotation
+  </label>
+
+  <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+    <FormControl fullWidth size="small">
+      <Select
+        value={formData.quotation_id || ""}
+        displayEmpty
+        onChange={(e) => {
+          handleChange({
+            target: { name: "quotation_id", value: e.target.value },
+          });
+
+          // 🔥 Reset search when selecting
+          setQuotationSearchTerm("");
+
+          if (errors.selectedQuotation) {
+            setErrors((prev) => ({ ...prev, selectedQuotation: "" }));
+          }
+        }}
+        style={{
+          ...inputStyle,
+          borderColor: errors.selectedQuotation ? "red" : "#d1d5db",
+        }}
+        MenuProps={{
+          PaperProps: { style: { maxHeight: 300 } },
+
+          // 🔥 Reset search when dropdown opens
+          onEntered: () => setQuotationSearchTerm(""),
+        }}
+        renderValue={(selected) => {
+          if (!selected) return <em>Select Quotation</em>;
+
+          const q = quotations.find((x) => x.id === selected);
+
+          return q
+            ? `${q.quotation_id} - ${q.customer_first_name} ${q.customer_last_name} (${q.customer.company_name})`
+            : "Select Quotation";
+        }}
+      >
+        {/* 🔍 Search bar inside dropdown */}
+        <div
+          style={{
+            padding: "8px",
+            position: "sticky",
+            top: 0,
+            background: "#fff",
+            zIndex: 1,
+          }}
+        >
+          <TextField
+            fullWidth
+            size="small"
+            placeholder="Search Quotation..."
+            value={quotationSearchTerm}
+            onChange={(e) => setQuotationSearchTerm(e.target.value)}
+            onClick={(e) => e.stopPropagation()}
+            onKeyDown={(e) => e.stopPropagation()}
+          />
+        </div>
+
+        {/* ⭐ Smart multi-word search filter */}
+        {quotations
+          .filter((q) => {
+            const term = quotationSearchTerm.trim().toLowerCase();
+            const words = term.split(" ").filter(Boolean);
+
+            const fullText = `${q.quotation_id} ${q.customer_first_name} ${q.customer_last_name} ${q.customer.company_name}`
+              .toLowerCase();
+
+            // Every typed word must appear somewhere in the text
+            return words.every((w) => fullText.includes(w));
+          })
+          .map((q) => (
+            <MenuItem key={q.id} value={q.id}>
+              {q.quotation_id} - {q.customer_first_name} {q.customer_last_name} (
+              {q.customer.company_name})
+            </MenuItem>
+          ))}
+      </Select>
+    </FormControl>
+
+    {errors.selectedQuotation && (
+      <span style={{ color: "red", fontSize: "0.75rem" }}>
+        {errors.selectedQuotation}
+      </span>
+    )}
+  </div>
+</div>
+
               <Field
                 label="Quotation ID"
                 placeholder="Quotation ID"

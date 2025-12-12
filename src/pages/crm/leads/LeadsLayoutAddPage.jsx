@@ -17,10 +17,14 @@ import {
   Paper,
   Snackbar,
   Alert,
+  FormControl,
+  Select,
+  MenuItem,
 } from "@mui/material";
 import { Add, Remove } from "@mui/icons-material";
 import API_URL, { IMAGE_API_URL, POSTAL_API } from "../../../api/Api_url";
 import { useNavigate } from "react-router-dom";
+import { generateSpecifications } from "../../../utils/generateSpecifications";
 
 const generateLeadId = () => {
   const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
@@ -87,6 +91,8 @@ const LeadsLayoutAddPage = () => {
   const [selectedProductIds, setSelectedProductIds] = useState([]);
   const [quantities, setQuantities] = useState({});
   const [showProductTable, setShowProductTable] = useState(false);
+  const [customerSearchTerm, setCustomerSearchTerm] = useState("");
+
   const [loading, setLoading] = useState({
     customers: true,
     products: true,
@@ -247,6 +253,8 @@ const LeadsLayoutAddPage = () => {
         payment_type: selectedCustomer.payment_type || "",
         owner: selectedCustomer.owner || "",
       }));
+
+      setCustomerSearchTerm("");
     }
     // Clear customer error when selection changes
     if (errors.selectedCustomer) {
@@ -600,19 +608,90 @@ const LeadsLayoutAddPage = () => {
             <h3 style={cardHeaderStyle}>Personal Details</h3>
           </div>
           <div style={fieldsGridStyle}>
-            <Field
-              label="Customer"
-              type="select"
-              placeholder="Select Customer"
-              value={formData.selectedCustomer}
-              onChange={handleCustomerChange}
-              options={customers.map((customer) => ({
-                value: customer.id.toString(),
-                label: `${customer.first_name} ${customer.last_name} (${customer.company_name})`,
-              }))}
-              required
-              error={errors.selectedCustomer}
-            />
+            <div style={fieldContainerStyle}>
+              <label style={labelStyle}>
+                Customer <span style={requiredStyle}>*</span>
+              </label>
+
+              <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                <FormControl fullWidth size="small">
+                  <Select
+                    value={formData.selectedCustomer || ""}
+                    onChange={(e) => handleCustomerChange(e.target.value)}
+                    displayEmpty
+                    style={{
+                      ...inputStyle,
+                      borderColor: errors.selectedCustomer ? "red" : "#d1d5db",
+                    }}
+                    MenuProps={{
+                      PaperProps: {
+                        style: { maxHeight: 300 },
+                      },
+                      onEntered: () => setCustomerSearchTerm(""), // 🔥 RESET SEARCH WHEN DROPDOWN OPENS
+                    }}
+                    renderValue={(selected) => {
+                      if (!selected) return <em>Select Customer</em>;
+
+                      const cust = customers.find(
+                        (c) => c.id.toString() === selected
+                      );
+
+                      return cust
+                        ? `${cust.first_name} ${cust.last_name} (${cust.company_name})`
+                        : "Select Customer";
+                    }}
+                  >
+                    {/* 🔎 Search Box Inside Dropdown */}
+                    <div
+                      style={{
+                        padding: "8px",
+                        position: "sticky",
+                        top: 0,
+                        background: "#fff",
+                        zIndex: 1,
+                      }}
+                    >
+                      <TextField
+                        fullWidth
+                        size="small"
+                        placeholder="Search Customer..."
+                        value={customerSearchTerm}
+                        onChange={(e) => setCustomerSearchTerm(e.target.value)}
+                        onClick={(e) => e.stopPropagation()}
+                        onKeyDown={(e) => e.stopPropagation()} // IMPORTANT
+                      />
+                    </div>
+
+                    {/* ⭐ Smart Multi-Word Search Filter */}
+                    {customers
+                      .filter((c) => {
+                        const term = customerSearchTerm.trim().toLowerCase();
+                        const words = term.split(" ").filter(Boolean);
+
+                        const fullName = `${c.first_name} ${c.last_name} ${c.company_name}`
+                          .toLowerCase();
+
+                        // 🧠 All words typed must exist anywhere in the text
+                        return words.every((w) => fullName.includes(w));
+                      })
+                      .map((c) => (
+                        <MenuItem key={c.id} value={c.id.toString()}>
+                          {c.first_name} {c.last_name} ({c.company_name})
+                        </MenuItem>
+                      ))}
+                  </Select>
+                </FormControl>
+
+                {/* Error Message */}
+                {errors.selectedCustomer && (
+                  <span style={{ color: "red", fontSize: "0.75rem" }}>
+                    Customer selection is required
+                  </span>
+                )}
+              </div>
+            </div>
+
+
             <Field
               label="Customer ID"
               placeholder="Enter Customer ID"
@@ -817,33 +896,9 @@ const LeadsLayoutAddPage = () => {
                       <TableCell
                         sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
                       >
-                        Brand
+                        Specifications
                       </TableCell>
-                      <TableCell
-                        sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
-                      >
-                        Model
-                      </TableCell>
-                      <TableCell
-                        sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
-                      >
-                        Processor
-                      </TableCell>
-                      <TableCell
-                        sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
-                      >
-                        RAM
-                      </TableCell>
-                      <TableCell
-                        sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
-                      >
-                        Storage
-                      </TableCell>
-                      <TableCell
-                        sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
-                      >
-                        Graphics
-                      </TableCell>
+
                       <TableCell
                         sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
                       >
@@ -852,51 +907,67 @@ const LeadsLayoutAddPage = () => {
                     </TableRow>
                   </TableHead>
                   <TableBody>
-                    {filteredProducts.map((product) => (
-                      <TableRow key={product.id}>
-                        <TableCell padding="checkbox">
-                          <Checkbox
-                            checked={selectedProductIds.includes(product.id)}
-                            onChange={() => handleProductSelection(product.id)}
-                          />
-                        </TableCell>
-                        <TableCell>{product.product_name}</TableCell>
-                        <TableCell>{product.brand}</TableCell>
-                        <TableCell>{product.model}</TableCell>
-                        <TableCell>{product.processor}</TableCell>
-                        <TableCell>{product.ram}</TableCell>
-                        <TableCell>{product.storage}</TableCell>
-                        <TableCell>{product.graphics}</TableCell>
-                        <TableCell>
-                          <Box display="flex" alignItems="center">
-                            <IconButton
-                              size="small"
-                              onClick={() => decrementQty(product.id)}
-                            >
-                              <Remove fontSize="small" />
-                            </IconButton>
-                            <TextField
-                              type="number"
-                              size="small"
-                              value={quantities[product.id] || ""}
-                              onChange={(e) =>
-                                handleQtyChange(product.id, e.target.value)
-                              }
-                              inputProps={{
-                                min: 0,
-                                style: { width: 50, textAlign: "center" },
-                              }}
+                    {filteredProducts
+                      .slice()
+                      .sort((a, b) => {
+                        const aSelected = selectedProductIds.includes(a.id);
+                        const bSelected = selectedProductIds.includes(b.id);
+
+                        if (aSelected === bSelected) return 0;
+                        if (aSelected && !bSelected) return -1;
+                        return 1;
+                      })
+                      .map((product) => (
+                        <TableRow key={product.id}>
+                          <TableCell padding="checkbox">
+                            <Checkbox
+                              checked={selectedProductIds.includes(product.id)}
+                              onChange={() => handleProductSelection(product.id)}
                             />
-                            <IconButton
-                              size="small"
-                              onClick={() => incrementQty(product.id)}
-                            >
-                              <Add fontSize="small" />
-                            </IconButton>
-                          </Box>
-                        </TableCell>
-                      </TableRow>
-                    ))}
+                          </TableCell>
+                          <TableCell>{product.product_name}</TableCell>
+
+                          <TableCell>{generateSpecifications(product)}</TableCell>
+
+                          <TableCell>
+                            <Box display="flex" alignItems="center">
+                              <IconButton
+                                size="small"
+                                onClick={() => decrementQty(product.id)}
+                                disabled={
+                                  !selectedProductIds.includes(product.id)
+                                }
+                              >
+                                <Remove fontSize="small" />
+                              </IconButton>
+                              <TextField
+                                type="number"
+                                size="small"
+                                value={quantities[product.id] || ""}
+                                onChange={(e) =>
+                                  handleQtyChange(product.id, e.target.value)
+                                }
+                                disabled={
+                                  !selectedProductIds.includes(product.id)
+                                }
+                                inputProps={{
+                                  min: 0,
+                                  style: { width: 50, textAlign: "center" },
+                                }}
+                              />
+                              <IconButton
+                                size="small"
+                                onClick={() => incrementQty(product.id)}
+                                disabled={
+                                  !selectedProductIds.includes(product.id)
+                                }
+                              >
+                                <Add fontSize="small" />
+                              </IconButton>
+                            </Box>
+                          </TableCell>
+                        </TableRow>
+                      ))}
                   </TableBody>
                 </Table>
               </TableContainer>

@@ -21,6 +21,7 @@ import {
 import { Add, Remove } from "@mui/icons-material";
 import API_URL, { IMAGE_API_URL } from "../../../api/Api_url";
 import { useSelector } from "react-redux";
+import { generateSpecifications } from "../../../utils/generateSpecifications";
 
 const generateRandomId = () => {
   const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
@@ -160,6 +161,54 @@ const GoodsReceiptsAddLayout = () => {
     return !Object.values(errors).some((error) => error !== "");
   };
 
+
+
+  const validateAssetIdInRealTime = (productId, assetIdArray, changedIndex, newValue) => {
+    const errors = {};
+    const normalizedIds = assetIdArray.map(id => id.trim().toLowerCase());
+    const normalizedValue = newValue.trim().toLowerCase();
+
+    // Check for duplicates
+    const duplicateCount = normalizedIds.filter(
+      id => id && id === normalizedValue
+    ).length;
+
+    const isEmpty = !newValue.trim();
+    const isDuplicate = duplicateCount > 1;
+    const isRequiredField = changedIndex < (quantities[productId] || 0);
+
+    // Set appropriate errors
+    if (isDuplicate) {
+      errors[productId] = "Duplicate asset IDs found";
+      // Mark all duplicate positions (except the first occurrence)
+      normalizedIds.forEach((id, idx) => {
+        if (id && id === normalizedValue && idx !== normalizedIds.indexOf(id)) {
+          errors[`${productId}-${idx}`] = "This Asset ID is already entered";
+        }
+      });
+    } else if (isEmpty && isRequiredField) {
+      errors[`${productId}-${changedIndex}`] = `Asset ID ${changedIndex + 1} cannot be empty`;
+      errors[productId] = "Please fill all required Asset IDs";
+    }
+
+    // Update errors state
+    setAssetIdErrors((prev) => {
+      const newErrors = { ...prev };
+
+      // Clear previous errors for this product and field
+      Object.keys(newErrors).forEach(key => {
+        if (key === productId || key.startsWith(`${productId}-`)) {
+          delete newErrors[key];
+        }
+      });
+
+      // Add new errors
+      Object.assign(newErrors, errors);
+
+      return newErrors;
+    });
+  };
+
   const validateAssetIds = () => {
     const errors = {};
     let isValid = true;
@@ -168,23 +217,51 @@ const GoodsReceiptsAddLayout = () => {
       if (qty > 0) {
         const currentAssetIds = assetIds[productId] || [];
 
-        if (currentAssetIds.length !== qty) {
-          errors[productId] = `Please enter exactly ${qty} asset ID(s)`;
-          isValid = false;
-        }
-
-        currentAssetIds.forEach((id, index) => {
-          if (!id.trim()) {
-            errors[productId] = `Asset ID ${index + 1} cannot be empty`;
+        // Check for empty required fields
+        for (let i = 0; i < Math.min(currentAssetIds.length, qty); i++) {
+          if (!currentAssetIds[i] || !currentAssetIds[i].trim()) {
+            errors[`${productId}-${i}`] = `Asset ID ${i + 1} cannot be empty`;
+            errors[productId] = "Please fill all required Asset IDs";
             isValid = false;
           }
-        });
+        }
 
-        const uniqueIds = new Set(
-          currentAssetIds.map((id) => id.trim().toLowerCase())
-        );
-        if (uniqueIds.size !== currentAssetIds.length) {
+        // Check for duplicates
+        const normalizedIds = currentAssetIds
+          .slice(0, qty)
+          .map(id => id.trim().toLowerCase())
+          .filter(id => id !== "");
+
+        const uniqueIds = new Set(normalizedIds);
+        if (uniqueIds.size !== normalizedIds.length) {
           errors[productId] = "Duplicate asset IDs found";
+          isValid = false;
+
+          // Find and mark duplicate positions
+          const idCounts = {};
+          normalizedIds.forEach((id, index) => {
+            if (id) {
+              if (idCounts[id]) {
+                idCounts[id].push(index);
+              } else {
+                idCounts[id] = [index];
+              }
+            }
+          });
+
+          // Mark all duplicates (except the first occurrence)
+          Object.values(idCounts).forEach(positions => {
+            if (positions.length > 1) {
+              positions.slice(1).forEach(pos => {
+                errors[`${productId}-${pos}`] = "This Asset ID is already entered";
+              });
+            }
+          });
+        }
+
+        // Check if enough asset IDs are provided
+        if (currentAssetIds.length < qty) {
+          errors[productId] = `Please enter exactly ${qty} asset ID(s)`;
           isValid = false;
         }
       }
@@ -193,7 +270,6 @@ const GoodsReceiptsAddLayout = () => {
     setAssetIdErrors(errors);
     return isValid;
   };
-
   const handlePurchaseOrderToggle = (usePO) => {
     setUsePurchaseOrder(usePO);
 
@@ -581,12 +657,16 @@ const GoodsReceiptsAddLayout = () => {
                 handleInputChange("goodsReceiptDate", e.target.value)
               }
             />
-            <Field
-              label="Purchase Type"
-              value={formData.purchaseType}
-              onChange={(e) => handleInputChange("purchaseType", e.target.value)}
-              disabled={usePurchaseOrder && selectedPurchaseOrder}
-            />
+            {usePurchaseOrder && (
+              <Field
+                label="Purchase Type"
+                value={formData.purchaseType}
+                onChange={(e) => handleInputChange("purchaseType", e.target.value)}
+                disabled={usePurchaseOrder && selectedPurchaseOrder}
+              />
+
+            )}
+
             <Field
               label="Goods Receipt Status"
               type="select"
@@ -726,26 +806,21 @@ const GoodsReceiptsAddLayout = () => {
                 <Table size="small" stickyHeader>
                   <TableHead>
                     <TableRow sx={{ backgroundColor: "#0d47a1" }}>
-                      {!usePurchaseOrder && (
-                        <TableCell
-                          padding="checkbox"
-                          sx={{ backgroundColor: "#0d47a1" }}
-                        >
-                          <Checkbox
-                            sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
-                          />
-                        </TableCell>
-                      )}
+                      <TableCell
+                        padding="checkbox"
+                        sx={{ backgroundColor: "#0d47a1" }}
+                      >
+                        <Checkbox
+                          sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
+                        />
+                      </TableCell>
+
                       <TableCell
                         sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
                       >
                         Product Name
                       </TableCell>
-                      <TableCell
-                        sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
-                      >
-                        Brand
-                      </TableCell>
+
                       <TableCell
                         sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
                       >
@@ -771,33 +846,15 @@ const GoodsReceiptsAddLayout = () => {
                   <TableBody>
                     {getProductsToDisplay().map((product) => (
                       <TableRow key={product.id}>
-                        {!usePurchaseOrder && (
-                          <TableCell padding="checkbox">
-                            <Checkbox
-                              checked={selectedProductIds.includes(product.id)}
-                              onChange={() => handleManualProductSelection(product.id)}
-                            />
-                          </TableCell>
-                        )}
-                        <TableCell>{product.product_name}</TableCell>
-                        <TableCell>{product.brand}</TableCell>
-                        <TableCell>
-                          <div>
-                            <strong>Model:</strong> {product.model}
-                          </div>
-                          <div>
-                            <strong>Processor:</strong> {product.processor}
-                          </div>
-                          <div>
-                            <strong>RAM:</strong> {product.ram}
-                          </div>
-                          <div>
-                            <strong>Storage:</strong> {product.storage}
-                          </div>
-                          <div>
-                            <strong>Graphics:</strong> {product.graphics}
-                          </div>
+                        <TableCell padding="checkbox">
+                          <Checkbox
+                            checked={selectedProductIds.includes(product.id)}
+                            onChange={() => handleManualProductSelection(product.id)}
+                          />
                         </TableCell>
+
+                        <TableCell>{product.product_name}</TableCell>
+                        <TableCell>{generateSpecifications(product)}</TableCell>
                         <TableCell>
                           <div>
                             <strong>Month:</strong> ₹
@@ -819,6 +876,9 @@ const GoodsReceiptsAddLayout = () => {
                               onChange={(e) =>
                                 handleQtyChange(product.id, e.target.value)
                               }
+                               disabled={
+                                  !selectedProductIds.includes(product.id)
+                                }
                               inputProps={{
                                 min: 0,
                                 style: { width: 50, textAlign: "center" },
@@ -834,58 +894,105 @@ const GoodsReceiptsAddLayout = () => {
                         </TableCell>
                         <TableCell>
                           {quantities[product.id] > 0 && (
-                            <Box
-                              display="flex"
-                              flexDirection="column"
-                              gap={1}
-                            >
-                              {(assetIds[product.id] || []).map((id, idx) => (
-                                <TextField
-                                  key={idx}
-                                  size="small"
-                                  placeholder={`Asset ID ${idx + 1}`}
-                                  value={id}
-                                  onChange={(e) => {
-                                    const updated = [
-                                      ...(assetIds[product.id] || []),
-                                    ];
-                                    updated[idx] = e.target.value;
-                                    setAssetIds((prev) => ({
-                                      ...prev,
-                                      [product.id]: updated,
-                                    }));
-                                    if (assetIdErrors[product.id]) {
-                                      setAssetIdErrors((prev) => {
-                                        const newErrors = { ...prev };
-                                        delete newErrors[product.id];
-                                        return newErrors;
-                                      });
-                                    }
-                                  }}
-                                  error={Boolean(assetIdErrors[product.id])}
-                                  helperText={
-                                    idx === 0 ? assetIdErrors[product.id] : ""
-                                  }
-                                />
-                              ))}
-                              {(assetIds[product.id]?.length || 0) <
-                                (quantities[product.id] || 0) && (
-                                  <Button
+                            <Box display="flex" flexDirection="column" gap={1}>
+                              {(assetIds[product.id] || []).map((id, idx) => {
+                                // Get current errors for this field
+                                const fieldError = assetIdErrors[`${product.id}-${idx}`];
+                                const productError = assetIdErrors[product.id];
+                                const isRequiredField = idx < quantities[product.id];
+                                const isLastField = idx === (assetIds[product.id]?.length || 0) - 1;
+                                const canAddMore = (assetIds[product.id]?.length || 0) < (quantities[product.id] || 0);
+
+                                return (
+                                  <TextField
+                                    key={idx}
                                     size="small"
-                                    variant="outlined"
-                                    onClick={() =>
+                                    placeholder={`Asset ID ${idx + 1}`}
+                                    value={id}
+                                    onChange={(e) => {
+                                      const newValue = e.target.value;
+                                      const updated = [...(assetIds[product.id] || [])];
+                                      updated[idx] = newValue;
+
                                       setAssetIds((prev) => ({
                                         ...prev,
-                                        [product.id]: [
-                                          ...(prev[product.id] || []),
-                                          "",
-                                        ],
-                                      }))
+                                        [product.id]: updated,
+                                      }));
+
+                                      // Call validation function on change
+                                      validateAssetIdInRealTime(product.id, updated, idx, newValue);
+                                    }}
+                                    onKeyDown={(e) => {
+                                      // Add new field when Enter is pressed on the last field
+                                      if (e.key === 'Enter' && isLastField && canAddMore) {
+                                        e.preventDefault(); // Prevent form submission if in a form
+                                        setAssetIds((prev) => ({
+                                          ...prev,
+                                          [product.id]: [...(prev[product.id] || []), ""],
+                                        }));
+
+                                        // Focus the new field after a brief delay
+                                        setTimeout(() => {
+                                          const nextField = document.querySelector(`[data-asset-id="${product.id}-${idx + 1}"]`);
+                                          if (nextField) {
+                                            nextField.focus();
+                                          }
+                                        }, 10);
+                                      }
+                                    }}
+                                    onBlur={(e) => {
+                                      const value = e.target.value.trim();
+                                      // Only validate empty fields for required positions
+                                      if (isRequiredField && value === "") {
+                                        setAssetIdErrors((prev) => ({
+                                          ...prev,
+                                          [`${product.id}-${idx}`]: `Asset ID ${idx + 1} cannot be empty`,
+                                          [product.id]: prev[product.id] || "Please fill all required Asset IDs",
+                                        }));
+                                      }
+                                    }}
+                                    error={Boolean(fieldError || (idx === 0 && productError && !fieldError))}
+                                    helperText={
+                                      fieldError ||
+                                      (idx === 0 && productError && !fieldError ? productError : "")
                                     }
-                                  >
-                                    + Add Asset ID
-                                  </Button>
-                                )}
+                                    // Add data attribute for easy selection
+                                    inputProps={{
+                                      'data-asset-id': `${product.id}-${idx}`
+                                    }}
+                                  />
+                                );
+                              })}
+
+                              {(assetIds[product.id]?.length || 0) < (quantities[product.id] || 0) && (
+                                <Button
+                                  size="small"
+                                  variant="outlined"
+                                  onClick={() => {
+                                    const currentLength = assetIds[product.id]?.length || 0;
+                                    const requiredQty = quantities[product.id] || 0;
+
+                                    if (currentLength < requiredQty) {
+                                      const newAssetIds = [...(assetIds[product.id] || []), ""];
+                                      setAssetIds((prev) => ({
+                                        ...prev,
+                                        [product.id]: newAssetIds,
+                                      }));
+
+                                      // Focus the new field after a brief delay
+                                      setTimeout(() => {
+                                        const newFieldIndex = newAssetIds.length - 1;
+                                        const newField = document.querySelector(`[data-asset-id="${product.id}-${newFieldIndex}"]`);
+                                        if (newField) {
+                                          newField.focus();
+                                        }
+                                      }, 10);
+                                    }
+                                  }}
+                                >
+                                  + Add Asset ID
+                                </Button>
+                              )}
                             </Box>
                           )}
                         </TableCell>

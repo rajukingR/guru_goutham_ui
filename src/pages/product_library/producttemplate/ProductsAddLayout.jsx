@@ -192,51 +192,51 @@ const ProductsAddLayout = () => {
   const handlePriceChange = (e) => {
     const { name, value } = e.target;
 
-    // Remove leading zeros for numeric fields
-    let numericValue;
-    if (
-      name === "purchase_price" ||
-      name.includes("rent_percent") ||
-      name.includes("rent_price")
-    ) {
-      // Remove leading zeros and parse as float
-      const cleanedValue = value.replace(/^0+/, "") || "0";
-      numericValue = parseFloat(cleanedValue) || 0;
-    } else {
-      numericValue = value;
+    let cleanedValue = value;
+
+    // Remove leading zeros BUT allow single "0"
+    if (name.includes("rent_percent") || name === "purchase_price") {
+      cleanedValue = cleanedValue.replace(/^0+(?=\d)/, "");
+      if (cleanedValue === "") cleanedValue = "0";
     }
+
+    // Convert cleaned value to number ONLY for calculations
+    const numericValue = Number(cleanedValue);
 
     const purchasePrice =
       name === "purchase_price"
         ? numericValue
-        : parseFloat(formData.purchase_price) || 0;
+        : Number(formData.purchase_price) || 0;
 
-    // Update the changed field first
+    // Update the input field
     const updatedFormData = {
       ...formData,
-      [name]: numericValue,
+      [name]: cleanedValue,
     };
 
-    // If purchase price changed, update all rent prices
+    // If purchase price changed → update all rent prices
     if (name === "purchase_price") {
       updatedFormData.rent_price_per_day = (
-        (purchasePrice * updatedFormData.rent_percent_per_day) /
+        (purchasePrice * Number(formData.rent_percent_per_day)) /
         100
       ).toFixed(2);
+
       updatedFormData.rent_price_per_month = (
-        (purchasePrice * updatedFormData.rent_percent_per_month) /
+        (purchasePrice * Number(formData.rent_percent_per_month)) /
         100
       ).toFixed(2);
+
       updatedFormData.rent_price_6_months = (
-        (purchasePrice * updatedFormData.rent_percent_6_months) /
+        (purchasePrice * Number(formData.rent_percent_6_months)) /
         100
       ).toFixed(2);
+
       updatedFormData.rent_price_1_year = (
-        (purchasePrice * updatedFormData.rent_percent_1_year) /
+        (purchasePrice * Number(formData.rent_percent_1_year)) /
         100
       ).toFixed(2);
     }
-    // If a rent percentage changed, update just that rent price
+    // If a rent percentage is updated → update only its rent price
     else if (name.includes("rent_percent")) {
       const priceField = name.replace("percent", "price");
       updatedFormData[priceField] = (
@@ -247,6 +247,7 @@ const ProductsAddLayout = () => {
 
     setFormData(updatedFormData);
   };
+
 
   // Handle form submission
   const handleSubmit = async (e) => {
@@ -395,7 +396,7 @@ const ProductsAddLayout = () => {
   // Render different specification fields based on product category
   const renderSpecificationFields = () => {
     switch (formData.product_category) {
-      case "Laptops":
+      case "Laptop":
         return (
           <>
             <div
@@ -1406,42 +1407,34 @@ const ProductsAddLayout = () => {
               required
             />
 
-            {/* Rent Percentage Slider for Per Month */}
+            {/* Rent Percentage Input for Per Month */}
             <div style={{ gridColumn: "1 / -1", marginTop: "1rem" }}>
               <label style={labelStyle}>
                 Rent Percent Per Month
                 <span style={requiredStyle}>*</span>
               </label>
 
-              <div style={sliderContainerStyle}>
-                <input
-                  type="range"
-                  min="0"
-                  max="70"
-                  step="1"
-                  name="rent_percent_per_month"
-                  value={formData.rent_percent_per_month}
-                  onChange={handlePriceChange}
-                  style={sliderStyle}
-                />
+              <input
+                type="number"
+                min="0"
+                max="70"
+                step="1"
+                name="rent_percent_per_month"
+                value={formData.rent_percent_per_month}
+                onChange={handlePriceChange}
+                style={{
+                  width: "100%",
+                  padding: "10px",
+                  borderRadius: "6px",
+                  border: "1px solid #ccc",
+                  fontSize: "14px",
+                  marginTop: "5px",
+                }}
+                placeholder="Enter Rent Percent (0 - 70)"
+              />
 
-                <div style={sliderValueContainerStyle}>
-                  <span style={sliderValueStyle}>
-                    {formData.rent_percent_per_month}%
-                  </span>
-                </div>
-
-                <div style={sliderTicksContainerStyle}>
-                  {[0, 10, 20, 30, 40, 50, 60, 70].map((tick) => (
-                    <div key={tick} style={sliderTickStyle}>
-                      <div style={sliderTickMarkStyle}></div>
-                      <span style={sliderTickLabelStyle}>{tick}%</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div style={sliderOutputContainerStyle}>
+              {/* Output Field (Read Only) */}
+              <div style={{ marginTop: "1rem" }}>
                 <Field
                   label="Rent Price Per Month"
                   type="text"
@@ -1452,6 +1445,7 @@ const ProductsAddLayout = () => {
                 />
               </div>
             </div>
+
 
             <div style={{ gridColumn: "1 / -1" }}>
               <Field

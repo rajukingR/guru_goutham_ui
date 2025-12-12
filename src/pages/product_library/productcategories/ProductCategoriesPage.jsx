@@ -13,7 +13,7 @@ const ProductCategoriesPage = () => {
 
   const columns = [
     { id: "s_no", label: "S.No." },
-    { id: "category_number", label: "Category Number" },
+    // { id: "category_number", label: "Category Number" },
     { id: "category_name", label: "Category Name" },
     { id: "description", label: "Description" },
     // { id: "status", label: "Status" }, // Status column

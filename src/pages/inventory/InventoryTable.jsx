@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import DynamicTable from "../../components/table-format/DynamicTable";
 import axios from "axios";
 import API_URL, { IMAGE_API_URL } from "../../api/Api_url";
-  import { useSelector } from "react-redux";
+import { useSelector } from "react-redux";
 
 import DefaultImage from "../../assets/logos/default.jpg";
 
@@ -13,9 +13,9 @@ const InventoryTable = () => {
 
 
 
-    const { user, token } = useSelector((state) => state.auth);
-  
-    const userToken = token;
+  const { user, token } = useSelector((state) => state.auth);
+
+  const userToken = token;
 
   const columns = [
     { id: "id", label: "S.No." },
@@ -35,6 +35,113 @@ const InventoryTable = () => {
     // { id: "used_rent_value", label: "Used Rent Value (₹)" },
     // { id: "used_buy_value", label: "Used Buy Value (₹)" },
   ];
+
+
+
+  const getSpecifications = (p) => {
+    const category = p.product_category || "";
+
+    switch (category) {
+      case "Laptop":
+      case "Laptops":
+        return `
+        RAM: ${p.ram || "N/A"},
+        Storage: ${p.storage || "N/A"},
+        Disk: ${p.disk_type || "N/A"},
+        Processor: ${p.processor_model || p.processor || "N/A"} ${p.generation || ""},
+        Graphics: ${p.graphics || "N/A"},
+        OS: ${p.os || "N/A"},
+        Screen: ${p.display_size || p.screen_size || "N/A"},
+        
+      `;
+
+      case "Assembled PC":
+        return `
+        RAM: ${p.ram || "N/A"},
+        Processor: ${p.processor || "N/A"},
+        RAM Type: ${p.ramType || "N/A"},
+        Motherboard: ${p.motherboard || "N/A"}
+      `;
+
+      case "Monitors":
+        return `
+        Size: ${p.screen_size || p.display_size || "N/A"},
+        Resolution: ${p.resolution || "N/A"},
+        Brightness: ${p.brightness || "N/A"}
+      `;
+
+      case "Processor":
+        return `
+        Model: ${p.model || "N/A"},
+        Generation: ${p.generation || "N/A"},
+        Speed: ${p.speed || "N/A"}
+      `;
+
+      case "RAM":
+        return `
+        Size: ${p.ram || p.sizeGb || "N/A"},
+        Type: ${p.ramType || "N/A"},
+        Speed: ${p.speed || "N/A"}
+      `;
+
+      case "SSD":
+        return `
+        Capacity: ${p.capacity || p.storage || "N/A"},
+        Type: ${p.ssd_type || p.disk_type || "N/A"},
+        Speed: ${p.speed || "N/A"}
+      `;
+
+      case "HDD":
+        return `
+        Capacity: ${p.capacity || p.storage || "N/A"},
+        Speed: ${p.speed || "N/A"}
+      `;
+
+      case "GPU":
+        return `
+        Model: ${p.model || "N/A"},
+        Memory: ${p.capacity || "N/A"}
+      `;
+
+      case "Mother Board":
+        return `
+        Model: ${p.model || "N/A"},
+        Chipset: ${p.pro_model || "N/A"}
+      `;
+
+      case "SMPS":
+        return `Wattage: ${p.smps || "N/A"}`;
+
+      case "Cabinet":
+        return `
+        Model: ${p.model || "N/A"},
+        Form Factor: ${p.cabinet || "N/A"}
+      `;
+
+      case "Wi-Fi":
+        return `
+        Standard: ${p.wifi_standard || "N/A"},
+        Frequency: ${p.frequency_band || p.frequencyMhz || "N/A"}
+      `;
+
+      case "Printer":
+        return `Type: ${p.model || "N/A"}`;
+
+      case "Projector":
+        return `
+        Model: ${p.model || "N/A"},
+        Resolution: ${p.resolution || "N/A"}
+      `;
+
+      default:
+        return `
+        RAM: ${p.ram || "N/A"},
+        Storage: ${p.storage || "N/A"},
+        Processor: ${p.processor || "N/A"}
+      `;
+    }
+  };
+
 
   const formatBoolean = (value) => (value ? "Yes" : "No");
 
@@ -58,20 +165,7 @@ const InventoryTable = () => {
           const formattedData = products.map((item, index) => {
             const p = item.product || {};
 
-            const specifications = `
-              RAM: ${p.ram || "N/A"}, 
-              Storage: ${p.storage || "N/A"}, 
-              Disk: ${p.disk_type || "N/A"}, 
-              Processor: ${p.processor || "N/A"},
-              Model: ${p.model || "N/A"},
-              Graphics: ${p.graphics || "N/A"}, 
-              OS: ${p.os || "N/A"}, 
-              Mouse: ${formatBoolean(p.mouse)}, 
-              Keyboard: ${formatBoolean(p.keyboard)}, 
-              Speaker: ${formatBoolean(p.speaker)}, 
-              Webcam: ${formatBoolean(p.webcam)}, 
-              DVD: ${formatBoolean(p.dvd)}
-            `
+            const specifications = getSpecifications(p)
               .trim()
               .replace(/\s+/g, " ");
 

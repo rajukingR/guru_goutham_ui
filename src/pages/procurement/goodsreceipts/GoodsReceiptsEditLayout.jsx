@@ -21,6 +21,7 @@ import {
 import { Add, Remove } from "@mui/icons-material";
 import { useSelector } from "react-redux";
 import API_URL, { IMAGE_API_URL } from "../../../api/Api_url";
+import { generateSpecifications } from "../../../utils/generateSpecifications";
 
 const GoodsReceiptsEditLayout = () => {
   const { user, token } = useSelector((state) => state.auth);
@@ -630,12 +631,16 @@ const GoodsReceiptsEditLayout = () => {
                 handleInputChange("goods_receipt_date", e.target.value)
               }
             />
-            <Field
-              label="Purchase Type"
-              value={formData.purchase_type}
-              onChange={(e) => handleInputChange("purchase_type", e.target.value)}
-              disabled={usePurchaseOrder && selectedPurchaseOrder}
-            />
+
+            {usePurchaseOrder && (
+              <Field
+                label="Purchase Type"
+                value={formData.purchase_type}
+                onChange={(e) => handleInputChange("purchase_type", e.target.value)}
+                disabled={usePurchaseOrder && selectedPurchaseOrder}
+              />
+
+            )}
             <Field
               label="Goods Receipt Status"
               type="select"
@@ -768,26 +773,21 @@ const GoodsReceiptsEditLayout = () => {
                 <Table size="small" stickyHeader>
                   <TableHead>
                     <TableRow sx={{ backgroundColor: "#0d47a1" }}>
-                      {!usePurchaseOrder && (
-                        <TableCell
-                          padding="checkbox"
-                          sx={{ backgroundColor: "#0d47a1" }}
-                        >
-                          <Checkbox
-                            sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
-                          />
-                        </TableCell>
-                      )}
+                      <TableCell
+                        padding="checkbox"
+                        sx={{ backgroundColor: "#0d47a1" }}
+                      >
+                        <Checkbox
+                          sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
+                        />
+                      </TableCell>
+
                       <TableCell
                         sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
                       >
                         Product Name
                       </TableCell>
-                      <TableCell
-                        sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
-                      >
-                        Brand
-                      </TableCell>
+
                       <TableCell
                         sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
                       >
@@ -810,130 +810,188 @@ const GoodsReceiptsEditLayout = () => {
                       </TableCell>
                     </TableRow>
                   </TableHead>
+
+
+
                   <TableBody>
-                    {getProductsToDisplay().map((product) => (
-                      <TableRow key={product.id}>
-                        {!usePurchaseOrder && (
+                    {getProductsToDisplay()
+                      .filter(product => selectedProductIds.includes(product.id))
+                      .map((product) => (
+                        <TableRow key={product.id}>
                           <TableCell padding="checkbox">
                             <Checkbox
                               checked={selectedProductIds.includes(product.id)}
                               onChange={() => handleManualProductSelection(product.id)}
                             />
                           </TableCell>
-                        )}
-                        <TableCell>{product.product_name}</TableCell>
-                        <TableCell>{product.brand}</TableCell>
-                        <TableCell>
-                          <div>
-                            <strong>Model:</strong> {product.model}
-                          </div>
-                          <div>
-                            <strong>Processor:</strong> {product.processor}
-                          </div>
-                          <div>
-                            <strong>RAM:</strong> {product.ram}
-                          </div>
-                          <div>
-                            <strong>Storage:</strong> {product.storage}
-                          </div>
-                          <div>
-                            <strong>Graphics:</strong> {product.graphics}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div>
-                            <strong>Month:</strong> ₹
-                            {product.rent_price_per_month}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <Box display="flex" alignItems="center">
-                            <IconButton
-                              size="small"
-                              onClick={() => decrementQty(product.id)}
-                            >
-                              <Remove fontSize="small" />
-                            </IconButton>
-                            <TextField
-                              type="number"
-                              size="small"
-                              value={quantities[product.id] || 0}
-                              onChange={(e) =>
-                                handleQtyChange(product.id, e.target.value)
-                              }
-                              inputProps={{
-                                min: 0,
-                                style: { width: 50, textAlign: "center" },
-                              }}
-                            />
-                            <IconButton
-                              size="small"
-                              onClick={() => incrementQty(product.id)}
-                            >
-                              <Add fontSize="small" />
-                            </IconButton>
-                          </Box>
-                        </TableCell>
-                        <TableCell>
-                          {quantities[product.id] > 0 && (
-                            <Box
-                              display="flex"
-                              flexDirection="column"
-                              gap={1}
-                            >
-                              {(assetIds[product.id] || []).map((id, idx) => (
-                                <TextField
-                                  key={idx}
-                                  size="small"
-                                  placeholder={`Asset ID ${idx + 1}`}
-                                  value={id}
-                                  onChange={(e) => {
-                                    const updated = [
-                                      ...(assetIds[product.id] || []),
-                                    ];
-                                    updated[idx] = e.target.value;
-                                    setAssetIds((prev) => ({
-                                      ...prev,
-                                      [product.id]: updated,
-                                    }));
-                                    // Clear error when user types
-                                    if (assetIdErrors[product.id]) {
-                                      setAssetIdErrors((prev) => {
-                                        const newErrors = { ...prev };
-                                        delete newErrors[product.id];
-                                        return newErrors;
-                                      });
-                                    }
-                                  }}
-                                  error={Boolean(assetIdErrors[product.id])}
-                                  helperText={
-                                    idx === 0 ? assetIdErrors[product.id] : ""
-                                  }
-                                />
-                              ))}
-                              {(assetIds[product.id]?.length || 0) <
-                                (quantities[product.id] || 0) && (
+
+                          <TableCell>{product.product_name}</TableCell>
+                          <TableCell>{generateSpecifications(product)}</TableCell>
+                          <TableCell>
+                            <div>
+                              <strong>Month:</strong> ₹
+                              {product.rent_price_per_month}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <Box display="flex" alignItems="center">
+                              <IconButton
+                                size="small"
+                                onClick={() => decrementQty(product.id)}
+                              >
+                                <Remove fontSize="small" />
+                              </IconButton>
+                              <TextField
+                                type="number"
+                                size="small"
+                                value={quantities[product.id] || 0}
+                                onChange={(e) =>
+                                  handleQtyChange(product.id, e.target.value)
+                                }
+                                inputProps={{
+                                  min: 0,
+                                  style: { width: 50, textAlign: "center" },
+                                }}
+                              />
+                              <IconButton
+                                size="small"
+                                onClick={() => incrementQty(product.id)}
+                              >
+                                <Add fontSize="small" />
+                              </IconButton>
+                            </Box>
+                          </TableCell>
+                          <TableCell>
+                            {quantities[product.id] > 0 && (
+                              <Box display="flex" flexDirection="column" gap={1}>
+                                {(assetIds[product.id] || []).map((id, idx) => {
+                                  // Check for duplicates in real-time
+                                  const currentAssetIds = assetIds[product.id] || [];
+                                  const normalizedCurrentIds = currentAssetIds.map(id => id.trim().toLowerCase());
+                                  const normalizedId = id.trim().toLowerCase();
+
+                                  // Count how many times this ID appears (excluding current index if empty)
+                                  const duplicateCount = normalizedCurrentIds.filter(
+                                    (normalizedAssetId, index) =>
+                                      normalizedAssetId &&
+                                      normalizedAssetId === normalizedId &&
+                                      (id.trim() !== "" || index === idx)
+                                  ).length;
+
+                                  const isDuplicate = duplicateCount > 1;
+                                  const isEmpty = !id.trim();
+
+                                  return (
+                                    <TextField
+                                      key={idx}
+                                      size="small"
+                                      placeholder={`Asset ID ${idx + 1}`}
+                                      value={id}
+                                      onChange={(e) => {
+                                        const newValue = e.target.value;
+                                        const updated = [...(assetIds[product.id] || [])];
+                                        updated[idx] = newValue;
+
+                                        setAssetIds((prev) => ({
+                                          ...prev,
+                                          [product.id]: updated,
+                                        }));
+
+                                        // Immediate validation
+                                        const currentIds = updated;
+                                        const normalizedIds = currentIds.map(id => id.trim().toLowerCase());
+                                        const currentNormalizedValue = newValue.trim().toLowerCase();
+
+                                        // Check for duplicates
+                                        const duplicateCountNow = normalizedIds.filter(
+                                          normalizedId =>
+                                            normalizedId &&
+                                            normalizedId === currentNormalizedValue
+                                        ).length;
+
+                                        const isEmptyNow = !newValue.trim();
+                                        const isDuplicateNow = duplicateCountNow > 1;
+
+                                        // Update errors
+                                        setAssetIdErrors((prev) => {
+                                          const newErrors = { ...prev };
+
+                                          if (isDuplicateNow) {
+                                            newErrors[product.id] = "Duplicate asset IDs found";
+                                            newErrors[`${product.id}-${idx}`] = "This Asset ID is already entered";
+                                          } else if (isEmptyNow && idx < quantities[product.id]) {
+                                            // Don't show empty error for extra optional fields if they exist
+                                            if (idx < (quantities[product.id] || 0)) {
+                                              newErrors[`${product.id}-${idx}`] = `Asset ID ${idx + 1} cannot be empty`;
+                                              if (!newErrors[product.id]) {
+                                                newErrors[product.id] = "Please fill all required Asset IDs";
+                                              }
+                                            }
+                                          } else {
+                                            // Clear specific field error
+                                            delete newErrors[`${product.id}-${idx}`];
+
+                                            // Clear product error if all fields are valid
+                                            const hasOtherErrors = Object.keys(newErrors).some(key =>
+                                              key.startsWith(`${product.id}-`) ||
+                                              (key === product.id && key !== `${product.id}-${idx}`)
+                                            );
+                                            if (!hasOtherErrors) {
+                                              delete newErrors[product.id];
+                                            }
+                                          }
+
+                                          return newErrors;
+                                        });
+                                      }}
+                                      onBlur={(e) => {
+                                        // Final validation on blur
+                                        const value = e.target.value.trim();
+                                        if (value === "" && idx < quantities[product.id]) {
+                                          // Only show error for required fields (based on quantity)
+                                          setAssetIdErrors((prev) => ({
+                                            ...prev,
+                                            [`${product.id}-${idx}`]: `Asset ID ${idx + 1} cannot be empty`,
+                                            [product.id]: prev[product.id] || "Please fill all required Asset IDs",
+                                          }));
+                                        }
+                                      }}
+                                      error={Boolean(
+                                        assetIdErrors[`${product.id}-${idx}`] ||
+                                        (idx === 0 && assetIdErrors[product.id] && !assetIdErrors[`${product.id}-0`])
+                                      )}
+                                      helperText={
+                                        assetIdErrors[`${product.id}-${idx}`] ||
+                                        (idx === 0 && assetIdErrors[product.id] && !assetIdErrors[`${product.id}-0`] ? assetIdErrors[product.id] : "")
+                                      }
+                                    />
+                                  );
+                                })}
+
+                                {(assetIds[product.id]?.length || 0) < (quantities[product.id] || 0) && (
                                   <Button
                                     size="small"
                                     variant="outlined"
-                                    onClick={() =>
-                                      setAssetIds((prev) => ({
-                                        ...prev,
-                                        [product.id]: [
-                                          ...(prev[product.id] || []),
-                                          "",
-                                        ],
-                                      }))
-                                    }
+                                    onClick={() => {
+                                      const currentLength = assetIds[product.id]?.length || 0;
+                                      const requiredQty = quantities[product.id] || 0;
+
+                                      if (currentLength < requiredQty) {
+                                        setAssetIds((prev) => ({
+                                          ...prev,
+                                          [product.id]: [...(prev[product.id] || []), ""],
+                                        }));
+                                      }
+                                    }}
                                   >
                                     + Add Asset ID
                                   </Button>
                                 )}
-                            </Box>
-                          )}
-                        </TableCell>
-                      </TableRow>
-                    ))}
+                              </Box>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      ))}
                   </TableBody>
                 </Table>
               </TableContainer>
