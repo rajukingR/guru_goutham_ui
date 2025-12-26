@@ -3,6 +3,7 @@ import DynamicTable from "../../components/table-format/DynamicTable";
 import axios from "axios";
 import API_URL, { IMAGE_API_URL } from "../../api/Api_url";
 import { useSelector } from "react-redux";
+import { generateSpecifications } from "../../utils/generateSpecifications";
 
 import DefaultImage from "../../assets/logos/default.jpg";
 
@@ -165,7 +166,7 @@ const InventoryTable = () => {
           const formattedData = products.map((item, index) => {
             const p = item.product || {};
 
-            const specifications = getSpecifications(p)
+            const specifications = generateSpecifications(p)
               .trim()
               .replace(/\s+/g, " ");
 

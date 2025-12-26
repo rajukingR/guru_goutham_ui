@@ -25,6 +25,7 @@ import { Add, Remove, Edit } from "@mui/icons-material";
 import API_URL, { IMAGE_API_URL, POSTAL_API } from "../../../api/Api_url";
 import { useNavigate, useParams } from "react-router-dom";
 import { useSelector } from "react-redux";
+import { generateSpecifications } from "../../../utils/generateSpecifications";
 
 const QuotationsEditLayoutPage = () => {
   const { user, token } = useSelector((state) => state.auth);
@@ -64,6 +65,7 @@ const QuotationsEditLayoutPage = () => {
 
   const [productOfferPrices, setProductOfferPrices] = useState({});
   const [productRentOfferPrices, setProductRentOfferPrices] = useState({});
+  const [quantityErrors, setQuantityErrors] = useState({});
 
   const [assetIds, setAssetIds] = useState({});
   const [assetIdErrors, setAssetIdErrors] = useState({});
@@ -110,6 +112,35 @@ const QuotationsEditLayoutPage = () => {
     state: "",
     country: "India",
   });
+
+
+  const validateQuantities = () => {
+    const errors = {};
+    let isValid = true;
+
+    selectedProductIds.forEach((productId) => {
+      const qty = quantities[productId];
+
+      if (!qty || qty <= 0) {
+        errors[productId] = "Quantity is required";
+        isValid = false;
+      }
+    });
+
+    setQuantityErrors(errors);
+
+    if (!isValid) {
+      setSnackbar({
+        open: true,
+        message: "Please enter quantity for all selected products",
+        severity: "error",
+      });
+    }
+
+    return isValid;
+  };
+
+
 
   // Fetch quotation data
   useEffect(() => {
@@ -449,16 +480,24 @@ const QuotationsEditLayoutPage = () => {
 
   const handleQtyChange = (id, value) => {
     const qty = Math.max(0, parseInt(value) || 0);
-    setQuantities({ ...quantities, [id]: qty });
 
-    // Reset asset IDs when quantity changes
-    if (quantities[id] !== qty) {
-      setAssetIds((prev) => ({
-        ...prev,
-        [id]: Array(qty).fill(""),
-      }));
+    setQuantities((prev) => ({ ...prev, [id]: qty }));
+
+    // 🔥 Clear error when user enters qty
+    if (quantityErrors[id]) {
+      setQuantityErrors((prev) => {
+        const updated = { ...prev };
+        delete updated[id];
+        return updated;
+      });
     }
+
+    setAssetIds((prev) => ({
+      ...prev,
+      [id]: Array(qty).fill(""),
+    }));
   };
+
 
   const incrementQty = (id) => {
     const newQty = (quantities[id] || 0) + 1;
@@ -570,23 +609,14 @@ const QuotationsEditLayoutPage = () => {
 
     setErrors(newErrors);
 
-    // Validate asset IDs if it's a direct invoice
+    if (!validateQuantities()) {
+      isValid = false;
+    }
+
+    // Existing direct invoice validation
     if (formData.is_direct_invoice) {
       const assetIdValid = validateAssetIds();
-      if (!assetIdValid) {
-        isValid = false;
-
-        // Show specific error message if we have product-specific errors
-        const hasProductErrors = Object.keys(assetIdErrors).length > 0;
-        if (hasProductErrors) {
-          setSnackbar({
-            open: true,
-            message:
-              "Please provide all required asset IDs for the selected products",
-            severity: "error",
-          });
-        }
-      }
+      if (!assetIdValid) isValid = false;
     }
 
     return isValid;
@@ -660,6 +690,9 @@ const QuotationsEditLayoutPage = () => {
         quotation_generated_by: formData.quotationGeneratedBy,
         status: formData.quotationStatus,
         items: selectedProductIds.map((productId) => {
+          const qty = quantities[productId];
+
+          if (!qty || qty <= 0) return null;
           const product = products.find((p) => p.id === productId);
           const offerPrice = productOfferPrices[productId] || 0;
           const rentOfferPrice = productRentOfferPrices[productId] || 0;
@@ -677,7 +710,7 @@ const QuotationsEditLayoutPage = () => {
           return {
             product_id: productId,
             requested_quantity: leadProduct?.quantity || 1,
-            quotation_quantity: quantities[productId] || 0,
+            quotation_quantity: qty,
             product_name: product?.product_name || "",
             offer_purchase_price: offerPrice,
             offer_rent_price_per_month: rentOfferPrice,
@@ -948,12 +981,12 @@ const QuotationsEditLayoutPage = () => {
                 </div>
               </div>
 
-              <Field
+              {/* <Field
                 label="Lead ID"
                 placeholder="Enter Lead ID"
                 value={formData.leadId}
                 readOnly
-              />
+              /> */}
               <Field
                 label="Transaction Type"
                 type="select"
@@ -1214,182 +1247,188 @@ const QuotationsEditLayoutPage = () => {
                       </TableRow>
                     </TableHead>
                     <TableBody>
-                      {filteredProducts.map((product) => (
-                        <TableRow key={product.id}>
-                          <TableCell padding="checkbox">
-                            <Checkbox
-                              checked={selectedProductIds.includes(product.id)}
-                              onChange={() => {
-                                setSelectedProductIds((prev) =>
-                                  prev.includes(product.id)
-                                    ? prev.filter((id) => id !== product.id)
-                                    : [...prev, product.id]
-                                );
-                              }}
-                            />
-                          </TableCell>
-                          <TableCell>{product.product_name}</TableCell>
-                          <TableCell>{product.product_category}</TableCell>
-                          <TableCell>
-                            <div>
-                              <strong>Model:</strong> {product.model}
-                            </div>
-                            <div>
-                              <strong>Processor:</strong> {product.processor}
-                            </div>
-                            <div>
-                              <strong>RAM:</strong> {product.ram}
-                            </div>
-                            <div>
-                              <strong>Storage:</strong> {product.storage}
-                            </div>
-                            <div>
-                              <strong>Graphics:</strong> {product.graphics}
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <>
-                              <div>
-                                <strong>Purchase Price:</strong> ₹
-                                {productOfferPrices[product.id] > 0
-                                  ? productOfferPrices[product.id]
-                                  : product.purchase_price}
-                              </div>
-                              <div>
-                                <strong>Month Price:</strong> ₹
-                                {productRentOfferPrices[product.id] > 0
-                                  ? productRentOfferPrices[product.id]
-                                  : product.rent_price_per_month}
-                              </div>
-                            </>
-                          </TableCell>
-                          <TableCell>
-                            <Box display="flex" alignItems="center">
-                              <IconButton
-                                size="small"
-                                onClick={() => decrementQty(product.id)}
-                              >
-                                <Remove fontSize="small" />
-                              </IconButton>
-                              <TextField
-                                type="number"
-                                size="small"
-                                value={quantities[product.id] || ""}
-                                onChange={(e) =>
-                                  handleQtyChange(product.id, e.target.value)
-                                }
-                                inputProps={{
-                                  min: 0,
-                                  style: { width: 50, textAlign: "center" },
+                      {filteredProducts
+                        .slice()
+                        .sort((a, b) => {
+                          const aSelected = selectedProductIds.includes(a.id);
+                          const bSelected = selectedProductIds.includes(b.id);
+
+                          if (aSelected === bSelected) return 0;
+                          if (aSelected && !bSelected) return -1;
+                          return 1;
+                        })
+                        .map((product) => (
+                          <TableRow key={product.id}>
+                            <TableCell padding="checkbox">
+                              <Checkbox
+                                checked={selectedProductIds.includes(product.id)}
+                                onChange={() => {
+                                  setSelectedProductIds((prev) =>
+                                    prev.includes(product.id)
+                                      ? prev.filter((id) => id !== product.id)
+                                      : [...prev, product.id]
+                                  );
                                 }}
                               />
-                              <IconButton
-                                size="small"
-                                onClick={() => incrementQty(product.id)}
-                              >
-                                <Add fontSize="small" />
-                              </IconButton>
-                            </Box>
-                          </TableCell>
-                          {formData.is_direct_invoice === true && (
+                            </TableCell>
+                            <TableCell>{product.product_name}</TableCell>
+                            <TableCell>{product.product_category}</TableCell>
                             <TableCell>
-                              {quantities[product.id] > 0 && (
-                                <Box
-                                  display="flex"
-                                  flexDirection="column"
-                                  gap={1}
-                                  sx={{ width: "200px" }}
+                              {generateSpecifications(product)}
+                            </TableCell>
+                            <TableCell>
+                              <>
+                                <div>
+                                  <strong>Purchase Price:</strong> ₹
+                                  {productOfferPrices[product.id] > 0
+                                    ? productOfferPrices[product.id]
+                                    : product.purchase_price}
+                                </div>
+                                <div>
+                                  <strong>Month Price:</strong> ₹
+                                  {productRentOfferPrices[product.id] > 0
+                                    ? productRentOfferPrices[product.id]
+                                    : product.rent_price_per_month}
+                                </div>
+                              </>
+                            </TableCell>
+                            <TableCell>
+                              <Box display="flex" alignItems="center">
+                                <IconButton
+                                  size="small"
+                                  onClick={() => decrementQty(product.id)}
+                                  disabled={
+                                    !selectedProductIds.includes(product.id)
+                                  }
                                 >
+                                  <Remove fontSize="small" />
+                                </IconButton>
+                                <TextField
+                                  type="number"
+                                  size="small"
+                                  value={quantities[product.id] || ""}
+                                  onChange={(e) =>
+                                    handleQtyChange(product.id, e.target.value)
+                                  }
+                                  disabled={!selectedProductIds.includes(product.id)}
+                                  error={Boolean(quantityErrors[product.id])}
+                                  helperText={quantityErrors[product.id] || ""}
+                                  inputProps={{
+                                    min: 0,
+                                    style: { width: 50, textAlign: "center" },
+                                  }}
+                                />
+
+                                <IconButton
+                                  size="small"
+                                  onClick={() => incrementQty(product.id)}
+                                  disabled={
+                                    !selectedProductIds.includes(product.id)
+                                  }
+                                >
+                                  <Add fontSize="small" />
+                                </IconButton>
+                              </Box>
+                            </TableCell>
+                            {formData.is_direct_invoice === true && (
+                              <TableCell>
+                                {quantities[product.id] > 0 && (
                                   <Box
                                     display="flex"
                                     flexDirection="column"
                                     gap={1}
+                                    sx={{ width: "200px" }}
                                   >
-                                    {(assetIds[product.id] || []).map(
-                                      (id, idx) => (
-                                        <TextField
-                                          key={idx}
-                                          size="small"
-                                          fullWidth
-                                          placeholder={`Asset ID ${idx + 1}`}
-                                          value={id}
-                                          onChange={(e) => {
-                                            const updated = [
-                                              ...(assetIds[product.id] || []),
-                                            ];
-                                            updated[idx] = e.target.value;
-                                            setAssetIds((prev) => ({
-                                              ...prev,
-                                              [product.id]: updated,
-                                            }));
-                                            if (assetIdErrors[product.id]) {
-                                              setAssetIdErrors((prev) => {
-                                                const newErrors = { ...prev };
-                                                delete newErrors[product.id];
-                                                return newErrors;
-                                              });
+                                    <Box
+                                      display="flex"
+                                      flexDirection="column"
+                                      gap={1}
+                                    >
+                                      {(assetIds[product.id] || []).map(
+                                        (id, idx) => (
+                                          <TextField
+                                            key={idx}
+                                            size="small"
+                                            fullWidth
+                                            placeholder={`Asset ID ${idx + 1}`}
+                                            value={id}
+                                            onChange={(e) => {
+                                              const updated = [
+                                                ...(assetIds[product.id] || []),
+                                              ];
+                                              updated[idx] = e.target.value;
+                                              setAssetIds((prev) => ({
+                                                ...prev,
+                                                [product.id]: updated,
+                                              }));
+                                              if (assetIdErrors[product.id]) {
+                                                setAssetIdErrors((prev) => {
+                                                  const newErrors = { ...prev };
+                                                  delete newErrors[product.id];
+                                                  return newErrors;
+                                                });
+                                              }
+                                            }}
+                                            error={Boolean(
+                                              assetIdErrors[product.id]
+                                            )}
+                                            helperText={
+                                              idx === 0
+                                                ? assetIdErrors[product.id]
+                                                : ""
                                             }
-                                          }}
-                                          error={Boolean(
-                                            assetIdErrors[product.id]
-                                          )}
-                                          helperText={
-                                            idx === 0
-                                              ? assetIdErrors[product.id]
-                                              : ""
-                                          }
-                                        />
-                                      )
-                                    )}
+                                          />
+                                        )
+                                      )}
+                                    </Box>
+
+                                    {(assetIds[product.id]?.length || 0) <
+                                      (quantities[product.id] || 0) && (
+                                        <Box mt={1}>
+                                          <Button
+                                            size="small"
+                                            variant="outlined"
+                                            onClick={() =>
+                                              setAssetIds((prev) => ({
+                                                ...prev,
+                                                [product.id]: [
+                                                  ...(prev[product.id] || []),
+                                                  "",
+                                                ],
+                                              }))
+                                            }
+                                          >
+                                            + Add Asset ID
+                                          </Button>
+                                        </Box>
+                                      )}
                                   </Box>
+                                )}
+                              </TableCell>
+                            )}
 
-                                  {(assetIds[product.id]?.length || 0) <
-                                    (quantities[product.id] || 0) && (
-                                      <Box mt={1}>
-                                        <Button
-                                          size="small"
-                                          variant="outlined"
-                                          onClick={() =>
-                                            setAssetIds((prev) => ({
-                                              ...prev,
-                                              [product.id]: [
-                                                ...(prev[product.id] || []),
-                                                "",
-                                              ],
-                                            }))
-                                          }
-                                        >
-                                          + Add Asset ID
-                                        </Button>
-                                      </Box>
-                                    )}
-                                </Box>
-                              )}
+                            <TableCell>
+                              <IconButton
+                                size="small"
+                                onClick={() => handleOpenEditDialog(product)}
+                                title="Edit Prices"
+                                disabled={
+                                  !selectedProductIds.includes(product.id)
+                                }
+                                style={{
+                                  opacity: selectedProductIds.includes(product.id)
+                                    ? 1
+                                    : 0.5,
+                                  cursor: selectedProductIds.includes(product.id)
+                                    ? "pointer"
+                                    : "not-allowed",
+                                }}
+                              >
+                                <Edit fontSize="small" />
+                              </IconButton>
                             </TableCell>
-                          )}
-
-                          <TableCell>
-                            <IconButton
-                              size="small"
-                              onClick={() => handleOpenEditDialog(product)}
-                              title="Edit Prices"
-                              disabled={
-                                !selectedProductIds.includes(product.id)
-                              }
-                              style={{
-                                opacity: selectedProductIds.includes(product.id)
-                                  ? 1
-                                  : 0.5,
-                                cursor: selectedProductIds.includes(product.id)
-                                  ? "pointer"
-                                  : "not-allowed",
-                              }}
-                            >
-                              <Edit fontSize="small" />
-                            </IconButton>
-                          </TableCell>
-                        </TableRow>
-                      ))}
+                          </TableRow>
+                        ))}
                     </TableBody>
                   </Table>
                 </TableContainer>

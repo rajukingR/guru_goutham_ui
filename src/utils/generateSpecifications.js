@@ -1,6 +1,8 @@
 // src/utils/generateSpecifications.js
 export const generateSpecifications = (item) => {
-  const { product_category } = item;
+  const {
+    product_category
+  } = item;
 
   switch (product_category) {
     case "Laptop":
@@ -9,19 +11,43 @@ export const generateSpecifications = (item) => {
         Storage: ${item.storage || "N/A"},
         Disk: ${item.disk_type || "N/A"},
         Processor: ${item.processor_model || item.processor || "N/A"} ${item.generation || ""},
-        Graphics: ${item.graphics || "N/A"},
+        Graphics Card: ${item.graphics || "N/A"},
         OS: ${item.os || "N/A"},
-        Screen: ${item.display_size || item.screen_size || "N/A"}
+        Screen: ${item.display_size || item.screen_size || "N/A"}.
+      `;
+
+    case "Desktop":
+      return `
+        Model: ${item.model},
+        RAM: ${item.ram || "N/A"},
+        Processor: ${item.processor || "N/A"},
+        Disk Type: ${item.disk_type},
+        Storage: ${item.storage || "N/A"},
+        Graphics Card: ${item.graphics || "N/A"},
+        Motherboard: ${item.motherboard || "N/A"},
+        SMPS: ${item.smps || "N/A"},
+        Cabinet: ${item.cabinet || "N/A"},
+        OS: ${item.os || "N/A"},
+        Generation: ${item.generation || "N/A"},
+        Wi-Fi: ${item.wifi_standard || "N/A"}.
+
       `;
 
     case "Assembled PC":
       return `
+        Model: ${item.model},
         RAM: ${item.ram || "N/A"},
         Processor: ${item.processor || "N/A"},
-        RAM Type: ${item.ramType || "N/A"}
+        Disk Type: ${item.disk_type},
+        Storage: ${item.storage || "N/A"},
+        Graphics Card: ${item.graphics || "N/A"},
+        Motherboard: ${item.motherboard || "N/A"},
+        SMPS: ${item.smps || "N/A"},
+        Cabinet: ${item.cabinet || "N/A"},
+        Wi-Fi: ${item.wifi_standard || "N/A"}.
       `;
 
-    case "Monitors":
+    case "Monitor":
       return `
         Size: ${item.screen_size || item.display_size || "N/A"},
         Resolution: ${item.resolution || "N/A"},
@@ -42,23 +68,29 @@ export const generateSpecifications = (item) => {
         Speed: ${item.speed || item.ram_speed || "N/A"}
       `;
 
-    case "SSD":
+
+    case "NVMe Storage":
+      return `
+        Type: ${item.ramType || "N/A"},
+        Speed: ${item.speed || item.ram_speed || "N/A"}
+      `;
+
+    case "SSD Storage":
       return `
         Capacity: ${item.capacity || item.storage || "N/A"},
         Type: ${item.ssd_type || item.disk_type || "N/A"},
         Speed: ${item.speed || "N/A"}
       `;
 
-    case "HDD":
+    case "HDD Storage":
       return `
         Capacity: ${item.capacity || item.storage || "N/A"},
         Speed: ${item.speed || "N/A"}
       `;
 
-    case "Mother Board":
+    case "Motherboard":
       return `
-        Model: ${item.model || "N/A"},
-        Chipset: ${item.pro_model || "N/A"}
+        Model: ${item.model || "N/A"}
       `;
 
     case "Cabinet":
@@ -72,19 +104,20 @@ export const generateSpecifications = (item) => {
         Wattage: ${item.smps || "N/A"}
       `;
 
-    case "GPU":
+    case "Graphics Card":
       return `
         Model: ${item.model || "N/A"},
-        Memory: ${item.capacity || "N/A"}
+        Speed: ${item.speed || "N/A"}
       `;
 
-    case "Keyboard-Mouse-Combo":
+    case "Keyboard & Mouse":
       return `
         Includes Mouse: ${item.mouse ? "Yes" : "No"},
         Includes Keyboard: ${item.keyboard ? "Yes" : "No"}
       `;
 
-    case "Wi-Fi":
+    case "Wi-Fi Card":
+    case "Wi-Fi Dongle":
       return `
         Standard: ${item.wifi_standard || "N/A"},
         Frequency: ${item.frequency_band || item.frequencyMhz || "N/A"}

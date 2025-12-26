@@ -303,15 +303,16 @@ const HardwareSelectorEdit = () => {
   });
 
   // Component categories
+  // Component categories
   const componentCategories = {
     ram: "RAM",
     processor: "Processor",
-    motherboard: "Mother Board",
+    motherboard: "Motherboard",
     cabinet: "Cabinet",
-    storage: ["SSD", "HDD", "NVMe"],
-    gpu: "GPU",
+    storage: ["SSD Storage", "HDD Storage", "NVMe Storage"],
+    gpu: "Graphics Card",
     smps: "SMPS",
-    wifi: "Wi-Fi",
+    wifi: ["Wi-Fi Card", "Wi-Fi Dongle"],
   };
 
   // Component states
@@ -383,13 +384,13 @@ const HardwareSelectorEdit = () => {
 
 
   useEffect(() => {
-  if (selectedCabinetAssetId) {
-    setFormData((prev) => ({
-      ...prev,
-      asset_id: selectedCabinetAssetId,
-    }));
-  }
-}, [selectedCabinetAssetId]);
+    if (selectedCabinetAssetId) {
+      setFormData((prev) => ({
+        ...prev,
+        asset_id: selectedCabinetAssetId,
+      }));
+    }
+  }, [selectedCabinetAssetId]);
 
 
   // GPU State
@@ -1279,118 +1280,127 @@ const HardwareSelectorEdit = () => {
 
   // Wi-Fi Router Effects
   useEffect(() => {
-    if (componentCategories.wifi && !wifiBrands.length) {
-      const fetchWifiBrands = async () => {
-        setLoading((prev) => ({ ...prev, brands: true }));
-        const data = await fetchComponentData(
-          `product_category=${componentCategories.wifi}`,
-          {
-            headers: {
-              "Authorization": `Bearer ${userToken}`,
-            },
-          }
-        );
-        setWifiBrands(data);
-        setLoading((prev) => ({ ...prev, brands: false }));
-      };
-      fetchWifiBrands();
-    }
-  }, []);
+    if (!wifiType) return;
+
+    const fetchWifiBrands = async () => {
+      setLoading((prev) => ({ ...prev, brands: true }));
+
+      const data = await fetchComponentData(
+        `product_category=${encodeURIComponent(wifiType)}`,
+        {
+          headers: {
+            Authorization: `Bearer ${userToken}`,
+          },
+        }
+      );
+
+      setWifiBrands(data);
+      setLoading((prev) => ({ ...prev, brands: false }));
+    };
+
+    fetchWifiBrands();
+  }, [wifiType]);
+
 
   useEffect(() => {
-    if (componentCategories.wifi && wifiBrand && !wifiModels.length) {
-      const fetchWifiModels = async () => {
-        setLoading((prev) => ({ ...prev, models: true }));
-        const data = await fetchComponentData(
-          `product_category=${componentCategories.wifi}&brand=${wifiBrand}`,
-          {
-            headers: {
-              "Authorization": `Bearer ${userToken}`,
-            },
-          }
-        );
-        setWifiModels(data);
-        setLoading((prev) => ({ ...prev, models: false }));
-      };
-      fetchWifiModels();
-    }
-  }, [wifiBrand]);
+    if (!wifiType || !wifiBrand) return;
+
+    const fetchWifiModels = async () => {
+      setLoading((prev) => ({ ...prev, models: true }));
+
+      const data = await fetchComponentData(
+        `product_category=${encodeURIComponent(wifiType)}&brand=${encodeURIComponent(wifiBrand)}`,
+        {
+          headers: {
+            Authorization: `Bearer ${userToken}`,
+          },
+        }
+      );
+
+      setWifiModels(data);
+      setLoading((prev) => ({ ...prev, models: false }));
+    };
+
+    fetchWifiModels();
+  }, [wifiType, wifiBrand]);
+
+
+  useEffect(() => {
+    if (!wifiType || !wifiBrand || !wifiModel) return;
+
+    const fetchWifiFrequencyBands = async () => {
+      setLoading((prev) => ({ ...prev, details: true }));
+
+      const data = await fetchComponentData(
+        `product_category=${encodeURIComponent(wifiType)}&brand=${encodeURIComponent(wifiBrand)}&model=${encodeURIComponent(wifiModel)}`,
+        {
+          headers: {
+            Authorization: `Bearer ${userToken}`,
+          },
+        }
+      );
+
+      setFrequencyBands(data);
+      setLoading((prev) => ({ ...prev, details: false }));
+    };
+
+    fetchWifiFrequencyBands();
+  }, [wifiType, wifiBrand, wifiModel]);
+
+
+  useEffect(() => {
+    if (!wifiType || !wifiBrand || !wifiModel || !selectedFrequencyBand) return;
+
+    const fetchWifiStandards = async () => {
+      setLoading((prev) => ({ ...prev, details: true }));
+
+      const data = await fetchComponentData(
+        `product_category=${encodeURIComponent(wifiType)}&brand=${encodeURIComponent(wifiBrand)}&model=${encodeURIComponent(wifiModel)}&frequency_band=${encodeURIComponent(selectedFrequencyBand)}`,
+        {
+          headers: {
+            Authorization: `Bearer ${userToken}`,
+          },
+        }
+      );
+
+      setWifiStandards(data);
+      setLoading((prev) => ({ ...prev, details: false }));
+    };
+
+    fetchWifiStandards();
+  }, [wifiType, wifiBrand, wifiModel, selectedFrequencyBand]);
+
 
   useEffect(() => {
     if (
-      componentCategories.wifi &&
-      wifiBrand &&
-      wifiModel &&
-      !frequencyBands.length
-    ) {
-      const fetchWifiFrequencyBands = async () => {
-        setLoading((prev) => ({ ...prev, details: true }));
-        const data = await fetchComponentData(
-          `product_category=${componentCategories.wifi}&brand=${wifiBrand}&model=${wifiModel}`,
-          {
-            headers: {
-              "Authorization": `Bearer ${userToken}`,
-            },
-          }
-        );
-        setFrequencyBands(data);
-        setLoading((prev) => ({ ...prev, details: false }));
-      };
-      fetchWifiFrequencyBands();
-    }
-  }, [wifiBrand, wifiModel]);
+      !wifiType ||
+      !wifiBrand ||
+      !wifiModel ||
+      !selectedFrequencyBand ||
+      !selectedWifiStandard
+    )
+      return;
 
-  useEffect(() => {
-    if (
-      componentCategories.wifi &&
-      wifiBrand &&
-      wifiModel &&
-      selectedFrequencyBand &&
-      !wifiStandards.length
-    ) {
-      const fetchWifiStandards = async () => {
-        setLoading((prev) => ({ ...prev, details: true }));
-        const data = await fetchComponentData(
-          `product_category=${componentCategories.wifi}&brand=${wifiBrand}&model=${wifiModel}&frequency_band=${selectedFrequencyBand}`,
-          {
-            headers: {
-              "Authorization": `Bearer ${userToken}`,
-            },
-          }
-        );
-        setWifiStandards(data);
-        setLoading((prev) => ({ ...prev, details: false }));
-      };
-      fetchWifiStandards();
-    }
-  }, [wifiBrand, wifiModel, selectedFrequencyBand]);
+    const fetchWifiAssetIds = async () => {
+      setLoading((prev) => ({ ...prev, assets: true }));
 
-  useEffect(() => {
-    if (
-      componentCategories.wifi &&
-      wifiBrand &&
-      wifiModel &&
-      selectedFrequencyBand &&
-      selectedWifiStandard &&
-      !wifiAssetIds.length
-    ) {
-      const fetchWifiAssetIds = async () => {
-        setLoading((prev) => ({ ...prev, assets: true }));
-        const data = await fetchComponentData(
-          `product_category=${componentCategories.wifi}&brand=${wifiBrand}&model=${wifiModel}&frequency_band=${selectedFrequencyBand}&wifi_standard=${selectedWifiStandard}`,
-          {
-            headers: {
-              "Authorization": `Bearer ${userToken}`,
-            },
-          }
-        );
-        setWifiAssetIds(data.asset_ids);
-        setWifiProductId(data.product_id);
-        setLoading((prev) => ({ ...prev, assets: false }));
-      };
-      fetchWifiAssetIds();
-    }
-  }, [wifiBrand, wifiModel, selectedFrequencyBand, selectedWifiStandard]);
+      const data = await fetchComponentData(
+        `product_category=${encodeURIComponent(wifiType)}&brand=${encodeURIComponent(wifiBrand)}&model=${encodeURIComponent(wifiModel)}&frequency_band=${encodeURIComponent(selectedFrequencyBand)}&wifi_standard=${encodeURIComponent(selectedWifiStandard)}`,
+        {
+          headers: {
+            Authorization: `Bearer ${userToken}`,
+          },
+        }
+      );
+
+      setWifiAssetIds(data.asset_ids || []);
+      setWifiProductId(data.product_id || null);
+
+      setLoading((prev) => ({ ...prev, assets: false }));
+    };
+
+    fetchWifiAssetIds();
+  }, [wifiType, wifiBrand, wifiModel, selectedFrequencyBand, selectedWifiStandard]);
 
   // Handle form input changes
   const handleInputChange = (field, value) => {
@@ -1817,8 +1827,8 @@ const HardwareSelectorEdit = () => {
                     {loading.assets
                       ? "Loading..."
                       : ram.assetIds.length
-                      ? "Select Asset ID"
-                      : "Select options first"}
+                        ? "Select Asset ID"
+                        : "Select options first"}
                   </option>
                   {ram.assetIds.map((asset_id, assetIndex) => (
                     <option
@@ -1971,8 +1981,8 @@ const HardwareSelectorEdit = () => {
                     {loading.assets
                       ? "Loading..."
                       : drive.assetIds.length
-                      ? "Select Asset ID"
-                      : "Select options first"}
+                        ? "Select Asset ID"
+                        : "Select options first"}
                   </option>
                   {drive.assetIds.map((asset_id, assetIndex) => (
                     <option
@@ -2087,8 +2097,8 @@ const HardwareSelectorEdit = () => {
                 {loading.assets
                   ? "Loading..."
                   : processorAssetIds.length
-                  ? "Select Asset ID"
-                  : "Select options first"}
+                    ? "Select Asset ID"
+                    : "Select options first"}
               </option>
               {processorAssetIds.map((asset_id, index) => (
                 <option key={`processor-asset-${index}`} value={asset_id}>
@@ -2198,8 +2208,8 @@ const HardwareSelectorEdit = () => {
                 {loading.assets
                   ? "Loading..."
                   : motherboardAssetIds.length
-                  ? "Select Asset ID"
-                  : "Select options first"}
+                    ? "Select Asset ID"
+                    : "Select options first"}
               </option>
               {motherboardAssetIds.map((asset_id, index) => (
                 <option key={`motherboard-asset-${index}`} value={asset_id}>
@@ -2309,8 +2319,8 @@ const HardwareSelectorEdit = () => {
                 {loading.assets
                   ? "Loading..."
                   : cabinetAssetIds.length
-                  ? "Select Asset ID"
-                  : "Select options first"}
+                    ? "Select Asset ID"
+                    : "Select options first"}
               </option>
               {cabinetAssetIds.map((asset_id, index) => (
                 <option key={`cabinet-asset-${index}`} value={asset_id}>
@@ -2420,8 +2430,8 @@ const HardwareSelectorEdit = () => {
                 {loading.assets
                   ? "Loading..."
                   : gpuAssetIds.length
-                  ? "Select Asset ID"
-                  : "Select options first"}
+                    ? "Select Asset ID"
+                    : "Select options first"}
               </option>
               {gpuAssetIds.map((asset_id, index) => (
                 <option key={`gpu-asset-${index}`} value={asset_id}>
@@ -2566,8 +2576,8 @@ const HardwareSelectorEdit = () => {
                 {loading.assets
                   ? "Loading..."
                   : smpsAssetIds.length
-                  ? "Select Asset ID"
-                  : "Select options first"}
+                    ? "Select Asset ID"
+                    : "Select options first"}
               </option>
               {smpsAssetIds.map((asset_id, index) => (
                 <option key={`smps-asset-${index}`} value={asset_id}>
@@ -2596,7 +2606,14 @@ const HardwareSelectorEdit = () => {
               }}
             >
               <option value="">Select Categories</option>
-              <option value="Wi-Fi">Wi-Fi</option>
+              {componentCategories.wifi.map((type, typeIndex) => (
+                <option
+                  key={`wifi-${typeIndex}`}
+                  value={type}
+                >
+                  {type}
+                </option>
+              ))}
             </select>
           </div>
 
@@ -2695,8 +2712,8 @@ const HardwareSelectorEdit = () => {
                 {loading.details
                   ? "Loading..."
                   : frequencyBands.length
-                  ? "Select Frequency Band"
-                  : "Select model first"}
+                    ? "Select Frequency Band"
+                    : "Select model first"}
               </option>
               {frequencyBands.map((band, index) => (
                 <option key={`wifi-band-${index}`} value={band}>
@@ -2732,8 +2749,8 @@ const HardwareSelectorEdit = () => {
                 {loading.details
                   ? "Loading..."
                   : wifiStandards.length
-                  ? "Select WiFi Standard"
-                  : "Select frequency band first"}
+                    ? "Select WiFi Standard"
+                    : "Select frequency band first"}
               </option>
               {wifiStandards.map((standard, index) => (
                 <option key={`wifi-standard-${index}`} value={standard}>
@@ -2755,8 +2772,8 @@ const HardwareSelectorEdit = () => {
                 {loading.assets
                   ? "Loading..."
                   : wifiAssetIds.length
-                  ? "Select Asset ID"
-                  : "Complete selection first"}
+                    ? "Select Asset ID"
+                    : "Complete selection first"}
               </option>
               {wifiAssetIds.map((asset_id, index) => (
                 <option key={`wifi-asset-${index}`} value={asset_id}>

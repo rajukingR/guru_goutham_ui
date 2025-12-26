@@ -8,21 +8,23 @@ const ProductCategories = () => {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [hoveredCategory, setHoveredCategory] = useState(null);
   const [hoverPosition, setHoverPosition] = useState({ x: 0, y: 0 });
-  const [apiData, setApiData] = useState([]);
+  const [apiData, setApiData] = useState({
+    summary: {},
+    category_summary: []
+  });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-    const { user, token } = useSelector((state) => state.auth);
-  
-    const userToken = token;
+  const { user, token } = useSelector((state) => state.auth);
+  const userToken = token;
+
   // Fetch categories on mount
   useEffect(() => {
     const fetchCategories = async () => {
       setLoading(true);
       setError(null);
       try {
-        const token = localStorage.getItem("token");
-        const response = await fetch(`${API_URL}/product-categories`, {
+        const response = await fetch(`${API_URL}/goods-receipts/approved-receipt-products/dashboard`, {
           headers: {
             "Authorization": `Bearer ${userToken}`,
           },
@@ -31,7 +33,8 @@ const ProductCategories = () => {
         const data = await response.json();
         setApiData(data);
       } catch (err) {
-        setError("Failed to load categories");
+        setError("Failed to load product categories");
+        console.error("Error fetching categories:", err);
       } finally {
         setLoading(false);
       }
@@ -40,53 +43,33 @@ const ProductCategories = () => {
     fetchCategories();
   }, []);
 
-  // Seeded random function for reproducible random values per category and date
-  const seededRandom = (seed) => {
-    var x = Math.sin(seed) * 10000;
-    return x - Math.floor(x);
-  };
+  // Colors for categories
+  const colors = [
+    "#fb923c", "#6366f1", "#2dd4bf", "#f472b6", "#fbbf24", "#a855f7",
+    "#10b981", "#3b82f6", "#ef4444", "#8b5cf6", "#ec4899", "#14b8a6",
+    "#c084fc", "#f0abfc", "#e879f9", "#f43f5e", "#ef4444", "#a3e635",
+    "#d946ef", "#06b6d4",
+  ];
 
-  // Generate category data based on selectedDate
+  // Generate category data from API response
   const categoryData = useMemo(() => {
-    if (!apiData || apiData.length === 0) return [];
+    if (!apiData.category_summary || apiData.category_summary.length === 0) return [];
 
-    const colors = [
-      "#fb923c",
-      "#6366f1",
-      "#2dd4bf",
-      "#f472b6",
-      "#fbbf24",
-      "#a855f7",
-      "#10b981",
-      "#3b82f6",
-      "#ef4444",
-      "#8b5cf6",
-      "#ec4899",
-      "#14b8a6",
-      "#c084fc",
-      "#f0abfc",
-      "#e879f9",
-      "#f43f5e",
-      "#ef4444",
-      "#a3e635",
-      "#d946ef",
-      "#06b6d4",
-    ];
-
-    const seedBase =
-      selectedDate.getMonth() + 1 + selectedDate.getFullYear() * 100;
-
-    return apiData.map((category, index) => {
-      const seed = seedBase + index * 13;
-      const value = Math.floor(seededRandom(seed) * 100) + 5;
+    return apiData.category_summary.map((category, index) => {
+      // Use available_quantity as the value for the chart
+      const value = category.available_quantity || 0;
+      
       return {
-        name: category.category_name || `Category ${index + 1}`,
-        value,
-        // Always use preset colors since API doesn't have colors
+        name: category.product_category || `Category ${index + 1}`,
+        value: value,
         color: colors[index % colors.length],
+        // Additional data for tooltip
+        total_quantity: category.total_quantity || 0,
+        used_quantity: category.used_quantity || 0,
+        available_quantity: category.available_quantity || 0
       };
     });
-  }, [apiData, selectedDate]);
+  }, [apiData.category_summary]);
 
   const totalValue = categoryData.reduce((sum, cat) => sum + cat.value, 0);
 
@@ -119,28 +102,25 @@ const ProductCategories = () => {
           <div style={chartIconStyle}>📊</div>
           <h2 style={chartTitleStyle}>Product Categories</h2>
         </div>
-        <div style={datePickerContainerStyle}>
-          <span style={datePickerLabelStyle}>Filter by Date</span>
-          <DatePicker
-            selected={selectedDate}
-            onChange={setSelectedDate}
-            dateFormat="MM/yyyy"
-            showMonthYearPicker
-            customInput={
-              <button style={datePickerButtonStyle}>
-                {selectedDate.toLocaleDateString("en-US", {
-                  month: "long",
-                  year: "numeric",
-                })}
-              </button>
-            }
-          />
+        <div style={summaryStatsStyle}>
+          {/* <div style={statItemStyle}>
+            <div style={statValueStyle}>{apiData.summary.total_available_quantity || 0}</div>
+            <div style={statLabelStyle}>Available</div>
+          </div> */}
+          <div style={statItemStyle}>
+            <div style={statValueStyle}>{apiData.summary.total_used_quantity || 0}</div>
+            <div style={statLabelStyle}>In Use</div>
+          </div>
+          <div style={statItemStyle}>
+            <div style={statValueStyle}>{apiData.summary.total_available_quantity || 0}</div>
+            <div style={statLabelStyle}>Total Stock</div>
+          </div>
         </div>
       </div>
 
       <div style={doughnutChartContainerStyle} onMouseMove={handleMouseMove}>
         {loading ? (
-          <div style={loadingStyle}>Loading categories...</div>
+          <div style={loadingStyle}>Loading product categories...</div>
         ) : error ? (
           <div style={loadingStyle}>{error}</div>
         ) : categoryData.length > 0 && totalValue > 0 ? (
@@ -184,6 +164,33 @@ const ProductCategories = () => {
                   ).paths
                 }
                 <circle cx="50" cy="50" r="20" fill="white" />
+                {/* Center text */}
+                <text 
+                  x="50" 
+                  y="50" 
+                  textAnchor="middle" 
+                  dominantBaseline="middle"
+                  style={{
+                    fontSize: "6px",
+                    fontWeight: "bold",
+                    fill: "#374151"
+                  }}
+                >
+                  Available
+                </text>
+                <text 
+                  x="50" 
+                  y="57" 
+                  textAnchor="middle" 
+                  dominantBaseline="middle"
+                  style={{
+                    fontSize: "8px",
+                    fontWeight: "bold",
+                    fill: "#1f2937"
+                  }}
+                >
+                  {apiData.summary.total_available_quantity || 0}
+                </text>
               </svg>
               {hoveredCategory !== null && (
                 <div
@@ -192,7 +199,7 @@ const ProductCategories = () => {
                     left: hoverPosition.x + 150,
                     top: hoverPosition.y + 10,
                     transform: "translate(-50%, -50%)",
-                    backgroundColor: "rgba(20, 20, 20, 0.75)",
+                    backgroundColor: "rgba(20, 20, 20, 0.85)",
                     backdropFilter: "blur(8px)",
                     borderRadius: "12px",
                     boxShadow: `
@@ -204,124 +211,68 @@ const ProductCategories = () => {
                     pointerEvents: "none",
                     minWidth: 250,
                     maxWidth: 300,
-                    padding: "12px 16px",
+                    padding: "14px 18px",
                     color: "rgba(255, 255, 255, 0.95)",
                     fontSize: "14px",
                     lineHeight: "1.5",
-                    textAlign: "center",
-                    whiteSpace: "nowrap",
+                    textAlign: "left",
+                    whiteSpace: "normal",
                     transition: "all 0.2s ease-out",
                     opacity: 1,
                   }}
                 >
-                  <div
-                    style={{ fontWeight: 500, marginBottom: 4, opacity: 0.9 }}
-                  >
-                    {categoryData[hoveredCategory].name}
+                  <div style={{ 
+                    display: "flex", 
+                    alignItems: "center", 
+                    marginBottom: "8px" 
+                  }}>
+                    <div style={{
+                      width: "12px",
+                      height: "12px",
+                      borderRadius: "50%",
+                      backgroundColor: categoryData[hoveredCategory].color,
+                      marginRight: "10px",
+                      flexShrink: 0
+                    }} />
+                    <div style={{ fontWeight: 600, fontSize: "16px", opacity: 1 }}>
+                      {categoryData[hoveredCategory].name}
+                    </div>
                   </div>
-                  <div style={{ fontWeight: 400, opacity: 0.8 }}>
-                    Value:{" "}
-                    {categoryData[hoveredCategory].value.toLocaleString()}
-                  </div>
-                  <div style={{ fontWeight: 400, opacity: 0.8 }}>
-                    Percentage:{" "}
-                    {(
-                      (categoryData[hoveredCategory].value / totalValue) *
-                      100
-                    ).toFixed(2)}
-                    %
+                  <div style={{ 
+                    display: "grid", 
+                    gridTemplateColumns: "repeat(2, 1fr)", 
+                    gap: "8px",
+                    marginTop: "8px"
+                  }}>
+                    <div style={{ textAlign: "center" }}>
+                      <div style={{ fontSize: "24px", fontWeight: "bold", color: "#10b981" }}>
+                        {categoryData[hoveredCategory].available_quantity}
+                      </div>
+                      <div style={{ fontSize: "12px", opacity: 0.8 }}>Available</div>
+                    </div>
+                    <div style={{ textAlign: "center" }}>
+                      <div style={{ fontSize: "24px", fontWeight: "bold", color: "#3b82f6" }}>
+                        {categoryData[hoveredCategory].used_quantity}
+                      </div>
+                      <div style={{ fontSize: "12px", opacity: 0.8 }}>In Use</div>
+                    </div>
+                    
                   </div>
                 </div>
               )}
             </div>
 
-            <div style={legendRowsContainerStyle}>
-              {Array.from({ length: Math.ceil(categoryData.length / 4) }).map(
-                (_, rowIndex) => (
-                  <div key={rowIndex} style={legendRowStyle}>
-                    {categoryData
-                      .slice(rowIndex * 4, rowIndex * 4 + 4)
-                      .map((item, index) => (
-                        <div
-                          key={index}
-                          style={{
-                            ...legendItemBoxStyle,
-                            backgroundColor:
-                              hoveredCategory === rowIndex * 4 + index
-                                ? "#f1f5f9"
-                                : "#ffffff",
-                          }}
-                          onMouseEnter={() =>
-                            setHoveredCategory(rowIndex * 4 + index)
-                          }
-                          onMouseLeave={() => setHoveredCategory(null)}
-                        >
-                          <div
-                            style={{
-                              ...legendDotStyle,
-                              backgroundColor: item.color,
-                            }}
-                          />
-                          <span style={legendTextStyle}>
-                            {item.name}
-                            {/* {item.name} (₹{item.value.toLocaleString("en-IN")}) */}
-                          </span>
-                        </div>
-                      ))}
-                  </div>
-                )
-              )}
-            </div>
+            
           </>
         ) : (
-          <div style={loadingStyle}>No data available</div>
+          <div style={loadingStyle}>No product data available</div>
         )}
       </div>
     </div>
   );
 };
 
-// ========== Your ORIGINAL Styles ==========
-
-const legendRowsContainerStyle = {
-  display: "flex",
-  flexDirection: "column",
-  gap: "12px",
-  marginTop: "1.5rem",
-};
-
-const legendRowStyle = {
-  display: "flex",
-  flexDirection: "row",
-  gap: "12px",
-};
-
-const legendItemBoxStyle = {
-  display: "flex",
-  alignItems: "center",
-  padding: "6px 12px",
-  borderRadius: "8px",
-  border: "1px solid #e2e8f0",
-  gap: "8px",
-  minHeight: "36px",
-  whiteSpace: "nowrap",
-  overflow: "hidden",
-  textOverflow: "ellipsis",
-  minWidth: "200px",
-};
-
-const legendDotStyle = {
-  width: "10px",
-  height: "10px",
-  borderRadius: "50%",
-  flexShrink: 0,
-};
-
-const legendTextStyle = {
-  fontSize: "14px",
-  fontWeight: 500,
-  color: "#1e293b",
-};
+// ========== Updated Styles ==========
 
 const chartCardStyle = {
   backgroundColor: "#ffffff",
@@ -329,6 +280,7 @@ const chartCardStyle = {
   padding: "1.5rem",
   boxShadow: "0 10px 25px rgba(0, 0, 0, 0.1)",
   border: "1px solid rgba(255, 255, 255, 0.2)",
+  overflow: "hidden",
 };
 
 const chartHeaderWithDateStyle = {
@@ -337,11 +289,43 @@ const chartHeaderWithDateStyle = {
   alignItems: "flex-start",
   marginBottom: "1.5rem",
   flexWrap: "wrap",
+  gap: "1.5rem",
 };
 
 const chartHeaderStyle = {
   display: "flex",
   alignItems: "center",
+  flex: 1,
+  minWidth: "200px",
+};
+
+const summaryStatsStyle = {
+  display: "flex",
+  gap: "1.5rem",
+  flexWrap: "wrap",
+};
+
+const statItemStyle = {
+  display: "flex",
+  flexDirection: "column",
+  alignItems: "center",
+  padding: "0.75rem 1rem",
+  backgroundColor: "#f8fafc",
+  borderRadius: "10px",
+  minWidth: "80px",
+};
+
+const statValueStyle = {
+  fontSize: "1.5rem",
+  fontWeight: "700",
+  color: "#1e293b",
+  marginBottom: "0.25rem",
+};
+
+const statLabelStyle = {
+  fontSize: "0.875rem",
+  fontWeight: "500",
+  color: "#64748b",
 };
 
 const chartIconStyle = {
@@ -349,6 +333,7 @@ const chartIconStyle = {
   backgroundColor: "#f1f5f9",
   borderRadius: "8px",
   fontSize: "1.25rem",
+  marginRight: "0.75rem",
 };
 
 const chartTitleStyle = {
@@ -358,45 +343,22 @@ const chartTitleStyle = {
   margin: 0,
 };
 
-const datePickerContainerStyle = {
-  display: "flex",
-  flexDirection: "column",
-  gap: "0.5rem",
-  minWidth: "200px",
-};
-
-const datePickerLabelStyle = {
-  fontSize: "0.875rem",
-  fontWeight: "600",
-  color: "#64748b",
-};
-
-const datePickerButtonStyle = {
-  padding: "0.5rem 0.75rem",
-  borderRadius: "8px",
-  border: "1px solid #d1d5db",
-  fontSize: "0.875rem",
-  fontWeight: "500",
-  color: "#374151",
-  backgroundColor: "#ffffff",
-  cursor: "pointer",
-  minWidth: "150px",
-  textAlign: "left",
-};
-
 const doughnutChartContainerStyle = {
   position: "relative",
-  height: "500px",
+  minHeight: "400px",
+  minWidth: "150px",
   display: "flex",
   flexDirection: "column",
   alignItems: "center",
   justifyContent: "center",
+  overflow: "visible",
 };
 
 const doughnutChartStyle = {
-  width: "300px",
-  height: "300px",
+  width: "min(350px, 90vw)",
+  height: "min(350px, 90vw)",
   position: "relative",
+  marginBottom: "2rem",
 };
 
 const svgStyle = {
@@ -404,34 +366,63 @@ const svgStyle = {
   height: "100%",
 };
 
-const legendBelowStyle = {
-  display: "flex",
-  flexWrap: "wrap",
-  justifyContent: "center",
-  gap: "0.5rem",
-  marginTop: "1.5rem",
-  maxWidth: "600px",
+// Updated Legend Styles
+const legendContainerStyle = {
+  display: "grid",
+  gridTemplateColumns: "repeat(auto-fill, minmax(250px, 1fr))",
+  gap: "12px",
+  width: "100%",
+  maxWidth: "1000px",
+  margin: "0 auto",
+  padding: "0 1rem",
 };
 
 const legendItemStyle = {
   display: "flex",
   alignItems: "center",
-  gap: "0.5rem",
+  padding: "10px 14px",
+  borderRadius: "8px",
+  border: "1px solid #e2e8f0",
+  gap: "10px",
+  minHeight: "40px",
+  backgroundColor: "#f8fafc",
+  transition: "all 0.2s ease",
   cursor: "pointer",
+  
+  "&:hover": {
+    backgroundColor: "#f1f5f9",
+    borderColor: "#cbd5e1",
+    transform: "translateY(-2px)",
+    boxShadow: "0 4px 6px rgba(0, 0, 0, 0.05)",
+  },
 };
 
-const legendColorStyle = {
+const legendDotStyle = {
   width: "12px",
   height: "12px",
   borderRadius: "50%",
   flexShrink: 0,
 };
 
-const legendValueStyle = {
-  fontSize: "0.875rem",
-  fontWeight: "600",
+const legendTextStyle = {
+  fontSize: "14px",
+  fontWeight: 500,
   color: "#1e293b",
-  marginLeft: "auto",
+  overflow: "hidden",
+  textOverflow: "ellipsis",
+  whiteSpace: "nowrap",
+  flex: 1,
+  minWidth: 0,
+};
+
+const legendValueStyle = {
+  fontSize: "14px",
+  fontWeight: 600,
+  color: "#10b981",
+  backgroundColor: "#d1fae5",
+  padding: "2px 8px",
+  borderRadius: "12px",
+  flexShrink: 0,
 };
 
 const loadingStyle = {
@@ -441,6 +432,8 @@ const loadingStyle = {
   height: "100%",
   color: "#64748b",
   fontSize: "1rem",
+  textAlign: "center",
+  padding: "2rem",
 };
 
 export default ProductCategories;

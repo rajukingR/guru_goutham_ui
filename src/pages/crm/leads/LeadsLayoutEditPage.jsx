@@ -42,6 +42,7 @@ const LeadsLayoutEditPage = () => {
     leadTitle: "",
     transactionType: "",
     leadStatus: "",
+    leadSource: "",
     sourceOfEnquiry: "",
     rentalDuration: "",
     rentalDurationDays: "",
@@ -132,7 +133,7 @@ const LeadsLayoutEditPage = () => {
           leadTitle: data.lead_title || "",
           transactionType: data.transaction_type || "",
           paymentType: data.payment_type || "",
-          leadStatus: data.lead_source || "",
+          leadSource: data.lead_source || "",
           sourceOfEnquiry: data.source_of_enquiry || "",
           rentalDuration: data.rental_duration_months || "",
           rentalDurationDays: data.rental_duration_days || "",
@@ -438,7 +439,7 @@ const LeadsLayoutEditPage = () => {
         lead_title: formData.leadTitle,
         transaction_type: formData.transactionType,
         payment_type: formData.paymentType,
-        lead_source: formData.leadStatus,
+        lead_source: formData.leadSource,
         source_of_enquiry: formData.sourceOfEnquiry,
         rental_duration_months: formData.rentalDuration || null,
         rental_duration_days: formData.rentalDurationDays || null,
@@ -538,17 +539,15 @@ const LeadsLayoutEditPage = () => {
                 "Social Media",
                 "Email Campaign",
                 "Phone Inquiry",
-                "Walk-in",
-                "Trade Show",
                 "Other",
               ]}
             />
-            {/* <Field
-              label="Lead Title"
-              placeholder="Enter Lead Title"
-              value={formData.leadTitle}
-              onChange={(value) => handleInputChange("leadTitle", value)}
-            /> */}
+            <Field
+              label="Reference name"
+              placeholder="Enter reference name"
+              value={formData.leadSource}
+              onChange={(value) => handleInputChange("leadSource", value)}
+            />
             <Field
               label="Transaction Type"
               type="select"

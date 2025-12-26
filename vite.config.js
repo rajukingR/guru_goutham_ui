@@ -4,6 +4,7 @@ import react from '@vitejs/plugin-react';
 
 export default defineConfig({
   plugins: [react()],
+  base: "/", // ✅ ADD THIS LINE
   optimizeDeps: {
     include: ['date-fns/addDays', 'date-fns'],
   },

@@ -5,6 +5,9 @@ import Snackbar from "@mui/material/Snackbar";
 import MuiAlert from "@mui/material/Alert";
 import { useNavigate } from "react-router-dom";
 import { useSelector } from "react-redux";
+import Select from "react-select";
+
+
 const generateProductId = () => {
   const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
   let randomPart = "";
@@ -165,28 +168,28 @@ const ProductsAddLayout = () => {
     fetchData();
   }, [userToken]); // Added userToken as dependency
 
+
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
-    // Add this to your handleChange function
-    if (name === "maxSpeed" || name === "speed") {
-      // Ensure speed values are reasonable
-      const floatValue = parseFloat(value);
-      if (floatValue > 10000) {
-        // Assuming 10GHz is a reasonable max
-        showSnackbar("Please enter a valid speed (max 10GHz)", "error");
-        return;
-      }
-      if (floatValue <= 0) {
-        showSnackbar("Speed must be greater than 0", "error");
-        return;
-      }
+
+    // Handle checkbox
+    if (type === "checkbox") {
+      setFormData((prev) => ({
+        ...prev,
+        [name]: checked,
+      }));
+      return;
     }
 
+    // ✅ Allow numbers + decimals + text (no blocking)
     setFormData((prev) => ({
       ...prev,
-      [name]: type === "checkbox" ? checked : value,
+      [name]: value,
     }));
   };
+
+
+
 
   // Handle price changes and calculate rent prices
   const handlePriceChange = (e) => {
@@ -247,6 +250,17 @@ const ProductsAddLayout = () => {
 
     setFormData(updatedFormData);
   };
+
+
+  const brandOptions = brands.map((brand) => ({
+    value: brand.brand_name,
+    label: brand.brand_name,
+  }));
+
+  const categoryOptions = categories.map((cat) => ({
+    value: cat.category_name,
+    label: cat.category_name,
+  }));
 
 
   // Handle form submission
@@ -435,6 +449,7 @@ const ProductsAddLayout = () => {
               <Field
                 label="Processor Speed"
                 name="processor_speed"
+                type="text"
                 placeholder="Enter Processor Speed (GHz)"
                 value={formData.processor_speed}
                 onChange={handleChange}
@@ -563,7 +578,15 @@ const ProductsAddLayout = () => {
           </>
         );
 
-      case "Branded Desktops":
+      case "Projector":
+        return (
+          <>
+            <Field label="Resolution" name="resolution" placeholder="Enter Resolution" value={formData.resolution} onChange={handleChange} required />
+            <Field label="Brightness (Lumens)" name="brightness" placeholder="Enter Brightness (Lumens)" value={formData.brightness} onChange={handleChange} />
+          </>
+        );
+
+      case "Branded Desktop":
         return (
           <>
             <div
@@ -701,7 +724,7 @@ const ProductsAddLayout = () => {
             />
           </>
         );
-      case "HDD":
+      case "HDD Storage":
         return (
           <>
             <Field
@@ -722,7 +745,7 @@ const ProductsAddLayout = () => {
             />
           </>
         );
-      case "SSD":
+      case "SSD Storage":
         return (
           <>
             <Field
@@ -751,13 +774,54 @@ const ProductsAddLayout = () => {
             <Field
               label="Read/Write Speed"
               name="speed"
-              placeholder="Enter Speed (e.g., 3500 MB/s)"
+              type="text"
+              placeholder="e.g., 3500 MB/s, 7200 RPM, 1.6 GHz"
+              value={formData.speed}
+              onChange={handleChange}
+            />
+
+          </>
+        );
+
+      case "NVMe Storage":
+        return (
+          <>
+            <Field
+              label="Storage Capacity"
+              name="capacity"
+              placeholder="Enter Storage Capacity (e.g., 512GB / 1TB)"
+              value={formData.capacity}
+              onChange={handleChange}
+              required
+            />
+
+            <Field
+              label="NVMe Interface"
+              name="ramType"
+              type="select"
+              value={formData.ramType}
+              onChange={handleChange}
+              required
+            >
+              <option value="">Select Interface</option>
+              <option value="PCIe Gen3">PCIe Gen 3</option>
+              <option value="PCIe Gen4">PCIe Gen 4</option>
+              <option value="PCIe Gen5">PCIe Gen 5</option>
+            </Field>
+
+            <Field
+              label="Read/Write Speed"
+              name="speed"
+              type="text"
+              placeholder="e.g., 3500 MB/s"
               value={formData.speed}
               onChange={handleChange}
             />
           </>
         );
-      case "Wi-Fi":
+
+      case "Wi-Fi Card":
+      case "Wi-Fi Dongle":
         return (
           <>
             <Field
@@ -827,21 +891,22 @@ const ProductsAddLayout = () => {
                 /> */}
 
                 <Field
-                  label="Speed (GHz)"
+                  label="Base Speed (GHz)"
                   name="speed"
-                  type="number"
-                  placeholder="Enter Base Speed"
+                  type="text"          // 👈 IMPORTANT CHANGE
+                  placeholder="e.g. 1.6"
                   value={formData.speed}
                   onChange={handleChange}
                   required
-                  step="0.1"
                 />
+
+
               </div>
             </div>
           </div>
         );
 
-      case "Assembled Desktop":
+      case "Desktop":
         return (
           <>
             <div
@@ -1081,13 +1146,13 @@ const ProductsAddLayout = () => {
           </div>
         );
 
-      case "GPU":
+      case "Graphics Card":
         return (
           <>
             <Field
-              label="Speed"
+              label="Memory Speed"
               name="speed"
-              placeholder="Enter Speed (e.g., 6Gbps)"
+              placeholder="Enter Memory Speed (e.g., 6Gbps)"
               value={formData.speed}
               onChange={handleChange}
             />
@@ -1106,21 +1171,9 @@ const ProductsAddLayout = () => {
             />
           </>
         );
-      case "Cabinet":
-        return (
-          <>
-            <Field
-              label="Brand Name"
-              name="brand"
-              placeholder="Enter Brand Name"
-              value={formData.brand}
-              onChange={handleChange}
-              required
-            />
-          </>
-        );
 
-      case "Monitors":
+
+      case "Monitor":
         return (
           <>
             {/* <Field
@@ -1167,6 +1220,9 @@ const ProductsAddLayout = () => {
               onChange={handleChange}
               required
             />
+
+            <Field label="Resolution" name="resolution" placeholder="Enter Resolution" value={formData.resolution} onChange={handleChange} />
+
 
             {/* <Field
               label="Color"
@@ -1233,21 +1289,31 @@ const ProductsAddLayout = () => {
           </div>
 
           <div style={fieldsGridStyle}>
-            <Field
-              label="Product Category"
-              type="select"
-              name="product_category"
-              value={formData.product_category}
-              onChange={handleChange}
-              required
-            >
-              <option value="">Select Category</option>
-              {categories.map((category) => (
-                <option key={category.id} value={category.category_name}>
-                  {category.category_name}
-                </option>
-              ))}
-            </Field>
+            <div style={{ marginBottom: "16px" }}>
+              <label style={{ fontWeight: "bold", marginBottom: "6px", display: "block" }}>
+                Product Category
+              </label>
+
+              <Select
+                options={categoryOptions}
+                placeholder="Search & Select Category"
+                value={
+                  categoryOptions.find(
+                    (option) => option.value === formData.product_category
+                  ) || null
+                }
+                onChange={(selectedOption) => {
+                  setFormData((prev) => ({
+                    ...prev,
+                    product_category: selectedOption
+                      ? selectedOption.value
+                      : "",
+                  }));
+                }}
+                isClearable
+                isSearchable
+              />
+            </div>
 
             <div style={{ gridColumn: "1 / -1" }}>
               <label style={{ fontWeight: "bold" }}>Add Images</label>
@@ -1313,21 +1379,29 @@ const ProductsAddLayout = () => {
             />
 
             {formData.product_category !== "Assembled Desktop" && (
-              <Field
-                label="Brand"
-                type="select"
-                name="brand"
-                value={formData.brand}
-                onChange={handleChange}
-                required
-              >
-                <option value="">Select Brand</option>
-                {brands.map((brand) => (
-                  <option key={brand.id} value={brand.brand_name}>
-                    {brand.brand_name}
-                  </option>
-                ))}
-              </Field>
+              <div style={{ marginBottom: "16px" }}>
+                <label style={{ fontWeight: "bold", marginBottom: "6px", display: "block" }}>
+                  Brand
+                </label>
+
+                <Select
+                  options={brandOptions}
+                  placeholder="Search & Select Brand"
+                  value={
+                    brandOptions.find(
+                      (option) => option.value === formData.brand
+                    ) || null
+                  }
+                  onChange={(selectedOption) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      brand: selectedOption ? selectedOption.value : "",
+                    }))
+                  }
+                  isClearable
+                  isSearchable
+                />
+              </div>
             )}
 
             {/* <Field

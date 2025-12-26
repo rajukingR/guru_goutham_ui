@@ -17,210 +17,367 @@ import {
   Button,
   FormControlLabel,
   Switch,
+  CircularProgress,
 } from "@mui/material";
 import { Add, Remove } from "@mui/icons-material";
-import { useSelector } from "react-redux";
 import API_URL, { IMAGE_API_URL } from "../../../api/Api_url";
+import { useSelector } from "react-redux";
 import { generateSpecifications } from "../../../utils/generateSpecifications";
 
 const GoodsReceiptsEditLayout = () => {
+  const { id } = useParams();
   const { user, token } = useSelector((state) => state.auth);
   const userToken = token;
 
-  const { id } = useParams();
-  const [goodsReceipt, setGoodsReceipt] = useState(null);
   const [purchaseOrders, setPurchaseOrders] = useState([]);
+  const [selectedPurchaseOrder, setSelectedPurchaseOrder] = useState(null);
   const [suppliers, setSuppliers] = useState([]);
   const [products, setProducts] = useState([]);
   const navigate = useNavigate();
   const [assetIds, setAssetIds] = useState({});
   const [assetIdErrors, setAssetIdErrors] = useState({});
-  const [supplierName, setSupplierName] = useState("");
   const [usePurchaseOrder, setUsePurchaseOrder] = useState(false);
-  const [selectedPurchaseOrder, setSelectedPurchaseOrder] = useState(null);
+  const [validationErrors, setValidationErrors] = useState({
+    purchaseOrderId: "",
+    goodsReceiptStatus: "",
+    owner: "",
+    description: "",
+    products: "",
+    vendorInvoiceNumber: "",
+  });
 
   const [formData, setFormData] = useState({
-    goods_receipt_id: "",
-    vendor_invoice_number: "",
-    purchase_order_id: "",
-    purchase_order_status: "",
-    goods_receipt_date: new Date().toISOString().split("T")[0],
-    purchase_type: "Buy",
-    goods_receipt_status: "Pending",
-    supplier_id: "",
-    description: "",
+    goodsReceiptId: "",
+    vendorInvoiceNumber: "",
+    purchaseOrderId: "",
+    purchaseOrderStatus: "",
+    goodsReceiptDate: new Date().toISOString().split("T")[0],
+    purchaseType: "",
+    goodsReceiptStatus: "Pending",
     owner: "",
+    supplier_id: "",
+    supplierName: "",
+    description: "",
+    isSupplierLocked: false,
   });
 
   const [selectedProductIds, setSelectedProductIds] = useState([]);
   const [quantities, setQuantities] = useState({});
   const [searchTerm, setSearchTerm] = useState("");
   const [showProductTable, setShowProductTable] = useState(false);
-  const [loading, setLoading] = useState({
-    goodsReceipt: true,
-    purchaseOrders: true,
-    suppliers: true,
-    products: true,
-  });
-  const [error, setError] = useState({
-    goodsReceipt: "",
-    purchaseOrders: "",
-    suppliers: "",
-    products: "",
-  });
+  const [originalData, setOriginalData] = useState(null);
+  const [isLoadingData, setIsLoadingData] = useState(true);
+
   const [snackbar, setSnackbar] = useState({
     open: false,
     message: "",
     severity: "success",
   });
 
+  // Fetch goods receipt data for editing
   useEffect(() => {
-    const fetchData = async () => {
+    const fetchGoodsReceiptData = async () => {
+      if (!id || !userToken) return;
+
       try {
-        // Fetch existing goods receipt
-        const grResponse = await fetch(`${API_URL}/goods-receipts/${id}`, {
+        setIsLoadingData(true);
+        
+        const response = await fetch(`${API_URL}/goods-receipts/${id}`, {
           headers: {
             "Authorization": `Bearer ${userToken}`,
+            "Content-Type": "application/json"
           },
         });
-        if (!grResponse.ok) throw new Error("Failed to fetch goods receipt");
-        const grData = await grResponse.json();
-        setGoodsReceipt(grData);
 
-        // Determine if using purchase order based on existing data
-        const hasPurchaseOrder = !!grData.purchase_order_id;
-        setUsePurchaseOrder(hasPurchaseOrder);
+        if (!response.ok) {
+          throw new Error(`Failed to fetch goods receipt: ${response.status}`);
+        }
 
-        // Pre-fill form with existing goods receipt data
+        const data = await response.json();
+        console.log("Goods Receipt Data:", data); // Debug log
+        setOriginalData(data);
+        
+        // Set form data
         setFormData({
-          goods_receipt_id: grData.goods_receipt_id,
-          vendor_invoice_number: grData.vendor_invoice_number || "",
-          purchase_order_id: grData.purchase_order_id || "",
-          purchase_order_status: grData.purchase_order_status || "",
-          goods_receipt_date: grData.goods_receipt_date.split("T")[0],
-          purchase_type: grData.purchase_type || "Buy",
-          goods_receipt_status: grData.goods_receipt_status || "Pending",
-          supplier_id: grData.supplier_id,
-          description: grData.description || "",
-          owner: grData.owner || "",
+          goodsReceiptId: data.goods_receipt_id || "",
+          vendorInvoiceNumber: data.vendor_invoice_number || "",
+          purchaseOrderId: data.purchase_order_id || "",
+          purchaseOrderStatus: data.purchase_order_status || "",
+          goodsReceiptDate: data.goods_receipt_date?.split("T")[0] || new Date().toISOString().split("T")[0],
+          purchaseType: data.purchase_type || "",
+          goodsReceiptStatus: data.goods_receipt_status || "Pending",
+          owner: data.owner || "",
+          supplier_id: data.supplier_id || "",
+          supplierName: data.supplier?.supplier_name || "",
+          description: data.description || "",
+          isSupplierLocked: !!data.purchase_order_id,
         });
 
-        // Initialize quantities, selected products, and asset IDs
-        const newQuantities = {};
-        const newSelectedProducts = [];
-        const newAssetIds = {};
+        // Set usePurchaseOrder based on whether there's a purchase order
+        setUsePurchaseOrder(!!data.purchase_order_id);
 
-        // Process selected_products from API response
-        if (grData.selected_products && grData.selected_products.length > 0) {
-          grData.selected_products.forEach((item) => {
-            newQuantities[item.product_id] = item.quantity;
-            newSelectedProducts.push(item.product_id);
-            if (item.asset_ids && item.asset_ids.length > 0) {
-              newAssetIds[item.product_id] = item.asset_ids;
-            } else {
-              // Initialize empty array if no asset IDs exist
-              newAssetIds[item.product_id] = Array(item.quantity).fill("");
-            }
+        // 🚨 CRITICAL FIX: The API returns "selected_products" not "items"
+        if (data.selected_products && data.selected_products.length > 0) {
+          console.log("Selected Products:", data.selected_products); // Debug log
+          
+          const productIds = data.selected_products.map(item => item.product_id);
+          
+          // ✅ AUTO-SELECT CHECKBOXES: Select products that have quantity > 0
+          setSelectedProductIds(productIds);
+          console.log("Selected Product IDs:", productIds); // Debug log
+
+          const quantityMap = {};
+          const assetIdMap = {};
+          
+          data.selected_products.forEach(item => {
+            quantityMap[item.product_id] = item.quantity;
+            assetIdMap[item.product_id] = item.asset_ids || [];
           });
+
+          console.log("Quantity Map:", quantityMap); // Debug log
+          console.log("Asset ID Map:", assetIdMap); // Debug log
+
+          setQuantities(quantityMap);
+          setAssetIds(assetIdMap);
         }
 
-        setQuantities(newQuantities);
-        setSelectedProductIds(newSelectedProducts);
-        setAssetIds(newAssetIds);
-
-        // Fetch purchase orders
-        const poResponse = await fetch(`${API_URL}/purchase-orders/approved`, {
-          headers: {
-            "Authorization": `Bearer ${userToken}`,
-          },
+        setIsLoadingData(false);
+      } catch (error) {
+        console.error("Error loading goods receipt data:", error);
+        setSnackbar({
+          open: true,
+          message: "Error loading goods receipt data",
+          severity: "error",
         });
-        if (!poResponse.ok) throw new Error("Failed to fetch purchase orders");
-        const poData = await poResponse.json();
-        setPurchaseOrders(poData);
-
-        // Set selected purchase order if exists
-        if (hasPurchaseOrder) {
-          const existingPO = poData.find(
-            (order) => order.purchase_order_id === grData.purchase_order_id
-          );
-          setSelectedPurchaseOrder(existingPO);
-        }
-
-        // Fetch suppliers
-        const supResponse = await fetch(`${API_URL}/supplier`, {
-          headers: {
-            "Authorization": `Bearer ${userToken}`,
-          },
-        });
-        if (!supResponse.ok) throw new Error("Failed to fetch suppliers");
-        const supData = await supResponse.json();
-        setSuppliers(supData);
-
-        // Fetch supplier name if supplier_id exists
-        if (grData.supplier_id) {
-          const supplierResponse = await fetch(
-            `${API_URL}/supplier/${grData.supplier_id}`,
-            {
-              headers: {
-                "Authorization": `Bearer ${userToken}`,
-              },
-            }
-          );
-          if (supplierResponse.ok) {
-            const supplierData = await supplierResponse.json();
-            setSupplierName(supplierData.supplier_name);
-          }
-        }
-
-        // Fetch products
-        const prodResponse = await fetch(`${API_URL}/product-templete`, {
-          headers: {
-            "Authorization": `Bearer ${userToken}`,
-          },
-        });
-        if (!prodResponse.ok) throw new Error("Failed to fetch products");
-        const prodData = await prodResponse.json();
-        setProducts(prodData);
-
-        setLoading({
-          goodsReceipt: false,
-          purchaseOrders: false,
-          suppliers: false,
-          products: false,
-        });
-      } catch (err) {
-        console.error("Error fetching data:", err);
-        setError({
-          goodsReceipt: err.message,
-          purchaseOrders: err.message,
-          suppliers: err.message,
-          products: err.message,
-        });
-        setLoading({
-          goodsReceipt: false,
-          purchaseOrders: false,
-          suppliers: false,
-          products: false,
-        });
+        setIsLoadingData(false);
       }
     };
 
-    fetchData();
-  }, [id]);
+    fetchGoodsReceiptData();
+  }, [id, userToken]);
 
+  // Fetch other data
+  useEffect(() => {
+    const fetchAllData = async () => {
+      if (!userToken) return;
+
+      try {
+        // Fetch Purchase Orders
+        const poResponse = await fetch(`${API_URL}/purchase-orders/approved`, {
+          headers: {
+            "Authorization": `Bearer ${userToken}`,
+            "Content-Type": "application/json"
+          },
+        });
+
+        if (poResponse.ok) {
+          const poData = await poResponse.json();
+          setPurchaseOrders(poData || []);
+        }
+
+        // Fetch Suppliers
+        const supResponse = await fetch(`${API_URL}/supplier`, {
+          headers: {
+            "Authorization": `Bearer ${userToken}`,
+            "Content-Type": "application/json"
+          },
+        });
+
+        if (supResponse.ok) {
+          const supData = await supResponse.json();
+          setSuppliers(supData || []);
+        }
+
+        // Fetch Products
+        const prodResponse = await fetch(`${API_URL}/product-templete/without-active`, {
+          headers: {
+            "Authorization": `Bearer ${userToken}`,
+            "Content-Type": "application/json"
+          },
+        });
+
+        if (prodResponse.ok) {
+          const prodData = await prodResponse.json();
+          const activeProducts = prodData.filter(product =>
+            product.is_active === true || product.is_active === undefined
+          );
+          setProducts(activeProducts || []);
+          console.log("Products loaded:", activeProducts.length); // Debug log
+        }
+
+      } catch (error) {
+        console.error("Error fetching data:", error);
+      }
+    };
+
+    fetchAllData();
+  }, [userToken]);
+
+  // Handle quantity change with asset ID sync
+  const handleQtyChange = (productId, value) => {
+    const qty = Math.max(0, parseInt(value) || 0);
+    const currentQty = quantities[productId] || 0;
+    const currentAssetIds = assetIds[productId] || [];
+    
+    // Update quantity
+    setQuantities(prev => ({ ...prev, [productId]: qty }));
+    
+    // Sync Asset IDs with quantity
+    if (qty < currentQty) {
+      // Reduce quantity: Remove extra asset IDs
+      setAssetIds(prev => ({
+        ...prev,
+        [productId]: prev[productId]?.slice(0, qty) || []
+      }));
+    } else if (qty > currentQty) {
+      // Increase quantity: Add empty asset ID slots
+      const newAssetIds = [...currentAssetIds];
+      const additionalSlots = qty - currentQty;
+      
+      for (let i = 0; i < additionalSlots; i++) {
+        newAssetIds.push("");
+      }
+      
+      setAssetIds(prev => ({
+        ...prev,
+        [productId]: newAssetIds
+      }));
+    }
+  };
+
+  const incrementQty = (productId) => {
+    const currentQty = quantities[productId] || 0;
+    const newQty = currentQty + 1;
+    
+    // Update quantity
+    setQuantities(prev => ({ ...prev, [productId]: newQty }));
+    
+    // Add new empty asset ID
+    setAssetIds(prev => ({
+      ...prev,
+      [productId]: [...(prev[productId] || []), ""]
+    }));
+  };
+
+  const decrementQty = (productId) => {
+    const currentQty = quantities[productId] || 0;
+    if (currentQty <= 0) return;
+    
+    const newQty = currentQty - 1;
+    
+    // Update quantity
+    setQuantities(prev => ({ ...prev, [productId]: newQty }));
+    
+    // Remove last asset ID
+    setAssetIds(prev => ({
+      ...prev,
+      [productId]: prev[productId]?.slice(0, -1) || []
+    }));
+  };
+
+  // Handle product selection
+  const handleManualProductSelection = (productId) => {
+    const isCurrentlySelected = selectedProductIds.includes(productId);
+    
+    if (isCurrentlySelected) {
+      // Deselect product
+      setSelectedProductIds(prev => prev.filter(id => id !== productId));
+      setQuantities(prev => {
+        const newQuantities = { ...prev };
+        delete newQuantities[productId];
+        return newQuantities;
+      });
+      setAssetIds(prev => {
+        const newAssetIds = { ...prev };
+        delete newAssetIds[productId];
+        return newAssetIds;
+      });
+    } else {
+      // Select product and initialize with quantity 1 if not already set
+      setSelectedProductIds(prev => [...prev, productId]);
+      if (!quantities[productId]) {
+        setQuantities(prev => ({ ...prev, [productId]: 1 }));
+        setAssetIds(prev => ({ ...prev, [productId]: [""] }));
+      }
+    }
+  };
+
+  // Validation functions
+  const validateForm = () => {
+    const errors = {
+      goodsReceiptStatus: !formData.goodsReceiptStatus
+        ? "Status is required"
+        : "",
+      products:
+        selectedProductIds.length === 0
+          ? "At least one product is required"
+          : "",
+    };
+
+    if (usePurchaseOrder) {
+      errors.purchaseOrderId = !formData.purchaseOrderId
+        ? "Purchase Order is required"
+        : "";
+    }
+
+    setValidationErrors(errors);
+    return !Object.values(errors).some((error) => error !== "");
+  };
+
+  const validateAssetIds = () => {
+    const errors = {};
+    let isValid = true;
+
+    Object.entries(quantities).forEach(([productId, qty]) => {
+      if (qty > 0) {
+        const currentAssetIds = assetIds[productId] || [];
+
+        // Check for empty required fields
+        for (let i = 0; i < Math.min(currentAssetIds.length, qty); i++) {
+          if (!currentAssetIds[i] || !currentAssetIds[i].trim()) {
+            errors[`${productId}-${i}`] = `Asset ID ${i + 1} cannot be empty`;
+            errors[productId] = "Please fill all required Asset IDs";
+            isValid = false;
+          }
+        }
+
+        // Check for duplicates
+        const normalizedIds = currentAssetIds
+          .slice(0, qty)
+          .map(id => id.trim().toLowerCase())
+          .filter(id => id !== "");
+
+        const uniqueIds = new Set(normalizedIds);
+        if (uniqueIds.size !== normalizedIds.length) {
+          errors[productId] = "Duplicate asset IDs found";
+          isValid = false;
+        }
+      }
+    });
+
+    setAssetIdErrors(errors);
+    return isValid;
+  };
+
+  // Purchase order handlers
   const handlePurchaseOrderToggle = (usePO) => {
     setUsePurchaseOrder(usePO);
 
     if (!usePO) {
-      // Reset purchase order related data when switching to manual mode
       setSelectedPurchaseOrder(null);
       setFormData((prev) => ({
         ...prev,
-        purchase_order_id: "",
-        purchase_order_status: "",
+        purchaseOrderId: "",
+        purchaseOrderStatus: "",
+        supplier_id: "",
+        supplierName: "",
+        description: "",
+        isSupplierLocked: false,
       }));
+      setSelectedProductIds([]);
+      setQuantities({});
+      setAssetIds({});
     } else {
-      // Reset manual selections when switching to PO mode
       setSelectedProductIds([]);
       setQuantities({});
       setAssetIds({});
@@ -229,14 +386,18 @@ const GoodsReceiptsEditLayout = () => {
 
   const handlePurchaseOrderChange = (e) => {
     const selectedId = e.target.value;
+    setValidationErrors((prev) => ({ ...prev, purchaseOrderId: "" }));
+
     if (!selectedId) {
       setSelectedPurchaseOrder(null);
       setFormData((prev) => ({
         ...prev,
-        purchase_order_id: "",
-        purchase_order_status: "",
+        purchaseOrderId: "",
+        purchaseOrderStatus: "",
         supplier_id: "",
+        supplierName: "",
         description: "",
+        isSupplierLocked: false,
       }));
       setSelectedProductIds([]);
       setQuantities({});
@@ -249,43 +410,39 @@ const GoodsReceiptsEditLayout = () => {
     );
     setSelectedPurchaseOrder(selectedOrder);
 
-    if (selectedOrder) {
-      setFormData((prev) => ({
-        ...prev,
-        purchase_order_id: selectedOrder.purchase_order_id,
-        purchase_order_status: selectedOrder.po_status,
-        supplier_id: selectedOrder.supplier_id,
-        description: selectedOrder.description,
-        owner: selectedOrder.owner,
-        purchase_type: selectedOrder.purchase_type,
-      }));
+    const supplier = suppliers.find((s) => s.id === selectedOrder.supplier_id);
+    const supplierName = supplier ? supplier.supplier_name : "No Supplier name";
 
-      // Initialize quantities and selected products from PO
-      const newQuantities = {};
-      const newSelectedProducts = [];
-      const newAssetIds = {};
+    setFormData((prev) => ({
+      ...prev,
+      purchaseOrderId: selectedOrder.purchase_order_id,
+      purchaseOrderStatus: selectedOrder.po_status,
+      supplier_id: selectedOrder.supplier_id,
+      supplierName: supplierName,
+      description: selectedOrder.description,
+      isSupplierLocked: true,
+      owner: selectedOrder.owner,
+      purchaseType: selectedOrder.purchase_type,
+    }));
 
-      if (
-        selectedOrder.selected_products &&
-        selectedOrder.selected_products.length > 0
-      ) {
-        selectedOrder.selected_products.forEach((item) => {
-          newQuantities[item.product_id] = item.quantity;
-          newSelectedProducts.push(item.product_id);
-          newAssetIds[item.product_id] = Array(item.quantity).fill("");
-        });
-      }
+    const productIds = selectedOrder.selected_products.map(
+      (item) => item.product_id
+    );
+    setSelectedProductIds(productIds);
 
-      setQuantities(newQuantities);
-      setSelectedProductIds(newSelectedProducts);
-      setAssetIds(newAssetIds);
-    }
+    const newQuantities = {};
+    selectedOrder.selected_products.forEach((item) => {
+      newQuantities[item.product_id] = item.quantity;
+    });
+    setQuantities(newQuantities);
   };
 
   const handleInputChange = (field, value) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
+    setValidationErrors((prev) => ({ ...prev, [field]: "" }));
   };
 
+  // Filter products for search
   const filteredProducts = products.filter(
     (product) =>
       product.product_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -293,183 +450,67 @@ const GoodsReceiptsEditLayout = () => {
       product.description?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const handleQtyChange = (id, value) => {
-    const qty = Math.max(0, parseInt(value) || 0);
-    setQuantities((prev) => ({ ...prev, [id]: qty }));
-
-    // Adjust asset IDs array when quantity changes
-    if (qty < (assetIds[id]?.length || 0)) {
-      setAssetIds((prev) => ({
-        ...prev,
-        [id]: prev[id]?.slice(0, qty) || [],
-      }));
-    } else if (qty > (assetIds[id]?.length || 0)) {
-      setAssetIds((prev) => ({
-        ...prev,
-        [id]: [
-          ...(prev[id] || []),
-          ...Array(qty - (prev[id]?.length || 0)).fill(""),
-        ],
-      }));
-    }
-  };
-
-  const incrementQty = (id) => {
-    const newQty = (quantities[id] || 0) + 1;
-    setQuantities((prev) => ({ ...prev, [id]: newQty }));
-    setAssetIds((prev) => ({
-      ...prev,
-      [id]: [...(prev[id] || []), ""],
-    }));
-  };
-
-  const decrementQty = (id) => {
-    const newQty = Math.max(0, (quantities[id] || 0) - 1);
-    setQuantities((prev) => ({ ...prev, [id]: newQty }));
-    if (newQty < (assetIds[id]?.length || 0)) {
-      setAssetIds((prev) => ({
-        ...prev,
-        [id]: prev[id].slice(0, newQty),
-      }));
-    }
-  };
-
-  const handleManualProductSelection = (productId) => {
-    setSelectedProductIds((prev) =>
-      prev.includes(productId)
-        ? prev.filter((id) => id !== productId)
-        : [...prev, productId]
-    );
-
-    // Reset quantity when deselecting product
-    if (selectedProductIds.includes(productId)) {
-      setQuantities((prev) => {
-        const newQuantities = { ...prev };
-        delete newQuantities[productId];
-        return newQuantities;
-      });
-      setAssetIds((prev) => {
-        const newAssetIds = { ...prev };
-        delete newAssetIds[productId];
-        return newAssetIds;
-      });
-    } else {
-      // Initialize with quantity 1 when selecting product
-      setQuantities((prev) => ({ ...prev, [productId]: 1 }));
-      setAssetIds((prev) => ({ ...prev, [productId]: [""] }));
-    }
-  };
-
-  const validateAssetIds = () => {
-    const errors = {};
-    let isValid = true;
-
-    Object.entries(quantities).forEach(([productId, qty]) => {
-      if (qty > 0) {
-        const currentAssetIds = assetIds[productId] || [];
-
-        if (currentAssetIds.length !== qty) {
-          errors[productId] = `Please enter exactly ${qty} asset ID(s)`;
-          isValid = false;
-        }
-
-        currentAssetIds.forEach((id, index) => {
-          if (!id.trim()) {
-            errors[productId] = `Asset ID ${index + 1} cannot be empty`;
-            isValid = false;
-          }
-        });
-
-        const uniqueIds = new Set(
-          currentAssetIds.map((id) => id.trim().toLowerCase())
-        );
-        if (uniqueIds.size !== currentAssetIds.length) {
-          errors[productId] = "Duplicate asset IDs found";
-          isValid = false;
-        }
-      }
-    });
-
-    setAssetIdErrors(errors);
-    return isValid;
-  };
-
+  // Submit handler
   const handleSubmit = async () => {
+    if (!validateForm()) {
+      setSnackbar({
+        open: true,
+        message: "Please fill all required fields",
+        severity: "error",
+      });
+      return;
+    }
+
+    if (!validateAssetIds()) {
+      setSnackbar({
+        open: true,
+        message: "Please fix all asset ID errors",
+        severity: "error",
+      });
+      return;
+    }
+
     try {
-      if (!goodsReceipt) {
-        throw new Error("Goods receipt data not loaded");
-      }
+      // 🚨 FIX: Use selected_products structure
+      const items = selectedProductIds
+        .filter((productId) => quantities[productId] > 0)
+        .map((productId) => {
+          const product = products.find((p) => p.id === productId);
+          const quantity = quantities[productId] || 0;
+          const productAssetIds = assetIds[productId] || [];
 
-      if (!validateAssetIds()) {
-        throw new Error("Please fix all asset ID errors before submitting");
-      }
-
-      // Prepare items array based on mode
-      let items = [];
-
-      if (usePurchaseOrder && selectedPurchaseOrder) {
-        // With Purchase Order - use PO products
-        items = selectedPurchaseOrder.selected_products
-          .filter((item) => quantities[item.product_id] > 0)
-          .map((item) => {
-            const product = products.find((p) => p.id === item.product_id);
-            const quantity = quantities[item.product_id] || 0;
-            const productAssetIds = assetIds[item.product_id] || [];
-
-            return {
-              product_id: item.product_id,
-              product_name: product?.product_name || "",
-              quantity: quantity,
-              asset_ids: productAssetIds.filter((id) => id.trim() !== ""),
-            };
-          });
-      } else {
-        // Without Purchase Order - use manually selected products
-        items = selectedProductIds
-          .filter((productId) => quantities[productId] > 0)
-          .map((productId) => {
-            const product = products.find((p) => p.id === productId);
-            const quantity = quantities[productId] || 0;
-            const productAssetIds = assetIds[productId] || [];
-
-            return {
-              product_id: productId,
-              product_name: product?.product_name || "",
-              quantity: quantity,
-              asset_ids: productAssetIds.filter((id) => id.trim() !== ""),
-            };
-          });
-      }
+          return {
+            product_id: productId,
+            product_name: product?.product_name || "",
+            quantity: quantity,
+            asset_ids: productAssetIds.filter((id) => id.trim() !== ""),
+          };
+        });
 
       if (items.length === 0) {
         throw new Error("Please add at least one product with quantity > 0");
       }
 
-      // Frontend duplicate check within form
-      const allAssetIds = items.flatMap((item) => item.asset_ids);
-      const duplicateInForm = allAssetIds.filter(
-        (id, index, arr) => arr.indexOf(id) !== index
-      );
-      if (duplicateInForm.length > 0) {
-        throw new Error(
-          `Duplicate asset IDs in form: ${duplicateInForm.join(", ")}`
-        );
-      }
-
-      // Prepare payload
       const payload = {
-        ...formData,
-        items,
+        goods_receipt_id: formData.goodsReceiptId,
+        vendor_invoice_number: formData.vendorInvoiceNumber,
+        supplier_id: formData.supplier_id,
+        goods_receipt_date: formData.goodsReceiptDate,
+        purchase_type: formData.purchaseType,
+        goods_receipt_status: formData.goodsReceiptStatus,
+        description: formData.description,
+        owner: formData.owner,
+        items, // 🚨 This should match your backend expectation
       };
 
-      // Remove purchase order data if not using PO
-      if (!usePurchaseOrder) {
-        payload.purchase_order_id = "";
-        payload.purchase_order_status = "";
+      if (usePurchaseOrder && selectedPurchaseOrder) {
+        payload.purchase_order_id = selectedPurchaseOrder.purchase_order_id;
+        payload.purchase_order_status = selectedPurchaseOrder.po_status;
       }
 
-      // Send update request
-      const response = await fetch(`${API_URL}/goods-receipts/${id}`, {
+      console.log("Submitting payload:", payload); // Debug log
+
+      const response = await fetch(`${API_URL}/goods-receipts/update/${id}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -480,18 +521,9 @@ const GoodsReceiptsEditLayout = () => {
 
       if (!response.ok) {
         const errorData = await response.json();
-
-        // Backend duplicate check feedback
-        if (errorData.duplicateDetails) {
-          const messages = errorData.duplicateDetails
-            .map((d) => `${d.product_name}: ${d.duplicates.join(", ")}`)
-            .join("; ");
-          throw new Error(`Duplicate asset IDs found: ${messages}`);
-        } else {
-          throw new Error(
-            errorData.message || "Failed to update goods receipt"
-          );
-        }
+        throw new Error(
+          errorData.message || "Failed to update goods receipt"
+        );
       }
 
       setSnackbar({
@@ -512,24 +544,34 @@ const GoodsReceiptsEditLayout = () => {
     }
   };
 
+  // Get products to display in table
   const getProductsToDisplay = () => {
     if (usePurchaseOrder && selectedPurchaseOrder) {
-      // Show only products from the selected purchase order
       return products.filter((product) =>
         selectedProductIds.includes(product.id)
       );
     } else {
-      // Show all filtered products for manual selection
+      // Show products that are selected OR all filtered products
+      const selectedProducts = products.filter(product => 
+        selectedProductIds.includes(product.id)
+      );
+      
+      // If we have selected products, show them first, then filtered products
+      if (selectedProducts.length > 0) {
+        return selectedProducts;
+      }
+      
       return filteredProducts;
     }
   };
 
-  if (loading.goodsReceipt) {
-    return <div>Loading goods receipt data...</div>;
-  }
-
-  if (error.goodsReceipt) {
-    return <div>Error: {error.goodsReceipt}</div>;
+  if (isLoadingData) {
+    return (
+      <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
+        <CircularProgress />
+        <Box ml={2}>Loading goods receipt data...</Box>
+      </Box>
+    );
   }
 
   return (
@@ -550,7 +592,6 @@ const GoodsReceiptsEditLayout = () => {
       </Snackbar>
 
       <div style={formContainerStyle}>
-
         {/* Goods Receipt Details */}
         <div style={cardStyle}>
           <div style={cardHeaderContainerStyle}>
@@ -561,16 +602,20 @@ const GoodsReceiptsEditLayout = () => {
             <Field
               label="Goods Receipt ID"
               placeholder="Enter Goods Receipt ID"
-              value={formData.goods_receipt_id}
+              value={formData.goodsReceiptId}
               onChange={(e) =>
-                handleInputChange("goods_receipt_id", e.target.value)
+                handleInputChange("goodsReceiptId", e.target.value)
               }
+              disabled
             />
             <Field
               label="Vendor Invoice Number"
               placeholder="Enter Vendor Invoice Number"
-              value={formData.vendor_invoice_number}
-              onChange={(e) => handleInputChange("vendor_invoice_number", e.target.value)}
+              value={formData.vendorInvoiceNumber}
+              onChange={(e) =>
+                handleInputChange("vendorInvoiceNumber", e.target.value)
+              }
+              error={validationErrors.vendorInvoiceNumber}
             />
 
             <div style={fieldsGridStyle}>
@@ -580,29 +625,32 @@ const GoodsReceiptsEditLayout = () => {
                     checked={usePurchaseOrder}
                     onChange={(e) => handlePurchaseOrderToggle(e.target.checked)}
                     color="primary"
+                    disabled={!!originalData?.purchase_order_id}
                   />
                 }
                 label={usePurchaseOrder ? "Using Purchase Order" : "Manual Product Selection"}
               />
-              <div style={{ fontSize: "0.875rem", color: "#666", marginTop: "0.5rem" }}>
-                {usePurchaseOrder
-                  ? "Products will be auto-selected from the chosen Purchase Order"
-                  : "Manually select products from the product catalog"}
-              </div>
+              {!!originalData?.purchase_order_id && (
+                <div style={{ fontSize: "0.75rem", color: "#666", marginTop: "0.25rem" }}>
+                  Cannot change mode when a purchase order is already associated
+                </div>
+              )}
             </div>
 
             {usePurchaseOrder && (
               <Field
                 label="Purchase Order"
                 type="select"
-                placeholder="Select Purchase Order"
                 value={selectedPurchaseOrder?.id || ""}
                 onChange={handlePurchaseOrderChange}
+                error={validationErrors.purchaseOrderId}
+                required
+                disabled={!!originalData?.purchase_order_id}
               >
                 <option value="">Select Purchase Order</option>
                 {purchaseOrders.map((order) => (
                   <option key={order.id} value={order.id}>
-                    {order.purchase_order_id} - {order.supplier?.supplier_name}
+                    {order.purchase_order_id} - {order.supplier.supplier_name}
                   </option>
                 ))}
               </Field>
@@ -612,12 +660,12 @@ const GoodsReceiptsEditLayout = () => {
               <>
                 <Field
                   label="Purchase Order ID"
-                  value={formData.purchase_order_id}
+                  value={formData.purchaseOrderId}
                   disabled
                 />
                 <Field
                   label="Purchase Order Status"
-                  value={formData.purchase_order_status}
+                  value={formData.purchaseOrderStatus}
                   disabled
                 />
               </>
@@ -626,36 +674,36 @@ const GoodsReceiptsEditLayout = () => {
             <Field
               label="Goods Receipt Date"
               type="date"
-              value={formData.goods_receipt_date}
+              value={formData.goodsReceiptDate}
               onChange={(e) =>
-                handleInputChange("goods_receipt_date", e.target.value)
+                handleInputChange("goodsReceiptDate", e.target.value)
               }
             />
-
             {usePurchaseOrder && (
               <Field
                 label="Purchase Type"
-                value={formData.purchase_type}
-                onChange={(e) => handleInputChange("purchase_type", e.target.value)}
+                value={formData.purchaseType}
+                onChange={(e) => handleInputChange("purchaseType", e.target.value)}
                 disabled={usePurchaseOrder && selectedPurchaseOrder}
               />
-
             )}
+
             <Field
               label="Goods Receipt Status"
               type="select"
-              placeholder="Select Status"
-              options={["Pending", "Approved", "Rejected"]}
-              value={formData.goods_receipt_status}
+              value={formData.goodsReceiptStatus}
               onChange={(e) =>
-                handleInputChange("goods_receipt_status", e.target.value)
+                handleInputChange("goodsReceiptStatus", e.target.value)
               }
+              error={validationErrors.goodsReceiptStatus}
+              options={["Pending", "Approved", "Rejected"]}
             />
             <Field
               label="Owner"
               placeholder="Enter Owner"
               value={formData.owner}
               onChange={(e) => handleInputChange("owner", e.target.value)}
+              error={validationErrors.owner}
             />
           </div>
         </div>
@@ -667,26 +715,25 @@ const GoodsReceiptsEditLayout = () => {
             <h3 style={cardHeaderStyle}>Supplier Details</h3>
           </div>
           <div style={fieldsGridStyle}>
-            <Field
-              label="Supplier"
-              type="select"
-              value={formData.supplier_id}
-              onChange={(e) => handleInputChange("supplier_id", e.target.value)}
-              disabled={usePurchaseOrder && selectedPurchaseOrder}
-            >
-              <option value="">Select Supplier</option>
-              {suppliers.map((supplier) => (
-                <option key={supplier.id} value={supplier.id}>
-                  {supplier.supplier_name}
-                </option>
-              ))}
-              {formData.supplier_id &&
-                !suppliers.some((s) => s.id === formData.supplier_id) && (
-                  <option value={formData.supplier_id} selected>
-                    {supplierName || "Loading..."}
+            {formData.isSupplierLocked ? (
+              <Field label="Supplier" value={formData.supplierName} disabled />
+            ) : (
+              <Field
+                label="Supplier"
+                type="select"
+                value={formData.supplier_id}
+                onChange={(e) =>
+                  handleInputChange("supplier_id", e.target.value)
+                }
+              >
+                <option value="">Select Supplier</option>
+                {suppliers.map((supplier) => (
+                  <option key={supplier.id} value={supplier.id}>
+                    {supplier.supplier_name}
                   </option>
-                )}
-            </Field>
+                ))}
+              </Field>
+            )}
           </div>
         </div>
 
@@ -702,6 +749,7 @@ const GoodsReceiptsEditLayout = () => {
               placeholder="Enter Description"
               value={formData.description}
               onChange={(e) => handleInputChange("description", e.target.value)}
+              error={validationErrors.description}
               type="textarea"
             />
           </div>
@@ -712,9 +760,14 @@ const GoodsReceiptsEditLayout = () => {
       <div style={cardStyle}>
         <div style={cardHeaderContainerStyle}>
           <h3 style={cardHeaderStyle}>
-            {usePurchaseOrder ? "Products from Purchase Order" : "Select Products"}
+            {usePurchaseOrder ? "Products from Purchase Order" : "Edit Products"}
           </h3>
         </div>
+        {validationErrors.products && (
+          <div style={{ color: "red", margin: "0 0 1rem 1rem" }}>
+            {validationErrors.products}
+          </div>
+        )}
 
         {usePurchaseOrder && !selectedPurchaseOrder && (
           <div style={{ color: "#666", margin: "0 0 1rem 1rem" }}>
@@ -742,9 +795,7 @@ const GoodsReceiptsEditLayout = () => {
           >
             {showProductTable
               ? "Hide Product List"
-              : usePurchaseOrder
-                ? "View Products"
-                : "Edit Products"
+              : "View/Edit Products"
             }
           </button>
 
@@ -759,7 +810,6 @@ const GoodsReceiptsEditLayout = () => {
                     onChange={(e) => setSearchTerm(e.target.value)}
                   />
                 </Box>
-
               )}
 
               <TableContainer
@@ -773,215 +823,116 @@ const GoodsReceiptsEditLayout = () => {
                 <Table size="small" stickyHeader>
                   <TableHead>
                     <TableRow sx={{ backgroundColor: "#0d47a1" }}>
-                      <TableCell
-                        padding="checkbox"
-                        sx={{ backgroundColor: "#0d47a1" }}
-                      >
-                        <Checkbox
-                          sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
-                        />
+                      <TableCell padding="checkbox" sx={{ backgroundColor: "#0d47a1" }}>
+                        <Checkbox sx={{ color: "#fff" }} />
                       </TableCell>
-
-                      <TableCell
-                        sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
-                      >
+                      <TableCell sx={{ backgroundColor: "#0d47a1", color: "#fff" }}>
                         Product Name
                       </TableCell>
-
-                      <TableCell
-                        sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
-                      >
+                      <TableCell sx={{ backgroundColor: "#0d47a1", color: "#fff" }}>
                         Specifications
                       </TableCell>
-                      <TableCell
-                        sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
-                      >
+                      <TableCell sx={{ backgroundColor: "#0d47a1", color: "#fff" }}>
                         Price per Piece
                       </TableCell>
-                      <TableCell
-                        sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
-                      >
+                      <TableCell sx={{ backgroundColor: "#0d47a1", color: "#fff" }}>
                         Quantity
                       </TableCell>
-                      <TableCell
-                        sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
-                      >
+                      <TableCell sx={{ backgroundColor: "#0d47a1", color: "#fff" }}>
                         Asset IDs
                       </TableCell>
                     </TableRow>
                   </TableHead>
-
-
-
                   <TableBody>
-                    {getProductsToDisplay()
-                      .filter(product => selectedProductIds.includes(product.id))
-                      .map((product) => (
-                        <TableRow key={product.id}>
+                    {getProductsToDisplay().map((product) => {
+                      const productId = product.id;
+                      const qty = quantities[productId] || 0;
+                      const isSelected = selectedProductIds.includes(productId);
+                      const productAssetIds = assetIds[productId] || [];
+                      
+                      console.log(`Product ${productId}: qty=${qty}, selected=${isSelected}, assetIds=${productAssetIds.length}`); // Debug
+                      
+                      return (
+                        <TableRow key={productId}>
                           <TableCell padding="checkbox">
+                            {/* ✅ CHECKBOX: Auto-selected based on existing data */}
                             <Checkbox
-                              checked={selectedProductIds.includes(product.id)}
-                              onChange={() => handleManualProductSelection(product.id)}
+                              checked={isSelected}
+                              onChange={() => handleManualProductSelection(productId)}
+                              disabled={usePurchaseOrder}
                             />
                           </TableCell>
-
                           <TableCell>{product.product_name}</TableCell>
                           <TableCell>{generateSpecifications(product)}</TableCell>
                           <TableCell>
                             <div>
-                              <strong>Month:</strong> ₹
-                              {product.rent_price_per_month}
+                              <strong>Month:</strong> ₹{product.rent_price_per_month || "N/A"}
                             </div>
                           </TableCell>
                           <TableCell>
+                            {/* ✅ QUANTITY: Shows actual quantity from goods receipt */}
                             <Box display="flex" alignItems="center">
                               <IconButton
                                 size="small"
-                                onClick={() => decrementQty(product.id)}
+                                onClick={() => decrementQty(productId)}
+                                disabled={!isSelected}
                               >
                                 <Remove fontSize="small" />
                               </IconButton>
                               <TextField
                                 type="number"
                                 size="small"
-                                value={quantities[product.id] || 0}
+                                value={qty}
                                 onChange={(e) =>
-                                  handleQtyChange(product.id, e.target.value)
+                                  handleQtyChange(productId, e.target.value)
                                 }
+                                disabled={!isSelected}
                                 inputProps={{
                                   min: 0,
-                                  style: { width: 50, textAlign: "center" },
+                                  style: { width: 60, textAlign: "center" },
                                 }}
                               />
                               <IconButton
                                 size="small"
-                                onClick={() => incrementQty(product.id)}
+                                onClick={() => incrementQty(productId)}
+                                disabled={!isSelected}
                               >
                                 <Add fontSize="small" />
                               </IconButton>
                             </Box>
                           </TableCell>
                           <TableCell>
-                            {quantities[product.id] > 0 && (
+                            {/* ✅ ASSET IDs: Shows actual asset IDs from goods receipt */}
+                            {qty > 0 && (
                               <Box display="flex" flexDirection="column" gap={1}>
-                                {(assetIds[product.id] || []).map((id, idx) => {
-                                  // Check for duplicates in real-time
-                                  const currentAssetIds = assetIds[product.id] || [];
-                                  const normalizedCurrentIds = currentAssetIds.map(id => id.trim().toLowerCase());
-                                  const normalizedId = id.trim().toLowerCase();
-
-                                  // Count how many times this ID appears (excluding current index if empty)
-                                  const duplicateCount = normalizedCurrentIds.filter(
-                                    (normalizedAssetId, index) =>
-                                      normalizedAssetId &&
-                                      normalizedAssetId === normalizedId &&
-                                      (id.trim() !== "" || index === idx)
-                                  ).length;
-
-                                  const isDuplicate = duplicateCount > 1;
-                                  const isEmpty = !id.trim();
-
-                                  return (
-                                    <TextField
-                                      key={idx}
-                                      size="small"
-                                      placeholder={`Asset ID ${idx + 1}`}
-                                      value={id}
-                                      onChange={(e) => {
-                                        const newValue = e.target.value;
-                                        const updated = [...(assetIds[product.id] || [])];
-                                        updated[idx] = newValue;
-
-                                        setAssetIds((prev) => ({
-                                          ...prev,
-                                          [product.id]: updated,
-                                        }));
-
-                                        // Immediate validation
-                                        const currentIds = updated;
-                                        const normalizedIds = currentIds.map(id => id.trim().toLowerCase());
-                                        const currentNormalizedValue = newValue.trim().toLowerCase();
-
-                                        // Check for duplicates
-                                        const duplicateCountNow = normalizedIds.filter(
-                                          normalizedId =>
-                                            normalizedId &&
-                                            normalizedId === currentNormalizedValue
-                                        ).length;
-
-                                        const isEmptyNow = !newValue.trim();
-                                        const isDuplicateNow = duplicateCountNow > 1;
-
-                                        // Update errors
-                                        setAssetIdErrors((prev) => {
-                                          const newErrors = { ...prev };
-
-                                          if (isDuplicateNow) {
-                                            newErrors[product.id] = "Duplicate asset IDs found";
-                                            newErrors[`${product.id}-${idx}`] = "This Asset ID is already entered";
-                                          } else if (isEmptyNow && idx < quantities[product.id]) {
-                                            // Don't show empty error for extra optional fields if they exist
-                                            if (idx < (quantities[product.id] || 0)) {
-                                              newErrors[`${product.id}-${idx}`] = `Asset ID ${idx + 1} cannot be empty`;
-                                              if (!newErrors[product.id]) {
-                                                newErrors[product.id] = "Please fill all required Asset IDs";
-                                              }
-                                            }
-                                          } else {
-                                            // Clear specific field error
-                                            delete newErrors[`${product.id}-${idx}`];
-
-                                            // Clear product error if all fields are valid
-                                            const hasOtherErrors = Object.keys(newErrors).some(key =>
-                                              key.startsWith(`${product.id}-`) ||
-                                              (key === product.id && key !== `${product.id}-${idx}`)
-                                            );
-                                            if (!hasOtherErrors) {
-                                              delete newErrors[product.id];
-                                            }
-                                          }
-
-                                          return newErrors;
-                                        });
-                                      }}
-                                      onBlur={(e) => {
-                                        // Final validation on blur
-                                        const value = e.target.value.trim();
-                                        if (value === "" && idx < quantities[product.id]) {
-                                          // Only show error for required fields (based on quantity)
-                                          setAssetIdErrors((prev) => ({
-                                            ...prev,
-                                            [`${product.id}-${idx}`]: `Asset ID ${idx + 1} cannot be empty`,
-                                            [product.id]: prev[product.id] || "Please fill all required Asset IDs",
-                                          }));
-                                        }
-                                      }}
-                                      error={Boolean(
-                                        assetIdErrors[`${product.id}-${idx}`] ||
-                                        (idx === 0 && assetIdErrors[product.id] && !assetIdErrors[`${product.id}-0`])
-                                      )}
-                                      helperText={
-                                        assetIdErrors[`${product.id}-${idx}`] ||
-                                        (idx === 0 && assetIdErrors[product.id] && !assetIdErrors[`${product.id}-0`] ? assetIdErrors[product.id] : "")
-                                      }
-                                    />
-                                  );
-                                })}
-
-                                {(assetIds[product.id]?.length || 0) < (quantities[product.id] || 0) && (
+                                {productAssetIds.slice(0, qty).map((id, idx) => (
+                                  <TextField
+                                    key={idx}
+                                    size="small"
+                                    placeholder={`Asset ID ${idx + 1}`}
+                                    value={id}
+                                    onChange={(e) => {
+                                      const updated = [...productAssetIds];
+                                      updated[idx] = e.target.value;
+                                      setAssetIds((prev) => ({
+                                        ...prev,
+                                        [productId]: updated,
+                                      }));
+                                    }}
+                                    error={Boolean(assetIdErrors[`${productId}-${idx}`])}
+                                    helperText={assetIdErrors[`${productId}-${idx}`]}
+                                  />
+                                ))}
+                                {/* Add more asset IDs if needed */}
+                                {productAssetIds.length < qty && (
                                   <Button
                                     size="small"
                                     variant="outlined"
                                     onClick={() => {
-                                      const currentLength = assetIds[product.id]?.length || 0;
-                                      const requiredQty = quantities[product.id] || 0;
-
-                                      if (currentLength < requiredQty) {
-                                        setAssetIds((prev) => ({
-                                          ...prev,
-                                          [product.id]: [...(prev[product.id] || []), ""],
-                                        }));
-                                      }
+                                      setAssetIds((prev) => ({
+                                        ...prev,
+                                        [productId]: [...productAssetIds, ""],
+                                      }));
                                     }}
                                   >
                                     + Add Asset ID
@@ -991,7 +942,8 @@ const GoodsReceiptsEditLayout = () => {
                             )}
                           </TableCell>
                         </TableRow>
-                      ))}
+                      );
+                    })}
                   </TableBody>
                 </Table>
               </TableContainer>
@@ -1016,84 +968,7 @@ const GoodsReceiptsEditLayout = () => {
   );
 };
 
-// Field component and styles (same as before)
-const Field = ({
-  label,
-  placeholder,
-  type = "text",
-  value = "",
-  disabled = false,
-  options = [],
-  onChange,
-  children,
-  error = "",
-  required = false,
-}) => (
-  <div style={fieldContainerStyle}>
-    <label style={labelStyle}>
-      {label}
-      {required && <span style={{ color: "red" }}>*</span>}
-    </label>
-    {type === "select" ? (
-      <div style={selectWrapperStyle}>
-        <select
-          style={{
-            ...selectStyle,
-            borderColor: error ? "red" : "#cbd5e1",
-          }}
-          disabled={disabled}
-          value={value}
-          onChange={onChange}
-        >
-          {placeholder && (
-            <option value="" disabled>
-              {placeholder}
-            </option>
-          )}
-          {options.length > 0
-            ? options.map((opt, idx) => (
-              <option key={idx} value={opt}>
-                {opt}
-              </option>
-            ))
-            : children}
-        </select>
-        <div style={selectArrowStyle}>▼</div>
-      </div>
-    ) : type === "textarea" ? (
-      <textarea
-        placeholder={placeholder}
-        value={value}
-        disabled={disabled}
-        style={{
-          ...inputStyle,
-          height: "80px",
-          borderColor: error ? "red" : "#cbd5e1",
-        }}
-        onChange={onChange}
-      />
-    ) : (
-      <input
-        type={type}
-        placeholder={placeholder}
-        value={value}
-        disabled={disabled}
-        style={{
-          ...inputStyle,
-          borderColor: error ? "red" : "#cbd5e1",
-        }}
-        onChange={onChange}
-      />
-    )}
-    {error && (
-      <div style={{ color: "red", fontSize: "0.75rem", marginTop: "4px" }}>
-        {error}
-      </div>
-    )}
-  </div>
-);
-
-// Styles (same as before)
+// Styles remain the same...
 const containerStyle = {
   padding: "2rem",
   fontFamily: '"Inter", "Segoe UI", sans-serif',
@@ -1209,5 +1084,82 @@ const createBtnStyle = {
   fontWeight: "500",
   fontSize: "0.875rem",
 };
+
+// Field component
+const Field = ({
+  label,
+  placeholder,
+  type = "text",
+  value = "",
+  disabled = false,
+  options = [],
+  onChange,
+  children,
+  error = "",
+  required = false,
+}) => (
+  <div style={fieldContainerStyle}>
+    <label style={labelStyle}>
+      {label}
+      {required && <span style={{ color: "red" }}>*</span>}
+    </label>
+    {type === "select" ? (
+      <div style={selectWrapperStyle}>
+        <select
+          style={{
+            ...selectStyle,
+            borderColor: error ? "red" : "#cbd5e1",
+          }}
+          disabled={disabled}
+          value={value}
+          onChange={onChange}
+        >
+          {placeholder && (
+            <option value="" disabled>
+              {placeholder}
+            </option>
+          )}
+          {options.length > 0
+            ? options.map((opt, idx) => (
+                <option key={idx} value={opt}>
+                  {opt}
+                </option>
+              ))
+            : children}
+        </select>
+        <div style={selectArrowStyle}>▼</div>
+      </div>
+    ) : type === "textarea" ? (
+      <textarea
+        placeholder={placeholder}
+        value={value}
+        disabled={disabled}
+        style={{
+          ...inputStyle,
+          height: "80px",
+          borderColor: error ? "red" : "#cbd5e1",
+        }}
+        onChange={onChange}
+      />
+    ) : (
+      <input
+        type={type}
+        placeholder={placeholder}
+        value={value}
+        disabled={disabled}
+        style={{
+          ...inputStyle,
+          borderColor: error ? "red" : "#cbd5e1",
+        }}
+        onChange={onChange}
+      />
+    )}
+    {error && (
+      <div style={{ color: "red", fontSize: "0.75rem", marginTop: "4px" }}>
+        {error}
+      </div>
+    )}
+  </div>
+);
 
 export default GoodsReceiptsEditLayout;

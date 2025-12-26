@@ -5,6 +5,8 @@ import Snackbar from "@mui/material/Snackbar";
 import MuiAlert from "@mui/material/Alert";
 import { useNavigate, useParams } from "react-router-dom";
 import { useSelector } from "react-redux";
+import Select from "react-select";
+
 // Add this Alert component (optional but recommended for better styling)
 const Alert = React.forwardRef(function Alert(props, ref) {
   return <MuiAlert elevation={6} ref={ref} variant="filled" {...props} />;
@@ -302,6 +304,19 @@ const ProductsEditLayout = () => {
 
     setFormData(updatedFormData);
   };
+
+
+
+  const categoryOptions = categories.map((cat) => ({
+    value: cat.category_name,
+    label: cat.category_name,
+  }));
+
+
+  const brandOptions = brands.map((brand) => ({
+    value: brand.brand_name,
+    label: brand.brand_name,
+  }));
 
 
   // Handle form submission
@@ -1019,21 +1034,31 @@ const ProductsEditLayout = () => {
           </div>
 
           <div style={fieldsGridStyle}>
-            <Field
-              label="Product Category"
-              type="select"
-              name="product_category"
-              value={formData.product_category}
-              onChange={handleChange}
-              required
-            >
-              <option value="">Select Category</option>
-              {categories.map((category) => (
-                <option key={category.id} value={category.category_name}>
-                  {category.category_name}
-                </option>
-              ))}
-            </Field>
+            <div style={{ marginBottom: "16px" }}>
+              <label style={{ fontWeight: "bold", marginBottom: "6px", display: "block" }}>
+                Product Category
+              </label>
+
+              <Select
+                options={categoryOptions}
+                placeholder="Search & Select Category"
+                value={
+                  categoryOptions.find(
+                    (option) => option.value === formData.product_category
+                  ) || null
+                }
+                onChange={(selectedOption) => {
+                  setFormData((prev) => ({
+                    ...prev,
+                    product_category: selectedOption
+                      ? selectedOption.value
+                      : "",
+                  }));
+                }}
+                isClearable
+                isSearchable
+              />
+            </div>
 
             <div style={{ gridColumn: "1 / -1" }}>
               <label style={{ fontWeight: "bold" }}>Product Image</label>
@@ -1123,21 +1148,29 @@ const ProductsEditLayout = () => {
             />
 
             {formData.product_category !== "Assembled Desktop" && (
-              <Field
-                label="Brand"
-                type="select"
-                name="brand"
-                value={formData.brand}
-                onChange={handleChange}
-                required
-              >
-                <option value="">Select Brand</option>
-                {brands.map((brand) => (
-                  <option key={brand.id} value={brand.brand_name}>
-                    {brand.brand_name}
-                  </option>
-                ))}
-              </Field>
+              <div style={{ marginBottom: "16px" }}>
+                <label style={{ fontWeight: "bold", marginBottom: "6px", display: "block" }}>
+                  Brand
+                </label>
+
+                <Select
+                  options={brandOptions}
+                  placeholder="Search & Select Brand"
+                  value={
+                    brandOptions.find(
+                      (option) => option.value === formData.brand
+                    ) || null
+                  }
+                  onChange={(selectedOption) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      brand: selectedOption ? selectedOption.value : "",
+                    }))
+                  }
+                  isClearable
+                  isSearchable
+                />
+              </div>
             )}
 
             <Field
@@ -1193,16 +1226,16 @@ const ProductsEditLayout = () => {
           </div>
 
           <div style={{ display: "grid", gap: "1.2rem" }}>
-           <Field
-  label="Purchase Price"
-  name="purchase_price"
-  type="number"
-  step="any"
-  placeholder="Enter Purchase Price"
-  value={formData.purchase_price}
-  onChange={handlePriceChange}
-  required
-/>
+            <Field
+              label="Purchase Price"
+              name="purchase_price"
+              type="number"
+              step="any"
+              placeholder="Enter Purchase Price"
+              value={formData.purchase_price}
+              onChange={handlePriceChange}
+              required
+            />
 
 
             {/* Rent Percentage Slider for Per Month */}
@@ -1321,16 +1354,16 @@ const Field = ({
       <button style={buttonFieldStyle}>+</button>
     ) : type === "number" ? (
       <input
-    type="number"
-    name={name}
-    placeholder={placeholder}
-    style={inputStyle}
-    value={value}
-    onChange={onChange}
-    required={required}
-    readOnly={readOnly}
-    step="any"
-  />
+        type="number"
+        name={name}
+        placeholder={placeholder}
+        style={inputStyle}
+        value={value}
+        onChange={onChange}
+        required={required}
+        readOnly={readOnly}
+        step="any"
+      />
     ) : (
       <input
         type={type}

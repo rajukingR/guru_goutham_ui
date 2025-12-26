@@ -25,6 +25,7 @@ import { Add, Remove } from "@mui/icons-material";
 import { useSelector } from "react-redux";
 import API_URL, { IMAGE_API_URL, POSTAL_API } from "../../../api/Api_url";
 import { useInventory } from "../../../contexts/InventoryContext";
+import { generateSpecifications } from "../../../utils/generateSpecifications";
 
 const SalesOrdersEditLayoutPage = ({ product }) => {
   // State for form data
@@ -1309,72 +1310,58 @@ const SalesOrdersEditLayoutPage = ({ product }) => {
                     </TableHead>
 
                     <TableBody>
-                      {filteredProducts.map((product) => {
-                        const isSelected = selectedProductIds.includes(
-                          product.id
-                        );
-                        return (
-                          <TableRow key={product.id}>
-                            <TableCell padding="checkbox">
-                              <Checkbox
-                                checked={isSelected}
-                                onChange={() => {
-                                  if (isSelected) {
-                                    setSelectedProductIds((prev) =>
-                                      prev.filter((id) => id !== product.id)
-                                    );
-                                    const updatedQuantities = { ...quantities };
-                                    delete updatedQuantities[product.id];
-                                    setQuantities(updatedQuantities);
-                                  } else {
-                                    setSelectedProductIds((prev) => [
-                                      ...prev,
-                                      product.id,
-                                    ]);
-                                    setQuantities((prev) => ({
-                                      ...prev,
-                                      [product.id]: prev[product.id] || 1,
-                                    }));
-                                  }
-                                }}
-                              />
-                            </TableCell>
-                            <TableCell>{product.product_name}</TableCell>
-                            <TableCell>{product.product_category}</TableCell>
-                            <TableCell>
-                              <div>
-                                <strong>Model:</strong> {product.model}
-                              </div>
-                              <div>
-                                <strong>Processor:</strong> {product.processor}
-                              </div>
-                              <div>
-                                <strong>RAM:</strong> {product.ram}
-                              </div>
-                              <div>
-                                <strong>Storage:</strong> {product.storage}
-                              </div>
-                              <div>
-                                <strong>Graphics:</strong> {product.graphics}
-                              </div>
-                            </TableCell>
-                            {/* <TableCell>{getAvailableQty(product.id)}</TableCell> */}
-                            {/* <TableCell>
-              <strong>Month:</strong> ₹{product.rent_price_per_month}
-            </TableCell> */}
-                            <TableCell>
-                              {isSelected ? (
+                      {filteredProducts
+                        .slice()
+                        .sort((a, b) => {
+                          const aSelected = selectedProductIds.includes(a.id);
+                          const bSelected = selectedProductIds.includes(b.id);
+
+                          if (aSelected === bSelected) return 0;
+                          if (aSelected && !bSelected) return -1;
+                          return 1;
+                        })
+                        .map((product) => {
+                          const isSelected = selectedProductIds.includes(product.id);
+                          return (
+                            <TableRow key={product.id}>
+                              <TableCell padding="checkbox">
+                                <Checkbox
+                                  checked={isSelected}
+                                  onChange={() => {
+                                    if (isSelected) {
+                                      setSelectedProductIds((prev) =>
+                                        prev.filter((id) => id !== product.id)
+                                      );
+                                      const updatedQuantities = { ...quantities };
+                                      delete updatedQuantities[product.id];
+                                      setQuantities(updatedQuantities);
+                                    } else {
+                                      setSelectedProductIds((prev) => [...prev, product.id]);
+                                      setQuantities((prev) => ({
+                                        ...prev,
+                                        [product.id]: prev[product.id] || 1,
+                                      }));
+                                    }
+                                  }}
+                                />
+                              </TableCell>
+                              <TableCell>{product.product_name}</TableCell>
+                              <TableCell>{product.product_category}</TableCell>
+                              <TableCell>
+                                {generateSpecifications(product)}
+                              </TableCell>
+                              <TableCell>
                                 <Box display="flex" alignItems="center">
                                   <IconButton
                                     size="small"
                                     onClick={() =>
                                       setQuantities((prev) => ({
                                         ...prev,
-                                        [product.id]: Math.max(
-                                          (prev[product.id] || 1) - 1,
-                                          1
-                                        ),
+                                        [product.id]: Math.max((prev[product.id] || 1) - 1, 1),
                                       }))
+                                    }
+                                    disabled={
+                                      !selectedProductIds.includes(product.id)
                                     }
                                   >
                                     <Remove fontSize="small" />
@@ -1384,15 +1371,15 @@ const SalesOrdersEditLayoutPage = ({ product }) => {
                                     size="small"
                                     value={quantities[product.id] || ""}
                                     onChange={(e) => {
-                                      const value = Math.max(
-                                        Number(e.target.value),
-                                        1
-                                      );
+                                      const value = Math.max(Number(e.target.value), 1);
                                       setQuantities((prev) => ({
                                         ...prev,
                                         [product.id]: value,
                                       }));
                                     }}
+                                    disabled={
+                                      !selectedProductIds.includes(product.id)
+                                    }
                                     inputProps={{
                                       min: 1,
                                       style: { width: 50, textAlign: "center" },
@@ -1403,21 +1390,21 @@ const SalesOrdersEditLayoutPage = ({ product }) => {
                                     onClick={() =>
                                       setQuantities((prev) => ({
                                         ...prev,
-                                        [product.id]:
-                                          (prev[product.id] || 1) + 1,
+                                        [product.id]: (prev[product.id] || 1) + 1,
                                       }))
+                                    }
+                                    disabled={
+                                      !selectedProductIds.includes(product.id)
                                     }
                                   >
                                     <Add fontSize="small" />
                                   </IconButton>
                                 </Box>
-                              ) : (
-                                "-"
-                              )}
-                            </TableCell>
-                          </TableRow>
-                        );
-                      })}
+
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
                     </TableBody>
                   </Table>
                 </TableContainer>

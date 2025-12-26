@@ -17,6 +17,7 @@ import {
   Button,
   FormControlLabel,
   Switch,
+  CircularProgress, // Added for loading state
 } from "@mui/material";
 import { Add, Remove } from "@mui/icons-material";
 import API_URL, { IMAGE_API_URL } from "../../../api/Api_url";
@@ -72,64 +73,130 @@ const GoodsReceiptsAddLayout = () => {
   const [quantities, setQuantities] = useState({});
   const [searchTerm, setSearchTerm] = useState("");
   const [showProductTable, setShowProductTable] = useState(false);
-  const [loading, setLoading] = useState({
-    purchaseOrders: true,
-    suppliers: true,
-    products: true,
+
+  // Enhanced loading and error states
+  const [isLoading, setIsLoading] = useState({
+    purchaseOrders: false,
+    suppliers: false,
+    products: false,
   });
-  const [error, setError] = useState({
-    purchaseOrders: "",
-    suppliers: "",
-    products: "",
+  const [fetchErrors, setFetchErrors] = useState({
+    purchaseOrders: null,
+    suppliers: null,
+    products: null,
   });
+
   const [snackbar, setSnackbar] = useState({
     open: false,
     message: "",
     severity: "success",
   });
 
+
+
+
+
+  // ========== CRITICAL FIX: Enhanced Data Fetching ==========
   useEffect(() => {
-    const fetchData = async () => {
+    const fetchAllData = async () => {
+      console.log("🔍 Starting data fetch...");
+
       try {
+        // Fetch Purchase Orders
+        setIsLoading(prev => ({ ...prev, purchaseOrders: true }));
         const poResponse = await fetch(`${API_URL}/purchase-orders/approved`, {
           headers: {
             "Authorization": `Bearer ${userToken}`,
+            "Content-Type": "application/json"
           },
         });
-        if (!poResponse.ok) throw new Error("Failed to fetch purchase orders");
-        const poData = await poResponse.json();
-        setPurchaseOrders(poData);
+        console.log("📋 PO Response Status:", poResponse.status);
 
+        if (!poResponse.ok) {
+          const errorText = await poResponse.text();
+          setFetchErrors(prev => ({ ...prev, purchaseOrders: `Failed to fetch purchase orders: ${poResponse.status}` }));
+        } else {
+          const poData = await poResponse.json();
+          setPurchaseOrders(poData || []);
+          setFetchErrors(prev => ({ ...prev, purchaseOrders: null }));
+        }
+        setIsLoading(prev => ({ ...prev, purchaseOrders: false }));
+
+        // Fetch Suppliers
+        setIsLoading(prev => ({ ...prev, suppliers: true }));
         const supResponse = await fetch(`${API_URL}/supplier`, {
           headers: {
             "Authorization": `Bearer ${userToken}`,
+            "Content-Type": "application/json"
           },
         });
-        if (!supResponse.ok) throw new Error("Failed to fetch suppliers");
-        const supData = await supResponse.json();
-        setSuppliers(supData);
+        console.log("🏢 Supplier Response Status:", supResponse.status);
 
-        const prodResponse = await fetch(`${API_URL}/product-templete/without-active`, {
-          headers: {
-            "Authorization": `Bearer ${userToken}`,
-          },
-        });
-        if (!prodResponse.ok) throw new Error("Failed to fetch products");
-        const prodData = await prodResponse.json();
-        setProducts(prodData);
+        if (!supResponse.ok) {
+          const errorText = await supResponse.text();
+          setFetchErrors(prev => ({ ...prev, suppliers: `Failed to fetch suppliers: ${supResponse.status}` }));
+        } else {
+          const supData = await supResponse.json();
+          setSuppliers(supData || []);
+          setFetchErrors(prev => ({ ...prev, suppliers: null }));
+        }
+        setIsLoading(prev => ({ ...prev, suppliers: false }));
 
-        setLoading({
-          purchaseOrders: false,
-          suppliers: false,
-          products: false,
+        setIsLoading(prev => ({ ...prev, products: true }));
+
+        const possibleEndpoints = [
+          `${API_URL}/product-templete/without-active`,
+        ];
+
+        let productsData = [];
+        let successfulEndpoint = "";
+
+        for (const endpoint of possibleEndpoints) {
+          try {
+            console.log(`🔄 Trying product endpoint: ${endpoint}`);
+            const response = await fetch(endpoint, {
+              headers: {
+                "Authorization": `Bearer ${userToken}`,
+                "Content-Type": "application/json"
+              },
+            });
+
+            if (response.ok) {
+              productsData = await response.json();
+              successfulEndpoint = endpoint;
+            } else {
+              console.log(`⚠️ Endpoint ${endpoint} returned status: ${response.status}`);
+            }
+          } catch (err) {
+            console.log(`❌ Error with ${endpoint}:`, err.message);
+          }
+        }
+
+        if (productsData.length === 0) {
+          setSnackbar({
+            open: true,
+            message: "Failed to load products. Please try again or contact support.",
+            severity: "error",
+          });
+        } else {
+
+          const activeProducts = productsData.filter(product =>
+            product.is_active === true || product.is_active === undefined
+          );
+
+          setProducts(activeProducts || []);
+          setFetchErrors(prev => ({ ...prev, products: null }));
+        }
+
+        setIsLoading(prev => ({ ...prev, products: false }));
+
+      } catch (error) {
+        setSnackbar({
+          open: true,
+          message: "Error loading data. Please check your connection.",
+          severity: "error",
         });
-      } catch (err) {
-        setError({
-          purchaseOrders: err.message,
-          suppliers: err.message,
-          products: err.message,
-        });
-        setLoading({
+        setIsLoading({
           purchaseOrders: false,
           suppliers: false,
           products: false,
@@ -137,8 +204,16 @@ const GoodsReceiptsAddLayout = () => {
       }
     };
 
-    fetchData();
-  }, []);
+    if (userToken) {
+      fetchAllData();
+    } else {
+      setSnackbar({
+        open: true,
+        message: "Authentication required. Please login again.",
+        severity: "error",
+      });
+    }
+  }, [userToken]);
 
   const validateForm = () => {
     const errors = {
@@ -160,6 +235,10 @@ const GoodsReceiptsAddLayout = () => {
     setValidationErrors(errors);
     return !Object.values(errors).some((error) => error !== "");
   };
+
+
+
+
 
 
 
@@ -540,6 +619,28 @@ const GoodsReceiptsAddLayout = () => {
     }
   };
 
+
+    const handleSelectAll = (checked) => {
+  if (checked) {
+    // Select all visible products
+    setSelectedProductIds(allProductIds);
+
+    // Initialize quantities if not present
+    setQuantities((prev) => {
+      const updated = { ...prev };
+      allProductIds.forEach((id) => {
+        if (!updated[id]) updated[id] = 1;
+      });
+      return updated;
+    });
+  } else {
+    // Deselect all
+    setSelectedProductIds([]);
+    setQuantities({});
+    setAssetIds({});
+  }
+};
+
   const getProductsToDisplay = () => {
     if (usePurchaseOrder && selectedPurchaseOrder) {
       // Show only products from the selected purchase order
@@ -552,6 +653,25 @@ const GoodsReceiptsAddLayout = () => {
     }
   };
 
+
+
+
+  
+  const displayedProducts = getProductsToDisplay();
+const allProductIds = displayedProducts.map((p) => p.id);
+
+const isAllSelected =
+  allProductIds.length > 0 &&
+  allProductIds.every((id) => selectedProductIds.includes(id));
+
+const isSomeSelected =
+  allProductIds.some((id) => selectedProductIds.includes(id)) &&
+  !isAllSelected;
+
+
+
+
+  
   return (
     <div style={containerStyle}>
       <Snackbar
@@ -700,7 +820,6 @@ const GoodsReceiptsAddLayout = () => {
               <Field
                 label="Supplier"
                 type="select"
-                placeholder="Select Supplier"
                 value={formData.supplier_id}
                 onChange={(e) =>
                   handleInputChange("supplier_id", e.target.value)
@@ -806,14 +925,15 @@ const GoodsReceiptsAddLayout = () => {
                 <Table size="small" stickyHeader>
                   <TableHead>
                     <TableRow sx={{ backgroundColor: "#0d47a1" }}>
-                      <TableCell
-                        padding="checkbox"
-                        sx={{ backgroundColor: "#0d47a1" }}
-                      >
-                        <Checkbox
-                          sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
-                        />
-                      </TableCell>
+                      <TableCell padding="checkbox" sx={{ backgroundColor: "#0d47a1" }}>
+  <Checkbox
+    sx={{ color: "#fff" }}
+    checked={isAllSelected}
+    indeterminate={isSomeSelected}
+    onChange={(e) => handleSelectAll(e.target.checked)}
+  />
+</TableCell>
+
 
                       <TableCell
                         sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
@@ -844,8 +964,17 @@ const GoodsReceiptsAddLayout = () => {
                     </TableRow>
                   </TableHead>
                   <TableBody>
-                    {getProductsToDisplay().map((product) => (
-                      <TableRow key={product.id}>
+  {[...getProductsToDisplay()]
+    .sort((a, b) => {
+      const aSelected = selectedProductIds.includes(a.id);
+      const bSelected = selectedProductIds.includes(b.id);
+
+      if (aSelected && !bSelected) return -1;
+      if (!aSelected && bSelected) return 1;
+      return 0;
+    })
+    .map((product) => (
+      <TableRow key={product.id}>
                         <TableCell padding="checkbox">
                           <Checkbox
                             checked={selectedProductIds.includes(product.id)}
@@ -876,9 +1005,9 @@ const GoodsReceiptsAddLayout = () => {
                               onChange={(e) =>
                                 handleQtyChange(product.id, e.target.value)
                               }
-                               disabled={
-                                  !selectedProductIds.includes(product.id)
-                                }
+                              disabled={
+                                !selectedProductIds.includes(product.id)
+                              }
                               inputProps={{
                                 min: 0,
                                 style: { width: 50, textAlign: "center" },

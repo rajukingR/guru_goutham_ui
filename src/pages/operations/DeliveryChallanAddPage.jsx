@@ -14,6 +14,7 @@ import {
   Snackbar,
   Alert,
   Typography,
+  FormControl, Select, MenuItem,
 } from "@mui/material";
 import { Add, Remove } from "@mui/icons-material";
 import { useNavigate } from "react-router-dom";
@@ -487,7 +488,7 @@ const DeliveryChallanAddPage = ({ product }) => {
   const [showOtherAccessory, setShowOtherAccessory] = useState(false);
   const [otherAccessory, setOtherAccessory] = useState("");
   const [accessoryErrors, setAccessoryErrors] = useState({});
-
+  const [orderPrepSearchTerm, setOrderPrepSearchTerm] = useState("");
   const [snackbar, setSnackbar] = useState({
     open: false,
     message: "",
@@ -1002,25 +1003,117 @@ const DeliveryChallanAddPage = ({ product }) => {
                 readOnly
               />
 
-              <Field
-                label="Select Order Preparation"
-                name="order_id"
-                type="select"
-                placeholder="Select Order Preparation"
-                value={formData.order_id}
-                onChange={(e) => {
-                  handleOrderSelect(e.target.value);
-                  if (errors.order_id) {
-                    setErrors({ ...errors, order_id: "" });
-                  }
-                }}
-                error={errors.order_id}
-                options={dispatchOrders.map((order) => ({
-                  value: order.id,
-                  label: `${order.dispatch_order_id} - ${order.shipping_name || "" } (${order.contact.company_name || ""})`,
-                }))}
-              />
+              {/* Select Order Preparation Dropdown */}
+              <div style={fieldContainerStyle}>
+                <label style={labelStyle}>Select Order Preparation</label>
 
+                <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                  <FormControl fullWidth size="small">
+                    <Select
+                      value={formData.order_id || ""}
+                      displayEmpty
+                      onChange={(e) => {
+                        handleOrderSelect(e.target.value);
+                        if (errors.order_id) {
+                          setErrors({ ...errors, order_id: "" });
+                        }
+
+                        // Reset search when selection is made
+                        setOrderPrepSearchTerm("");
+                      }}
+                      style={{
+                        ...inputStyle,
+                        borderColor: errors.order_id ? "red" : "#d1d5db",
+                      }}
+                      MenuProps={{
+                        PaperProps: { style: { maxHeight: 300 } },
+                        onEntered: () => setOrderPrepSearchTerm(""), // Reset search when dropdown opens
+                      }}
+                      renderValue={(selected) => {
+                        if (!selected) return <em>Select Order Preparation</em>;
+
+                        const order = dispatchOrders.find(x => x.id === parseInt(selected));
+                        if (!order) return "Select Order Preparation";
+
+                        return `${order.dispatch_order_id} - ${order.shipping_name || ""} (${order.contact?.company_name || ""})`;
+                      }}
+                    >
+                      {/* Search bar inside dropdown */}
+                      <div
+                        style={{
+                          padding: "8px",
+                          position: "sticky",
+                          top: 0,
+                          background: "#fff",
+                          zIndex: 1,
+                          borderBottom: "1px solid #e0e0e0",
+                        }}
+                      >
+                        <TextField
+                          fullWidth
+                          size="small"
+                          placeholder="Search Order Preparation"
+                          value={orderPrepSearchTerm}
+                          onChange={(e) => setOrderPrepSearchTerm(e.target.value)}
+                          onClick={(e) => e.stopPropagation()}
+                          onKeyDown={(e) => e.stopPropagation()}
+                          autoFocus
+                        />
+                      </div>
+
+                      {/* Smart multi-word search filter */}
+                      {dispatchOrders.length === 0 ? (
+                        <MenuItem disabled>
+                          No order preparations available
+                        </MenuItem>
+                      ) : (
+                        dispatchOrders
+                          .filter((order) => {
+                            const term = orderPrepSearchTerm.trim().toLowerCase();
+                            if (!term) return true;
+
+                            const words = term.split(" ").filter(Boolean);
+
+                            // Create search text with all searchable fields
+                            const searchText = [
+                              order.dispatch_order_id,
+                              order.shipping_name,
+                              order.contact?.company_name,
+                              order.order_number,
+                              order.email
+                            ]
+                              .filter(Boolean)
+                              .join(" ")
+                              .toLowerCase();
+
+                            return words.every(word => searchText.includes(word));
+                          })
+                          .map((order) => (
+                            <MenuItem key={order.id} value={order.id}>
+
+
+
+
+
+                              <div>
+                                {order.dispatch_order_id}
+                                {order.shipping_name || "No Name"}
+                                {order.contact?.company_name && ` - ${order.contact.company_name}`}
+                              </div>
+
+                            </MenuItem>
+                          ))
+                      )}
+                    </Select>
+                  </FormControl>
+
+                  {errors.order_id && (
+                    <span style={{ color: "red", fontSize: "0.75rem" }}>
+                      {errors.order_id}
+                    </span>
+                  )}
+                </div>
+              </div>
               <Field
                 label="Order Number"
                 name="order_number"
@@ -1279,179 +1372,181 @@ const DeliveryChallanAddPage = ({ product }) => {
               />
             </div>
 
-            {/* Demo DC Checkbox */}
-            <div style={fieldContainerStyle}>
-              <label
-                style={{
-                  ...labelStyle,
-                  display: "flex",
-                  alignItems: "center",
-                  marginTop: "20px",
-                }}
-              >
-                <input
-                  type="checkbox"
-                  name="defualt_dc"
-                  checked={formData.defualt_dc || false}
-                  onChange={handleChange}
+          </div>
+
+        </div>
+
+        {/* Demo DC Checkbox */}
+        <div style={fieldContainerStyle}>
+          <label
+            style={{
+              ...labelStyle,
+              display: "flex",
+              alignItems: "center",
+              marginTop: "20px",
+            }}
+          >
+            <input
+              type="checkbox"
+              name="defualt_dc"
+              checked={formData.defualt_dc || false}
+              onChange={handleChange}
+              style={{
+                marginRight: "0.5rem",
+                width: "16px",
+                height: "16px",
+                cursor: "pointer",
+              }}
+            />
+            Demo DC
+          </label>
+          <div
+            style={{
+              fontSize: "0.75rem",
+              color: "#6b7280",
+              marginTop: "0.25rem",
+              marginLeft: "1.5rem", // indent helper text
+            }}
+          >
+            Check if this is a demo delivery challan
+          </div>
+        </div>
+
+        <div style={fieldContainerStyle}>
+          <label style={labelStyle}>Included Accessories:</label>
+          <div style={checkboxGroupStyle}>
+            {["mouse", "cable", "bag", "others"].map((field) => (
+              <div key={field} style={{ marginBottom: "15px" }}>
+                <label
                   style={{
-                    marginRight: "0.5rem",
-                    width: "16px",
-                    height: "16px",
-                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    marginRight: "15px",
                   }}
-                />
-                Demo DC
-              </label>
-              <div
-                style={{
-                  fontSize: "0.75rem",
-                  color: "#6b7280",
-                  marginTop: "0.25rem",
-                  marginLeft: "1.5rem", // indent helper text
-                }}
-              >
-                Check if this is a demo delivery challan
-              </div>
-            </div>
+                >
+                  <input
+                    type="checkbox"
+                    name={field}
+                    checked={formData[field]}
+                    onChange={handleChange}
+                    style={{ marginRight: "5px" }}
+                  />
+                  {field.charAt(0).toUpperCase() + field.slice(1)}
+                </label>
 
-            <div style={fieldContainerStyle}>
-              <label style={labelStyle}>Included Accessories:</label>
-              <div style={checkboxGroupStyle}>
-                {["mouse", "cable", "bag", "others"].map((field) => (
-                  <div key={field} style={{ marginBottom: "15px" }}>
-                    <label
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        marginRight: "15px",
-                      }}
-                    >
+                {/* Quantity input that appears when checkbox is checked */}
+                {formData[field] && (
+                  <div style={{ marginLeft: "20px", marginTop: "8px" }}>
+                    <label style={{ fontSize: "12px", marginRight: "5px", display: "block", marginBottom: "4px" }}>
+                      Quantity:
+                    </label>
+                    <div style={{ display: "flex", alignItems: "center", gap: "5px" }}>
+                      <button
+                        type="button"
+                        onClick={() => decrementAccessoryQty(field)}
+                        style={{
+                          padding: "2px 8px",
+                          fontSize: "12px",
+                          backgroundColor: "#f0f0f0",
+                          border: "1px solid #ccc",
+                          borderRadius: "3px",
+                          cursor: "pointer",
+                          minWidth: "30px"
+                        }}
+                      >
+                        -
+                      </button>
                       <input
-                        type="checkbox"
-                        name={field}
-                        checked={formData[field]}
-                        onChange={handleChange}
-                        style={{ marginRight: "5px" }}
+                        type="number"
+                        name={`${field}_qty`}
+                        value={formData[`${field}_qty`] || 0}
+                        onChange={(e) => handleAccessoryQtyChange(field, e.target.value)}
+                        min="0"
+                        style={{
+                          width: "60px",
+                          padding: "4px 6px",
+                          fontSize: "12px",
+                          border: accessoryErrors[`${field}_qty`] ? "1px solid #d32f2f" : "1px solid #ccc",
+                          borderRadius: "3px",
+                          backgroundColor: accessoryErrors[`${field}_qty`] ? "#ffebee" : "#fff"
+                        }}
                       />
-                      {field.charAt(0).toUpperCase() + field.slice(1)}
-                    </label>
-
-                    {/* Quantity input that appears when checkbox is checked */}
-                    {formData[field] && (
-                      <div style={{ marginLeft: "20px", marginTop: "8px" }}>
-                        <label style={{ fontSize: "12px", marginRight: "5px", display: "block", marginBottom: "4px" }}>
-                          Quantity:
-                        </label>
-                        <div style={{ display: "flex", alignItems: "center", gap: "5px" }}>
-                          <button
-                            type="button"
-                            onClick={() => decrementAccessoryQty(field)}
-                            style={{
-                              padding: "2px 8px",
-                              fontSize: "12px",
-                              backgroundColor: "#f0f0f0",
-                              border: "1px solid #ccc",
-                              borderRadius: "3px",
-                              cursor: "pointer",
-                              minWidth: "30px"
-                            }}
-                          >
-                            -
-                          </button>
-                          <input
-                            type="number"
-                            name={`${field}_qty`}
-                            value={formData[`${field}_qty`] || 0}
-                            onChange={(e) => handleAccessoryQtyChange(field, e.target.value)}
-                            min="0"
-                            style={{
-                              width: "60px",
-                              padding: "4px 6px",
-                              fontSize: "12px",
-                              border: accessoryErrors[`${field}_qty`] ? "1px solid #d32f2f" : "1px solid #ccc",
-                              borderRadius: "3px",
-                              backgroundColor: accessoryErrors[`${field}_qty`] ? "#ffebee" : "#fff"
-                            }}
-                          />
-                          <button
-                            type="button"
-                            onClick={() => incrementAccessoryQty(field)}
-                            style={{
-                              padding: "2px 8px",
-                              fontSize: "12px",
-                              backgroundColor: "#f0f0f0",
-                              border: "1px solid #ccc",
-                              borderRadius: "3px",
-                              cursor: "pointer",
-                              minWidth: "30px"
-                            }}
-                          >
-                            +
-                          </button>
-                        </div>
-                        {/* Error message for accessory quantity */}
-                        {accessoryErrors[`${field}_qty`] && (
-                          <div style={{
-                            color: "#d32f2f",
-                            fontSize: "11px",
-                            marginTop: "4px",
-                            marginLeft: "2px",
-                            fontWeight: "500"
-                          }}>
-                            {accessoryErrors[`${field}_qty`]}
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-
-              {/* Other Accessory input field */}
-              {showOtherAccessory && (
-                <div style={{ marginTop: "15px" }}>
-                  <div style={fieldContainerStyle}>
-                    <label style={labelStyle}>
-                      Other Accessory Name
-                    </label>
-                    <input
-                      type="text"
-                      name="other_accessory"
-                      placeholder="Enter accessory name"
-                      value={otherAccessory}
-                      onChange={(e) => {
-                        setOtherAccessory(e.target.value);
-                        // Clear error when user starts typing
-                        if (e.target.value.trim() && accessoryErrors.other_accessory) {
-                          setAccessoryErrors(prev => {
-                            const newErrors = { ...prev };
-                            delete newErrors.other_accessory;
-                            return newErrors;
-                          });
-                        }
-                      }}
-                      style={{
-                        ...inputStyle,
-                        border: accessoryErrors.other_accessory ? "1px solid #d32f2f" : "1px solid #d1d5db",
-                        backgroundColor: accessoryErrors.other_accessory ? "#ffebee" : "#ffffff"
-                      }}
-                    />
-                    {accessoryErrors.other_accessory && (
+                      <button
+                        type="button"
+                        onClick={() => incrementAccessoryQty(field)}
+                        style={{
+                          padding: "2px 8px",
+                          fontSize: "12px",
+                          backgroundColor: "#f0f0f0",
+                          border: "1px solid #ccc",
+                          borderRadius: "3px",
+                          cursor: "pointer",
+                          minWidth: "30px"
+                        }}
+                      >
+                        +
+                      </button>
+                    </div>
+                    {/* Error message for accessory quantity */}
+                    {accessoryErrors[`${field}_qty`] && (
                       <div style={{
                         color: "#d32f2f",
                         fontSize: "11px",
                         marginTop: "4px",
+                        marginLeft: "2px",
                         fontWeight: "500"
                       }}>
-                        {accessoryErrors.other_accessory}
+                        {accessoryErrors[`${field}_qty`]}
                       </div>
                     )}
                   </div>
-                </div>
-              )}
-            </div>
+                )}
+              </div>
+            ))}
           </div>
+
+          {/* Other Accessory input field */}
+          {showOtherAccessory && (
+            <div style={{ marginTop: "15px" }}>
+              <div style={fieldContainerStyle}>
+                <label style={labelStyle}>
+                  Other Accessory Name
+                </label>
+                <input
+                  type="text"
+                  name="other_accessory"
+                  placeholder="Enter accessory name"
+                  value={otherAccessory}
+                  onChange={(e) => {
+                    setOtherAccessory(e.target.value);
+                    // Clear error when user starts typing
+                    if (e.target.value.trim() && accessoryErrors.other_accessory) {
+                      setAccessoryErrors(prev => {
+                        const newErrors = { ...prev };
+                        delete newErrors.other_accessory;
+                        return newErrors;
+                      });
+                    }
+                  }}
+                  style={{
+                    ...inputStyle,
+                    border: accessoryErrors.other_accessory ? "1px solid #d32f2f" : "1px solid #d1d5db",
+                    backgroundColor: accessoryErrors.other_accessory ? "#ffebee" : "#ffffff"
+                  }}
+                />
+                {accessoryErrors.other_accessory && (
+                  <div style={{
+                    color: "#d32f2f",
+                    fontSize: "11px",
+                    marginTop: "4px",
+                    fontWeight: "500"
+                  }}>
+                    {accessoryErrors.other_accessory}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
         </div>
         {/* Select Products Section */}
         <div style={cardStyle}>
@@ -1634,20 +1729,20 @@ const DeliveryChallanAddPage = ({ product }) => {
           >
             Cancel
           </button>
-            <button
-              type="submit"
-              style={{
-                backgroundColor: "#2563eb",
-                color: "#fff",
-                padding: "0.75rem 1.5rem",
-                border: "none",
-                borderRadius: "6px",
-                cursor: "pointer",
-                fontSize: "1rem",
-              }}
-            >
-              Create Delivery Challan
-            </button>
+          <button
+            type="submit"
+            style={{
+              backgroundColor: "#2563eb",
+              color: "#fff",
+              padding: "0.75rem 1.5rem",
+              border: "none",
+              borderRadius: "6px",
+              cursor: "pointer",
+              fontSize: "1rem",
+            }}
+          >
+            Create Delivery Challan
+          </button>
         </div>
       </form>
     </div>

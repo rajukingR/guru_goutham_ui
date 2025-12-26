@@ -49,6 +49,7 @@ const LeadsLayoutAddPage = () => {
     leadTitle: "",
     transactionType: "",
     leadStatus: "",
+    leadSource: "",
     sourceOfEnquiry: "",
     rentalDuration: "",
     rentalDurationDays: "",
@@ -427,9 +428,9 @@ const LeadsLayoutAddPage = () => {
       const payload = {
         lead_id: formData.leadId,
         lead_title: formData.leadTitle,
+        lead_source: formData.leadSource,
         transaction_type: formData.transactionType,
         payment_type: formData.paymentType,
-        lead_source: formData.leadStatus,
         source_of_enquiry: formData.sourceOfEnquiry,
         rental_duration_months: formData.rentalDuration,
         rental_duration_days: formData.rentalDurationDays,
@@ -527,10 +528,15 @@ const LeadsLayoutAddPage = () => {
                 "Social Media",
                 "Email Campaign",
                 "Phone Inquiry",
-                "Walk-in",
-                "Trade Show",
                 "Other",
               ]}
+            />
+
+            <Field
+              label="Reference name"
+              placeholder="Enter reference name"
+              value={formData.leadSource}
+              onChange={(value) => handleInputChange("leadSource", value)}
             />
 
             <Field

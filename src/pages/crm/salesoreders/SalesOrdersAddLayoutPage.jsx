@@ -17,14 +17,15 @@ import {
   IconButton,
   Snackbar,
   Alert,
-    FormControl,
-    Select,
+  FormControl,
+  Select,
 } from "@mui/material";
 import { Add, Remove } from "@mui/icons-material";
 import { useParams, useNavigate } from "react-router-dom";
-import API_URL, { IMAGE_API_URL, POSTAL_API} from "../../../api/Api_url";
+import API_URL, { IMAGE_API_URL, POSTAL_API } from "../../../api/Api_url";
 import { useInventory } from "../../../contexts/InventoryContext";
 import { useSelector } from "react-redux";
+import { generateSpecifications } from "../../../utils/generateSpecifications";
 
 const generateSalesOrderId = () => {
   const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
@@ -335,115 +336,115 @@ const SalesOrdersAddLayoutPage = ({ product }) => {
 
 
   // Fetch location data when shipping pincode changes
-// Shipping Pincode
-useEffect(() => {
-  const fetchShippingLocationFromPincode = async () => {
-    const shippingPincode = formData.address.shipping_pincode;
+  // Shipping Pincode
+  useEffect(() => {
+    const fetchShippingLocationFromPincode = async () => {
+      const shippingPincode = formData.address.shipping_pincode;
 
-    if (shippingPincode && shippingPincode.length === 6) {
-      try {
-        const response = await fetch(`${POSTAL_API}/${shippingPincode}`);
-        const result = await response.json();
+      if (shippingPincode && shippingPincode.length === 6) {
+        try {
+          const response = await fetch(`${POSTAL_API}/${shippingPincode}`);
+          const result = await response.json();
 
-        // Set Shipping Post Offices
-        if (Array.isArray(result) && result.length > 0 && result[0]?.PostOffice) {
-          setShippingPostOffices(result[0].PostOffice);
-        }
+          // Set Shipping Post Offices
+          if (Array.isArray(result) && result.length > 0 && result[0]?.PostOffice) {
+            setShippingPostOffices(result[0].PostOffice);
+          }
 
-        if (result[0]?.PostOffice?.length > 0) {
-          const firstOffice = result[0].PostOffice[0];
-          setFormData((prev) => ({
-            ...prev,
-            address: {
-              ...prev.address,
-              shipping_city: firstOffice.District,
-              shipping_state: firstOffice.State,
-              shipping_country: firstOffice.Country || "India",
-            },
-          }));
-        } else {
+          if (result[0]?.PostOffice?.length > 0) {
+            const firstOffice = result[0].PostOffice[0];
+            setFormData((prev) => ({
+              ...prev,
+              address: {
+                ...prev.address,
+                shipping_city: firstOffice.District,
+                shipping_state: firstOffice.State,
+                shipping_country: firstOffice.Country || "India",
+              },
+            }));
+          } else {
+            setSnackbar({
+              open: true,
+              message: "Could not find location for this shipping pincode",
+              severity: "warning",
+            });
+          }
+        } catch (error) {
+          console.error("Error fetching shipping location data:", error);
           setSnackbar({
             open: true,
-            message: "Could not find location for this shipping pincode",
-            severity: "warning",
+            message: "Error fetching shipping location data. Please check the pincode and try again.",
+            severity: "error",
           });
         }
-      } catch (error) {
-        console.error("Error fetching shipping location data:", error);
-        setSnackbar({
-          open: true,
-          message: "Error fetching shipping location data. Please check the pincode and try again.",
-          severity: "error",
-        });
       }
-    }
-  };
+    };
 
-  const debounceTimer = setTimeout(fetchShippingLocationFromPincode, 500);
-  return () => clearTimeout(debounceTimer);
-}, [formData.address.shipping_pincode]);
+    const debounceTimer = setTimeout(fetchShippingLocationFromPincode, 500);
+    return () => clearTimeout(debounceTimer);
+  }, [formData.address.shipping_pincode]);
 
 
   // Fetch location data when pincode changes
-const [postOffices, setPostOffices] = useState([]);
+  const [postOffices, setPostOffices] = useState([]);
 
-useEffect(() => {
-  const fetchLocationFromPincode = async () => {
-    const pincode = formData.address.pincode;
+  useEffect(() => {
+    const fetchLocationFromPincode = async () => {
+      const pincode = formData.address.pincode;
 
-    // Only make API call if pincode is 6 digits (India specific)
-    if (pincode && pincode.length === 6) {
-      try {
-        const response = await fetch(`${POSTAL_API}/${pincode}`);
-        const result = await response.json();
+      // Only make API call if pincode is 6 digits (India specific)
+      if (pincode && pincode.length === 6) {
+        try {
+          const response = await fetch(`${POSTAL_API}/${pincode}`);
+          const result = await response.json();
 
-        // Set Post Offices if available
-        if (Array.isArray(result) && result.length > 0 && result[0]?.PostOffice) {
-          setPostOffices(result[0].PostOffice);
-        }
+          // Set Post Offices if available
+          if (Array.isArray(result) && result.length > 0 && result[0]?.PostOffice) {
+            setPostOffices(result[0].PostOffice);
+          }
 
-        // Update formData with first post office info (optional)
-        if (result[0]?.PostOffice?.length > 0) {
-          const firstOffice = result[0].PostOffice[0];
-          setFormData((prev) => ({
-            ...prev,
-            address: {
-              ...prev.address,
-              country: firstOffice.Country || "India",
-              state: firstOffice.State,
-              city: firstOffice.District,
-              billing_address:
-                prev.address.billing_address ||
-                `${firstOffice.Name}, ${firstOffice.District}`,
-              shipping_address: prev.address.shipping_address,
-            },
-          }));
-        } else {
+          // Update formData with first post office info (optional)
+          if (result[0]?.PostOffice?.length > 0) {
+            const firstOffice = result[0].PostOffice[0];
+            setFormData((prev) => ({
+              ...prev,
+              address: {
+                ...prev.address,
+                country: firstOffice.Country || "India",
+                state: firstOffice.State,
+                city: firstOffice.District,
+                billing_address:
+                  prev.address.billing_address ||
+                  `${firstOffice.Name}, ${firstOffice.District}`,
+                shipping_address: prev.address.shipping_address,
+              },
+            }));
+          } else {
+            setSnackbar({
+              open: true,
+              message: "Could not find location for this pincode",
+              severity: "warning",
+            });
+          }
+        } catch (error) {
+          console.error("Error fetching location data:", error);
           setSnackbar({
             open: true,
-            message: "Could not find location for this pincode",
-            severity: "warning",
+            message:
+              "Error fetching location data. Please check the pincode and try again.",
+            severity: "error",
           });
         }
-      } catch (error) {
-        console.error("Error fetching location data:", error);
-        setSnackbar({
-          open: true,
-          message:
-            "Error fetching location data. Please check the pincode and try again.",
-          severity: "error",
-        });
       }
-    }
-  };
+    };
 
-  // Debounce API calls
-  const debounceTimer = setTimeout(() => {
-    fetchLocationFromPincode();
-  }, 500);
+    // Debounce API calls
+    const debounceTimer = setTimeout(() => {
+      fetchLocationFromPincode();
+    }, 500);
 
-  return () => clearTimeout(debounceTimer);
-}, [formData.address.pincode]);
+    return () => clearTimeout(debounceTimer);
+  }, [formData.address.pincode]);
 
 
 
@@ -704,96 +705,96 @@ useEffect(() => {
                 }
               /> */}
               <div style={fieldContainerStyle}>
-  <label style={labelStyle}>
-    Select Quotation
-  </label>
+                <label style={labelStyle}>
+                  Select Quotation
+                </label>
 
-  <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-    <FormControl fullWidth size="small">
-      <Select
-        value={formData.quotation_id || ""}
-        displayEmpty
-        onChange={(e) => {
-          handleChange({
-            target: { name: "quotation_id", value: e.target.value },
-          });
+                <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                  <FormControl fullWidth size="small">
+                    <Select
+                      value={formData.quotation_id || ""}
+                      displayEmpty
+                      onChange={(e) => {
+                        handleChange({
+                          target: { name: "quotation_id", value: e.target.value },
+                        });
 
-          // 🔥 Reset search when selecting
-          setQuotationSearchTerm("");
+                        // 🔥 Reset search when selecting
+                        setQuotationSearchTerm("");
 
-          if (errors.selectedQuotation) {
-            setErrors((prev) => ({ ...prev, selectedQuotation: "" }));
-          }
-        }}
-        style={{
-          ...inputStyle,
-          borderColor: errors.selectedQuotation ? "red" : "#d1d5db",
-        }}
-        MenuProps={{
-          PaperProps: { style: { maxHeight: 300 } },
+                        if (errors.selectedQuotation) {
+                          setErrors((prev) => ({ ...prev, selectedQuotation: "" }));
+                        }
+                      }}
+                      style={{
+                        ...inputStyle,
+                        borderColor: errors.selectedQuotation ? "red" : "#d1d5db",
+                      }}
+                      MenuProps={{
+                        PaperProps: { style: { maxHeight: 300 } },
 
-          // 🔥 Reset search when dropdown opens
-          onEntered: () => setQuotationSearchTerm(""),
-        }}
-        renderValue={(selected) => {
-          if (!selected) return <em>Select Quotation</em>;
+                        // 🔥 Reset search when dropdown opens
+                        onEntered: () => setQuotationSearchTerm(""),
+                      }}
+                      renderValue={(selected) => {
+                        if (!selected) return <em>Select Quotation</em>;
 
-          const q = quotations.find((x) => x.id === selected);
+                        const q = quotations.find((x) => x.id === selected);
 
-          return q
-            ? `${q.quotation_id} - ${q.customer_first_name} ${q.customer_last_name} (${q.customer.company_name})`
-            : "Select Quotation";
-        }}
-      >
-        {/* 🔍 Search bar inside dropdown */}
-        <div
-          style={{
-            padding: "8px",
-            position: "sticky",
-            top: 0,
-            background: "#fff",
-            zIndex: 1,
-          }}
-        >
-          <TextField
-            fullWidth
-            size="small"
-            placeholder="Search Quotation..."
-            value={quotationSearchTerm}
-            onChange={(e) => setQuotationSearchTerm(e.target.value)}
-            onClick={(e) => e.stopPropagation()}
-            onKeyDown={(e) => e.stopPropagation()}
-          />
-        </div>
+                        return q
+                          ? `${q.quotation_id} - ${q.customer_first_name} ${q.customer_last_name} (${q.customer.company_name})`
+                          : "Select Quotation";
+                      }}
+                    >
+                      {/* 🔍 Search bar inside dropdown */}
+                      <div
+                        style={{
+                          padding: "8px",
+                          position: "sticky",
+                          top: 0,
+                          background: "#fff",
+                          zIndex: 1,
+                        }}
+                      >
+                        <TextField
+                          fullWidth
+                          size="small"
+                          placeholder="Search Quotation..."
+                          value={quotationSearchTerm}
+                          onChange={(e) => setQuotationSearchTerm(e.target.value)}
+                          onClick={(e) => e.stopPropagation()}
+                          onKeyDown={(e) => e.stopPropagation()}
+                        />
+                      </div>
 
-        {/* ⭐ Smart multi-word search filter */}
-        {quotations
-          .filter((q) => {
-            const term = quotationSearchTerm.trim().toLowerCase();
-            const words = term.split(" ").filter(Boolean);
+                      {/* ⭐ Smart multi-word search filter */}
+                      {quotations
+                        .filter((q) => {
+                          const term = quotationSearchTerm.trim().toLowerCase();
+                          const words = term.split(" ").filter(Boolean);
 
-            const fullText = `${q.quotation_id} ${q.customer_first_name} ${q.customer_last_name} ${q.customer.company_name}`
-              .toLowerCase();
+                          const fullText = `${q.quotation_id} ${q.customer_first_name} ${q.customer_last_name} ${q.customer.company_name}`
+                            .toLowerCase();
 
-            // Every typed word must appear somewhere in the text
-            return words.every((w) => fullText.includes(w));
-          })
-          .map((q) => (
-            <MenuItem key={q.id} value={q.id}>
-              {q.quotation_id} - {q.customer_first_name} {q.customer_last_name} (
-              {q.customer.company_name})
-            </MenuItem>
-          ))}
-      </Select>
-    </FormControl>
+                          // Every typed word must appear somewhere in the text
+                          return words.every((w) => fullText.includes(w));
+                        })
+                        .map((q) => (
+                          <MenuItem key={q.id} value={q.id}>
+                            {q.quotation_id} - {q.customer_first_name} {q.customer_last_name} (
+                            {q.customer.company_name})
+                          </MenuItem>
+                        ))}
+                    </Select>
+                  </FormControl>
 
-    {errors.selectedQuotation && (
-      <span style={{ color: "red", fontSize: "0.75rem" }}>
-        {errors.selectedQuotation}
-      </span>
-    )}
-  </div>
-</div>
+                  {errors.selectedQuotation && (
+                    <span style={{ color: "red", fontSize: "0.75rem" }}>
+                      {errors.selectedQuotation}
+                    </span>
+                  )}
+                </div>
+              </div>
 
               <Field
                 label="Quotation ID"
@@ -1306,13 +1307,18 @@ useEffect(() => {
                         {/* <TableCell sx={{ backgroundColor: "#0d47a1", color: "#fff" }}>Asset IDs</TableCell> */}
                       </TableRow>
                     </TableHead>
-                    <TableBody>
-                      {filteredProducts
-                        .filter((product) =>
-                          selectedProductIds.includes(product.id)
-                        )
+                     <TableBody>
+                    {filteredProducts
+                      .slice()
+                      .sort((a, b) => {
+                        const aSelected = selectedProductIds.includes(a.id);
+                        const bSelected = selectedProductIds.includes(b.id);
 
-                        .map((product) => (
+                        if (aSelected === bSelected) return 0;
+                        if (aSelected && !bSelected) return -1;
+                        return 1;
+                      })
+                      .map((product) => (
                           <TableRow key={product.id}>
                             <TableCell padding="checkbox">
                               <Checkbox
@@ -1332,21 +1338,7 @@ useEffect(() => {
                             <TableCell>{product.product_category}</TableCell>
                             {/* <TableCell>{product.brand}</TableCell> */}
                             <TableCell>
-                              <div>
-                                <strong>Model:</strong> {product.model}
-                              </div>
-                              <div>
-                                <strong>Processor:</strong> {product.processor}
-                              </div>
-                              <div>
-                                <strong>RAM:</strong> {product.ram}
-                              </div>
-                              <div>
-                                <strong>Storage:</strong> {product.storage}
-                              </div>
-                              <div>
-                                <strong>Graphics:</strong> {product.graphics}
-                              </div>
+                              {generateSpecifications(product)}
                             </TableCell>
                             {/* <TableCell>
                               {formData.transaction_type === "Rent" ? (
@@ -1378,6 +1370,9 @@ useEffect(() => {
                                   onChange={(e) =>
                                     handleQtyChange(product.id, e.target.value)
                                   }
+                                  disabled={
+                                  !selectedProductIds.includes(product.id)
+                                } 
                                   inputProps={{
                                     style: { width: 50, textAlign: "center" },
                                   }}

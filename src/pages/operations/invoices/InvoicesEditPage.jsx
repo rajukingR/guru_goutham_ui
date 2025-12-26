@@ -242,7 +242,8 @@ const Field = memo(
     value,
     onChange,
     error,
-    children,
+    children, // <-- keep children support also
+    description,
     ...props
   }) => (
     <div style={fieldContainerStyle}>
@@ -270,6 +271,7 @@ const Field = memo(
               </option>
             )}
 
+            {/* Support both `options` and `children` */}
             {options.length > 0
               ? options.map((option) => (
                 <option key={option.value} value={option.value}>
@@ -309,14 +311,23 @@ const Field = memo(
           {...props}
         />
       ) : type === "checkbox" ? (
-        <input
-          type="checkbox"
-          name={name}
-          checked={value}
-          onChange={onChange}
-          style={checkboxStyle}
-          {...props}
-        />
+        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+          <input
+            type="checkbox"
+            name={name}
+            checked={value}
+            onChange={onChange}
+            {...props}
+          />
+
+          <div>
+            <label style={{ fontSize: "14px", fontWeight: 500 }}>
+              {label}
+              {required && <span style={requiredStyle}>*</span>}
+            </label>
+          </div>
+        </div>
+
       ) : (
         <input
           type={type}
@@ -334,15 +345,21 @@ const Field = memo(
         />
       )}
 
-      {error && (
+      {description && (
         <Typography
           variant="caption"
-          color="error"
-          style={{ marginTop: "4px" }}
+          style={{ marginTop: "4px", color: "#6b7280", display: "block" }}
         >
+          {description}
+        </Typography>
+      )}
+
+      {error && (
+        <Typography variant="caption" color="error" style={{ marginTop: "4px" }}>
           {error}
         </Typography>
       )}
+
     </div>
   )
 );
@@ -489,7 +506,6 @@ const InvoicesEditPage = () => {
     dc_id: "",
   });
 
-
   const getCompanyName = (order) => {
     if (order.type === "dispatch_order") {
       return order.dispatch_order?.contact?.company_name || 'No Company';
@@ -498,7 +514,6 @@ const InvoicesEditPage = () => {
     }
     return 'No Company';
   };
-
 
   const [formData, setFormData] = useState({
     invoice_number: "",
@@ -522,6 +537,7 @@ const InvoicesEditPage = () => {
     approval_status: "Approved",
     approval_date: new Date().toISOString().slice(0, 19).replace("T", " "),
     invoice_consulting_by: "",
+    is_small_amount: false,
     industry: "",
     remarks: "",
     items: [],
@@ -545,6 +561,8 @@ const InvoicesEditPage = () => {
   const [quantities, setQuantities] = useState({});
   const [searchTerm, setSearchTerm] = useState("");
   const [showProductTable, setShowProductTable] = useState(false);
+  const [orderPrepSearchTerm, setOrderPrepSearchTerm] = useState("");
+  const [dcSearchTerm, setDcSearchTerm] = useState(""); // Add this for DC dropdown
   const [snackbar, setSnackbar] = useState({
     open: false,
     message: "",
@@ -570,6 +588,51 @@ const InvoicesEditPage = () => {
   });
 
   const [isLoading, setIsLoading] = useState(true);
+  const [isOrdersLoaded, setIsOrdersLoaded] = useState(false);
+
+  // Function to find order ID based on dc_id or dispatch_order_number
+  const findOrderIdByDcId = (dcId, orders) => {
+    if (!dcId || !orders.length) return "";
+
+    console.log("Looking for order with dc_id:", dcId);
+
+    // Try multiple matching strategies
+    let order = orders.find(order => {
+      // Strategy 1: Direct match with dc_id
+      if (order.dc_id?.toString() === dcId.toString()) {
+        console.log("Found by dc_id direct match:", order);
+        return true;
+      }
+
+      // Strategy 2: Match with dispatch_order_id
+      if (order.dispatch_order_id?.toString() === dcId.toString()) {
+        console.log("Found by dispatch_order_id match:", order);
+        return true;
+      }
+
+      // Strategy 3: Match with dispatch_order_number
+      if (order.dispatch_order_number?.toString() === dcId.toString()) {
+        console.log("Found by dispatch_order_number match:", order);
+        return true;
+      }
+
+      // Strategy 4: Match with quotation_id for direct invoices
+      if (order.type === "direct_invoice" && order.quotation_id?.toString() === dcId.toString()) {
+        console.log("Found by quotation_id match:", order);
+        return true;
+      }
+
+      // Strategy 5: Check if any dc_id in the order data matches
+      if (order.dispatch_order?.delivery_challans?.some(dc => dc.dc_id?.toString() === dcId.toString())) {
+        console.log("Found by delivery_challans dc_id match:", order);
+        return true;
+      }
+
+      return false;
+    });
+
+    return order ? order.id.toString() : "";
+  };
 
   // Fetch invoice data on component mount
   useEffect(() => {
@@ -585,6 +648,7 @@ const InvoicesEditPage = () => {
         if (!response.ok) throw new Error("Failed to fetch invoice");
 
         const invoiceData = await response.json();
+        console.log("Fetched invoice data:", invoiceData);
 
         // Set form data with existing invoice data
         setFormData({
@@ -648,6 +712,8 @@ const InvoicesEditPage = () => {
         const approvedDispatchOrdersData =
           await approvedDispatchOrdersResponse.json();
 
+        console.log("Raw approved dispatch orders data:", approvedDispatchOrdersData);
+
         const transformedOrders = approvedDispatchOrdersData
           .map((item) => {
             if (item.dispatch_order_id) {
@@ -656,7 +722,7 @@ const InvoicesEditPage = () => {
                 id: item.id,
                 order_id: item.order_id,
                 dc_id: dc.dc_id || item.dispatch_order_id,
-                dispatch_order_number: dc.dispatch_order_id,
+                dispatch_order_number: dc.dispatch_order_id || item.dispatch_order_id,
                 dc_date: dc.dc_date || item.dispatch_order_date,
                 customer_code: item.customer_code,
                 order_number: item.order_number,
@@ -750,7 +816,9 @@ const InvoicesEditPage = () => {
           })
           .filter(Boolean);
 
+        console.log("Transformed orders:", transformedOrders);
         setOrders(transformedOrders);
+        setIsOrdersLoaded(true);
 
         const prodResponse = await fetch(`${API_URL}/product-templete`, {
           headers: {
@@ -781,6 +849,38 @@ const InvoicesEditPage = () => {
 
     fetchData();
   }, [userToken]);
+
+  // Separate useEffect to handle order selection after both invoice data and orders are loaded
+  useEffect(() => {
+    if (isOrdersLoaded && formData.dc_id && orders.length > 0) {
+      console.log("Attempting to find order for dc_id:", formData.dc_id);
+      console.log("Available orders:", orders);
+
+      const orderId = findOrderIdByDcId(formData.dc_id, orders);
+      console.log("Found orderId:", orderId);
+
+      if (orderId) {
+        setSelectedOrderId(orderId);
+
+        // Also trigger the handleCustomerSelect to populate all data
+        setTimeout(() => {
+          handleCustomerSelect(orderId);
+        }, 100);
+      } else {
+        console.warn("No order found for dc_id:", formData.dc_id);
+        // Try to find by dispatch_order_number as fallback
+        if (formData.dispatch_order_number) {
+          const fallbackOrderId = findOrderIdByDcId(formData.dispatch_order_number, orders);
+          if (fallbackOrderId) {
+            setSelectedOrderId(fallbackOrderId);
+            setTimeout(() => {
+              handleCustomerSelect(fallbackOrderId);
+            }, 100);
+          }
+        }
+      }
+    }
+  }, [isOrdersLoaded, formData.dc_id, formData.dispatch_order_number, orders]);
 
   const calculateRentalPrice = useCallback((product, months = 0, days = 0) => {
     const perDay = product.rent_price_per_day || 0;
@@ -903,11 +1003,17 @@ const InvoicesEditPage = () => {
 
   const handleCustomerSelect = useCallback(
     (dispatchOrderId) => {
+      console.log("handleCustomerSelect called with:", dispatchOrderId);
       const selectedOrder = orders.find(
         (order) => order.id === parseInt(dispatchOrderId)
       );
-      if (!selectedOrder) return;
 
+      if (!selectedOrder) {
+        console.log("No order found for ID:", dispatchOrderId);
+        return;
+      }
+
+      console.log("Selected order:", selectedOrder);
       setSelectedOrderId(dispatchOrderId);
 
       if (selectedOrder.type === "dispatch_order") {
@@ -989,8 +1095,8 @@ const InvoicesEditPage = () => {
         const totalTax = cgst + sgst;
         const totalAmount = amount + totalTax;
 
-        setFormData({
-          ...formData,
+        setFormData((prev) => ({
+          ...prev,
           customer_id: customerId || "",
           customer_name: `${personal?.first_name || ""}`,
           email: personal?.email || "",
@@ -1018,7 +1124,7 @@ const InvoicesEditPage = () => {
           total_amount: totalAmount,
           items: items,
           shippingDetails: {
-            ...formData.shippingDetails,
+            ...prev.shippingDetails,
             consignee_name: `${personal?.first_name || ""}`,
             country: address?.country || "India",
             state: address?.state || "",
@@ -1028,7 +1134,7 @@ const InvoicesEditPage = () => {
             phone_number: personal?.phone_number || "",
             email: personal?.email || "",
           },
-        });
+        }));
       } else if (selectedOrder.type === "direct_invoice") {
         const customerId = selectedOrder.customer_id;
         const quotationDate = selectedOrder.quotation_date;
@@ -1075,8 +1181,8 @@ const InvoicesEditPage = () => {
         const totalTax = cgst + sgst;
         const totalAmount = amount + totalTax;
 
-        setFormData({
-          ...formData,
+        setFormData((prev) => ({
+          ...prev,
           customer_id: customerId || "",
           customer_name: `${personal?.first_name || ""} ${personal?.last_name || ""
             }`,
@@ -1098,7 +1204,7 @@ const InvoicesEditPage = () => {
           total_amount: totalAmount,
           items: items,
           shippingDetails: {
-            ...formData.shippingDetails,
+            ...prev.shippingDetails,
             consignee_name: `${personal?.first_name || ""} ${personal?.last_name || ""
               }`,
             country: address?.country || "India",
@@ -1109,10 +1215,10 @@ const InvoicesEditPage = () => {
             phone_number: personal?.phone_number || "",
             email: personal?.email || "",
           },
-        });
+        }));
       }
     },
-    [orders, products, taxTypes, formData, calculateRentalPrice]
+    [orders, products, taxTypes, calculateRentalPrice]
   );
 
   useEffect(() => {
@@ -1132,11 +1238,9 @@ const InvoicesEditPage = () => {
           const response = await fetch(`${POSTAL_API}/${pincode}`);
           const result = await response.json();
 
-          // Check if PostOffice exists
           if (Array.isArray(result) && result.length > 0 && result[0]?.PostOffice?.length > 0) {
             const firstOffice = result[0].PostOffice[0];
 
-            // Update shippingDetails
             setFormData((prev) => ({
               ...prev,
               shippingDetails: {
@@ -1147,7 +1251,6 @@ const InvoicesEditPage = () => {
               },
             }));
 
-            // Set shipping post offices
             setShippingPostOffices(result[0].PostOffice);
           } else {
             setSnackbar({
@@ -1171,14 +1274,14 @@ const InvoicesEditPage = () => {
     return () => clearTimeout(debounceTimer);
   }, [formData.shippingDetails.pincode]);
 
+  const handleInputChange = (e) => {
+    const { name, type, checked, value } = e.target;
 
-  const handleInputChange = useCallback((e) => {
-    const { name, value } = e.target;
     setFormData((prev) => ({
       ...prev,
-      [name]: value,
+      [name]: type === "checkbox" ? checked : value,
     }));
-  }, []);
+  };
 
   const handleShippingChange = useCallback((e) => {
     const { name, value } = e.target;
@@ -1476,7 +1579,6 @@ const InvoicesEditPage = () => {
         }),
       };
 
-      // Use PUT request for updating instead of POST
       const response = await fetch(`${API_URL}/invoices/${id}`, {
         method: "PUT",
         headers: {
@@ -1576,38 +1678,111 @@ const InvoicesEditPage = () => {
                 onChange={handleInputChange}
               />
 
-              <FormControl fullWidth size="small" error={!!errors.dc_id}>
-                <InputLabel>Select DC</InputLabel>
-                <Select
-                  value={selectedOrderId || ""}
-                  onChange={(e) => {
-                    handleCustomerSelect(e.target.value);
-                    if (errors.dc_id) {
-                      setErrors({ ...errors, dc_id: "" });
-                    }
-                  }}
-                  label="Select DC"
-                  displayEmpty
-                  inputProps={{ "aria-label": "Without label" }}
-                  style={{
-                    ...inputStyle,
-                    borderColor: errors.dc_id ? "red" : "#d1d5db",
-                  }}
-                >
-                  {orders.map((order) => (
-                    <MenuItem key={order.id} value={order.id}>
-                      {order.type === "dispatch_order"
-                        ? `${order.dispatch_order_id} - ${order.personalDetails?.first_name} (${getCompanyName(order)})`
-                        : `${order.quotation_id} - ${order.personalDetails?.first_name} ${order.personalDetails?.last_name} (${getCompanyName(order)})`}
-                    </MenuItem>
-                  ))}
-                </Select>
-                {errors.dc_id && (
-                  <Typography color="error" variant="caption">
-                    {errors.dc_id}
-                  </Typography>
-                )}
-              </FormControl>
+              <div style={fieldContainerStyle}>
+                <label style={labelStyle}>Select DC</label>
+
+                <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                  <FormControl fullWidth size="small" error={!!errors.dc_id}>
+                    <Select
+                      value={selectedOrderId || ""}
+                      onChange={(e) => {
+                        handleCustomerSelect(e.target.value);
+                        if (errors.dc_id) {
+                          setErrors({ ...errors, dc_id: "" });
+                        }
+                        // Reset search when selection is made
+                        setDcSearchTerm("");
+                      }}
+                      label="Select DC"
+                      displayEmpty
+                      style={{
+                        ...inputStyle,
+                        borderColor: errors.dc_id ? "red" : "#d1d5db",
+                      }}
+                      MenuProps={{
+                        PaperProps: { style: { maxHeight: 300 } },
+                        onEntered: () => setDcSearchTerm(""), // Reset search when dropdown opens
+                      }}
+                      renderValue={(selected) => {
+                        if (!selected) return <em>Select DC</em>;
+                        const order = orders.find(x => x.id === parseInt(selected));
+                        if (!order) return "Select DC";
+
+                        return order.type === "dispatch_order"
+                          ? `${order.dispatch_order_id} - ${order.personalDetails?.first_name} (${getCompanyName(order)})`
+                          : `${order.quotation_id} - ${order.personalDetails?.first_name} ${order.personalDetails?.last_name} (${getCompanyName(order)})`;
+                      }}
+                    >
+                      {/* Search bar inside dropdown */}
+                      <div
+                        style={{
+                          padding: "8px",
+                          position: "sticky",
+                          top: 0,
+                          background: "#fff",
+                          zIndex: 1,
+                          borderBottom: "1px solid #e0e0e0",
+                        }}
+                      >
+                        <TextField
+                          fullWidth
+                          size="small"
+                          placeholder="Search DC"
+                          value={dcSearchTerm}
+                          onChange={(e) => setDcSearchTerm(e.target.value)}
+                          onClick={(e) => e.stopPropagation()}
+                          onKeyDown={(e) => e.stopPropagation()}
+                          autoFocus
+                        />
+                      </div>
+
+                      {/* Smart multi-word search filter */}
+                      {orders.length === 0 ? (
+                        <MenuItem disabled>No DCs available</MenuItem>
+                      ) : (
+                        orders
+                          .filter((order) => {
+                            const term = dcSearchTerm.trim().toLowerCase();
+                            if (!term) return true;
+
+                            const words = term.split(" ").filter(Boolean);
+                            const personalDetails = order.personalDetails || {};
+
+                            // Create search text with all searchable fields
+                            const searchText = [
+                              order.type === "dispatch_order" ? order.dispatch_order_id : order.quotation_id,
+                              personalDetails.first_name,
+                              personalDetails.last_name,
+                              getCompanyName(order),
+                              personalDetails.email,
+                              personalDetails.phone_number
+                            ]
+                              .filter(Boolean)
+                              .join(" ")
+                              .toLowerCase();
+
+                            return words.every(word => searchText.includes(word));
+                          })
+                          .map((order) => {
+                            const personalDetails = order.personalDetails || {};
+                            return (
+                              <MenuItem key={order.id} value={order.id}>
+                                {order.type === "dispatch_order"
+                                  ? `${order.dispatch_order_id} - ${personalDetails.first_name} (${getCompanyName(order)})`
+                                  : `${order.quotation_id} - ${personalDetails.first_name} ${personalDetails.last_name} (${getCompanyName(order)})`}
+                              </MenuItem>
+                            );
+                          })
+                      )}
+                    </Select>
+                    {errors.dc_id && (
+                      <Typography color="error" variant="caption">
+                        {errors.dc_id}
+                      </Typography>
+                    )}
+                  </FormControl>
+                </div>
+              </div>
 
               <Field
                 label="Transaction Type"
@@ -1669,7 +1844,7 @@ const InvoicesEditPage = () => {
                 placeholder="Enter GST Number"
               />
               <Field
-                label="Email"
+                label="Customer Email"
                 name="email"
                 value={formData.email}
                 onChange={handleInputChange}
@@ -1677,7 +1852,7 @@ const InvoicesEditPage = () => {
                 type="email"
               />
               <Field
-                label="Phone"
+                label="Customer Phone"
                 name="phone_number"
                 value={formData.phone_number}
                 onChange={handleInputChange}
@@ -1685,34 +1860,34 @@ const InvoicesEditPage = () => {
                 type="tel"
               />
               <Field
-                label="PAN"
+                label="Customer PAN"
                 name="pan_number"
                 value={formData.pan_number}
                 onChange={handleInputChange}
                 placeholder="Enter PAN"
               />
 
-              <Field
+              {/* <Field
                 label="Consultant"
                 name="invoice_consulting_by"
                 value={formData.invoice_consulting_by}
                 onChange={handleInputChange}
                 placeholder="Enter Consultant Name"
-              />
-              <Field
+              /> */}
+              {/* <Field
                 label="Industry"
                 name="industry"
                 value={formData.industry}
                 onChange={handleInputChange}
                 placeholder="Enter Industry"
-              />
-              <Field
+              /> */}
+              {/* <Field
                 label="Remarks"
                 name="remarks"
                 value={formData.remarks}
                 onChange={handleInputChange}
                 placeholder="Enter Remarks"
-              />
+              /> */}
             </div>
           </div>
 
@@ -1792,10 +1967,13 @@ const InvoicesEditPage = () => {
           </div>
 
           <div style={cardStyle}>
-            <div style={cardHeaderContainerStyle}>
-              <div style={iconStyle}>📦</div>
-              <h3 style={cardHeaderStyle}>Courier Charges</h3>
-            </div>
+            <Field
+              label="Peripherals small amount"
+              name="is_small_amount"
+              type="checkbox"
+              value={formData.is_small_amount}
+              onChange={handleInputChange}
+            />
           </div>
         </div>
 
@@ -1835,7 +2013,6 @@ const InvoicesEditPage = () => {
                     onChange={(e) => setSearchTerm(e.target.value)}
                   />
                 </Box>
-
 
                 <TableContainer
                   component={Paper}

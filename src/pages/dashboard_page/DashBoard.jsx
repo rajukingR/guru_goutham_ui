@@ -31,9 +31,9 @@ const Dashboard = () => {
     const fetchCategories = async () => {
       // Replace with your real API if available
       const categories = [
-        { id: 15, category_name: "Assembled Desktop" },
-        { id: 16, category_name: "Laptops" },
-        { id: 18, category_name: "Monitors" },
+        { id: 15, category_name: "Desktop" },
+        { id: 16, category_name: "Laptop" },
+        { id: 18, category_name: "Monitor" },
         { id: 20, category_name: "RAM" },
         { id: 21, category_name: "Processor" },
         { id: 22, category_name: "Keyboard" },
@@ -42,7 +42,6 @@ const Dashboard = () => {
         { id: 25, category_name: "PC-Case" },
         { id: 26, category_name: "Cabinet" },
         { id: 27, category_name: "Power Supply Unit (PSU)" },
-        { id: 28, category_name: "PROCESSOR" },
       ];
       setApiCategories(categories);
     };
@@ -209,88 +208,54 @@ const Dashboard = () => {
     return diffDays >= 0 && diffDays <= days;
   }
 
-  // Stats with dynamic available stock
+  // Modern Stats Cards Data - SIMPLIFIED
   const stats = [
     {
       title: "Active Rentals",
-      durations: [
-        {
-          label: "Last 30 days",
-          value: deliveryChallans.filter(
-            (dc) => dc.type === "Rent" && isInLastDays(dc.dc_date, 30)
-          ).length,
-        },
-        {
-          label: "Last 90 days",
-          value: deliveryChallans.filter(
-            (dc) => dc.type === "Rent" && isInLastDays(dc.dc_date, 90)
-          ).length,
-        },
-        {
-          label: "Last 1 year",
-          value: deliveryChallans.filter(
-            (dc) => dc.type === "Rent" && isInLastDays(dc.dc_date, 365)
-          ).length,
-        },
-      ],
+      mainValue: deliveryChallans.filter(
+        (dc) => dc.type === "Rent" && isInLastDays(dc.dc_date, 30)
+      ).length,
+      icon: "📅",
       color: "#10b981",
-      bgColor: "#ecfdf5",
-      icon: "💻",
-      change: "+8.2%",
+      gradient: "linear-gradient(135deg, #10b981, #059669)",
+      trend: "+12.5%",
+      trendUp: true,
+      description: "Currently active rental devices"
     },
     {
       title: "Products Sold",
-      durations: [
-        {
-          label: "Last 30 days",
-          value: deliveryChallans.filter(
-            (dc) =>
-              (dc.type === "Sale" || dc.type === "Buy") &&
-              isInLastDays(dc.dc_date, 30)
-          ).length,
-        },
-        {
-          label: "Last 90 days",
-          value: deliveryChallans.filter(
-            (dc) =>
-              (dc.type === "Sale" || dc.type === "Buy") &&
-              isInLastDays(dc.dc_date, 90)
-          ).length,
-        },
-        {
-          label: "Last 1 year",
-          value: deliveryChallans.filter(
-            (dc) =>
-              (dc.type === "Sale" || dc.type === "Buy") &&
-              isInLastDays(dc.dc_date, 365)
-          ).length,
-        },
-      ],
-      color: "#8b5cf6",
-      bgColor: "#faf5ff",
+      mainValue: deliveryChallans.filter(
+        (dc) =>
+          (dc.type === "Sale" || dc.type === "Buy") &&
+          isInLastDays(dc.dc_date, 30)
+      ).length,
       icon: "💰",
-      change: "+12.5%",
+      color: "#8b5cf6",
+      gradient: "linear-gradient(135deg, #8b5cf6, #7c3aed)",
+      trend: "+8.3%",
+      trendUp: true,
+      description: "Total sales this month"
     },
     {
       title: "Available Stock",
-      durations: [{ label: "Current", value: availableStock }],
-      color: "#3b82f6",
-      bgColor: "#eff6ff",
+      mainValue: availableStock,
       icon: "📦",
-      change: "+4.1%",
+      color: "#3b82f6",
+      gradient: "linear-gradient(135deg, #3b82f6, #2563eb)",
+      trend: "+4.1%",
+      trendUp: true,
+      description: "Ready to handover devices"
     },
-    {
-      title: "Overdue Rentals",
-      durations: [
-        { label: "Last 30 days", value: 0 },
-        { label: "Last 90 days", value: 0 },
-        { label: "Last 1 year", value: 0 },
-      ],
-      color: "#ef4444",
-      bgColor: "#fef2f2",
-      icon: "⚠️",
-      change: "-2.3%",
-    },
+    // {
+    //   title: "Overdue Rentals",
+    //   mainValue: 2,
+    //   icon: "⚠️",
+    //   color: "#ef4444",
+    //   gradient: "linear-gradient(135deg, #ef4444, #dc2626)",
+    //   trend: "-2.3%",
+    //   trendUp: false,
+    //   description: "Requires follow-up"
+    // },
   ];
 
   return (
@@ -308,34 +273,38 @@ const Dashboard = () => {
         </div>
       </div>
 
-      {/* Stats Cards */}
+      {/* Modern Stats Cards - SIMPLIFIED */}
       <div style={statsGridStyle}>
         {stats.map((stat, i) => (
           <div key={i} style={statsCardStyle}>
-            <div style={statsCardHeaderStyle}>
-              <div style={{ ...statsIconStyle, backgroundColor: stat.bgColor }}>
-                <span style={{ color: stat.color }}>{stat.icon}</span>
+            <div style={statsCardTopStyle}>
+              <div style={statsIconCircleStyle}>
+                <div style={{...iconCircleStyle, background: stat.gradient}}>
+                  <span style={iconStyle}>{stat.icon}</span>
+                </div>
               </div>
-              <div
-                style={{
-                  ...changeIndicatorStyle,
-                  backgroundColor: stat.change.startsWith("+")
-                    ? "#dcfce7"
-                    : "#fee2e2",
-                  color: stat.change.startsWith("+") ? "#166534" : "#991b1b",
-                }}
-              >
-                {stat.change}
+              <div style={statsTitleStyle}>
+                <h3 style={statTitleTextStyle}>{stat.title}</h3>
+                <div style={{
+                  ...trendBadgeStyle,
+                  backgroundColor: stat.trendUp ? "#d1fae5" : "#fee2e2",
+                  color: stat.trendUp ? "#065f46" : "#991b1b",
+                }}>
+                  <span style={trendArrowStyle}>
+                    {stat.trendUp ? "↗" : "↘"}
+                  </span>
+                  {stat.trend}
+                </div>
               </div>
             </div>
-            <h3 style={statsCardTitleStyle}>{stat.title}</h3>
-            <div style={durationsContainerStyle}>
-              {stat.durations.map((d, idx) => (
-                <div key={idx} style={durationBoxStyle}>
-                  <p style={durationLabelStyle}>{d.label}</p>
-                  <p style={durationValueStyle}>{d.value}</p>
-                </div>
-              ))}
+            
+            <div style={mainValueContainerStyle}>
+              <span style={mainValueNumberStyle}>{stat.mainValue}</span>
+              <span style={mainValueLabelStyle}>units</span>
+            </div>
+            
+            <div style={descriptionStyle}>
+              {stat.description}
             </div>
           </div>
         ))}
@@ -371,134 +340,184 @@ const Dashboard = () => {
 
 export default Dashboard;
 
-// ----------- STYLES -----------
+// ----------- UPDATED STYLES -----------
 
 const containerStyle = {
   minHeight: "100vh",
   padding: "1.5rem 2rem",
   fontFamily: '"Inter", "Segoe UI", Tahoma, Geneva, Verdana, sans-serif',
   color: "#1e293b",
+  backgroundColor: "#f8fafc",
 };
 
 const headerContainerStyle = {
   backgroundColor: "#ffffff",
-  borderRadius: 12,
-  padding: "1.5rem 2rem",
+  borderRadius: 20,
+  padding: "2rem",
   marginBottom: "2rem",
-  boxShadow: "0 4px 12px rgba(0,0,0,0.05)",
+  boxShadow: "0 8px 30px rgba(0,0,0,0.08)",
   display: "flex",
   alignItems: "center",
-  gap: 16,
+  gap: 20,
+  border: "1px solid rgba(226, 232, 240, 0.6)",
 };
 
 const headerLeftStyle = {
   display: "flex",
   alignItems: "center",
-  gap: 12,
+  gap: 16,
 };
 
 const headerIconStyle = {
-  background: "linear-gradient(45deg, #3b82f6, #6366f1)",
+  background: "linear-gradient(135deg, #3b82f6, #8b5cf6)",
   color: "white",
-  borderRadius: 10,
-  padding: "0.6rem",
-  fontSize: 24,
-  boxShadow: "0 4px 8px rgba(59,130,246,0.4)",
+  borderRadius: 14,
+  padding: "0.8rem",
+  fontSize: 28,
+  boxShadow: "0 6px 15px rgba(99, 102, 241, 0.3)",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  width: 60,
+  height: 60,
 };
 
 const headerTitleStyle = {
-  fontSize: 26,
+  fontSize: 28,
   fontWeight: 700,
   margin: 0,
+  background: "linear-gradient(90deg, #1e293b, #475569)",
+  WebkitBackgroundClip: "text",
+  WebkitTextFillColor: "transparent",
+  backgroundClip: "text",
 };
 
 const headerSubtitleStyle = {
-  fontSize: 14,
+  fontSize: 15,
   color: "#64748b",
-  margin: 0,
+  margin: "4px 0 0 0",
+  fontWeight: 500,
 };
 
-// Stats grid with 4 cards in a row
+// Modern Stats Grid
 const statsGridStyle = {
   display: "grid",
-  gridTemplateColumns: "repeat(4, 1fr)",
-  gap: 20,
+  gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
+  gap: 24,
   marginBottom: "2.5rem",
 };
 
 const statsCardStyle = {
-  backgroundColor: "white",
-  padding: "1.25rem 1.5rem",
-  borderRadius: 16,
-  boxShadow: "0 6px 20px rgba(0,0,0,0.07)",
-  border: "1px solid #e2e8f0",
+  backgroundColor: "#ffffff",
+  padding: "1.5rem",
+  borderRadius: 20,
+  boxShadow: "0 8px 25px rgba(0,0,0,0.06)",
+  border: "1px solid rgba(226, 232, 240, 0.8)",
   display: "flex",
   flexDirection: "column",
-  justifyContent: "space-between",
+  transition: "all 0.3s ease",
+  position: "relative",
+  overflow: "hidden",
+  
+  "&:hover": {
+    transform: "translateY(-4px)",
+    boxShadow: "0 12px 35px rgba(0,0,0,0.12)",
+    borderColor: "rgba(99, 102, 241, 0.2)",
+  },
+  
+  "&::before": {
+    content: '""',
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 4,
+    borderRadius: "20px 20px 0 0",
+  },
 };
 
-const statsCardHeaderStyle = {
+const statsCardTopStyle = {
   display: "flex",
-  justifyContent: "space-between",
   alignItems: "center",
-  marginBottom: 15,
+  marginBottom: "1.25rem",
+  gap: 16,
 };
 
-const statsIconStyle = {
-  borderRadius: 12,
-  padding: "0.8rem 1rem",
-  fontSize: 28,
+const statsIconCircleStyle = {
+  flexShrink: 0,
+};
+
+const iconCircleStyle = {
+  width: 56,
+  height: 56,
+  borderRadius: 16,
   display: "flex",
   alignItems: "center",
   justifyContent: "center",
+  boxShadow: "0 6px 15px rgba(0,0,0,0.1)",
 };
 
-const changeIndicatorStyle = {
-  fontWeight: 600,
-  padding: "0.3rem 0.7rem",
-  borderRadius: 8,
-  fontSize: 14,
-  whiteSpace: "nowrap",
+const iconStyle = {
+  fontSize: 24,
+  color: "#ffffff",
 };
 
-const statsCardTitleStyle = {
-  fontWeight: 600,
-  fontSize: 18,
-  marginBottom: 12,
-  color: "#475569",
-};
-
-const durationsContainerStyle = {
+const statsTitleStyle = {
+  flex: 1,
   display: "flex",
-  gap: 12,
-  flexWrap: "wrap",
-  marginTop: 10,
+  flexDirection: "column",
+  gap: 6,
 };
 
-const durationBoxStyle = {
-  backgroundColor: "#f0f9ff",
-  borderRadius: 12,
-  padding: "12px 16px",
-  minWidth: 100,
-  textAlign: "center",
-  boxShadow: "0 1px 6px rgb(59 130 246 / 0.1)",
-};
-
-const durationLabelStyle = {
-  fontSize: 12,
-  color: "#3b82f6",
+const statTitleTextStyle = {
   fontWeight: 600,
-  marginBottom: 4,
-  textTransform: "uppercase",
-  userSelect: "none",
+  fontSize: 16,
+  color: "#475569",
+  margin: 0,
 };
 
-const durationValueStyle = {
-  fontSize: 20,
+const trendBadgeStyle = {
+  padding: "4px 10px",
+  borderRadius: 20,
+  fontSize: 12,
+  fontWeight: 600,
+  display: "inline-flex",
+  alignItems: "center",
+  gap: 4,
+  width: "fit-content",
+};
+
+const trendArrowStyle = {
+  fontSize: 14,
+};
+
+const mainValueContainerStyle = {
+  display: "flex",
+  alignItems: "baseline",
+  gap: 8,
+  marginBottom: "0.75rem",
+};
+
+const mainValueNumberStyle = {
+  fontSize: 42,
   fontWeight: 700,
   color: "#1e293b",
-  margin: 0,
-  userSelect: "none",
+  lineHeight: 1,
+};
+
+const mainValueLabelStyle = {
+  fontSize: 16,
+  color: "#64748b",
+  fontWeight: 500,
+};
+
+const descriptionStyle = {
+  fontSize: 14,
+  color: "#94a3b8",
+  fontWeight: 400,
+  lineHeight: 1.4,
+  paddingTop: "0.75rem",
+  borderTop: "1px solid rgba(226, 232, 240, 0.8)",
 };
 
 // Main dashboard content grid 2x2 layout
@@ -507,4 +526,52 @@ const chartsGridStyle = {
   gridTemplateColumns: "repeat(2, 1fr)",
   gridTemplateRows: "auto auto",
   gap: 24,
+};
+
+// Responsive styles
+const responsiveStyles = {
+  "@media (max-width: 1200px)": {
+    chartsGridStyle: {
+      gridTemplateColumns: "1fr",
+      gridTemplateRows: "auto",
+    },
+  },
+  "@media (max-width: 768px)": {
+    containerStyle: {
+      padding: "1rem",
+    },
+    statsGridStyle: {
+      gridTemplateColumns: "repeat(2, 1fr)",
+    },
+    headerContainerStyle: {
+      padding: "1.5rem",
+      flexDirection: "column",
+      alignItems: "flex-start",
+    },
+    headerIconStyle: {
+      width: 50,
+      height: 50,
+      fontSize: 22,
+    },
+    headerTitleStyle: {
+      fontSize: 22,
+    },
+    mainValueNumberStyle: {
+      fontSize: 36,
+    },
+  },
+  "@media (max-width: 480px)": {
+    statsGridStyle: {
+      gridTemplateColumns: "1fr",
+    },
+    chartsGridStyle: {
+      gridTemplateColumns: "1fr",
+    },
+    statsCardStyle: {
+      padding: "1.25rem",
+    },
+    mainValueNumberStyle: {
+      fontSize: 32,
+    },
+  },
 };

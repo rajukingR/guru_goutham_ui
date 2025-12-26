@@ -1,14 +1,14 @@
-import React, { useState, useEffect } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import API_URL from "../../../api/Api_url";
 import { useSelector } from "react-redux";
+import Pagination from '@mui/material/Pagination';
+import Stack from '@mui/material/Stack';
 
 const RecentRentals = () => {
-
-    const { user, token } = useSelector((state) => state.auth);
-  
-    const userToken = token;
+  const { user, token } = useSelector((state) => state.auth);
+  const userToken = token;
 
   const [fromMonth, setFromMonth] = useState(
     new Date(new Date().setMonth(new Date().getMonth() - 1))
@@ -17,6 +17,10 @@ const RecentRentals = () => {
   const [recentRentals, setRecentRentals] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  
+  // Pagination states
+  const rowsPerPage = 4; // change if needed
+  const [page, setPage] = useState(1);
 
   // Format date to YYYY-MM for filtering
   const formatDateYYYYMM = (date) => {
@@ -30,7 +34,6 @@ const RecentRentals = () => {
       setLoading(true);
       setError(null);
       try {
-        const token = localStorage.getItem("token");
         const response = await fetch(`${API_URL}/delivery-challans`, {
           headers: {
             "Authorization": `Bearer ${userToken}`,
@@ -62,6 +65,7 @@ const RecentRentals = () => {
         }));
 
         setRecentRentals(rentalsForTable);
+        setPage(1); // Reset to first page when data changes
       } catch (err) {
         console.error("Error fetching rentals:", err);
         setError("Failed to load recent rentals.");
@@ -71,78 +75,17 @@ const RecentRentals = () => {
     };
 
     fetchRentals();
-  }, [fromMonth, toMonth]);
+  }, [fromMonth, toMonth, userToken]);
 
-  // Styles
-  // Styles (same as before)
-  const chartCardStyle = {
-    backgroundColor: "#ffffff",
-    borderRadius: "16px",
-    padding: "1.5rem",
-    boxShadow: "0 10px 25px rgba(0, 0, 0, 0.1)",
-    border: "1px solid rgba(255, 255, 255, 0.2)",
-  };
+  // Calculate total pages
+  const totalPages = Math.ceil(recentRentals.length / rowsPerPage);
 
-  const chartHeaderStyle = {
-    display: "flex",
-    alignItems: "center",
-    gap: "0.5rem",
-  };
-
-  const chartHeaderWithDateStyle = {
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
-    marginBottom: "1.5rem",
-    flexWrap: "wrap",
-    gap: "1rem",
-  };
-
-  const chartIconStyle = {
-    padding: "0.5rem",
-    backgroundColor: "#f1f5f9",
-    borderRadius: "8px",
-    fontSize: "1.25rem",
-  };
-
-  const chartTitleStyle = {
-    fontSize: "1.25rem",
-    fontWeight: "700",
-    color: "#1e293b",
-    margin: 0,
-  };
-
-  const dateRangeContainerStyle = {
-    display: "flex",
-    gap: "1rem",
-    flexWrap: "wrap",
-  };
-
-  const datePickerContainerStyle = {
-    display: "flex",
-    flexDirection: "column",
-    gap: "0.5rem",
-    minWidth: "150px",
-  };
-
-  const datePickerLabelStyle = {
-    fontSize: "0.875rem",
-    fontWeight: "600",
-    color: "#64748b",
-  };
-
-  const datePickerButtonStyle = {
-    padding: "0.5rem 0.75rem",
-    borderRadius: "8px",
-    border: "1px solid #d1d5db",
-    fontSize: "0.875rem",
-    fontWeight: "500",
-    color: "#374151",
-    backgroundColor: "#ffffff",
-    cursor: "pointer",
-    minWidth: "150px",
-    textAlign: "left",
-  };
+  // Paginate data
+  const paginatedData = useMemo(() => {
+    const startIndex = (page - 1) * rowsPerPage;
+    const endIndex = startIndex + rowsPerPage;
+    return recentRentals.slice(startIndex, endIndex);
+  }, [recentRentals, page]);
 
   const getStatusColor = (status) => {
     switch (status) {
@@ -171,80 +114,6 @@ const RecentRentals = () => {
           border: "1px solid #e5e7eb",
         };
     }
-  };
-
-  const tableCardStyle = {
-    backgroundColor: "white",
-    borderRadius: "10px",
-    boxShadow: "0 1px 3px rgba(0, 0, 0, 0.1)",
-    padding: "20px",
-    marginBottom: "20px",
-  };
-
-  const tableHeaderStyle = {
-    display: "flex",
-    alignItems: "center",
-    gap: "10px",
-  };
-
-  const tableIconStyle = {
-    fontSize: "20px",
-  };
-
-  const tableTitleStyle = {
-    fontSize: "18px",
-    fontWeight: "600",
-    color: "#1e293b",
-    margin: "0",
-  };
-
-  const tableContainerStyle = {
-    overflowX: "auto",
-  };
-
-  const tableStyle = {
-    width: "100%",
-    borderCollapse: "collapse",
-  };
-
-  const tableHeaderRowStyle = {
-    backgroundColor: "#f8fafc",
-  };
-
-  const tableHeaderCellStyle = {
-    padding: "12px 16px",
-    textAlign: "left",
-    fontSize: "14px",
-    fontWeight: "600",
-    color: "#64748b",
-    borderBottom: "1px solid #e2e8f0",
-  };
-
-  const tableRowStyle = {
-    borderBottom: "1px solid #e2e8f0",
-    ":hover": {
-      backgroundColor: "#f8fafc",
-    },
-  };
-
-  const tableCellStyle = {
-    padding: "12px 16px",
-    fontSize: "14px",
-    color: "#334155",
-  };
-
-  const tableCellIdStyle = {
-    ...tableCellStyle,
-    fontWeight: "500",
-    color: "#3b82f6",
-  };
-
-  const statusBadgeStyle = {
-    padding: "4px 8px",
-    borderRadius: "12px",
-    fontSize: "12px",
-    fontWeight: "500",
-    display: "inline-block",
   };
 
   return (
@@ -300,61 +169,206 @@ const RecentRentals = () => {
       </div>
       <div style={tableContainerStyle}>
         {loading ? (
-          <div
-            style={{ padding: "1rem", color: "#64748b", textAlign: "center" }}
-          >
+          <div style={loadingStyle}>
             Loading recent rentals...
           </div>
         ) : error ? (
-          <div
-            style={{ padding: "1rem", color: "#ef4444", textAlign: "center" }}
-          >
+          <div style={errorStyle}>
             {error}
           </div>
         ) : recentRentals.length === 0 ? (
-          <div
-            style={{ padding: "1rem", color: "#64748b", textAlign: "center" }}
-          >
+          <div style={noDataStyle}>
             No rentals found for selected month.
           </div>
         ) : (
-          <table style={tableStyle}>
-            <thead>
-              <tr style={tableHeaderRowStyle}>
-                <th style={tableHeaderCellStyle}>Rental ID</th>
-                <th style={tableHeaderCellStyle}>Customer Name</th>
-                <th style={tableHeaderCellStyle}>Model</th>
-                <th style={tableHeaderCellStyle}>Start Date</th>
-                <th style={{ ...tableHeaderCellStyle, textAlign: "right" }}>
-                  Status
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {recentRentals.map((row, index) => (
-                <tr key={index} style={tableRowStyle}>
-                  <td style={tableCellIdStyle}>{row.id}</td>
-                  <td style={tableCellStyle}>{row.shipping_name}</td>
-                  <td style={tableCellStyle}>{row.model}</td>
-                  <td style={tableCellStyle}>{row.startDate}</td>
-                  <td style={{ ...tableCellStyle, textAlign: "right" }}>
-                    <span
-                      style={{
-                        ...statusBadgeStyle,
-                        ...getStatusColor(row.status),
-                      }}
-                    >
-                      {row.status}
-                    </span>
-                  </td>
+          <>
+            <table style={tableStyle}>
+              <thead>
+                <tr style={tableHeaderRowStyle}>
+                  <th style={tableHeaderCellStyle}>Rental ID</th>
+                  <th style={tableHeaderCellStyle}>Customer Name</th>
+                  <th style={tableHeaderCellStyle}>Model</th>
+                  <th style={tableHeaderCellStyle}>Start Date</th>
+                  <th style={{ ...tableHeaderCellStyle, textAlign: "right" }}>
+                    Status
+                  </th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {paginatedData.map((row, index) => (
+                  <tr key={index} style={tableRowStyle}>
+                    <td style={tableCellIdStyle}>{row.id}</td>
+                    <td style={tableCellStyle}>{row.shipping_name}</td>
+                    <td style={tableCellStyle}>{row.model}</td>
+                    <td style={tableCellStyle}>{row.startDate}</td>
+                    <td style={{ ...tableCellStyle, textAlign: "right" }}>
+                      <span
+                        style={{
+                          ...statusBadgeStyle,
+                          ...getStatusColor(row.status),
+                        }}
+                      >
+                        {row.status}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+
+            {/* Pagination Component */}
+              <Stack spacing={2} alignItems="center" mt={2} mb={1}>
+                <Pagination
+                  count={totalPages}
+                  page={page}
+                  onChange={(event, value) => setPage(value)}
+                  color="primary"
+                  variant="outlined"
+                  shape="rounded"
+                />
+              </Stack>
+          </>
         )}
       </div>
     </div>
   );
+};
+
+// Styles
+const tableCardStyle = {
+  backgroundColor: "white",
+  borderRadius: "10px",
+  boxShadow: "0 1px 3px rgba(0, 0, 0, 0.1)",
+  padding: "20px",
+  marginBottom: "20px",
+};
+
+const chartHeaderWithDateStyle = {
+  display: "flex",
+  justifyContent: "space-between",
+  alignItems: "flex-start",
+  marginBottom: "1.5rem",
+  flexWrap: "wrap",
+  gap: "1rem",
+};
+
+const chartHeaderStyle = {
+  display: "flex",
+  alignItems: "center",
+  gap: "0.5rem",
+};
+
+const chartIconStyle = {
+  padding: "0.5rem",
+  backgroundColor: "#f1f5f9",
+  borderRadius: "8px",
+  fontSize: "1.25rem",
+};
+
+const chartTitleStyle = {
+  fontSize: "1.25rem",
+  fontWeight: "700",
+  color: "#1e293b",
+  margin: 0,
+};
+
+const dateRangeContainerStyle = {
+  display: "flex",
+  gap: "1rem",
+  flexWrap: "wrap",
+};
+
+const datePickerContainerStyle = {
+  display: "flex",
+  flexDirection: "column",
+  gap: "0.5rem",
+  minWidth: "150px",
+};
+
+const datePickerLabelStyle = {
+  fontSize: "0.875rem",
+  fontWeight: "600",
+  color: "#64748b",
+};
+
+const datePickerButtonStyle = {
+  padding: "0.5rem 0.75rem",
+  borderRadius: "8px",
+  border: "1px solid #d1d5db",
+  fontSize: "0.875rem",
+  fontWeight: "500",
+  color: "#374151",
+  backgroundColor: "#ffffff",
+  cursor: "pointer",
+  minWidth: "150px",
+  textAlign: "left",
+};
+
+const tableContainerStyle = {
+  overflowX: "auto",
+};
+
+const tableStyle = {
+  width: "100%",
+  borderCollapse: "collapse",
+};
+
+const tableHeaderRowStyle = {
+  backgroundColor: "#f8fafc",
+};
+
+const tableHeaderCellStyle = {
+  padding: "12px 16px",
+  textAlign: "left",
+  fontSize: "14px",
+  fontWeight: "600",
+  color: "#64748b",
+  borderBottom: "1px solid #e2e8f0",
+};
+
+const tableRowStyle = {
+  borderBottom: "1px solid #e2e8f0",
+  ":hover": {
+    backgroundColor: "#f8fafc",
+  },
+};
+
+const tableCellStyle = {
+  padding: "12px 16px",
+  fontSize: "14px",
+  color: "#334155",
+};
+
+const tableCellIdStyle = {
+  ...tableCellStyle,
+  fontWeight: "500",
+  color: "#3b82f6",
+};
+
+const statusBadgeStyle = {
+  padding: "4px 8px",
+  borderRadius: "12px",
+  fontSize: "12px",
+  fontWeight: "500",
+  display: "inline-block",
+};
+
+const loadingStyle = {
+  padding: "1rem",
+  color: "#64748b",
+  textAlign: "center",
+};
+
+const errorStyle = {
+  padding: "1rem",
+  color: "#ef4444",
+  textAlign: "center",
+};
+
+const noDataStyle = {
+  padding: "1rem",
+  color: "#64748b",
+  textAlign: "center",
 };
 
 export default RecentRentals;

@@ -199,6 +199,11 @@ const monthButtonContainerStyle = {
   width: "100%",
 };
 
+const checkboxStyle = {
+  display: "none",
+};
+
+
 const monthButtonStyle = (isSelected) => ({
   padding: "0.5rem 1rem",
   backgroundColor: isSelected ? "#2563eb" : "#f3f4f6",
@@ -226,6 +231,7 @@ const Field = memo(
     onChange,
     error,
     children, // <-- keep children support also
+    description,
     ...props
   }) => (
     <div style={fieldContainerStyle}>
@@ -293,14 +299,23 @@ const Field = memo(
           {...props}
         />
       ) : type === "checkbox" ? (
-        <input
-          type="checkbox"
-          name={name}
-          checked={value}
-          onChange={onChange}
-          style={checkboxStyle}
-          {...props}
-        />
+        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+          <input
+            type="checkbox"
+            name={name}
+            checked={value}
+            onChange={onChange}
+            {...props}
+          />
+
+          <div>
+            <label style={{ fontSize: "14px", fontWeight: 500 }}>
+              {label}
+              {required && <span style={requiredStyle}>*</span>}
+            </label>
+          </div>
+        </div>
+
       ) : (
         <input
           type={type}
@@ -318,15 +333,21 @@ const Field = memo(
         />
       )}
 
-      {error && (
+      {description && (
         <Typography
           variant="caption"
-          color="error"
-          style={{ marginTop: "4px" }}
+          style={{ marginTop: "4px", color: "#6b7280", display: "block" }}
         >
+          {description}
+        </Typography>
+      )}
+
+      {error && (
+        <Typography variant="caption" color="error" style={{ marginTop: "4px" }}>
           {error}
         </Typography>
       )}
+
     </div>
   )
 );
@@ -516,6 +537,7 @@ const InvoicesAddPage = () => {
     approval_status: "Approved",
     approval_date: new Date().toISOString().slice(0, 19).replace("T", " "),
     invoice_consulting_by: "",
+    is_small_amount: false,
     industry: "",
     remarks: "",
     items: [],
@@ -539,6 +561,9 @@ const InvoicesAddPage = () => {
   const [quantities, setQuantities] = useState({});
   const [searchTerm, setSearchTerm] = useState("");
   const [showProductTable, setShowProductTable] = useState(false);
+  const [orderPrepSearchTerm, setOrderPrepSearchTerm] = useState("");
+  const [dcSearchTerm, setDcSearchTerm] = useState(""); // Add this for DC dropdown
+
   const [snackbar, setSnackbar] = useState({
     open: false,
     message: "",
@@ -1167,12 +1192,14 @@ const InvoicesAddPage = () => {
 
 
   const handleInputChange = useCallback((e) => {
-    const { name, value } = e.target;
+    const { name, type, checked, value } = e.target;
+
     setFormData((prev) => ({
       ...prev,
-      [name]: value,
+      [name]: type === "checkbox" ? checked : value,
     }));
   }, []);
+
 
   const handleShippingChange = useCallback((e) => {
     const { name, value } = e.target;
@@ -1384,6 +1411,7 @@ const InvoicesAddPage = () => {
         dispatch_order_number:
           formData.dispatch_order_number || formData.dispatch_order_id,
         dc_date: formData.dc_date,
+        is_small_amount: formData.is_small_amount,
         invoice_start_date: dateRanges.invoiceStartDate,
         invoice_end_date: dateRanges.invoiceEndDate,
         previous_delivered_start_date: dateRanges.previousDeliveredStartDate,
@@ -1561,38 +1589,112 @@ const InvoicesAddPage = () => {
                 onChange={handleInputChange}
               />
 
-              <FormControl fullWidth size="small" error={!!errors.dc_id}>
-                <InputLabel>Select DC</InputLabel>
-                <Select
-                  value={selectedOrderId || ""}
-                  onChange={(e) => {
-                    handleCustomerSelect(e.target.value);
-                    if (errors.dc_id) {
-                      setErrors({ ...errors, dc_id: "" });
-                    }
-                  }}
-                  label="Select DC"
-                  displayEmpty
-                  inputProps={{ "aria-label": "Without label" }}
-                  style={{
-                    ...inputStyle,
-                    borderColor: errors.dc_id ? "red" : "#d1d5db",
-                  }}
-                >
-                  {orders.map((order) => (
-                    <MenuItem key={order.id} value={order.id}>
-                      {order.type === "dispatch_order"
-                        ? `${order.dispatch_order_id} - ${order.personalDetails?.first_name} (${getCompanyName(order)})`
-                        : `${order.quotation_id} - ${order.personalDetails?.first_name} ${order.personalDetails?.last_name} (${getCompanyName(order)})`}
-                    </MenuItem>
-                  ))}
-                </Select>
-                {errors.dc_id && (
-                  <Typography color="error" variant="caption">
-                    {errors.dc_id}
-                  </Typography>
-                )}
-              </FormControl>
+              {/* Select DC Dropdown with Search */}
+              <div style={fieldContainerStyle}>
+                <label style={labelStyle}>Select DC</label>
+
+                <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                  <FormControl fullWidth size="small" error={!!errors.dc_id}>
+                    <Select
+                      value={selectedOrderId || ""}
+                      onChange={(e) => {
+                        handleCustomerSelect(e.target.value);
+                        if (errors.dc_id) {
+                          setErrors({ ...errors, dc_id: "" });
+                        }
+                        // Reset search when selection is made
+                        setDcSearchTerm("");
+                      }}
+                      label="Select DC"
+                      displayEmpty
+                      style={{
+                        ...inputStyle,
+                        borderColor: errors.dc_id ? "red" : "#d1d5db",
+                      }}
+                      MenuProps={{
+                        PaperProps: { style: { maxHeight: 300 } },
+                        onEntered: () => setDcSearchTerm(""), // Reset search when dropdown opens
+                      }}
+                      renderValue={(selected) => {
+                        if (!selected) return <em>Select DC</em>;
+                        const order = orders.find(x => x.id === parseInt(selected));
+                        if (!order) return "Select DC";
+
+                        return order.type === "dispatch_order"
+                          ? `${order.dispatch_order_id} - ${order.personalDetails?.first_name} (${getCompanyName(order)})`
+                          : `${order.quotation_id} - ${order.personalDetails?.first_name} ${order.personalDetails?.last_name} (${getCompanyName(order)})`;
+                      }}
+                    >
+                      {/* Search bar inside dropdown */}
+                      <div
+                        style={{
+                          padding: "8px",
+                          position: "sticky",
+                          top: 0,
+                          background: "#fff",
+                          zIndex: 1,
+                          borderBottom: "1px solid #e0e0e0",
+                        }}
+                      >
+                        <TextField
+                          fullWidth
+                          size="small"
+                          placeholder="Search DC"
+                          value={dcSearchTerm}
+                          onChange={(e) => setDcSearchTerm(e.target.value)}
+                          onClick={(e) => e.stopPropagation()}
+                          onKeyDown={(e) => e.stopPropagation()}
+                          autoFocus
+                        />
+                      </div>
+
+                      {/* Smart multi-word search filter */}
+                      {orders.length === 0 ? (
+                        <MenuItem disabled>No DCs available</MenuItem>
+                      ) : (
+                        orders
+                          .filter((order) => {
+                            const term = dcSearchTerm.trim().toLowerCase();
+                            if (!term) return true;
+
+                            const words = term.split(" ").filter(Boolean);
+                            const personalDetails = order.personalDetails || {};
+
+                            // Create search text with all searchable fields
+                            const searchText = [
+                              order.type === "dispatch_order" ? order.dispatch_order_id : order.quotation_id,
+                              personalDetails.first_name,
+                              personalDetails.last_name,
+                              getCompanyName(order),
+                              personalDetails.email,
+                              personalDetails.phone_number
+                            ]
+                              .filter(Boolean)
+                              .join(" ")
+                              .toLowerCase();
+
+                            return words.every(word => searchText.includes(word));
+                          })
+                          .map((order) => {
+                            const personalDetails = order.personalDetails || {};
+                            return (
+                              <MenuItem key={order.id} value={order.id}>
+                                {order.type === "dispatch_order"
+                                  ? `${order.dispatch_order_id} - ${personalDetails.first_name} (${getCompanyName(order)})`
+                                  : `${order.quotation_id} - ${personalDetails.first_name} ${personalDetails.last_name} (${getCompanyName(order)})`}
+                              </MenuItem>
+                            );
+                          })
+                      )}
+                    </Select>
+                    {errors.dc_id && (
+                      <Typography color="error" variant="caption">
+                        {errors.dc_id}
+                      </Typography>
+                    )}
+                  </FormControl>
+                </div>
+              </div>
 
               <Field
                 label="Transaction Type"
@@ -1654,7 +1756,7 @@ const InvoicesAddPage = () => {
                 placeholder="Enter GST Number"
               />
               <Field
-                label="Email"
+                label="Customer Email"
                 name="email"
                 value={formData.email}
                 onChange={handleInputChange}
@@ -1662,7 +1764,7 @@ const InvoicesAddPage = () => {
                 type="email"
               />
               <Field
-                label="Phone"
+                label="Customer Phone"
                 name="phone_number"
                 value={formData.phone_number}
                 onChange={handleInputChange}
@@ -1670,14 +1772,14 @@ const InvoicesAddPage = () => {
                 type="tel"
               />
               <Field
-                label="PAN"
+                label="Customer PAN"
                 name="pan_number"
                 value={formData.pan_number}
                 onChange={handleInputChange}
                 placeholder="Enter PAN"
               />
 
-              <Field
+              {/* <Field
                 label="Consultant"
                 name="invoice_consulting_by"
                 value={formData.invoice_consulting_by}
@@ -1697,7 +1799,7 @@ const InvoicesAddPage = () => {
                 value={formData.remarks}
                 onChange={handleInputChange}
                 placeholder="Enter Remarks"
-              />
+              /> */}
             </div>
           </div>
 
@@ -1777,10 +1879,17 @@ const InvoicesAddPage = () => {
           </div>
 
           <div style={cardStyle}>
-            <div style={cardHeaderContainerStyle}>
-              <div style={iconStyle}>📦</div>
-              <h3 style={cardHeaderStyle}>Courier Charges</h3>
-            </div>
+
+
+
+            <Field
+              label="Peripherals small amount"
+              name="is_small_amount"
+              type="checkbox"
+              value={formData.is_small_amount}
+              onChange={handleInputChange}
+            />
+
           </div>
         </div>
 

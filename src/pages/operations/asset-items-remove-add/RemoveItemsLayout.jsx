@@ -448,15 +448,15 @@ const RemoveItemsLayout = () => {
                 });
             }
 
-            if (productData.processor_model && !productData.itemsInfo?.processor_model) {
+            if ((productData.processor_model || productData.processor) && (!productData.itemsInfo?.processor_model || !productData.itemsInfo?.processor)) {
                 currentConfig.push({
                     id: 2,
                     type: 'processor',
                     name: 'Processor',
-                    specification: productData.processor_model,
+                    specification: productData.processor_model || productData.processor,
                     isDefault: true,
                     price: 0,
-                    size: productData.processor_model,
+                    size: productData.processor_model || productData.processor,
                     installedDate: '2024-01-15'
                 });
             }

@@ -1,23 +1,26 @@
-import React, { useState, useEffect } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import API_URL from "../../../api/Api_url";
-  import { useSelector } from "react-redux";
+import { useSelector } from "react-redux";
+import Pagination from '@mui/material/Pagination';
+import Stack from '@mui/material/Stack';
 
-const RecentSales = () => {
-
-
-    const { user, token } = useSelector((state) => state.auth);
-  
-    const userToken = token;
+const RecentRentals = () => {
+  const { user, token } = useSelector((state) => state.auth);
+  const userToken = token;
 
   const [fromMonth, setFromMonth] = useState(
     new Date(new Date().setMonth(new Date().getMonth() - 1))
   );
   const [toMonth, setToMonth] = useState(new Date());
-  const [recentSales, setRecentSales] = useState([]);
+  const [recentRentals, setRecentRentals] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  
+  // Pagination states
+  const rowsPerPage = 4; // change if needed
+  const [page, setPage] = useState(1);
 
   // Format date to YYYY-MM for filtering
   const formatDateYYYYMM = (date) => {
@@ -27,11 +30,10 @@ const RecentSales = () => {
   };
 
   useEffect(() => {
-    const fetchSales = async () => {
+    const fetchRentals = async () => {
       setLoading(true);
       setError(null);
       try {
-        const token = localStorage.getItem("token");
         const response = await fetch(`${API_URL}/delivery-challans`, {
           headers: {
             "Authorization": `Bearer ${userToken}`,
@@ -45,61 +47,45 @@ const RecentSales = () => {
         const startMonth = formatDateYYYYMM(fromMonth);
         const endMonth = formatDateYYYYMM(toMonth);
 
-        // Filter challans of type "Buy" within month range
+        // Filter Rent type challans within month range
         const filtered = data.filter((challan) => {
-          if (challan.type !== "Buy") return false;
+          if (challan.type !== "Rent") return false;
 
-          // Extract YYYY-MM from dc_date (which might be YYYY-MM-DD)
-          const challanMonth = challan.dc_date.substring(0, 7);
+          const challanMonth = challan.dc_date.substring(0, 7); // Extract YYYY-MM
           return challanMonth >= startMonth && challanMonth <= endMonth;
         });
 
-        const salesForTable = [];
-        filtered.forEach((challan) => {
-          const customer = challan.shipping_name || "-";
-          const date = challan.dc_date || "-";
-          const status = challan.dc_status || "Unknown";
-          const idBase = challan.dc_id || challan.id;
+        const rentalsForTable = filtered.map((challan) => ({
+          id: challan.dc_id || challan.id,
+          shipping_name: challan.shipping_name || "-",
+          model: challan.items?.[0]?.product_name || "-",
+          startDate: challan.dc_date,
+          endDate: "-",
+          status: challan.dc_status || "Unknown",
+        }));
 
-          if (challan.items && challan.items.length) {
-            challan.items.forEach((item, idx) => {
-              salesForTable.push({
-                id: `${idBase}-${item.id || idx}`,
-                customer,
-                model: item.product_name || "-",
-                date,
-                price: item.total_price
-                  ? parseFloat(item.total_price).toLocaleString(undefined, {
-                      style: "currency",
-                      currency: "INR",
-                    })
-                  : "-",
-                status,
-              });
-            });
-          } else {
-            salesForTable.push({
-              id: idBase,
-              customer,
-              model: "-",
-              date,
-              price: "-",
-              status,
-            });
-          }
-        });
-
-        setRecentSales(salesForTable);
+        setRecentRentals(rentalsForTable);
+        setPage(1); // Reset to first page when data changes
       } catch (err) {
-        console.error("Error fetching sales:", err);
-        setError("Failed to load recent sales.");
+        console.error("Error fetching rentals:", err);
+        setError("Failed to load recent rentals.");
       } finally {
         setLoading(false);
       }
     };
 
-    fetchSales();
-  }, [fromMonth, toMonth]);
+    fetchRentals();
+  }, [fromMonth, toMonth, userToken]);
+
+  // Calculate total pages
+  const totalPages = Math.ceil(recentRentals.length / rowsPerPage);
+
+  // Paginate data
+  const paginatedData = useMemo(() => {
+    const startIndex = (page - 1) * rowsPerPage;
+    const endIndex = startIndex + rowsPerPage;
+    return recentRentals.slice(startIndex, endIndex);
+  }, [recentRentals, page]);
 
   const getStatusColor = (status) => {
     switch (status) {
@@ -133,9 +119,9 @@ const RecentSales = () => {
   return (
     <div style={tableCardStyle}>
       <div style={chartHeaderWithDateStyle}>
-        <div style={tableHeaderStyle}>
-          <div style={tableIconStyle}>💵</div>
-          <h2 style={tableTitleStyle}>Recent Sales</h2>
+        <div style={chartHeaderStyle}>
+          <div style={chartIconStyle}>📈</div>
+          <h2 style={chartTitleStyle}>Recent Rentals</h2>
         </div>
         <div style={dateRangeContainerStyle}>
           <div style={datePickerContainerStyle}>
@@ -183,90 +169,78 @@ const RecentSales = () => {
       </div>
       <div style={tableContainerStyle}>
         {loading ? (
-          <div
-            style={{ padding: "1rem", color: "#64748b", textAlign: "center" }}
-          >
-            Loading recent sales...
+          <div style={loadingStyle}>
+            Loading recent rentals...
           </div>
         ) : error ? (
-          <div
-            style={{ padding: "1rem", color: "#ef4444", textAlign: "center" }}
-          >
+          <div style={errorStyle}>
             {error}
           </div>
-        ) : recentSales.length === 0 ? (
-          <div
-            style={{ padding: "1rem", color: "#64748b", textAlign: "center" }}
-          >
-            No sales found for selected month range.
+        ) : recentRentals.length === 0 ? (
+          <div style={noDataStyle}>
+            No rentals found for selected month.
           </div>
         ) : (
-          <table style={tableStyle}>
-            <thead>
-              <tr style={tableHeaderRowStyle}>
-                <th style={tableHeaderCellStyle}>Sale ID</th>
-                <th style={tableHeaderCellStyle}>Customer</th>
-                <th style={tableHeaderCellStyle}>Model</th>
-                <th style={tableHeaderCellStyle}>Date</th>
-                <th style={{ ...tableHeaderCellStyle, textAlign: "right" }}>
-                  Price
-                </th>
-                <th style={{ ...tableHeaderCellStyle, textAlign: "right" }}>
-                  Status
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {recentSales.map((row, index) => (
-                <tr key={index} style={tableRowStyle}>
-                  <td style={tableCellIdStyle}>{row.id}</td>
-                  <td style={tableCellStyle}>{row.customer}</td>
-                  <td style={tableCellStyle}>{row.model}</td>
-                  <td style={tableCellStyle}>{row.date}</td>
-                  <td
-                    style={{
-                      ...tableCellStyle,
-                      textAlign: "right",
-                      fontWeight: "600",
-                    }}
-                  >
-                    {row.price}
-                  </td>
-                  <td style={{ ...tableCellStyle, textAlign: "right" }}>
-                    <span
-                      style={{
-                        ...statusBadgeStyle,
-                        ...getStatusColor(row.status),
-                      }}
-                    >
-                      {row.status}
-                    </span>
-                  </td>
+          <>
+            <table style={tableStyle}>
+              <thead>
+                <tr style={tableHeaderRowStyle}>
+                  <th style={tableHeaderCellStyle}>Rental ID</th>
+                  <th style={tableHeaderCellStyle}>Customer Name</th>
+                  <th style={tableHeaderCellStyle}>Model</th>
+                  <th style={tableHeaderCellStyle}>Start Date</th>
+                  <th style={{ ...tableHeaderCellStyle, textAlign: "right" }}>
+                    Status
+                  </th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {paginatedData.map((row, index) => (
+                  <tr key={index} style={tableRowStyle}>
+                    <td style={tableCellIdStyle}>{row.id}</td>
+                    <td style={tableCellStyle}>{row.shipping_name}</td>
+                    <td style={tableCellStyle}>{row.model}</td>
+                    <td style={tableCellStyle}>{row.startDate}</td>
+                    <td style={{ ...tableCellStyle, textAlign: "right" }}>
+                      <span
+                        style={{
+                          ...statusBadgeStyle,
+                          ...getStatusColor(row.status),
+                        }}
+                      >
+                        {row.status}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+
+            {/* Pagination Component */}
+              <Stack spacing={2} alignItems="center" mt={2} mb={1}>
+                <Pagination
+                  count={totalPages}
+                  page={page}
+                  onChange={(event, value) => setPage(value)}
+                  color="primary"
+                  variant="outlined"
+                  shape="rounded"
+                />
+              </Stack>
+          </>
         )}
       </div>
     </div>
   );
 };
 
-export default RecentSales;
-
-// Styles (same as before)
-const chartCardStyle = {
-  backgroundColor: "#ffffff",
-  borderRadius: "16px",
-  padding: "1.5rem",
-  boxShadow: "0 10px 25px rgba(0, 0, 0, 0.1)",
-  border: "1px solid rgba(255, 255, 255, 0.2)",
-};
-
-const chartHeaderStyle = {
-  display: "flex",
-  alignItems: "center",
-  gap: "0.5rem",
+// Styles
+const tableCardStyle = {
+  backgroundColor: "white",
+  borderRadius: "10px",
+  boxShadow: "0 1px 3px rgba(0, 0, 0, 0.1)",
+  padding: "20px",
+  marginBottom: "20px",
 };
 
 const chartHeaderWithDateStyle = {
@@ -276,6 +250,12 @@ const chartHeaderWithDateStyle = {
   marginBottom: "1.5rem",
   flexWrap: "wrap",
   gap: "1rem",
+};
+
+const chartHeaderStyle = {
+  display: "flex",
+  alignItems: "center",
+  gap: "0.5rem",
 };
 
 const chartIconStyle = {
@@ -322,31 +302,6 @@ const datePickerButtonStyle = {
   cursor: "pointer",
   minWidth: "150px",
   textAlign: "left",
-};
-
-const tableCardStyle = {
-  backgroundColor: "white",
-  borderRadius: "10px",
-  boxShadow: "0 1px 3px rgba(0, 0, 0, 0.1)",
-  padding: "20px",
-  marginBottom: "20px",
-};
-
-const tableHeaderStyle = {
-  display: "flex",
-  alignItems: "center",
-  gap: "10px",
-};
-
-const tableIconStyle = {
-  fontSize: "20px",
-};
-
-const tableTitleStyle = {
-  fontSize: "18px",
-  fontWeight: "600",
-  color: "#1e293b",
-  margin: "0",
 };
 
 const tableContainerStyle = {
@@ -397,3 +352,23 @@ const statusBadgeStyle = {
   fontWeight: "500",
   display: "inline-block",
 };
+
+const loadingStyle = {
+  padding: "1rem",
+  color: "#64748b",
+  textAlign: "center",
+};
+
+const errorStyle = {
+  padding: "1rem",
+  color: "#ef4444",
+  textAlign: "center",
+};
+
+const noDataStyle = {
+  padding: "1rem",
+  color: "#64748b",
+  textAlign: "center",
+};
+
+export default RecentRentals;

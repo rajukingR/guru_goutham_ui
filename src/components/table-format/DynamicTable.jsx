@@ -24,6 +24,7 @@ import axios from "axios";
 import { jsPDF } from "jspdf";
 import html2canvas from "html2canvas";
 import numWords from "num-words";
+import VisibilityIcon from "@mui/icons-material/Visibility";
 
 // Import Icons
 import DeleteIcon from "../../assets/logos/delete.png";
@@ -36,6 +37,7 @@ import { API_URL, IMAGE_API_URL } from "../../api/Api_url";
 import { useSelector } from "react-redux";
 import CloudUploadIcon from "@mui/icons-material/CloudUpload";
 import CloudDownloadIcon from "@mui/icons-material/CloudDownload";
+import { generateSpecifications } from "../../utils/generateSpecifications";
 
 
 // API Endpoints Mapping
@@ -1381,13 +1383,16 @@ const QuotationDialog = ({ open, onClose, quotationData }) => {
                             lineHeight: "1.4",
                           }}
                         >
-                          <strong>Specifications:</strong> Brand:{" "}
+                          <strong>Specifications:</strong> {generateSpecifications(item.product)}
+
+
+                          {/* <strong>Specifications:</strong> Brand:{" "}
                           {item.product?.brand}, Model: {item.product?.model},
                           Processor: {item.product?.processor_model}, RAM:{" "}
                           {item.product?.ram}, Storage: {item.product?.storage},
                           <br />
                           Disk Type: {item.product?.disk_type}, Graphics:{" "}
-                          {item.product?.graphics}, OS: {item.product?.os}.
+                          {item.product?.graphics}, OS: {item.product?.os}. */}
                         </div>
                         <br />
                       </td>
@@ -5013,14 +5018,14 @@ const InvoiceDialog = ({ open, onClose, invoiceData }) => {
         let description;
 
         if (specialCase) {
-          days = calculateDays(dcDate, invoiceEndDate);
+          days = calculateDays(invoiceStartDate, invoiceEndDate);
           description = `Billing Start Date: ${formatDate(
-            dcDate
+            invoiceStartDate
           )} to ${formatDate(invoiceEndDate)}`;
         } else if (sameMonth) {
-          days = calculateDays(dcDate, invoiceEndDate);
+          days = calculateDays(invoiceStartDate, invoiceEndDate);
           description = `Billing Start Date: ${formatDate(
-            dcDate
+            invoiceStartDate
           )} to ${formatDate(invoiceEndDate)}`;
         } else {
           days = calculateDays(invoiceStartDate, invoiceEndDate);
@@ -5189,13 +5194,52 @@ const InvoiceDialog = ({ open, onClose, invoiceData }) => {
     return parseFloat(rawAmount.toFixed(2));
   };
 
-  // Function to get asset transactions for specific device IDs
-  const getAssetTransactionsForDevices = (deviceIds) => {
-    if (!invoiceData.asset_transactions || !Array.isArray(deviceIds)) return [];
 
-    return invoiceData.asset_transactions.filter(
-      txn => deviceIds.includes(txn.parent_asset_id)
-    );
+
+  const buildTransactionsMap = (invoiceData) => {
+    const map = {};
+
+    const pushTxn = (txn) => {
+      if (!txn) return;
+      const deviceId = txn.parent_asset_id || txn.parentAssetId || txn.asset_parent_id || txn.asset_parent || txn.parent_asset || txn.device_id;
+      if (!deviceId) return;
+      if (!map[deviceId]) map[deviceId] = [];
+      map[deviceId].push(txn);
+    };
+
+    (invoiceData.asset_transactions || []).forEach(pushTxn);
+
+    // item-level asset_transactions may be either:
+    // - [ { device_id, transactions: [...] }, ... ]
+    // - or [ { ...txn... }, ... ] (flat txn objects)
+    (invoiceData.items || []).forEach((it) => {
+      (it.asset_transactions || []).forEach((x) => {
+        if (x && x.device_id && Array.isArray(x.transactions)) {
+          x.transactions.forEach(pushTxn);
+        } else {
+          pushTxn(x);
+        }
+      });
+    });
+
+    // sort by action_date asc
+    Object.keys(map).forEach((k) => {
+      map[k].sort((a, b) => new Date(a.action_date) - new Date(b.action_date));
+    });
+
+    return map;
+  };
+
+
+  const getAssetTransactionsForDevices = (deviceIds = []) => {
+    if (!invoiceData) return [];
+    const txnsMap = buildTransactionsMap(invoiceData);
+    const results = [];
+    deviceIds.forEach((did) => {
+      (txnsMap[did] || []).forEach((t) => results.push(t));
+    });
+    // already chronological per device, but combine and sort
+    return results.sort((a, b) => new Date(a.action_date) - new Date(b.action_date));
   };
 
   // Group devices by their final specifications
@@ -5227,19 +5271,17 @@ const InvoiceDialog = ({ open, onClose, invoiceData }) => {
   // Create a unique key based on specifications
   const createSpecificationKey = (specs) => {
     return [
-      specs.ram || '',
-      specs.storage || '',
-      specs.disk_type || '',
-      specs.processor_model || '',
-      specs.graphics || '',
-      specs.os || ''
-    ].join('|');
+      specs.ram || "",
+      specs.storage || "",
+      specs.disk_type || "",
+      specs.processor || specs.processor_model || "",
+      specs.graphics || "",
+      specs.os || ""
+    ].join("|");
   };
-
 
   const specificationType = (itemType) => {
     if (!itemType || typeof itemType !== "string") return "";
-
     switch (itemType.toLowerCase()) {
       case "ram": return "RAM";
       case "storage": return "Storage";
@@ -5256,6 +5298,7 @@ const InvoiceDialog = ({ open, onClose, invoiceData }) => {
         return itemType.charAt(0).toUpperCase() + itemType.slice(1);
     }
   };
+
 
 
   // Enhanced specifications renderer
@@ -5512,171 +5555,97 @@ const InvoiceDialog = ({ open, onClose, invoiceData }) => {
 
 
 
-  // Render product specifications
   const renderSpecifications = (product, deviceIds = []) => {
     if (!product) return null;
+    if (!invoiceData) return null;
 
-    const invoiceStart = new Date(invoiceDate);
+    // Use invoice start date for month-diff calculations if needed
+    const invoiceStart = invoiceDate ? new Date(invoiceDate) : (invoiceData ? new Date(invoiceData.invoice_start_date) : null);
+
+    // Build merged transactions for these devices (flat chronological)
     const deviceAssetTransactions = getAssetTransactionsForDevices(deviceIds);
 
-    const sortedTransactions = [...deviceAssetTransactions].sort(
-      (a, b) => new Date(a.action_date) - new Date(b.action_date)
-    );
+    // Already sorted by date in getAssetTransactionsForDevices
+    const sortedTransactions = [...deviceAssetTransactions].sort((a, b) => new Date(a.action_date) - new Date(b.action_date));
 
+    // Apply same filter you had but use invoiceStart safely
     const filteredTransactions = sortedTransactions.filter((txn) => {
+      if (!invoiceStart) return true; // keep everything if invoiceStart absent
       const actionDate = new Date(txn.action_date);
-      const monthDiff =
-        (actionDate.getFullYear() - invoiceStart.getFullYear()) * 12 +
-        (actionDate.getMonth() - invoiceStart.getMonth());
+      const monthDiff = (actionDate.getFullYear() - invoiceStart.getFullYear()) * 12 + (actionDate.getMonth() - invoiceStart.getMonth());
       return paymentMode ? monthDiff <= 0 : monthDiff < 0;
     });
 
-    // ✅ Collect active specs
-    let activeSpecs = {};
+    // collect active specs using filteredTransactions (but keep full history separately)
     let ramList = product.ram ? [product.ram] : [];
     let processorList = product.processor_model ? [product.processor_model] : [];
     let storageList = product.storage ? [product.storage] : [];
+    const activeSpecs = {};
 
     filteredTransactions.forEach((txn) => {
-      const type = txn.item_type;
-      const value = txn.size || txn.specification;
+      const type = (txn.item_type || "").toLowerCase();
+      const value = txn.size || txn.specification || txn.asset_id || txn.item_name || null;
+      const status = (txn.status || "").toLowerCase();
 
-      switch (type) {
-        case "ram":
-          if (txn.status === "Added") ramList.push(value);
-          else if (txn.status === "Removed") ramList = ramList.filter(r => r !== value);
-          break;
-
-        case "processor":
-          if (txn.status === "Added") processorList.push(value);
-          else if (txn.status === "Removed") processorList = processorList.filter(p => p !== value);
-          break;
-
-        case "storage":
-        case "hdd":
-        case "ssd":
-          if (txn.status === "Added") storageList.push(value);
-          else if (txn.status === "Removed") storageList = storageList.filter(s => s !== value);
-          break;
-
-        default:
-          if (txn.status === "Added") activeSpecs[type] = value;
-          else if (txn.status === "Removed") delete activeSpecs[type];
-          break;
+      if (status === "added") {
+        if (type === "ram" && value) ramList.push(value);
+        else if (type === "processor" && value) processorList.push(value);
+        else if ((type === "storage" || type === "ssd" || type === "hdd") && value) storageList.push(value);
+        else if (value) activeSpecs[type] = value;
+      } else if (status === "removed") {
+        if (type === "ram") {
+          if (value) {
+            const idx = ramList.indexOf(value);
+            if (idx >= 0) ramList.splice(idx, 1);
+            else if (ramList.length) ramList.splice(ramList.length - 1, 1);
+          }
+        } else if (type === "processor") {
+          if (value) {
+            const idx = processorList.indexOf(value);
+            if (idx >= 0) processorList.splice(idx, 1);
+            else if (processorList.length) processorList.splice(processorList.length - 1, 1);
+          }
+        } else if (type === "storage" || type === "ssd" || type === "hdd") {
+          if (value) {
+            const idx = storageList.indexOf(value);
+            if (idx >= 0) storageList.splice(idx, 1);
+            else if (storageList.length) storageList.splice(storageList.length - 1, 1);
+          }
+        } else {
+          delete activeSpecs[type];
+        }
       }
     });
 
-    // ✅ Final merged specs
-    let finalSpecs = { ...product };
-    Object.entries(activeSpecs).forEach(([type, value]) => {
-      switch (type) {
-        case "graphics":
-        case "gpu":
-          finalSpecs.graphics = value;
-          break;
-        case "os":
-          finalSpecs.os = value;
-          break;
-        default:
-          if (value) finalSpecs[type] = value;
-          break;
-      }
-    });
+    // Final specs merge
+    const finalSpecs = { ...product };
+    finalSpecs.processor = processorList.length ? processorList.join(" + ") : product.processor_model || null;
+    finalSpecs.ram = ramList.length ? ramList.join(" + ") : product.ram || null;
+    finalSpecs.storage = storageList.length ? storageList.join(" + ") : product.storage || null;
 
-    // ✅ Combine all active values
-    let combinedRam = ramList.length > 0 ? ramList.join(" + ") : null;
-    let combinedProcessor = processorList.length > 0 ? processorList.join(" + ") : null;
-    let combinedStorage = storageList.length > 0 ? storageList.join(" + ") : null;
+    // Build history list (full chronological for these devices)
+    const history = sortedTransactions.slice(); // we kept it chronologically
 
-    // ✅ Handle is_default / upgraded logic for RAM, Processor, Storage
-    const handleDefaultUpgrade = (list, type, baseValue) => {
-      if (!list || list.length === 0) {
-        const hasDefaultRemoved = filteredTransactions.some(
-          (txn) => txn.item_type === type && txn.status === "Removed" && txn.is_default === "Default"
-        );
-        const hasUpgradedRemoved = filteredTransactions.some(
-          (txn) => txn.item_type === type && txn.status === "Removed" && txn.is_default === "Upgraded"
-        );
-
-        if (hasDefaultRemoved) return null;
-        else if (hasUpgradedRemoved && baseValue) return baseValue;
-      }
-      return list.length > 0 ? list.join(" + ") : null;
-    };
-
-    combinedRam = handleDefaultUpgrade(ramList, "ram", product.ram);
-    combinedProcessor = handleDefaultUpgrade(processorList, "processor", product.processor_model);
-    combinedStorage = handleDefaultUpgrade(storageList, "storage", product.storage);
-
-    // ✅ Render
+    // Render JSX (current specs + history)
     return (
-      <div
-        style={{
-          fontSize: "12px",
-          color: "#555",
-          textAlign: "justify",
-          lineHeight: "1.4",
-        }}
-      >
-        Specifications:{" "}
-        {finalSpecs?.brand && (
-          <>
-            <strong>Brand:</strong> {finalSpecs.brand},{" "}
-          </>
-        )}
-        {finalSpecs?.model && (
-          <>
-            <strong>Model:</strong> {finalSpecs.model},{" "}
-          </>
-        )}
-        {combinedProcessor && (
-          <>
-            <strong>Processor:</strong> {combinedProcessor},{" "}
-          </>
-        )}
-        {combinedRam && (
-          <>
-            <strong>RAM:</strong> {combinedRam},{" "}
-          </>
-        )}
-        {combinedStorage && (
-          <>
-            <strong>Storage:</strong> {combinedStorage},{" "}
-          </>
-        )}
-        {finalSpecs?.disk_type && (
-          <>
-            <strong>Disk Type:</strong> {finalSpecs.disk_type},{" "}
-          </>
-        )}
-        {finalSpecs?.graphics && (
-          <>
-            <strong>Graphics:</strong> {finalSpecs.graphics},{" "}
-          </>
-        )}
-        {finalSpecs?.os && (
-          <>
-            <strong>OS:</strong> {finalSpecs.os}.{" "}
-          </>
-        )}
+      <div style={{ fontSize: "12px", color: "#555", textAlign: "justify", lineHeight: "1.4" }}>
+        <div>
+          <strong>Specifications:</strong>{" "}
+          {finalSpecs?.brand && (<><strong>Brand:</strong> {finalSpecs.brand}, </>)}
+          {finalSpecs?.model && (<><strong>Model:</strong> {finalSpecs.model}, </>)}
+          {finalSpecs.processor && (<><strong>Processor:</strong> {finalSpecs.processor}, </>)}
+          {finalSpecs.ram && (<><strong>RAM:</strong> {finalSpecs.ram}, </>)}
+          {finalSpecs.storage && (<><strong>Storage:</strong> {finalSpecs.storage}, </>)}
+          {finalSpecs?.disk_type && (<><strong>Disk Type:</strong> {finalSpecs.disk_type}, </>)}
+          {finalSpecs?.graphics && (<><strong>Graphics:</strong> {finalSpecs.graphics}, </>)}
+          {finalSpecs?.os && (<><strong>OS:</strong> {finalSpecs.os}. </>)}
+        </div>
 
-        {/* Additional components */}
-        {filteredTransactions
-          .filter(
-            (txn) =>
-              txn.status === "Added" &&
-              !["ram", "storage", "hdd", "ssd", "processor", "graphics", "gpu", "os"].includes(txn.item_type)
-          )
-          .map((txn, index) => (
-            <span key={index}>
-              {" "}
-              <strong>{specificationType(txn.item_type)}:</strong>{" "}
-              {txn.specification || txn.size}.
-            </span>
-          ))}
+
       </div>
     );
   };
+
 
 
 
@@ -5874,6 +5843,9 @@ const InvoiceDialog = ({ open, onClose, invoiceData }) => {
 
 
   const renderAssetTransactionRow = (_, product, parentItem) => {
+
+    if (invoiceData.is_small_amount) return null;
+
     const invoiceDate = new Date(invoiceData.invoice_start_date);
     const paymentMode = invoiceData.payment_mode === "Postpaid";
 
@@ -6014,68 +5986,86 @@ const InvoiceDialog = ({ open, onClose, invoiceData }) => {
     };
   };
 
-  // Update the specifications to handle Removed transactions properly
-  const getFinalSpecificationsForDevice = (deviceId, baseProduct) => {
-    // Start with base product specifications
-    const finalSpecs = { ...baseProduct };
+  const getFinalSpecificationsForDevice = (deviceId, baseProduct = {}) => {
+    const txnsMap = buildTransactionsMap(invoiceData);
+    const deviceTxns = txnsMap[deviceId] || [];
 
-    // Apply asset transactions for this device
-    const deviceTransactions = getAssetTransactionsForDevices([deviceId]);
+    // Start from base product values
+    let ramList = baseProduct.ram ? [baseProduct.ram] : [];
+    let processorList = baseProduct.processor_model ? [baseProduct.processor_model] : [];
+    let storageList = baseProduct.storage ? [baseProduct.storage] : [];
+    let others = {}; // for other item_types like GPU, OS, etc.
 
-    // Process transactions in chronological order (by action_date)
-    const sortedTransactions = deviceTransactions.sort((a, b) =>
-      new Date(a.action_date) - new Date(b.action_date)
-    );
+    // Keep chronological history
+    const history = [];
 
-    sortedTransactions.forEach(txn => {
-      if (txn.status === "Added") {
-        // Apply added components
-        switch (txn.item_type) {
+    deviceTxns.forEach((txn) => {
+      history.push(txn);
+      const type = (txn.item_type || "").toLowerCase();
+      const value = txn.size || txn.specification || txn.asset_id || txn.item_name || null;
+      const status = (txn.status || "").toLowerCase();
+
+      if (status === "added") {
+        switch (type) {
           case "ram":
-            finalSpecs.ram = txn.size || txn.specification;
-            break;
-          case "storage":
-          case "hdd":
-          case "ssd":
-            finalSpecs.storage = txn.size || txn.specification;
-            finalSpecs.disk_type = txn.item_type === "ssd" ? "SSD" :
-              txn.item_type === "hdd" ? "HDD" :
-                txn.item_type || finalSpecs.disk_type;
+            if (value) ramList.push(value);
             break;
           case "processor":
-            finalSpecs.processor_model = txn.specification;
-            break;
-          case "graphics":
-          case "gpu":
-            finalSpecs.graphics = txn.specification;
-            break;
-          case "os":
-            finalSpecs.os = txn.specification;
-            break;
-          default:
-            break;
-        }
-      } else if (txn.status === "Removed") {
-        // Handle removed components - revert to base product or previous state
-        // For simplicity, we'll revert to base product spec for removed items
-        // In a more complex system, you might track the history
-        switch (txn.item_type) {
-          case "ram":
-            // If RAM is removed, revert to base product RAM
-            finalSpecs.ram = baseProduct.ram;
+            if (value) processorList.push(value);
             break;
           case "storage":
-          case "hdd":
           case "ssd":
-            finalSpecs.storage = baseProduct.storage;
-            finalSpecs.disk_type = baseProduct.disk_type;
+          case "hdd":
+            if (value) storageList.push(value);
             break;
-          // Add other cases as needed
           default:
+            if (value) others[type] = value;
+            break;
+        }
+      } else if (status === "removed") {
+        switch (type) {
+          case "ram":
+            if (value) {
+              const idx = ramList.indexOf(value);
+              if (idx >= 0) ramList.splice(idx, 1);
+              else if (ramList.length) ramList.splice(ramList.length - 1, 1);
+            }
+            break;
+          case "processor":
+            if (value) {
+              const idx = processorList.indexOf(value);
+              if (idx >= 0) processorList.splice(idx, 1);
+              else if (processorList.length) processorList.splice(processorList.length - 1, 1);
+            }
+            break;
+          case "storage":
+          case "ssd":
+          case "hdd":
+            if (value) {
+              const idx = storageList.indexOf(value);
+              if (idx >= 0) storageList.splice(idx, 1);
+              else if (storageList.length) storageList.splice(storageList.length - 1, 1);
+            }
+            break;
+          default:
+            delete others[type];
             break;
         }
       }
     });
+
+    const finalSpecs = {
+      brand: baseProduct.brand || null,
+      model: baseProduct.model || null,
+      processor: processorList.length ? processorList.join(" + ") : baseProduct.processor_model || null,
+      ram: ramList.length ? ramList.join(" + ") : baseProduct.ram || null,
+      storage: storageList.length ? storageList.join(" + ") : baseProduct.storage || null,
+      disk_type: baseProduct.disk_type || null,
+      graphics: baseProduct.graphics || null,
+      os: baseProduct.os || null,
+      others,
+      history,
+    };
 
     return finalSpecs;
   };
@@ -8198,6 +8188,8 @@ const DynamicTable = ({
 
   const userToken = token;
 
+
+
   const [data, setData] = useState([]);
   const [status, setStatus] = useState([]);
   const [page, setPage] = useState(1);
@@ -8211,6 +8203,13 @@ const DynamicTable = ({
   // Then in your DynamicTable component, add the state and handler for the invoice dialog:
   const [openInvoiceDialog, setOpenInvoiceDialog] = useState(false);
   const [selectedInvoiceRow, setSelectedInvoiceRow] = useState(null);
+
+
+  const [openAssetDialog, setOpenAssetDialog] = useState(false);
+  const [selectedAssetTransactions, setSelectedAssetTransactions] = useState([]);
+  const [selectedAssetId, setSelectedAssetId] = useState("");
+
+
   useEffect(() => {
     if (Array.isArray(initialData) && initialData.length > 0) {
       setData(initialData);
@@ -8439,6 +8438,16 @@ const DynamicTable = ({
     }
   };
 
+
+
+  const handleViewAssetTransactions = (row) => {
+    setSelectedAssetId(row.asset_id);
+    setSelectedAssetTransactions(row.asset_transactions || []);
+    setOpenAssetDialog(true);
+  };
+
+
+
   //   const handleViewInvoice = async (row, type = "current") => {
   //   try {
   //     const customerId = row.customer_id;
@@ -8608,17 +8617,20 @@ const DynamicTable = ({
         gap={2}
         mb={2}
       >
-        <TextField
-          label="Search"
-          variant="outlined"
-          size="small"
-          onChange={(e) => setSearchTerm(e.target.value)}
-          sx={{
-            '& .MuiOutlinedInput-root': {
-              borderRadius: '14px',
-            },
-          }}
-        />
+        {tableType !== "wear-house" && (
+          <TextField
+            label="Search"
+            variant="outlined"
+            size="small"
+            onChange={(e) => setSearchTerm(e.target.value)}
+            sx={{
+              '& .MuiOutlinedInput-root': {
+                borderRadius: '14px',
+              },
+            }}
+          />
+        )}
+
 
         {tableType !== "inventory" &&
           tableType !== "asset" &&
@@ -8775,6 +8787,13 @@ const DynamicTable = ({
                     Action
                   </TableCell>
                 )}
+
+
+              {tableType === "client-place" && (
+                <TableCell align="center" sx={{ fontWeight: "bold" }}>
+                  Peripherals History
+                </TableCell>
+              )}
             </TableRow>
           </TableHead>
 
@@ -9046,6 +9065,20 @@ const DynamicTable = ({
                     </>
                   )}
 
+                  {tableType === "client-place" && (
+                    <TableCell align="center">
+                      <Button
+                        onClick={() => handleViewAssetTransactions(row)}
+                        sx={{ minWidth: "30px", p: 0 }}
+                        title="View Asset Transactions"
+                      >
+                        <VisibilityIcon sx={{ fontSize: 28, color: "#1976d2" }} />
+
+                      </Button>
+                    </TableCell>
+                  )}
+
+
                   {/* Action Buttons */}
                   {["inventory"].includes(tableType) === false && (
                     <TableCell align="center">
@@ -9107,6 +9140,10 @@ const DynamicTable = ({
                       </Box>
                     </TableCell>
                   )}
+
+
+
+
                 </TableRow>
               ))
             ) : (
@@ -9157,6 +9194,73 @@ const DynamicTable = ({
           </Button>
         </DialogActions>
       </Dialog>
+
+
+      <Dialog
+        open={openAssetDialog}
+        onClose={() => setOpenAssetDialog(false)}
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle>
+          Asset Transaction History — {selectedAssetId}
+        </DialogTitle>
+
+        <DialogContent dividers>
+          {selectedAssetTransactions.length === 0 ? (
+            <Typography>No Peripherals History.</Typography>
+          ) : (
+            <Table>
+              <TableHead>
+                <TableRow sx={{ backgroundColor: "#f2f2f2" }}>
+                  <TableCell sx={{ fontWeight: "bold" }}>S.No</TableCell>
+                  <TableCell sx={{ fontWeight: "bold" }}>Action Date</TableCell>
+                  <TableCell sx={{ fontWeight: "bold" }}>Asset ID</TableCell>
+                  <TableCell sx={{ fontWeight: "bold" }}>Item Name</TableCell>
+                  <TableCell sx={{ fontWeight: "bold" }}>Type</TableCell>
+                  <TableCell sx={{ fontWeight: "bold" }}>Specification</TableCell>
+                  <TableCell sx={{ fontWeight: "bold" }}>Price</TableCell>
+                  <TableCell sx={{ fontWeight: "bold" }}>Status</TableCell>
+                </TableRow>
+
+              </TableHead>
+
+              <TableBody>
+                {selectedAssetTransactions.map((t, index) => (
+                  <TableRow key={t.id}>
+                    <TableCell>{index + 1}</TableCell>
+                    <TableCell>{t.action_date}</TableCell>
+                    <TableCell>{t.parent_asset_id}</TableCell>
+                    <TableCell>{t.item_name}</TableCell>
+                    <TableCell>{t.item_type}</TableCell>
+                    <TableCell>{t.specification}</TableCell>
+                    <TableCell>₹{t.price}</TableCell>
+                    <TableCell>
+                      <span
+                        style={{
+                          padding: "4px 10px",
+                          borderRadius: "6px",
+                          fontWeight: 600,
+                          color: t.status === "Added" ? "green" : "red",
+                          background: t.status === "Added" ? "#d6e4d6ff" : "#ebd7d7ff",
+                        }}
+                      >
+                        {t.status}
+                      </span>
+                    </TableCell>
+
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </DialogContent>
+
+        <DialogActions>
+          <Button onClick={() => setOpenAssetDialog(false)}>Close</Button>
+        </DialogActions>
+      </Dialog>
+
 
       {/* Delivery Challan Dialog */}
       <DeliveryChallanDialog

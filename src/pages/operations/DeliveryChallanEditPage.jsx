@@ -14,6 +14,7 @@ import {
   Snackbar,
   Alert,
   Typography,
+  FormControl, Select, MenuItem,
 } from "@mui/material";
 import { Add, Remove } from "@mui/icons-material";
 import { useNavigate, useParams } from "react-router-dom";
@@ -444,6 +445,7 @@ const DeliveryChallanEditPage = () => {
   const [showOtherAccessory, setShowOtherAccessory] = useState(false);
   const [otherAccessory, setOtherAccessory] = useState("");
   const [accessoryErrors, setAccessoryErrors] = useState({});
+  const [orderPrepSearchTerm, setOrderPrepSearchTerm] = useState("");
 
   const [snackbar, setSnackbar] = useState({
     open: false,
@@ -985,24 +987,117 @@ const DeliveryChallanEditPage = () => {
                 readOnly
               />
 
-              <Field
-                label="Select Order Preparation"
-                name="order_id"
-                type="select"
-                placeholder="Select Order Preparation"
-                value={formData.order_id}
-                onChange={(e) => {
-                  handleOrderSelect(e.target.value);
-                  if (errors.order_id) {
-                    setErrors({ ...errors, order_id: "" });
-                  }
-                }}
-                error={errors.order_id}
-                options={dispatchOrders.map((order) => ({
-                  value: order.id,
-                  label: `${order.dispatch_order_id} - ${order.shipping_name || ""} (${order.contact.company_name || ""})`,
-                }))}
-              />
+              {/* Select Order Preparation Dropdown */}
+              <div style={fieldContainerStyle}>
+                <label style={labelStyle}>Select Order Preparation</label>
+
+                <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                  <FormControl fullWidth size="small">
+                    <Select
+                      value={formData.order_id || ""}
+                      displayEmpty
+                      onChange={(e) => {
+                        handleOrderSelect(e.target.value);
+                        if (errors.order_id) {
+                          setErrors({ ...errors, order_id: "" });
+                        }
+
+                        // Reset search when selection is made
+                        setOrderPrepSearchTerm("");
+                      }}
+                      style={{
+                        ...inputStyle,
+                        borderColor: errors.order_id ? "red" : "#d1d5db",
+                      }}
+                      MenuProps={{
+                        PaperProps: { style: { maxHeight: 300 } },
+                        onEntered: () => setOrderPrepSearchTerm(""), // Reset search when dropdown opens
+                      }}
+                      renderValue={(selected) => {
+                        if (!selected) return <em>Select Order Preparation</em>;
+
+                        const order = dispatchOrders.find(x => x.id === parseInt(selected));
+                        if (!order) return "Select Order Preparation";
+
+                        return `${order.dispatch_order_id} - ${order.shipping_name || ""} (${order.contact?.company_name || ""})`;
+                      }}
+                    >
+                      {/* Search bar inside dropdown */}
+                      <div
+                        style={{
+                          padding: "8px",
+                          position: "sticky",
+                          top: 0,
+                          background: "#fff",
+                          zIndex: 1,
+                          borderBottom: "1px solid #e0e0e0",
+                        }}
+                      >
+                        <TextField
+                          fullWidth
+                          size="small"
+                          placeholder="Search Order Preparation"
+                          value={orderPrepSearchTerm}
+                          onChange={(e) => setOrderPrepSearchTerm(e.target.value)}
+                          onClick={(e) => e.stopPropagation()}
+                          onKeyDown={(e) => e.stopPropagation()}
+                          autoFocus
+                        />
+                      </div>
+
+                      {/* Smart multi-word search filter */}
+                      {dispatchOrders.length === 0 ? (
+                        <MenuItem disabled>
+                          No order preparations available
+                        </MenuItem>
+                      ) : (
+                        dispatchOrders
+                          .filter((order) => {
+                            const term = orderPrepSearchTerm.trim().toLowerCase();
+                            if (!term) return true;
+
+                            const words = term.split(" ").filter(Boolean);
+
+                            // Create search text with all searchable fields
+                            const searchText = [
+                              order.dispatch_order_id,
+                              order.shipping_name,
+                              order.contact?.company_name,
+                              order.order_number,
+                              order.email
+                            ]
+                              .filter(Boolean)
+                              .join(" ")
+                              .toLowerCase();
+
+                            return words.every(word => searchText.includes(word));
+                          })
+                          .map((order) => (
+                            <MenuItem key={order.id} value={order.id}>
+
+
+
+
+
+                              <div>
+                                {order.dispatch_order_id}
+                                {order.shipping_name || "No Name"}
+                                {order.contact?.company_name && ` - ${order.contact.company_name}`}
+                              </div>
+
+                            </MenuItem>
+                          ))
+                      )}
+                    </Select>
+                  </FormControl>
+
+                  {errors.order_id && (
+                    <span style={{ color: "red", fontSize: "0.75rem" }}>
+                      {errors.order_id}
+                    </span>
+                  )}
+                </div>
+              </div>
 
               <Field
                 label="Order Number"
@@ -1262,7 +1357,10 @@ const DeliveryChallanEditPage = () => {
                 required
               />
             </div>
-            {/* Default DC Checkbox */}
+            
+          </div>
+        </div>
+{/* Default DC Checkbox */}
             <div style={fieldContainerStyle}>
               <label
                 style={{
@@ -1412,9 +1510,6 @@ const DeliveryChallanEditPage = () => {
                 </div>
               )}
             </div>
-          </div>
-        </div>
-
         {/* Select Products Section */}
         <div style={cardStyle}>
           <div style={cardHeaderContainerStyle}>

@@ -16,13 +16,13 @@ import { useSelector } from "react-redux";
 const ClientPlaceStock = () => {
   const [clients, setClients] = useState([]);
   const [selectedCustomer, setSelectedCustomer] = useState("");
-  const [assetData, setAssetData] = useState([]);
+  const [assetData, setAssetData] = useState([]);  
   const [summary, setSummary] = useState(null);
   const [loading, setLoading] = useState(false);
 
-    const { user, token } = useSelector((state) => state.auth);
-  
-    const userToken = token;
+  const { token } = useSelector((state) => state.auth);
+  const userToken = token;
+
   const columns = [
     { id: "s_id", label: "S.No." },
     { id: "product_image", label: "Image" },
@@ -31,21 +31,14 @@ const ClientPlaceStock = () => {
     { id: "product_category", label: "Product Category" },
     { id: "specifications", label: "Specifications" },
     { id: "purchase_price", label: "Purchase Price (₹)" },
-    // { id: "dc_id", label: "DC Number" },
-    // { id: "dc_date", label: "Delivery Date" },
   ];
 
   useEffect(() => {
     const fetchClients = async () => {
       try {
-        const token = localStorage.getItem("token");
         const response = await axios.get(
           `${API_URL}/contacts/delivered-contacts`,
-          {
-            headers: {
-              "Authorization": `Bearer ${userToken}`,
-            },
-          }
+          { headers: { Authorization: `Bearer ${userToken}` } }
         );
 
         if (response.status === 200) {
@@ -56,7 +49,6 @@ const ClientPlaceStock = () => {
           }));
           setClients(dataWithSno);
 
-          // Auto-select the first customer if available
           if (response.data.length > 0) {
             setSelectedCustomer(response.data[0].id);
           }
@@ -78,12 +70,10 @@ const ClientPlaceStock = () => {
   const fetchClientSideAssets = async (customerId) => {
     try {
       setLoading(true);
-      const token = localStorage.getItem("token");
+
       const response = await axios.get(
         `${API_URL}/delivery-challans/customer-details/${customerId}`,
-        {
-          headers: { "Authorization": `Bearer ${userToken}` },
-        }
+        { headers: { Authorization: `Bearer ${userToken}` } }
       );
 
       if (response.status === 200) {
@@ -92,75 +82,73 @@ const ClientPlaceStock = () => {
         const assets = [];
         let serialNumber = 1;
 
-        // Process each challan and its items
         challans.forEach((challan) => {
-          if (challan.items && challan.items.length > 0) {
-            challan.items.forEach((item) => {
-              const p = item.product || {};
+          challan.items?.forEach((item) => {
+            const p = item.product || {};
 
-              // Process each device in the device_ids array
-              if (item.device_ids && item.device_ids.length > 0) {
-                item.device_ids.forEach((deviceId) => {
-                  const specifications = `
-                    RAM: ${p.ram || "N/A"}, 
-                    Storage: ${p.storage || "N/A"}, 
-                    Disk: ${p.disk_type || "N/A"}, 
-                    Processor: ${p.processor_model || p.processor || "N/A"},
-                    Model: ${p.model || "N/A"},
-                    Graphics: ${p.graphics || "N/A"}, 
-                    OS: ${p.os || "N/A"}, 
-                    Mouse: ${formatBoolean(p.mouse)}, 
-                    Keyboard: ${formatBoolean(p.keyboard)}, 
-                    Speaker: ${formatBoolean(p.speaker)}, 
-                    Webcam: ${formatBoolean(p.webcam)}, 
-                    DVD: ${formatBoolean(p.dvd)}
-                  `
-                    .trim()
-                    .replace(/\s+/g, " ");
+            // 🔥 IMPORTANT: LOOP THROUGH asset_transactions
+            item.asset_transactions?.forEach((devTx) => {
+              const deviceId = devTx.device_id;
+              const transactions = devTx.transactions; // <-- now available in frontend
 
-                  assets.push({
-                    s_id: serialNumber++,
-                    product_image: (
-                      <img
-                        src={
-                          p.product_image
-                            ? `${IMAGE_API_URL}/${p.product_image}`
-                            : DefaultImage
-                        }
-                        alt={p.product_name}
-                        style={{
-                          width: "65px",
-                          height: "65px",
-                          objectFit: "contain",
-                          border: "2px solid gray",
-                          borderRadius: "6px",
-                        }}
-                        onError={(e) => {
-                          e.target.onerror = null;
-                          e.target.src = DefaultImage;
-                        }}
-                      />
-                    ),
-                    asset_id: deviceId,
-                    name: p.product_name || "N/A",
-                    product_category: p.product_category || "N/A",
-                    specifications,
-                    purchase_price: p.purchase_price
-                      ? `₹${parseFloat(p.purchase_price).toLocaleString(
-                          "en-IN"
-                        )}`
-                      : "N/A",
-                    dc_id: challan.dc_id || "N/A",
-                    dc_date: challan.dc_date || "N/A",
-                    original_price: p.purchase_price || 0,
-                  });
-                });
-              }
+              const specifications = `
+                RAM: ${p.ram || "N/A"},
+                Storage: ${p.storage || "N/A"},
+                Disk: ${p.disk_type || "N/A"},
+                Processor: ${p.processor_model || p.processor || "N/A"},
+                Model: ${p.model || "N/A"},
+                Graphics: ${p.graphics || "N/A"},
+                OS: ${p.os || "N/A"},
+                Mouse: ${formatBoolean(p.mouse)},
+                Keyboard: ${formatBoolean(p.keyboard)},
+                Speaker: ${formatBoolean(p.speaker)},
+                Webcam: ${formatBoolean(p.webcam)},
+                DVD: ${formatBoolean(p.dvd)}
+              `
+                .trim()
+                .replace(/\s+/g, " ");
+
+              assets.push({
+                s_id: serialNumber++,
+                product_image: (
+                  <img
+                    src={
+                      p.product_image
+                        ? `${IMAGE_API_URL}/${p.product_image}`
+                        : DefaultImage
+                    }
+                    alt={p.product_name}
+                    style={{
+                      width: "65px",
+                      height: "65px",
+                      objectFit: "contain",
+                      border: "2px solid gray",
+                      borderRadius: "6px",
+                    }}
+                    onError={(e) => {
+                      e.target.onerror = null;
+                      e.target.src = DefaultImage;
+                    }}
+                  />
+                ),
+                asset_id: deviceId,
+                name: p.product_name,
+                product_category: p.product_category,
+                specifications,
+                purchase_price: p.purchase_price
+                  ? `₹${parseFloat(p.purchase_price).toLocaleString("en-IN")}`
+                  : "N/A",
+                dc_id: challan.dc_id,
+                dc_date: challan.dc_date,
+                original_price: p.purchase_price || 0,
+
+                // 🔥 ADD THIS → full asset transaction data
+                asset_transactions: transactions,
+              });
             });
-          }
+          });
         });
 
-        // Calculate summary
         const totalAssets = assets.length;
         const totalValue = assets.reduce(
           (sum, asset) => sum + parseFloat(asset.original_price || 0),
@@ -174,8 +162,8 @@ const ClientPlaceStock = () => {
           customerName: `${customer.first_name} ${
             customer.last_name || ""
           }`.trim(),
-          companyName: customer.company_name || "N/A",
-          customerId: customer.customer_id || "N/A",
+          companyName: customer.company_name,
+          customerId: customer.customer_id,
         });
       }
     } catch (error) {
@@ -187,7 +175,6 @@ const ClientPlaceStock = () => {
     }
   };
 
-  // Helper function to format boolean values
   const formatBoolean = (value) => {
     if (value === true || value === "true") return "Yes";
     if (value === false || value === "false") return "No";
@@ -196,7 +183,7 @@ const ClientPlaceStock = () => {
 
   return (
     <div>
-      {/* Customer Selection Dropdown */}
+      {/* Customer Dropdown */}
       <FormControl fullWidth sx={{ mb: 3, maxWidth: 400 }}>
         <InputLabel>Select Customer</InputLabel>
         <Select
@@ -224,13 +211,9 @@ const ClientPlaceStock = () => {
             backgroundColor: "#f9f9f9",
           }}
         >
-          {/* <Typography variant="h6" gutterBottom>
-            Client Place Asset Inventory Summary
-          </Typography> */}
-
-            <Typography variant="body1">
-              Total Assets: <strong>{summary.totalAssets}</strong>
-            </Typography>
+          <Typography variant="body1">
+            Total Assets: <strong>{summary.totalAssets}</strong>
+          </Typography>
         </Box>
       )}
 
@@ -239,7 +222,7 @@ const ClientPlaceStock = () => {
       )}
 
       {selectedCustomer && assetData.length === 0 && !loading && (
-        <Typography variant="body1" sx={{ mt: 2, color: "text.secondary" }}>
+        <Typography sx={{ mt: 2, color: "text.secondary" }}>
           No assets found for this customer.
         </Typography>
       )}
@@ -248,6 +231,7 @@ const ClientPlaceStock = () => {
 };
 
 export default ClientPlaceStock;
+
 
 // import React, { useEffect, useState } from "react";
 // import DynamicTable from "../../../components/table-format/DynamicTable";

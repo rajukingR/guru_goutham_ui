@@ -18,12 +18,16 @@ import {
   DialogContent,
   DialogActions,
   Button,
+  FormControl,
+  MenuItem,
+  Select,
 } from "@mui/material";
 import { Add, Remove, Edit } from "@mui/icons-material";
 import { useNavigate, useParams } from "react-router-dom";
 import API_URL, { POSTAL_API } from "../../../api/Api_url";
 import { useInventory } from "../../../contexts/InventoryContext";
 import { useSelector } from "react-redux";
+import { generateSpecifications } from "../../../utils/generateSpecifications";
 
 // Styles (same as in your original code)
 const containerStyle = {
@@ -61,6 +65,7 @@ const formContainerStyle = {
 };
 
 const cardStyle = {
+  marginTop: "10px",
   backgroundColor: "#ffffff",
   padding: "1.5rem",
   borderRadius: "12px",
@@ -435,6 +440,7 @@ const DispatchOrdersEditForm = () => {
   const [approvedReceiptProducts, setApprovedReceiptProducts] = useState([]);
   const [postOffices, setPostOffices] = useState([]);
   const [showAssetSelection, setShowAssetSelection] = useState({});
+  const [orderSearchTerm, setOrderSearchTerm] = useState("");
 
   const getAvailableQty = (productId) => {
     const entry = approvedReceiptProducts.find(
@@ -517,6 +523,12 @@ const DispatchOrdersEditForm = () => {
     open: false,
     message: "",
     severity: "success",
+  });
+
+
+  const [errors, setErrors] = useState({
+    order_id: "",
+    dispatch_order_status: "",
   });
 
   // Fetch approved receipt products on component mount
@@ -1168,22 +1180,101 @@ const DispatchOrdersEditForm = () => {
                 onChange={handleInputChange}
                 readOnly
               />
-              <Field
-                label="Order Details"
-                name="order_id"
-                type="select"
-                placeholder="Select Order"
-                value={formData.order_id}
-                onChange={(e) => handleOrderSelect(e.target.value)}
-                options={orders.map((order) => {
-                  const customer =
-                    order.personalDetails || order.personal_details || {};
-                  return {
-                    value: order.id,
-                    label: `${order.order_id} - ${customer.first_name || ""} ${customer.last_name || ""} (${order.customer.company_name})`,
-                  };
-                })}
-              />
+              <div style={fieldContainerStyle}>
+                <label style={labelStyle}>Select Order</label>
+
+                <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                  <FormControl fullWidth size="small">
+                    <Select
+                      value={formData.order_id || ""}
+                      displayEmpty
+                      onChange={(e) => {
+                        handleOrderSelect(e.target.value);
+                        // Clear error when a selection is made
+                        if (errors.order_id) {
+                          setErrors({ ...errors, order_id: "" });
+                        }
+
+                        // Reset search
+                        setOrderSearchTerm("");
+                      }}
+                      style={{
+                        ...inputStyle,
+                        borderColor: errors.order_id ? "red" : "#d1d5db",
+                      }}
+                      MenuProps={{
+                        PaperProps: { style: { maxHeight: 300 } },
+                        onEntered: () => setOrderSearchTerm(""), // Reset search when dropdown opens
+                      }}
+                      renderValue={(selected) => {
+                        if (!selected) return <em>Select Order</em>;
+
+                        const order = orders.find(x => x.id === parseInt(selected));
+                        if (!order) return "Select Order";
+
+                        const customer = order.personalDetails || order.personal_details || {};
+                        return `${order.order_id} - ${customer.first_name || ""} ${customer.last_name || ""} (${order.customer.company_name})`;
+                      }}
+                    >
+                      {/* Search bar inside dropdown */}
+                      <div
+                        style={{
+                          padding: "8px",
+                          position: "sticky",
+                          top: 0,
+                          background: "#fff",
+                          zIndex: 1,
+                          borderBottom: "1px solid #e0e0e0",
+                        }}
+                      >
+                        <TextField
+                          fullWidth
+                          size="small"
+                          placeholder="Search Order..."
+                          value={orderSearchTerm}
+                          onChange={(e) => setOrderSearchTerm(e.target.value)}
+                          onClick={(e) => e.stopPropagation()}
+                          onKeyDown={(e) => e.stopPropagation()}
+                          InputProps={{
+                            style: { fontSize: '0.875rem' }
+                          }}
+                        />
+                      </div>
+
+                      {/* Smart multi-word search filter */}
+                      {orders
+                        .filter((order) => {
+                          const term = orderSearchTerm.trim().toLowerCase();
+                          if (!term) return true;
+
+                          const words = term.split(" ").filter(Boolean);
+                          const customer = order.personalDetails || order.personal_details || {};
+
+                          // Create search text that includes all searchable fields
+                          const searchText = `${order.order_id || ""} ${customer.first_name || ""} ${customer.last_name || ""} ${order.customer?.company_name || ""}`
+                            .toLowerCase();
+
+                          return words.every(word => searchText.includes(word));
+                        })
+                        .map((order) => {
+                          const customer = order.personalDetails || order.personal_details || {};
+                          return (
+                            <MenuItem key={order.id} value={order.id}>
+                              {order.order_id} - {customer.first_name || ""} {customer.last_name || ""} (
+                              {order.customer?.company_name || "No Company"})
+                            </MenuItem>
+                          );
+                        })}
+                    </Select>
+                  </FormControl>
+
+                  {errors.order_id && (
+                    <span style={{ color: "red", fontSize: "0.75rem" }}>
+                      {errors.order_id}
+                    </span>
+                  )}
+                </div>
+              </div>
 
               <Field
                 label="Order Number"
@@ -1386,26 +1477,30 @@ const DispatchOrdersEditForm = () => {
             </div>
             {/* Peripheral Update Checkbox */}
             <div style={fieldContainerStyle}>
-              <Field
-                label="Peripheral Update Required"
-                name="peripheral_update"
-                type="checkbox"
-                value={formData.peripheral_update}
-                onChange={handleInputChange}
-                description="Check if this delivery includes peripheral updates"
-              />
 
-              {/* Direct Invoice Checkbox */}
-              <Field
-                label="Direct Invoice"
-                name="is_direct_invoice"
-                type="checkbox"
-                value={formData.is_direct_invoice}
-                onChange={handleInputChange}
-                description="Check if this is a direct invoice"
-              />
             </div>
           </div>
+        </div>
+
+        <div style={cardStyle}>
+          <Field
+            label="Peripheral Update Required"
+            name="peripheral_update"
+            type="checkbox"
+            value={formData.peripheral_update}
+            onChange={handleInputChange}
+            description="Check if this delivery includes peripheral updates"
+          />
+
+          {/* Direct Invoice Checkbox */}
+          <Field
+            label="Direct Invoice"
+            name="is_direct_invoice"
+            type="checkbox"
+            value={formData.is_direct_invoice}
+            onChange={handleInputChange}
+            description="Check if this is a direct invoice"
+          />
         </div>
 
         {/* Select Products Section */}
@@ -1462,7 +1557,7 @@ const DispatchOrdersEditForm = () => {
                           padding="checkbox"
                           sx={{ backgroundColor: "#0d47a1" }}
                         >
-                          <Checkbox
+                          {/* <Checkbox
                             sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
                             checked={
                               selectedProductIds.length ===
@@ -1492,7 +1587,7 @@ const DispatchOrdersEditForm = () => {
                                 );
                               }
                             }}
-                          />
+                          /> */}
                         </TableCell>
                         <TableCell
                           sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
@@ -1502,23 +1597,9 @@ const DispatchOrdersEditForm = () => {
                         <TableCell
                           sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
                         >
-                          Processor
+                          Specifications
                         </TableCell>
-                        <TableCell
-                          sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
-                        >
-                          RAM
-                        </TableCell>
-                        <TableCell
-                          sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
-                        >
-                          Storage
-                        </TableCell>
-                        <TableCell
-                          sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
-                        >
-                          Graphics
-                        </TableCell>
+
                         <TableCell
                           sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
                         >
@@ -1568,13 +1649,13 @@ const DispatchOrdersEditForm = () => {
                                 onChange={() =>
                                   handleProductSelection(product.id)
                                 }
+                                disabled
                               />
                             </TableCell>
                             <TableCell>{product.product_name}</TableCell>
-                            <TableCell>{product.processor}</TableCell>
-                            <TableCell>{product.ram}</TableCell>
-                            <TableCell>{product.storage}</TableCell>
-                            <TableCell>{product.graphics}</TableCell>
+                            <TableCell>
+                              {generateSpecifications(product)}
+                            </TableCell>
                             <TableCell>{getAvailableQty(product.id)}</TableCell>
 
                             <TableCell>
@@ -1663,20 +1744,20 @@ const DispatchOrdersEditForm = () => {
           >
             Cancel
           </button>
-            <button
-              type="submit"
-              style={{
-                backgroundColor: "#2563eb",
-                color: "#fff",
-                padding: "0.75rem 1.5rem",
-                border: "none",
-                borderRadius: "6px",
-                cursor: "pointer",
-                fontSize: "1rem",
-              }}
-            >
-              Update Order Preparation
-            </button>
+          <button
+            type="submit"
+            style={{
+              backgroundColor: "#2563eb",
+              color: "#fff",
+              padding: "0.75rem 1.5rem",
+              border: "none",
+              borderRadius: "6px",
+              cursor: "pointer",
+              fontSize: "1rem",
+            }}
+          >
+            Update Order Preparation
+          </button>
         </div>
       </form>
     </div>
