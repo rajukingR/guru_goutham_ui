@@ -442,53 +442,53 @@ const DispatchOrdersAddForm = ({ product }) => {
   const [approvedReceiptProducts, setApprovedReceiptProducts] = useState([]);
   const [orderSearchTerm, setOrderSearchTerm] = useState(""); // ✅ FIXED: Added missing state
 
-// Add this with other state declarations
-const [productSpecsMap, setProductSpecsMap] = useState({});
+  // Add this with other state declarations
+  const [productSpecsMap, setProductSpecsMap] = useState({});
 
 
   // Add this helper function inside the DispatchOrdersAddForm component
-const findMatchingProduct = useCallback((orderProductId, orderProductSpecs) => {
-  // First try exact match by ID
-  let product = approvedReceiptProducts.find(
-    (item) => item.product_id === orderProductId
-  );
-  
-  if (product) return product;
-  
-  // If not found and it's an Assembled PC, try to match by specifications
-  if (orderProductSpecs && orderProductSpecs.product_category === 'Assembled PC') {
-    // Find product in approvedReceiptProducts with same specs
-    product = approvedReceiptProducts.find((item) => {
-      if (item.product?.product_category !== 'Assembled PC') return false;
-      
-      // Compare specifications
-      return (
-        item.product?.ram === orderProductSpecs.ram &&
-        item.product?.disk_type === orderProductSpecs.disk_type &&
-        item.product?.processor === orderProductSpecs.processor &&
-        item.product?.storage === orderProductSpecs.storage &&
-        item.product?.graphics === orderProductSpecs.graphics &&
-        item.product?.cabinet === orderProductSpecs.cabinet &&
-        item.product?.motherboard === orderProductSpecs.motherboard &&
-        item.product?.smps === orderProductSpecs.smps
-      );
-    });
-  }
-  
-  return product;
-}, [approvedReceiptProducts]);
+  const findMatchingProduct = useCallback((orderProductId, orderProductSpecs) => {
+    // First try exact match by ID
+    let product = approvedReceiptProducts.find(
+      (item) => item.product_id === orderProductId
+    );
 
-// Update the getAvailableQty function
-const getAvailableQty = useCallback((productId, productSpecs = null) => {
-  const product = findMatchingProduct(productId, productSpecs);
-  return product ? product.available_quantity : 0;
-}, [findMatchingProduct]);
+    if (product) return product;
 
-// Update the getAvailableAssetIds function
-const getAvailableAssetIds = useCallback((productId, productSpecs = null) => {
-  const product = findMatchingProduct(productId, productSpecs);
-  return product ? product.available_asset_ids : [];
-}, [findMatchingProduct]);
+    // If not found and it's an Assembled PC, try to match by specifications
+    if (orderProductSpecs && orderProductSpecs.product_category === 'Assembled PC') {
+      // Find product in approvedReceiptProducts with same specs
+      product = approvedReceiptProducts.find((item) => {
+        if (item.product?.product_category !== 'Assembled PC') return false;
+
+        // Compare specifications
+        return (
+          item.product?.ram === orderProductSpecs.ram &&
+          item.product?.disk_type === orderProductSpecs.disk_type &&
+          item.product?.processor === orderProductSpecs.processor &&
+          item.product?.storage === orderProductSpecs.storage &&
+          item.product?.graphics === orderProductSpecs.graphics &&
+          item.product?.cabinet === orderProductSpecs.cabinet &&
+          item.product?.motherboard === orderProductSpecs.motherboard &&
+          item.product?.smps === orderProductSpecs.smps
+        );
+      });
+    }
+
+    return product;
+  }, [approvedReceiptProducts]);
+
+  // Update the getAvailableQty function
+  const getAvailableQty = useCallback((productId, productSpecs = null) => {
+    const product = findMatchingProduct(productId, productSpecs);
+    return product ? product.available_quantity : 0;
+  }, [findMatchingProduct]);
+
+  // Update the getAvailableAssetIds function
+  const getAvailableAssetIds = useCallback((productId, productSpecs = null) => {
+    const product = findMatchingProduct(productId, productSpecs);
+    return product ? product.available_asset_ids : [];
+  }, [findMatchingProduct]);
 
   const [errors, setErrors] = useState({
     order_id: "",
@@ -620,78 +620,78 @@ const getAvailableAssetIds = useCallback((productId, productSpecs = null) => {
   }, []);
 
   // Handle order selection
-// Handle order selection
-const handleOrderSelect = (orderId) => {
-  const selectedOrder = orders.find(
-    (order) => order.id === parseInt(orderId)
-  );
-  if (!selectedOrder) return;
+  // Handle order selection
+  const handleOrderSelect = (orderId) => {
+    const selectedOrder = orders.find(
+      (order) => order.id === parseInt(orderId)
+    );
+    if (!selectedOrder) return;
 
-  const { personalDetails, address, items } = selectedOrder;
+    const { personalDetails, address, items } = selectedOrder;
 
-  // Store product specifications for later matching
-  const productSpecsMap = {};
-  items.forEach((item) => {
-    const product = products.find(p => p.id === item.product_id);
-    if (product) {
-      productSpecsMap[item.product_id] = product;
-    }
-  });
-  
-  setProductSpecsMap(productSpecsMap);
+    // Store product specifications for later matching
+    const productSpecsMap = {};
+    items.forEach((item) => {
+      const product = products.find(p => p.id === item.product_id);
+      if (product) {
+        productSpecsMap[item.product_id] = product;
+      }
+    });
 
-  // Set device IDs for each product
-  const newDeviceIds = {};
+    setProductSpecsMap(productSpecsMap);
 
-  items.forEach((item) => {
-    newDeviceIds[item.product_id] = item.device_ids || [];
-  });
+    // Set device IDs for each product
+    const newDeviceIds = {};
 
-  setDeviceIds(newDeviceIds);
+    items.forEach((item) => {
+      newDeviceIds[item.product_id] = item.device_ids || [];
+    });
 
-  setFormData({
-    ...formData,
-    order_id: selectedOrder.id,
-    customer_code: selectedOrder.customer_id,
-    order_number: selectedOrder.order_id,
-    payment_type: selectedOrder.payment_type,
-    email: personalDetails.email,
-    gst_number: personalDetails.gst_number,
-    shipping_ordered_by: `${personalDetails.first_name} ${personalDetails.last_name}`,
-    shipping_phone_number: personalDetails.phone_number,
-    shipping_name: `${personalDetails.first_name} ${personalDetails.last_name}`,
-    street: address.street || "",
-    landmark: address.landmark || "",
-    pincode: address.pincode,
-    city: address.city,
-    state: address.state,
-    country: address.country,
-    transaction_type: selectedOrder.transaction_type,
-    items: items.map((item) => ({
-      product_id: item.product_id,
-      product_name: item.product_name,
-      quantity: item.requested_quantity,
-      item_total_value: item.item_total_value,
-      device_ids: item.device_ids || [],
-      offer_purchase_price: item.offer_purchase_price || 0,
-      offer_rent_price_per_month: item.offer_rent_price_per_month || 0,
-      purchase_price: item.purchase_price || 0,
-      rent_price_per_month: item.rent_price_per_month || 0,
-      product_specs: productSpecsMap[item.product_id] // Store specs
-    })),
-  });
+    setDeviceIds(newDeviceIds);
 
-  // Auto-select products from the order
-  const productIds = items.map((item) => item.product_id);
-  setSelectedProductIds(productIds);
+    setFormData({
+      ...formData,
+      order_id: selectedOrder.id,
+      customer_code: selectedOrder.customer_id,
+      order_number: selectedOrder.order_id,
+      payment_type: selectedOrder.payment_type,
+      email: personalDetails.email,
+      gst_number: personalDetails.gst_number,
+      shipping_ordered_by: `${personalDetails.first_name} ${personalDetails.last_name}`,
+      shipping_phone_number: personalDetails.phone_number,
+      shipping_name: `${personalDetails.first_name} ${personalDetails.last_name}`,
+      street: address.street || "",
+      landmark: address.landmark || "",
+      pincode: address.pincode,
+      city: address.city,
+      state: address.state,
+      country: address.country,
+      transaction_type: selectedOrder.transaction_type,
+      items: items.map((item) => ({
+        product_id: item.product_id,
+        product_name: item.product_name,
+        quantity: item.requested_quantity,
+        item_total_value: item.item_total_value,
+        device_ids: item.device_ids || [],
+        offer_purchase_price: item.offer_purchase_price || 0,
+        offer_rent_price_per_month: item.offer_rent_price_per_month || 0,
+        purchase_price: item.purchase_price || 0,
+        rent_price_per_month: item.rent_price_per_month || 0,
+        product_specs: productSpecsMap[item.product_id] // Store specs
+      })),
+    });
 
-  // Set quantities
-  const newQuantities = {};
-  items.forEach((item) => {
-    newQuantities[item.product_id] = item.requested_quantity;
-  });
-  setQuantities(newQuantities);
-};
+    // Auto-select products from the order
+    const productIds = items.map((item) => item.product_id);
+    setSelectedProductIds(productIds);
+
+    // Set quantities
+    const newQuantities = {};
+    items.forEach((item) => {
+      newQuantities[item.product_id] = item.requested_quantity;
+    });
+    setQuantities(newQuantities);
+  };
 
   // Fetch location data when pincode changes
   useEffect(() => {
@@ -1020,95 +1020,96 @@ const handleOrderSelect = (orderId) => {
                 onChange={handleInputChange}
               />
               <div style={fieldContainerStyle}>
-  <label style={labelStyle}>Select Order</label>
-  
-  <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-    <FormControl fullWidth size="small">
-      <Select
-        value={formData.order_id || ""}
-        displayEmpty
-        onChange={(e) => {
-          handleOrderSelect(e.target.value);
-          // Clear error when a selection is made
-          if (errors.order_id) {
-            setErrors({ ...errors, order_id: "" });
-          }
-          
-          // Reset search
-          setOrderSearchTerm("");
-        }}
-        style={{
-          ...inputStyle,
-          borderColor: errors.order_id ? "red" : "#d1d5db",
-        }}
-        MenuProps={{
-          PaperProps: { style: { maxHeight: 300 } },
-          onEntered: () => setOrderSearchTerm(""), // Reset search when dropdown opens
-        }}
-        renderValue={(selected) => {
-          if (!selected) return <em>Select Order</em>;
-          
-          const order = orders.find(x => x.id === selected);
-          if (!order) return "Select Order";
-          
-          const customer = order.personalDetails || order.personal_details || {};
-          return `${order.order_id} - ${customer.first_name || ""} ${customer.last_name || ""}`;
-        }}
-      >
-        {/* Search bar inside dropdown */}
-        <div
-          style={{
-            padding: "8px",
-            position: "sticky",
-            top: 0,
-            background: "#fff",
-            zIndex: 1,
-            borderBottom: "1px solid #e0e0e0",
-          }}
-        >
-          <TextField
-            fullWidth
-            size="small"
-            placeholder="Search Order..."
-            value={orderSearchTerm}
-            onChange={(e) => setOrderSearchTerm(e.target.value)}
-            onClick={(e) => e.stopPropagation()}
-            onKeyDown={(e) => e.stopPropagation()}
-          />
-        </div>
+                <label style={labelStyle}>Select Order</label>
 
-        {/* Smart multi-word search filter */}
-        {orders
-          .filter((order) => {
-            const term = orderSearchTerm.trim().toLowerCase();
-            if (!term) return true;
-            
-            const words = term.split(" ").filter(Boolean);
-            const customer = order.personalDetails || order.personal_details || {};
-            
-            const searchText = `${order.order_id} ${customer.first_name || ""} ${customer.last_name || ""}`
-              .toLowerCase();
-            
-            return words.every(word => searchText.includes(word));
-          })
-          .map((order) => {
-            const customer = order.personalDetails || order.personal_details || {};
-            return (
-              <MenuItem key={order.id} value={order.id}>
-                {order.order_id} - {customer.first_name || ""} {customer.last_name || ""}
-              </MenuItem>
-            );
-          })}
-      </Select>
-    </FormControl>
-    
-    {errors.order_id && (
-      <span style={{ color: "red", fontSize: "0.75rem" }}>
-        {errors.order_id}
-      </span>
-    )}
-  </div>
-</div>
+                <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                  <FormControl fullWidth size="small">
+                    <Select
+                      value={formData.order_id || ""}
+                      displayEmpty
+                      onChange={(e) => {
+                        handleOrderSelect(e.target.value);
+                        // Clear error when a selection is made
+                        if (errors.order_id) {
+                          setErrors({ ...errors, order_id: "" });
+                        }
+
+                        // Reset search
+                        setOrderSearchTerm("");
+                      }}
+                      style={{
+                        ...inputStyle,
+                        borderColor: errors.order_id ? "red" : "#d1d5db",
+                      }}
+                      MenuProps={{
+                        PaperProps: { style: { maxHeight: 300 } },
+                        onEntered: () => setOrderSearchTerm(""), // Reset search when dropdown opens
+                      }}
+                      renderValue={(selected) => {
+                        if (!selected) return <em>Select Order</em>;
+
+                        const order = orders.find(x => x.id === selected);
+                        if (!order) return "Select Order";
+
+                        const customer = order.personalDetails || order.personal_details || {};
+                        return `${order.order_id} - ${customer.first_name || ""} ${customer.last_name || ""} (${order.customer.company_name})`;
+                      }}
+                    >
+                      {/* Search bar inside dropdown */}
+                      <div
+                        style={{
+                          padding: "8px",
+                          position: "sticky",
+                          top: 0,
+                          background: "#fff",
+                          zIndex: 1,
+                          borderBottom: "1px solid #e0e0e0",
+                        }}
+                      >
+                        <TextField
+                          fullWidth
+                          size="small"
+                          placeholder="Search Order..."
+                          value={orderSearchTerm}
+                          onChange={(e) => setOrderSearchTerm(e.target.value)}
+                          onClick={(e) => e.stopPropagation()}
+                          onKeyDown={(e) => e.stopPropagation()}
+                        />
+                      </div>
+
+                      {/* Smart multi-word search filter */}
+                      {orders
+                        .filter((order) => {
+                          const term = orderSearchTerm.trim().toLowerCase();
+                          if (!term) return true;
+
+                          const words = term.split(" ").filter(Boolean);
+                          const customer = order.personalDetails || order.personal_details || {};
+
+                          const searchText = `${order.order_id} ${customer.first_name || ""} ${customer.last_name || ""} ${order.customer.company_name}`
+                            .toLowerCase();
+
+                          return words.every(word => searchText.includes(word));
+                        })
+                        .map((order) => {
+                          const customer = order.personalDetails || order.personal_details || {};
+                          return (
+                            <MenuItem key={order.id} value={order.id}>
+                              {order.order_id} - {customer.first_name || ""} {customer.last_name || ""} (
+                              {order.customer.company_name})
+                            </MenuItem>
+                          );
+                        })}
+                    </Select>
+                  </FormControl>
+
+                  {errors.order_id && (
+                    <span style={{ color: "red", fontSize: "0.75rem" }}>
+                      {errors.order_id}
+                    </span>
+                  )}
+                </div>
+              </div>
 
               <Field
                 label="Order Number"
@@ -1292,33 +1293,33 @@ const handleOrderSelect = (orderId) => {
           </div>
           {/* Peripheral Update Checkbox */}
           <div style={fieldContainerStyle}>
-            
+
           </div>
         </div>
 
 
         <div style={cardStyle}>
-           
 
-            <Field
-              label="Peripheral Update Required"
-              name="peripheral_update"
-              type="checkbox"
-              value={formData.peripheral_update}
-              onChange={handleInputChange}
-              description="Check if this delivery includes peripheral updates"
-            />
 
-            {/* Direct Invoice Checkbox */}
-            <Field
-              label="Direct Invoice"
-              name="is_direct_invoice"
-              type="checkbox"
-              value={formData.is_direct_invoice}
-              onChange={handleInputChange}
-              description="Check if this is a direct invoice"
-            />
-          </div>
+          <Field
+            label="Peripheral Update Required"
+            name="peripheral_update"
+            type="checkbox"
+            value={formData.peripheral_update}
+            onChange={handleInputChange}
+            description="Check if this delivery includes peripheral updates"
+          />
+
+          {/* Direct Invoice Checkbox */}
+          <Field
+            label="Direct Invoice"
+            name="is_direct_invoice"
+            type="checkbox"
+            value={formData.is_direct_invoice}
+            onChange={handleInputChange}
+            description="Check if this is a direct invoice"
+          />
+        </div>
 
         {/* Select Products Section */}
         <div style={cardStyle}>
@@ -1416,7 +1417,7 @@ const handleOrderSelect = (orderId) => {
                         >
                           Specifications
                         </TableCell>
-                        
+
                         <TableCell
                           sx={{ backgroundColor: "#0d47a1", color: "#fff" }}
                         >
@@ -1441,142 +1442,142 @@ const handleOrderSelect = (orderId) => {
                       </TableRow>
                     </TableHead>
                     <TableBody>
-  {filteredProducts
-    .filter((product) =>
-      selectedProductIds.includes(product.id)
-    )
-    .map((product) => {
-      // Get the order item to get the original product specs
-      const orderItem = formData.items.find(item => item.product_id === product.id);
-      const productSpecs = orderItem?.product_specs || product;
-      
-      return (
-        <TableRow key={product.id}>
-          <TableCell padding="checkbox">
-            <Checkbox
-              checked={selectedProductIds.includes(product.id)}
-              onChange={() => handleProductSelection(product.id)}
-            />
-          </TableCell>
-          <TableCell>{product.product_name}</TableCell>
-          <TableCell>
-            {generateSpecifications(product)}
-          </TableCell>
-          <TableCell>
-            {getAvailableQty(product.id, productSpecs)}
-          </TableCell>
-          <TableCell>
-            <TextField
-              type="number"
-              size="small"
-              value={quantities[product.id] || ""}
-              disabled
-              inputProps={{
-                min: 0,
-                style: { width: 50, textAlign: "center" },
-              }}
-            />
-          </TableCell>
-          <TableCell>
-            {(deviceIds[product.id] || []).join(", ")}
-          </TableCell>
-          <TableCell>
-            {getAvailableAssetIds(product.id, productSpecs)?.length > 0 && (
-              <Box display="flex" flexDirection="column" gap={1}>
-                <TextField
-                  size="small"
-                  placeholder="Search Asset ID"
-                  value={assetSearchTerms[product.id] || ""}
-                  onChange={(e) => {
-                    const value = e.target.value;
-                    setAssetSearchTerms((prev) => ({
-                      ...prev,
-                      [product.id]: value,
-                    }));
-                  }}
-                />
+                      {filteredProducts
+                        .filter((product) =>
+                          selectedProductIds.includes(product.id)
+                        )
+                        .map((product) => {
+                          // Get the order item to get the original product specs
+                          const orderItem = formData.items.find(item => item.product_id === product.id);
+                          const productSpecs = orderItem?.product_specs || product;
 
-                {(assetSearchTerms[product.id] || "").trim() !== "" && (
-                  <Box
-                    sx={{
-                      maxHeight: 150,
-                      overflowY: "auto",
-                      border: "1px solid #e0e0e0",
-                      borderRadius: 1,
-                      p: 1,
-                    }}
-                  >
-                    {getAvailableAssetIds(product.id, productSpecs)
-                      .filter((assetId) =>
-                        assetId
-                          .toLowerCase()
-                          .includes(
-                            (assetSearchTerms[product.id] || "").toLowerCase()
-                          )
-                      )
-                      .map((assetId) => (
-                        <Box
-                          key={assetId}
-                          onClick={() => {
-                            const currentDeviceIds = deviceIds[product.id] || [];
-                            const maxQty = quantities[product.id] || 0;
+                          return (
+                            <TableRow key={product.id}>
+                              <TableCell padding="checkbox">
+                                <Checkbox
+                                  checked={selectedProductIds.includes(product.id)}
+                                  onChange={() => handleProductSelection(product.id)}
+                                />
+                              </TableCell>
+                              <TableCell>{product.product_name}</TableCell>
+                              <TableCell>
+                                {generateSpecifications(product)}
+                              </TableCell>
+                              <TableCell>
+                                {getAvailableQty(product.id, productSpecs)}
+                              </TableCell>
+                              <TableCell>
+                                <TextField
+                                  type="number"
+                                  size="small"
+                                  value={quantities[product.id] || ""}
+                                  disabled
+                                  inputProps={{
+                                    min: 0,
+                                    style: { width: 50, textAlign: "center" },
+                                  }}
+                                />
+                              </TableCell>
+                              <TableCell>
+                                {(deviceIds[product.id] || []).join(", ")}
+                              </TableCell>
+                              <TableCell>
+                                {getAvailableAssetIds(product.id, productSpecs)?.length > 0 && (
+                                  <Box display="flex" flexDirection="column" gap={1}>
+                                    <TextField
+                                      size="small"
+                                      placeholder="Search Asset ID"
+                                      value={assetSearchTerms[product.id] || ""}
+                                      onChange={(e) => {
+                                        const value = e.target.value;
+                                        setAssetSearchTerms((prev) => ({
+                                          ...prev,
+                                          [product.id]: value,
+                                        }));
+                                      }}
+                                    />
 
-                            if (currentDeviceIds.includes(assetId)) {
-                              setDeviceIdErrors((prev) => ({
-                                ...prev,
-                                [product.id]: `Asset ID "${assetId}" is already selected.`,
-                              }));
-                              return;
-                            }
+                                    {(assetSearchTerms[product.id] || "").trim() !== "" && (
+                                      <Box
+                                        sx={{
+                                          maxHeight: 150,
+                                          overflowY: "auto",
+                                          border: "1px solid #e0e0e0",
+                                          borderRadius: 1,
+                                          p: 1,
+                                        }}
+                                      >
+                                        {getAvailableAssetIds(product.id, productSpecs)
+                                          .filter((assetId) =>
+                                            assetId
+                                              .toLowerCase()
+                                              .includes(
+                                                (assetSearchTerms[product.id] || "").toLowerCase()
+                                              )
+                                          )
+                                          .map((assetId) => (
+                                            <Box
+                                              key={assetId}
+                                              onClick={() => {
+                                                const currentDeviceIds = deviceIds[product.id] || [];
+                                                const maxQty = quantities[product.id] || 0;
 
-                            if (currentDeviceIds.length >= maxQty) {
-                              setDeviceIdErrors((prev) => ({
-                                ...prev,
-                                [product.id]: `Only ${maxQty} asset ID(s) allowed.`,
-                              }));
-                              return;
-                            }
+                                                if (currentDeviceIds.includes(assetId)) {
+                                                  setDeviceIdErrors((prev) => ({
+                                                    ...prev,
+                                                    [product.id]: `Asset ID "${assetId}" is already selected.`,
+                                                  }));
+                                                  return;
+                                                }
 
-                            setDeviceIdErrors((prev) => {
-                              const newErrors = { ...prev };
-                              delete newErrors[product.id];
-                              return newErrors;
-                            });
+                                                if (currentDeviceIds.length >= maxQty) {
+                                                  setDeviceIdErrors((prev) => ({
+                                                    ...prev,
+                                                    [product.id]: `Only ${maxQty} asset ID(s) allowed.`,
+                                                  }));
+                                                  return;
+                                                }
 
-                            setDeviceIds((prev) => ({
-                              ...prev,
-                              [product.id]: [...currentDeviceIds, assetId],
-                            }));
-                          }}
-                          sx={{
-                            p: 0.5,
-                            cursor: "pointer",
-                            backgroundColor: (deviceIds[product.id] || []).includes(assetId)
-                              ? "#e3f2fd"
-                              : "transparent",
-                            "&:hover": {
-                              backgroundColor: "#f5f5f5",
-                            },
-                          }}
-                        >
-                          {assetId}
-                        </Box>
-                      ))}
-                  </Box>
-                )}
+                                                setDeviceIdErrors((prev) => {
+                                                  const newErrors = { ...prev };
+                                                  delete newErrors[product.id];
+                                                  return newErrors;
+                                                });
 
-                {deviceIdErrors[product.id] && (
-                  <Typography color="error" variant="caption">
-                    {deviceIdErrors[product.id]}
-                  </Typography>
-                )}
-              </Box>
-            )}
-          </TableCell>
-        </TableRow>
-      );
-    })}
-</TableBody>
+                                                setDeviceIds((prev) => ({
+                                                  ...prev,
+                                                  [product.id]: [...currentDeviceIds, assetId],
+                                                }));
+                                              }}
+                                              sx={{
+                                                p: 0.5,
+                                                cursor: "pointer",
+                                                backgroundColor: (deviceIds[product.id] || []).includes(assetId)
+                                                  ? "#e3f2fd"
+                                                  : "transparent",
+                                                "&:hover": {
+                                                  backgroundColor: "#f5f5f5",
+                                                },
+                                              }}
+                                            >
+                                              {assetId}
+                                            </Box>
+                                          ))}
+                                      </Box>
+                                    )}
+
+                                    {deviceIdErrors[product.id] && (
+                                      <Typography color="error" variant="caption">
+                                        {deviceIdErrors[product.id]}
+                                      </Typography>
+                                    )}
+                                  </Box>
+                                )}
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
+                    </TableBody>
                   </Table>
                 </TableContainer>
               </Box>
@@ -1594,20 +1595,20 @@ const handleOrderSelect = (orderId) => {
           >
             Cancel
           </button>
-            <button
-              type="submit"
-              style={{
-                backgroundColor: "#2563eb",
-                color: "#fff",
-                padding: "0.75rem 1.5rem",
-                border: "none",
-                borderRadius: "6px",
-                cursor: "pointer",
-                fontSize: "1rem",
-              }}
-            >
-              Create Order Preparation
-            </button>
+          <button
+            type="submit"
+            style={{
+              backgroundColor: "#2563eb",
+              color: "#fff",
+              padding: "0.75rem 1.5rem",
+              border: "none",
+              borderRadius: "6px",
+              cursor: "pointer",
+              fontSize: "1rem",
+            }}
+          >
+            Create Order Preparation
+          </button>
         </div>
       </form>
     </div>
