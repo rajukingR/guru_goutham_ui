@@ -1,52 +1,81 @@
 import React, { useEffect, useState } from "react";
 import DynamicTable from "../../../components/table-format/DynamicTable";
 import axios from "axios";
-import API_URL, { IMAGE_API_URL } from "../../../api/Api_url";
+import API_URL from "../../../api/Api_url";
 import { useSelector } from "react-redux";
 
 const POQuotationTable = () => {
+
+  const { token } = useSelector((state) => state.auth);
+
   const [data, setData] = useState([]);
-  const { user, token } = useSelector((state) => state.auth);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [search, setSearch] = useState("");
+
+  //-------------------------------------
 
   const columns = [
     { id: "s_id", label: "S.No." },
     { id: "purchase_quotation_id", label: "Quotation ID" },
     { id: "purchase_request_id", label: "Purchase Request ID" },
     { id: "purchase_quotation_date", label: "Quotation Date" },
-    // { id: "owner", label: "Owner" },
     { id: "supplier_name", label: "Supplier Name" },
-    // { id: "description", label: "Description" },
     { id: "po_quotation_status", label: "Status" },
   ];
 
-  useEffect(() => {
-    const fetchQuotations = async () => {
-      try {
-        const response = await axios.get(`${API_URL}/purchase-quotation`, {
+  //-------------------------------------
+
+  const fetchQuotations = async () => {
+    try {
+
+      const response = await axios.get(
+        `${API_URL}/purchase-quotation?page=${page}&limit=10&search=${search}`,
+        {
           headers: {
-            "Authorization": `Bearer ${token}`,
+            Authorization: `Bearer ${token}`,
           },
-        });
-
-        if (response.status === 200) {
-          const formattedData = response.data.map((item, index) => ({
-            s_id: index + 1,
-            ...item,
-            supplier_name: item.supplier?.supplier_name || "N/A",
-          }));
-          setData(formattedData);
         }
-      } catch (error) {
-        console.error("Error fetching purchase quotations:", error);
-      }
-    };
+      );
 
+      //---------------------------------
+
+      const formatted = response.data.data.map((item, index) => ({
+        ...item,
+
+        s_id: (page - 1) * 10 + index + 1,
+
+        supplier_name: item.supplier?.supplier_name || "N/A",
+      }));
+
+      setData(formatted);
+      setTotalPages(response.data.totalPages);
+
+    } catch (error) {
+      console.error("Error fetching purchase quotations:", error);
+    }
+  };
+
+  //-------------------------------------
+
+  useEffect(() => {
     fetchQuotations();
-  }, []);
+  }, [page, search]);
+
+  //-------------------------------------
 
   return (
     <div>
-      <DynamicTable columns={columns} data={data} rowsPerPage={10} />
+      <DynamicTable
+        columns={columns}
+        data={data}
+        page={page}
+        setPage={setPage}
+        totalPages={totalPages}
+        search={search}
+        setSearch={setSearch}
+        refreshData={fetchQuotations}
+      />
     </div>
   );
 };

@@ -37,15 +37,18 @@ const QuotationsEditLayoutPage = () => {
   const [postOffices, setPostOffices] = useState([]);
   const [quotation, setQuotation] = useState(null);
   const [leads, setLeads] = useState([]);
+  const [contacts, setContacts] = useState([]); // Added for existing clients
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState({
     quotation: true,
     leads: true,
+    contacts: true,
     products: true,
   });
   const [error, setError] = useState({
     quotation: null,
     leads: null,
+    contacts: null,
     products: null,
   });
   const [snackbar, setSnackbar] = useState({
@@ -54,12 +57,14 @@ const QuotationsEditLayoutPage = () => {
     severity: "info",
   });
   const [leadSearchTerm, setLeadSearchTerm] = useState("");
+  const [contactSearchTerm, setContactSearchTerm] = useState(""); // Added for contact search
 
   const [showProductTable, setShowProductTable] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedProductIds, setSelectedProductIds] = useState([]);
   const [quantities, setQuantities] = useState({});
   const [selectedLeadId, setSelectedLeadId] = useState(null);
+  const [selectedContactId, setSelectedContactId] = useState(null); // Added for contact selection
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
 
@@ -79,12 +84,15 @@ const QuotationsEditLayoutPage = () => {
 
   const [errors, setErrors] = useState({
     selectedLead: "",
+    selectedContact: "",
+    paymentType: "",
   });
 
   const [formData, setFormData] = useState({
     quotationId: "",
     quotationTitle: "",
     leadId: "",
+    contactId: "",
     transactionType: "",
     payment_type: "",
     quotationStatus: "Pending",
@@ -114,6 +122,9 @@ const QuotationsEditLayoutPage = () => {
   });
 
 
+  const isLeadSelected = selectedLeadId !== null;
+
+
   const validateQuantities = () => {
     const errors = {};
     let isValid = true;
@@ -140,7 +151,35 @@ const QuotationsEditLayoutPage = () => {
     return isValid;
   };
 
+  // Fetch contacts (existing clients)
+  useEffect(() => {
+    const fetchContacts = async () => {
+      try {
+        const response = await fetch(`${API_URL}/contacts/active-contacts`, {
+          headers: {
+            "Authorization": `Bearer ${userToken}`,
+          },
+        });
+        if (!response.ok) {
+          throw new Error("Failed to fetch contacts");
+        }
+        const data = await response.json();
+        console.log("Contacts fetched:", data); // Debug log
+        setContacts(data);
+        setLoading((prev) => ({ ...prev, contacts: false }));
+      } catch (err) {
+        setError((prev) => ({ ...prev, contacts: err.message }));
+        setLoading((prev) => ({ ...prev, contacts: false }));
+        setSnackbar({
+          open: true,
+          message: "Failed to load contacts",
+          severity: "error",
+        });
+      }
+    };
 
+    fetchContacts();
+  }, []);
 
   // Fetch quotation data
   useEffect(() => {
@@ -155,6 +194,7 @@ const QuotationsEditLayoutPage = () => {
           throw new Error("Failed to fetch quotation");
         }
         const data = await response.json();
+        console.log("Quotation fetched:", data); // Debug log
         setQuotation(data);
 
         // Extract address from customer object or use empty values as fallback
@@ -165,6 +205,7 @@ const QuotationsEditLayoutPage = () => {
           quotationId: data.quotation_id,
           quotationTitle: data.quotation_title,
           leadId: data.lead_id,
+          contactId: data.customer?.id || "", // Use customer.id if available
           transactionType: data.transaction_type,
           payment_type: data.payment_type,
           quotationStatus: data.status,
@@ -186,14 +227,16 @@ const QuotationsEditLayoutPage = () => {
           is_direct_invoice: data.is_direct_invoice,
           industry: data.customer?.industry || "", // Get industry from customer object
           street: address.street || "",
-          landmark: address.landmark || "", // This might not exist in API
+          landmark: address.landmark || "",
           pincode: address.pincode || address.zip || "", // Handle both pincode and zip
           city: address.city || "",
           state: address.state || "",
           country: address.country || "India",
         });
 
-        setSelectedLeadId(data.lead_id);
+        setSelectedLeadId(data.lead_id || null);
+        // If lead_id is null but we have customer data, set the contact ID
+        setSelectedContactId(data.customer?.id || null);
 
         // Set selected products and quantities
         if (data.items && data.items.length > 0) {
@@ -209,7 +252,7 @@ const QuotationsEditLayoutPage = () => {
             productQuantities[item.product_id] = item.quotation_quantity;
             offerPrices[item.product_id] = item.offer_purchase_price;
             rentOfferPrices[item.product_id] = item.offer_rent_price_per_month;
-            assetIdsData[item.product_id] = item.device_ids || []; // Changed from asset_ids to device_ids
+            assetIdsData[item.product_id] = item.device_ids || [];
           });
 
           setQuantities(productQuantities);
@@ -296,12 +339,14 @@ const QuotationsEditLayoutPage = () => {
   // Handle lead selection change
   const handleLeadChange = (leadId) => {
     setSelectedLeadId(leadId);
+    setSelectedContactId(null); // Clear contact selection
     const selectedLead = leads.find((lead) => lead.id === parseInt(leadId));
 
     if (selectedLead) {
       setFormData((prev) => ({
         ...prev,
         leadId: selectedLead.lead_id,
+        contactId: "",
         leadTitle: selectedLead.lead_title,
         transactionType: selectedLead.transaction_type,
         payment_type: selectedLead.payment_type,
@@ -343,12 +388,71 @@ const QuotationsEditLayoutPage = () => {
     }
   };
 
+  // Handle contact selection (existing client)
+  const handleContactSelect = (contactId) => {
+    console.log("Contact selected ID:", contactId); // Debug log
+    setSelectedContactId(contactId);
+    setSelectedLeadId(null); // Clear lead selection
+    const selectedContact = contacts.find((contact) => contact.id === parseInt(contactId));
+
+    console.log("Selected contact:", selectedContact); // Debug log
+
+    if (selectedContact) {
+      const address = selectedContact.address || {};
+      console.log("Contact address:", address); // Debug log
+
+      setFormData((prev) => ({
+        ...prev,
+        contactId: selectedContact.id,
+        leadId: "",
+        customer_id: selectedContact.customer_id || "",
+        customer_first_name: selectedContact.first_name || "",
+        customer_last_name: selectedContact.last_name || "",
+        email: selectedContact.email || "",
+        phoneNumber: selectedContact.phone_number || "",
+        industry: selectedContact.industry || "",
+        street: address.street || "",
+        landmark: address.landmark || "",
+        pincode: address.pincode || "",
+        city: address.city || "",
+        state: address.state || "",
+        country: address.country || "India",
+        payment_type: selectedContact.payment_type || "",
+        // Reset rental fields since contact might not have rental info
+        rentalDurationMonths: "",
+        rentalDurationDays: "",
+        rentalStartDate: "",
+        rentalEndDate: "",
+      }));
+
+      // Clear selected products when switching to contact
+      setSelectedProductIds([]);
+      setQuantities({});
+      setAssetIds({});
+
+      setSnackbar({
+        open: true,
+        message: `Client ${selectedContact.first_name} ${selectedContact.last_name} selected successfully`,
+        severity: "success",
+      });
+    }
+  };
+
   // Handle input changes
   const handleInputChange = (field, value) => {
-    setFormData((prev) => ({
-      ...prev,
-      [field]: value,
-    }));
+    setFormData((prev) => {
+      const updatedData = {
+        ...prev,
+        [field]: value,
+      };
+
+      // If transaction type changes to "Buy" (Sale), set payment_type to null/empty
+      if (field === "transactionType" && value === "Buy") {
+        updatedData.payment_type = "";
+      }
+
+      return updatedData;
+    });
   };
 
   // Add this function to your component
@@ -599,13 +703,23 @@ const QuotationsEditLayoutPage = () => {
     let isValid = true;
     const newErrors = {
       selectedLead: "",
+      selectedContact: "",
+      paymentType: "", // Add paymentType
     };
 
-    // Validate lead selection
-    if (!selectedLeadId) {
-      newErrors.selectedLead = "Lead selection is required";
+    // Validate lead or contact selection
+    if (!selectedLeadId && !selectedContactId) {
+      newErrors.selectedLead = "Either Lead or Client selection is required";
+      newErrors.selectedContact = "Either Lead or Client selection is required";
       isValid = false;
     }
+
+    // Validate payment type when transaction type is Rent
+    if (formData.transactionType === "Rent" && !formData.payment_type) {
+      newErrors.paymentType = "Payment type is required";
+      isValid = false;
+    }
+
 
     setErrors(newErrors);
 
@@ -641,11 +755,12 @@ const QuotationsEditLayoutPage = () => {
     }
 
     let isValid = true;
-    const newErrors = { selectedLead: "" };
+    const newErrors = { selectedLead: "", selectedContact: "" };
 
-    // Validate lead selection
-    if (!selectedLeadId) {
-      newErrors.selectedLead = "Lead selection is required";
+    // Validate lead/contact selection
+    if (!selectedLeadId && !selectedContactId) {
+      newErrors.selectedLead = "Either Lead or Client selection is required";
+      newErrors.selectedContact = "Either Lead or Client selection is required";
       isValid = false;
     }
 
@@ -675,8 +790,9 @@ const QuotationsEditLayoutPage = () => {
         quotation_id: formData.quotationId,
         quotation_title: formData.quotationTitle,
         transaction_type: formData.transactionType,
-        payment_type: formData.payment_type,
-        lead_id: selectedLeadId,
+        payment_type: formData.transactionType === "Buy" ? null : formData.payment_type,
+        lead_id: selectedLeadId || null,
+        contact_id: selectedContactId || null,
         rental_start_date: formData.rentalStartDate,
         rental_end_date: formData.rentalEndDate,
         quotation_date: formData.quotationDate,
@@ -890,96 +1006,206 @@ const QuotationsEditLayoutPage = () => {
                 }
               />
 
-              <div style={fieldContainerStyle}>
-                <label style={labelStyle}>
-                  Select Lead
-                </label>
+              {formData.leadId && (
 
-                <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-                  <FormControl fullWidth size="small">
-                    <Select
-                      value={selectedLeadId || ""}
-                      onChange={(e) => {
-                        handleLeadChange(e.target.value);
+                <>
+                  {/* EXISTING LEAD SELECTION - KEPT AS IS */}
+                  <div style={fieldContainerStyle}>
+                    <label style={labelStyle}>
+                      Select Lead
+                    </label>
 
-                        // reset search
-                        setLeadSearchTerm("");
+                    <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                      <FormControl fullWidth size="small">
+                        <Select
+                          value={selectedLeadId || ""}
+                          onChange={(e) => {
+                            handleLeadChange(e.target.value);
 
-                        // clear error
-                        if (errors.selectedLead) {
-                          setErrors((prev) => ({ ...prev, selectedLead: "" }));
-                        }
-                      }}
-                      displayEmpty
-                      style={{
-                        ...inputStyle,
-                        borderColor: errors.selectedLead ? "red" : "#d1d5db",
-                      }}
-                      MenuProps={{
-                        PaperProps: { style: { maxHeight: 300 } },
+                            // reset search
+                            setLeadSearchTerm("");
 
-                        // 🔥 clear search every time dropdown opens
-                        onEntered: () => setLeadSearchTerm(""),
-                      }}
-                      renderValue={(selected) => {
-                        if (!selected) return <em>Select Lead</em>;
+                            // clear error
+                            if (errors.selectedLead) {
+                              setErrors((prev) => ({ ...prev, selectedLead: "" }));
+                            }
+                          }}
+                          displayEmpty
+                          style={{
+                            ...inputStyle,
+                            borderColor: errors.selectedLead ? "red" : "#d1d5db",
+                          }}
+                          MenuProps={{
+                            PaperProps: { style: { maxHeight: 300 } },
 
-                        const lead = leads.find((l) => l.id === selected);
+                            // 🔥 clear search every time dropdown opens
+                            onEntered: () => setLeadSearchTerm(""),
+                          }}
+                          renderValue={(selected) => {
+                            if (!selected) return <em>Select Lead</em>;
 
-                        return lead
-                          ? `${lead.lead_id} - ${lead.contact.first_name} ${lead.contact.last_name} (${lead.contact.company_name})`
-                          : "Select Lead";
-                      }}
-                    >
-                      {/* 🔍 Search box inside dropdown */}
-                      <div
-                        style={{
-                          padding: "8px",
-                          position: "sticky",
-                          top: 0,
-                          background: "#fff",
-                          zIndex: 1,
-                        }}
-                      >
-                        <TextField
-                          fullWidth
-                          size="small"
-                          placeholder="Search Lead..."
-                          value={leadSearchTerm}
-                          onChange={(e) => setLeadSearchTerm(e.target.value)}
-                          onClick={(e) => e.stopPropagation()}
-                          onKeyDown={(e) => e.stopPropagation()}
-                        />
-                      </div>
+                            const lead = leads.find((l) => l.id === selected);
 
-                      {/* ⭐ Smart multi-word search filter */}
-                      {leads
-                        .filter((lead) => {
-                          const term = leadSearchTerm.trim().toLowerCase();
-                          const words = term.split(" ").filter(Boolean);
+                            return lead
+                              ? `${lead.lead_id} - ${lead.contact.first_name} ${lead.contact.last_name} (${lead.contact.company_name})`
+                              : "Select Lead";
+                          }}
+                        >
+                          {/* 🔍 Search box inside dropdown */}
+                          <div
+                            style={{
+                              padding: "8px",
+                              position: "sticky",
+                              top: 0,
+                              background: "#fff",
+                              zIndex: 1,
+                            }}
+                          >
+                            <TextField
+                              fullWidth
+                              size="small"
+                              placeholder="Search Lead..."
+                              value={leadSearchTerm}
+                              onChange={(e) => setLeadSearchTerm(e.target.value)}
+                              onClick={(e) => e.stopPropagation()}
+                              onKeyDown={(e) => e.stopPropagation()}
+                            />
+                          </div>
 
-                          const text = `${lead.lead_id} ${lead.contact.first_name} ${lead.contact.last_name} ${lead.contact.company_name}`
-                            .toLowerCase();
+                          {/* ⭐ Smart multi-word search filter */}
+                          {leads
+                            .filter((lead) => {
+                              const term = leadSearchTerm.trim().toLowerCase();
+                              const words = term.split(" ").filter(Boolean);
 
-                          return words.every((w) => text.includes(w));
-                        })
-                        .map((lead) => (
-                          <MenuItem key={lead.id} value={lead.id}>
-                            {lead.lead_id} - {lead.contact.first_name} {lead.contact.last_name} (
-                            {lead.contact.company_name})
-                          </MenuItem>
-                        ))}
-                    </Select>
-                  </FormControl>
+                              const text = `${lead.lead_id} ${lead.contact.first_name} ${lead.contact.last_name} ${lead.contact.company_name}`
+                                .toLowerCase();
 
-                  {/* Error Message */}
-                  {errors.selectedLead && (
-                    <span style={{ color: "red", fontSize: "0.75rem" }}>
-                      {errors.selectedLead}
-                    </span>
-                  )}
-                </div>
-              </div>
+                              return words.every((w) => text.includes(w));
+                            })
+                            .map((lead) => (
+                              <MenuItem key={lead.id} value={lead.id}>
+                                {lead.lead_id} - {lead.contact.first_name} {lead.contact.last_name} (
+                                {lead.contact.company_name})
+                              </MenuItem>
+                            ))}
+                        </Select>
+                      </FormControl>
+
+                      {/* Error Message */}
+                      {errors.selectedLead && (
+                        <span style={{ color: "red", fontSize: "0.75rem" }}>
+                          {errors.selectedLead}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </>
+              )}
+
+
+
+
+              {!formData.leadId && (
+
+                <>
+                  <div style={fieldContainerStyle}>
+                    <label style={labelStyle}>
+                      Select Existing Client
+                    </label>
+
+                    <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                      <FormControl fullWidth size="small">
+                        <Select
+                          value={selectedContactId || ""}
+                          onChange={(e) => {
+                            handleContactSelect(e.target.value);
+                            // reset search
+                            setContactSearchTerm("");
+                            // clear error
+                            if (errors.selectedContact) {
+                              setErrors((prev) => ({ ...prev, selectedContact: "" }));
+                            }
+                          }}
+                          displayEmpty
+                          style={{
+                            ...inputStyle,
+                            borderColor: errors.selectedContact ? "red" : "#d1d5db",
+                          }}
+                          MenuProps={{
+                            PaperProps: { style: { maxHeight: 300 } },
+                            // clear search every time dropdown opens
+                            onEntered: () => setContactSearchTerm(""),
+                          }}
+                          renderValue={(selected) => {
+                            if (!selected) return <em>Select Existing Client</em>;
+
+                            const contact = contacts.find((c) => c.id === selected);
+
+                            return contact
+                              ? `${contact.first_name} ${contact.last_name} - ${contact.company_name || "No Company"} (${contact.customer_id})`
+                              : "Select Client";
+                          }}
+                        >
+                          {/* Search box inside dropdown */}
+                          <div
+                            style={{
+                              padding: "8px",
+                              position: "sticky",
+                              top: 0,
+                              background: "#fff",
+                              zIndex: 1,
+                            }}
+                          >
+                            <TextField
+                              fullWidth
+                              size="small"
+                              placeholder="Search by name, email, phone, company..."
+                              value={contactSearchTerm}
+                              onChange={(e) => setContactSearchTerm(e.target.value)}
+                              onClick={(e) => e.stopPropagation()}
+                              onKeyDown={(e) => e.stopPropagation()}
+                            />
+                          </div>
+
+                          {/* Filter contacts */}
+                          {contacts
+                            .filter((contact) => {
+                              const term = contactSearchTerm.trim().toLowerCase();
+                              if (!term) return true;
+
+                              const words = term.split(" ").filter(Boolean);
+
+                              const searchText = `${contact.first_name || ""} ${contact.last_name || ""} ${contact.email || ""} ${contact.phone_number || ""} ${contact.company_name || ""} ${contact.customer_id || ""}`
+                                .toLowerCase();
+
+                              return words.every(word => searchText.includes(word));
+                            })
+                            .map((contact) => (
+                              <MenuItem key={contact.id} value={contact.id}>
+                                <div style={{ display: "flex", flexDirection: "column" }}>
+                                  <strong>{contact.first_name} {contact.last_name}</strong>
+                                  <span style={{ fontSize: "0.85rem", color: "#666" }}>
+                                    {contact.company_name || "No Company"} - {contact.customer_id}
+                                  </span>
+                                </div>
+                              </MenuItem>
+                            ))}
+                        </Select>
+                      </FormControl>
+
+                      {/* Error Message */}
+                      {errors.selectedContact && (
+                        <span style={{ color: "red", fontSize: "0.75rem" }}>
+                          {errors.selectedContact}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </>
+              )}
+
+
 
               {/* <Field
                 label="Lead ID"
@@ -987,6 +1213,7 @@ const QuotationsEditLayoutPage = () => {
                 value={formData.leadId}
                 readOnly
               /> */}
+              {/* Transaction Type Field */}
               <Field
                 label="Transaction Type"
                 type="select"
@@ -999,8 +1226,26 @@ const QuotationsEditLayoutPage = () => {
                   { value: "Rent", label: "Rent" },
                   { value: "Buy", label: "Sale" },
                 ]}
-                disabled
+                disabled={isLeadSelected}
               />
+
+              {/* Payment Type Field */}
+              {formData.transactionType === "Rent" && (
+                <Field
+                  label="Payment Type"
+                  type="select"
+                  placeholder="Select Payment Type"
+                  value={formData.payment_type}
+                  onChange={(e) =>
+                    handleInputChange("payment_type", e.target.value)
+                  }
+                  options={["Prepaid", "Postpaid"]}
+                  required
+                  error={errors.paymentType}
+                  disabled={isLeadSelected}
+                />
+              )}
+
               <Field
                 label="Quotation Status"
                 type="select"

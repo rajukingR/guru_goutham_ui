@@ -25,7 +25,7 @@ const AssetsDamageTable = () => {
       setLoading(true);
       setError(null);
       try {
-        const response = await fetch(`${API_URL}/asset-swaps`, {
+        const response = await fetch(`${API_URL}/asset-swaps/list`, {
           headers: {
             "Authorization": `Bearer ${userToken}`,
           },

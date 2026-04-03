@@ -38,11 +38,29 @@ import { useSelector } from "react-redux";
 import DefaultImage from "../../../assets/logos/default.jpg";
 
 const AssembledProductsTable = () => {
+
   const [data, setData] = useState([]);
   const [selectedSpecs, setSelectedSpecs] = useState(null);
   const [dialogOpen, setDialogOpen] = useState(false);
-  const { user, token } = useSelector((state) => state.auth);
+
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [search, setSearch] = useState("");
+
+  const { token } = useSelector((state) => state.auth);
+
   const userToken = token;
+
+
+  useEffect(() => {
+    fetchAssets();
+  }, [page, search]);
+
+  // reset page when searching
+  useEffect(() => {
+    setPage(1);
+  }, [search]);
+
 
   // Component type icons mapping
   const componentIcons = {
@@ -144,7 +162,6 @@ const AssembledProductsTable = () => {
     return specText || "No specifications available";
   };
 
-  // Function to show detailed specifications in modal
   const handleViewSpecifications = (assembledProduct) => {
     setSelectedSpecs({
       name: assembledProduct.assembled_name,
@@ -154,7 +171,6 @@ const AssembledProductsTable = () => {
     setDialogOpen(true);
   };
 
-  // Close specifications dialog
   const handleCloseDialog = () => {
     setDialogOpen(false);
     setSelectedSpecs(null);
@@ -178,90 +194,74 @@ const AssembledProductsTable = () => {
     return details.join(' • ');
   };
 
-  useEffect(() => {
-    const fetchAssembledAssets = async () => {
-      try {
-        const res = await axios.get(`${API_URL}/assembled-assets`, {
+  const fetchAssets = async () => {
+    try {
+
+      const res = await axios.get(
+        `${API_URL}/assembled-assets?page=${page}&limit=10&search=${search}`,
+        {
           headers: {
-            "Authorization": `Bearer ${userToken}`,
+            Authorization: `Bearer ${token}`,
           },
-        });
+        }
+      );
 
-        const formattedData = res.data.map((item, index) => ({
-          id: item.id,
-          s_no: index + 1,
-          ...item,
-          product_image: (
-            <img
-              src={
-                item.product_image
-                  ? `${IMAGE_API_URL}/${item.product_image}`
-                  : DefaultImage
-              }
-              alt={item.assembled_name}
-              style={{
-                width: "65px",
-                height: "65px",
-                objectFit: "contain",
-                border: "2px solid gray",
-                borderRadius: "6px",
-              }}
-              onError={(e) => {
-                e.target.onerror = null;
-                e.target.src = DefaultImage;
-              }}
-            />
-          ),
-          assembled_name: item.assembled_name,
-          parent_asset_id: item.parent_asset_id,
-          specifications: (
-            <Box sx={{ maxWidth: 300 }}>
-              <Typography
-                variant="body2"
-                sx={{
-                  display: "-webkit-box",
-                  WebkitLineClamp: 2,
-                  WebkitBoxOrient: "vertical",
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
-                }}
-              >
-                {formatSpecifications(item.components)}
-              </Typography>
-            </Box>
-          ),
-          component_types: [
-            ...new Set(item.components.map((comp) => comp.component_type)),
-          ].join(", "),
-          // ADDED VIEW DETAILS BUTTON
-          view_specs: (
-            <Tooltip title="View Full Specifications">
-              <Button
-                variant="outlined"
-                size="small"
-                startIcon={<Visibility />}
-                onClick={() => handleViewSpecifications(item)}
-                sx={{
-                  textTransform: 'none',
-                  fontSize: '0.75rem',
-                  py: 0.5
-                }}
-              >
-                View
-              </Button>
-            </Tooltip>
-          ),
-          is_active: item.is_active ? "Active" : "Inactive",
-        }));
+      const { assets, pagination } = res.data;
 
-        setData(formattedData);
-      } catch (err) {
-        console.error("❌ Failed to fetch assembled assets:", err);
-      }
-    };
+      setTotalPages(pagination.totalPages);
 
-    fetchAssembledAssets();
-  }, []);
+      const formattedData = assets.map((item, index) => ({
+        id: item.id,
+        s_no: (page - 1) * 10 + index + 1,
+        ...item,
+
+        product_image: (
+          <img
+            src={
+              item.product_image
+                ? `${IMAGE_API_URL}/${item.product_image}`
+                : DefaultImage
+            }
+            alt={item.assembled_name}
+            style={{
+              width: "65px",
+              height: "65px",
+              objectFit: "contain",
+              border: "2px solid gray",
+              borderRadius: "6px",
+            }}
+            onError={(e) => {
+              e.target.onerror = null;
+              e.target.src = DefaultImage;
+            }}
+          />
+        ),
+
+        component_types: [
+          ...new Set(item.components.map(c => c.component_type))
+        ].join(", "),
+
+        view_specs: (
+          <Tooltip title="View Full Specifications">
+            <Button
+              variant="outlined"
+              size="small"
+              startIcon={<Visibility />}
+              onClick={() => handleViewSpecifications(item)}
+              sx={{ textTransform: "none", fontSize: "0.75rem", py: 0.5 }}
+            >
+              View
+            </Button>
+          </Tooltip>
+        ),
+      }));
+
+      setData(formattedData);
+
+    } catch (err) {
+      console.error("❌ Failed to fetch assembled assets:", err);
+    }
+  };
 
   return (
     <div>
@@ -405,7 +405,7 @@ const AssembledProductsTable = () => {
                     color="primary"
                     variant="outlined"
                   />
-                  
+
                 </Box>
               </Box>
             </DialogContent>
@@ -426,11 +426,15 @@ const AssembledProductsTable = () => {
         )}
       </Dialog>
 
-      {/* Main Table */}
       <DynamicTable
         columns={columns}
         data={data}
-        rowsPerPage={10}
+        page={page}
+        setPage={setPage}
+        totalPages={totalPages}
+        search={search}
+        setSearch={setSearch}
+        refreshData={fetchAssets}
       />
     </div>
   );

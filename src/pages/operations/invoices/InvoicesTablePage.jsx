@@ -1,81 +1,104 @@
 import React, { useEffect, useState } from "react";
 import DynamicTable from "../../../components/table-format/DynamicTable";
 import axios from "axios";
-import API_URL, { IMAGE_API_URL } from "../../../api/Api_url";
+import API_URL from "../../../api/Api_url";
 import { useSelector } from "react-redux";
 
 const InvoicesTablePage = () => {
+
   const [data, setData] = useState([]);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [search, setSearch] = useState("");
+
+  const { token } = useSelector((state) => state.auth);
+  const userToken = token;
+
+  //---------------------------------------------
+  // FETCH
+  //---------------------------------------------
+
+  useEffect(() => {
+    fetchInvoices();
+  }, [page, search]);
+
+  const fetchInvoices = async () => {
+    try {
+
+      const response = await axios.get(
+        `${API_URL}/invoices?page=${page}&limit=10&search=${search}`,
+        {
+          headers: {
+            Authorization: `Bearer ${userToken}`,
+          },
+        }
+      );
+
+      const { invoices, pagination } = response.data;
+
+      setTotalPages(pagination.totalPages);
+
+      const formatted = invoices.map((item, index) => ({
+        ...item,
+
+        s_id: (page - 1) * 10 + index + 1,
 
 
-    const { user, token } = useSelector((state) => state.auth);
-  
-    const userToken = token;
+        status: item.approval_status === "Approved" ? "Active" : "Inactive",
+
+        transaction_type:
+          item.transaction_type === "Buy"
+            ? "Sale"
+            : item.transaction_type,
+
+        payment_mode:
+          item.payment_mode === "" ? "Sale" : item.payment_mode,
+
+      }));
+
+      setData(formatted);
+
+    } catch (error) {
+      console.error("Error fetching invoices:", error);
+    }
+  };
+
+  //---------------------------------------------
+  // RESET PAGE WHEN SEARCH
+  //---------------------------------------------
+
+  useEffect(() => {
+    setPage(1);
+  }, [search]);
+
+  //---------------------------------------------
 
   const columns = [
     { id: "s_id", label: "S.No." },
     { id: "invoice_number", label: "Invoice Number" },
-    // { id: "dispatch_order_number", label: "Order Number" },
-
     { id: "customer_name", label: "Customer Name" },
-        // { id: "customer_id", label: "Customer ID" },
-
     { id: "invoice_date", label: "Invoice Date" },
-        { id: "transaction_type", label: "Transaction Type" },
-        { id: "payment_mode", label: "Paymenet Type" },
-
-    { id: "email", label: "Email ID" },
+    { id: "transaction_type", label: "Transaction Type" },
+    { id: "payment_mode", label: "Payment Type" },
     { id: "phone_number", label: "Phone No" },
-    // { id: "customer_gst_number", label: "GST No." },
-
-    // { id: "pan_number", label: "PAN No." },
-    // { id: "transaction_type", label: "Transaction Type" },
-    // { id: "payment_mode", label: "Payment Mode" },
   ];
 
-  useEffect(() => {
-    const fetchInvoices = async () => {
-      try {
-        const token = localStorage.getItem("token");
-
-        const response = await axios.get(`${API_URL}/invoices`, {
-          headers: {
-            Authorization: `Bearer ${userToken}`,
-          },
-        });
-
-        if (response.status === 200) {
-          const formatted = response.data.map((item, index) => ({
-            s_id: index + 1,
-            ...item,
-            // payment_mode: item.payment_mode === "" ? "Buy": item.payment_mode,
-            status: item.approval_status === "Approved" ? "Active" : "Inactive",
-            transaction_type:
-            item.transaction_type === "Buy" ? "Sale" : item.transaction_type,
-          payment_mode: item.payment_mode === ""? "Sale" : item.payment_mode,
-          }));
-          setData(formatted);
-        }
-      } catch (error) {
-        console.error("Error fetching invoices:", error);
-      }
-    };
-
-    fetchInvoices();
-  }, []);
-
-  const formatINR = (value) => {
-    return new Intl.NumberFormat("en-IN", {
-      style: "currency",
-      currency: "INR",
-      maximumFractionDigits: 2,
-    }).format(parseFloat(value || 0));
-  };
+  //---------------------------------------------
 
   return (
     <div>
       <h2 style={{ marginBottom: "10px" }}>Invoices List</h2>
-      <DynamicTable columns={columns} data={data} />
+
+      <DynamicTable
+        columns={columns}
+        data={data}
+        page={page}
+        setPage={setPage}
+        totalPages={totalPages}
+        search={search}
+        setSearch={setSearch}
+        refreshData={fetchInvoices}
+      />
     </div>
   );
 };

@@ -438,12 +438,12 @@ const Sidebar = ({ section }) => {
             icon: <VpnKeyIcon />,
             description: "Roles",
           },
-          {
-            text: "Branch",
-            path: "/dashboard/settings/branches",
-            icon: <AccountTreeIcon />,
-            description: "Branches",
-          },
+          // {
+          //   text: "Branch",
+          //   path: "/dashboard/settings/branches",
+          //   icon: <AccountTreeIcon />,
+          //   description: "Branches",
+          // },
         ]
       : []),
         

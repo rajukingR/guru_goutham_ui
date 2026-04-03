@@ -2,19 +2,19 @@ import React, { useMemo, useState, useEffect } from "react";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import API_URL from "../../../api/Api_url";
-import { useSelector } from "react-redux";
 import Pagination from '@mui/material/Pagination';
 import Stack from '@mui/material/Stack';
+import { useSelector } from "react-redux";
 
-const RecentRentals = () => {
-  const { user, token } = useSelector((state) => state.auth);
-  const userToken = token;
+const RecentSales = () => {
 
-  const [fromMonth, setFromMonth] = useState(
-    new Date(new Date().setMonth(new Date().getMonth() - 1))
-  );
+    const { user, token } = useSelector((state) => state.auth);
+    const userToken = token;
+
+
+  const [fromMonth, setFromMonth] = useState(new Date(new Date().setMonth(new Date().getMonth() - 1)));
   const [toMonth, setToMonth] = useState(new Date());
-  const [recentRentals, setRecentRentals] = useState([]);
+  const [recentSales, setRecentSales] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   
@@ -30,11 +30,11 @@ const RecentRentals = () => {
   };
 
   useEffect(() => {
-    const fetchRentals = async () => {
+    const fetchSales = async () => {
       setLoading(true);
       setError(null);
       try {
-        const response = await fetch(`${API_URL}/delivery-challans`, {
+        const response = await fetch(`${API_URL}/delivery-challans/list`,{
           headers: {
             "Authorization": `Bearer ${userToken}`,
           },
@@ -47,81 +47,121 @@ const RecentRentals = () => {
         const startMonth = formatDateYYYYMM(fromMonth);
         const endMonth = formatDateYYYYMM(toMonth);
 
-        // Filter Rent type challans within month range
+        // Filter challans of type "Buy" within month range
         const filtered = data.filter((challan) => {
-          if (challan.type !== "Rent") return false;
-
-          const challanMonth = challan.dc_date.substring(0, 7); // Extract YYYY-MM
+          if (challan.type !== "Buy") return false;
+          
+          // Extract YYYY-MM from dc_date (which might be YYYY-MM-DD)
+          const challanMonth = challan.dc_date.substring(0, 7);
           return challanMonth >= startMonth && challanMonth <= endMonth;
         });
+        
+        const salesForTable = [];
+        filtered.forEach((challan) => {
+          const customer = challan.shipping_name || "-";
+          const date = challan.dc_date || "-";
+          const status = challan.dc_status || "Unknown";
+          const idBase = challan.dc_id || challan.id;
+          
+          if (challan.items && challan.items.length) {
+            challan.items.forEach((item, idx) => {
+              salesForTable.push({
+                id: `${idBase}-${item.id || idx}`,
+                customer,
+                model: item.product_name || "-",
+                date,
+                price: item.total_price ? parseFloat(item.total_price).toLocaleString(undefined, { style: 'currency', currency: 'INR' }) : "-",
+                status,
+              });
+            });
+          } else {
+            salesForTable.push({
+              id: idBase,
+              customer,
+              model: "-",
+              date,
+              price: "-",
+              status,
+            });
+          }
+        });
 
-        const rentalsForTable = filtered.map((challan) => ({
-          id: challan.dc_id || challan.id,
-          shipping_name: challan.shipping_name || "-",
-          model: challan.items?.[0]?.product_name || "-",
-          startDate: challan.dc_date,
-          endDate: "-",
-          status: challan.dc_status || "Unknown",
-        }));
-
-        setRecentRentals(rentalsForTable);
+        setRecentSales(salesForTable);
         setPage(1); // Reset to first page when data changes
       } catch (err) {
-        console.error("Error fetching rentals:", err);
-        setError("Failed to load recent rentals.");
+        console.error("Error fetching sales:", err);
+        setError("Failed to load recent sales.");
       } finally {
         setLoading(false);
       }
     };
 
-    fetchRentals();
-  }, [fromMonth, toMonth, userToken]);
+    fetchSales();
+  }, [fromMonth, toMonth]);
 
   // Calculate total pages
-  const totalPages = Math.ceil(recentRentals.length / rowsPerPage);
+  const totalPages = Math.ceil(recentSales.length / rowsPerPage);
 
   // Paginate data
   const paginatedData = useMemo(() => {
     const startIndex = (page - 1) * rowsPerPage;
     const endIndex = startIndex + rowsPerPage;
-    return recentRentals.slice(startIndex, endIndex);
-  }, [recentRentals, page]);
+    return recentSales.slice(startIndex, endIndex);
+  }, [recentSales, page]);
 
-  const getStatusColor = (status) => {
-    switch (status) {
-      case "Active":
-        return {
-          backgroundColor: "#dcfce7",
-          color: "#166534",
-          border: "1px solid #bbf7d0",
-        };
-      case "Completed":
-        return {
-          backgroundColor: "#dbeafe",
-          color: "#1e40af",
-          border: "1px solid #bfdbfe",
-        };
-      case "Overdue":
-        return {
-          backgroundColor: "#fee2e2",
-          color: "#991b1b",
-          border: "1px solid #fecaca",
-        };
-      default:
-        return {
-          backgroundColor: "#f3f4f6",
-          color: "#374151",
-          border: "1px solid #e5e7eb",
-        };
-    }
-  };
+const getStatusColor = (status) => {
+  switch (status) {
+    case "Delivered":
+      return {
+        backgroundColor: "#dcfce7", // light green
+        color: "#166534",
+        border: "1px solid #bbf7d0",
+      };
+
+    case "Completed":
+      return {
+        backgroundColor: "#dbeafe", // light blue
+        color: "#1e40af",
+        border: "1px solid #bfdbfe",
+      };
+
+    case "Overdue":
+      return {
+        backgroundColor: "#fee2e2", // light red
+        color: "#991b1b",
+        border: "1px solid #fecaca",
+      };
+
+    case "Pending":
+      return {
+        backgroundColor: "#fef9c3", // lite yellow
+        color: "#854d0e",
+        border: "1px solid #fde68a",
+      };
+
+    case "Rejected":
+      return {
+        backgroundColor: "#fee2e2", // red
+        color: "#7f1d1d",
+        border: "1px solid #fca5a5",
+      };
+
+    default:
+      return {
+        backgroundColor: "#f3f4f6",
+        color: "#374151",
+        border: "1px solid #e5e7eb",
+      };
+  }
+};
+
 
   return (
     <div style={tableCardStyle}>
       <div style={chartHeaderWithDateStyle}>
         <div style={chartHeaderStyle}>
-          <div style={chartIconStyle}>📈</div>
-          <h2 style={chartTitleStyle}>Recent Rentals</h2>
+          <div style={chartIconStyle}>💵</div>
+          <h2 style={chartTitleStyle}>Recent Sales</h2>
         </div>
         <div style={dateRangeContainerStyle}>
           <div style={datePickerContainerStyle}>
@@ -170,37 +210,37 @@ const RecentRentals = () => {
       <div style={tableContainerStyle}>
         {loading ? (
           <div style={loadingStyle}>
-            Loading recent rentals...
+            Loading recent sales...
           </div>
         ) : error ? (
           <div style={errorStyle}>
             {error}
           </div>
-        ) : recentRentals.length === 0 ? (
+        ) : recentSales.length === 0 ? (
           <div style={noDataStyle}>
-            No rentals found for selected month.
+            No sales found for selected month range.
           </div>
         ) : (
           <>
             <table style={tableStyle}>
               <thead>
                 <tr style={tableHeaderRowStyle}>
-                  <th style={tableHeaderCellStyle}>Rental ID</th>
-                  <th style={tableHeaderCellStyle}>Customer Name</th>
+                  <th style={tableHeaderCellStyle}>Sale ID</th>
+                  <th style={tableHeaderCellStyle}>Customer</th>
                   <th style={tableHeaderCellStyle}>Model</th>
-                  <th style={tableHeaderCellStyle}>Start Date</th>
-                  <th style={{ ...tableHeaderCellStyle, textAlign: "right" }}>
-                    Status
-                  </th>
+                  <th style={tableHeaderCellStyle}>Date</th>
+                  <th style={{ ...tableHeaderCellStyle, textAlign: "right" }}>Price</th>
+                  <th style={{ ...tableHeaderCellStyle, textAlign: "right" }}>Status</th>
                 </tr>
               </thead>
               <tbody>
                 {paginatedData.map((row, index) => (
                   <tr key={index} style={tableRowStyle}>
                     <td style={tableCellIdStyle}>{row.id}</td>
-                    <td style={tableCellStyle}>{row.shipping_name}</td>
+                    <td style={tableCellStyle}>{row.customer}</td>
                     <td style={tableCellStyle}>{row.model}</td>
-                    <td style={tableCellStyle}>{row.startDate}</td>
+                    <td style={tableCellStyle}>{row.date}</td>
+                    <td style={{ ...tableCellStyle, textAlign: "right", fontWeight: "600" }}>{row.price}</td>
                     <td style={{ ...tableCellStyle, textAlign: "right" }}>
                       <span
                         style={{
@@ -217,16 +257,16 @@ const RecentRentals = () => {
             </table>
 
             {/* Pagination Component */}
-              <Stack spacing={2} alignItems="center" mt={2} mb={1}>
-                <Pagination
-                  count={totalPages}
-                  page={page}
-                  onChange={(event, value) => setPage(value)}
-                  color="primary"
-                  variant="outlined"
-                  shape="rounded"
-                />
-              </Stack>
+            <Stack spacing={2} alignItems="center" mt={2} mb={1}>
+              <Pagination
+                count={totalPages}
+                page={page}
+                onChange={(event, value) => setPage(value)}
+                color="primary"
+                variant="outlined"
+                shape="rounded"
+              />
+            </Stack>
           </>
         )}
       </div>
@@ -371,4 +411,4 @@ const noDataStyle = {
   textAlign: "center",
 };
 
-export default RecentRentals;
+export default RecentSales;

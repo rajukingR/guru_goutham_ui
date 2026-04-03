@@ -172,7 +172,7 @@ const ServiceMaintenanceEdit = () => {
         const token = localStorage.getItem("token");
 
         // Fetch contacts
-        const contactsResponse = await axios.get(`${API_URL}/contacts`, {
+        const contactsResponse = await axios.get(`${API_URL}/contacts/list`, {
           headers: { "Authorization": `Bearer ${userToken}` },
         });
 

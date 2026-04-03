@@ -42,7 +42,7 @@ const ClientPlaceStock = () => {
         );
 
         if (response.status === 200) {
-          const dataWithSno = response.data.map((item, index) => ({
+          const dataWithSno = response.data.contacts.map((item, index) => ({
             s_id: index + 1,
             full_name: `${item.first_name} ${item.last_name || ""}`.trim(),
             ...item,

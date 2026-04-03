@@ -41,7 +41,7 @@ const ProductCategories = () => {
     };
 
     fetchCategories();
-  }, []);
+  }, [userToken]);
 
   // Colors for categories
   const colors = [
@@ -69,7 +69,7 @@ const ProductCategories = () => {
         available_quantity: category.available_quantity || 0
       };
     });
-  }, [apiData.category_summary]);
+  }, [apiData.category_summary, colors]);
 
   const totalValue = categoryData.reduce((sum, cat) => sum + cat.value, 0);
 
@@ -95,6 +95,11 @@ const ProductCategories = () => {
     });
   };
 
+  // Handle legend item hover
+  const handleLegendHover = (index) => {
+    setHoveredCategory(index);
+  };
+
   return (
     <div style={chartCardStyle}>
       <div style={chartHeaderWithDateStyle}>
@@ -103,16 +108,16 @@ const ProductCategories = () => {
           <h2 style={chartTitleStyle}>Product Categories</h2>
         </div>
         <div style={summaryStatsStyle}>
-          {/* <div style={statItemStyle}>
-            <div style={statValueStyle}>{apiData.summary.total_available_quantity || 0}</div>
-            <div style={statLabelStyle}>Available</div>
-          </div> */}
           <div style={statItemStyle}>
             <div style={statValueStyle}>{apiData.summary.total_used_quantity || 0}</div>
             <div style={statLabelStyle}>In Use</div>
           </div>
           <div style={statItemStyle}>
             <div style={statValueStyle}>{apiData.summary.total_available_quantity || 0}</div>
+            <div style={statLabelStyle}>Available</div>
+          </div>
+          <div style={statItemStyle}>
+            <div style={statValueStyle}>{apiData.summary.total_stock_quantity || 0}</div>
             <div style={statLabelStyle}>Total Stock</div>
           </div>
         </div>
@@ -256,13 +261,31 @@ const ProductCategories = () => {
                       </div>
                       <div style={{ fontSize: "12px", opacity: 0.8 }}>In Use</div>
                     </div>
-                    
                   </div>
                 </div>
               )}
             </div>
 
-            
+            {/* Legend Section */}
+            <div style={legendContainerStyle}>
+              {categoryData.map((category, index) => (
+                <div
+                  key={index}
+                  style={{
+                    ...legendItemStyle,
+                    opacity: hoveredCategory === null || hoveredCategory === index ? 1 : 0.6,
+                  }}
+                  onMouseEnter={() => handleLegendHover(index)}
+                  onMouseLeave={() => setHoveredCategory(null)}
+                >
+                  <div style={{ ...legendDotStyle, backgroundColor: category.color }} />
+                  <span style={legendTextStyle} title={category.name}>
+                    {category.name}
+                  </span>
+                  <span style={legendValueStyle}>{category.available_quantity}</span>
+                </div>
+              ))}
+            </div>
           </>
         ) : (
           <div style={loadingStyle}>No product data available</div>
@@ -272,7 +295,7 @@ const ProductCategories = () => {
   );
 };
 
-// ========== Updated Styles ==========
+// ========== Styles ==========
 
 const chartCardStyle = {
   backgroundColor: "#ffffff",
@@ -366,7 +389,6 @@ const svgStyle = {
   height: "100%",
 };
 
-// Updated Legend Styles
 const legendContainerStyle = {
   display: "grid",
   gridTemplateColumns: "repeat(auto-fill, minmax(250px, 1fr))",
@@ -388,8 +410,7 @@ const legendItemStyle = {
   backgroundColor: "#f8fafc",
   transition: "all 0.2s ease",
   cursor: "pointer",
-  
-  "&:hover": {
+  ":hover": {
     backgroundColor: "#f1f5f9",
     borderColor: "#cbd5e1",
     transform: "translateY(-2px)",

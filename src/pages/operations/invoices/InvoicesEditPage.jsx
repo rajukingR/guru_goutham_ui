@@ -15,13 +15,11 @@ import {
   Alert,
   Select,
   MenuItem,
-  InputLabel,
   FormControl,
-  Button,
   Typography,
 } from "@mui/material";
 import { Add, Remove } from "@mui/icons-material";
-import API_URL, { IMAGE_API_URL, POSTAL_API } from "../../../api/Api_url";
+import API_URL, { POSTAL_API } from "../../../api/Api_url";
 import { useNavigate, useParams } from "react-router-dom";
 import { useSelector } from "react-redux";
 
@@ -45,6 +43,10 @@ const titleStyle = {
   color: "#1e293b",
   margin: "0 0 0.5rem 0",
   letterSpacing: "-0.025em",
+};
+
+const checkboxStyle = {
+  display: "none",
 };
 
 const subtitleStyle = {
@@ -223,12 +225,6 @@ const textareaStyle = {
   minHeight: "80px",
 };
 
-const checkboxStyle = {
-  width: "18px",
-  height: "18px",
-  cursor: "pointer",
-};
-
 const Field = memo(
   ({
     label,
@@ -242,7 +238,7 @@ const Field = memo(
     value,
     onChange,
     error,
-    children, // <-- keep children support also
+    children,
     description,
     ...props
   }) => (
@@ -271,7 +267,6 @@ const Field = memo(
               </option>
             )}
 
-            {/* Support both `options` and `children` */}
             {options.length > 0
               ? options.map((option) => (
                 <option key={option.value} value={option.value}>
@@ -318,8 +313,8 @@ const Field = memo(
             checked={value}
             onChange={onChange}
             {...props}
+            style={checkboxStyle}
           />
-
           <div>
             <label style={{ fontSize: "14px", fontWeight: 500 }}>
               {label}
@@ -327,7 +322,6 @@ const Field = memo(
             </label>
           </div>
         </div>
-
       ) : (
         <input
           type={type}
@@ -359,7 +353,6 @@ const Field = memo(
           {error}
         </Typography>
       )}
-
     </div>
   )
 );
@@ -497,7 +490,7 @@ const DateRangeSelector = memo(
 );
 
 const InvoicesEditPage = () => {
-  const { user, token } = useSelector((state) => state.auth);
+  const { token } = useSelector((state) => state.auth);
   const { id } = useParams();
   const userToken = token;
   const navigate = useNavigate();
@@ -561,21 +554,15 @@ const InvoicesEditPage = () => {
   const [quantities, setQuantities] = useState({});
   const [searchTerm, setSearchTerm] = useState("");
   const [showProductTable, setShowProductTable] = useState(false);
-  const [orderPrepSearchTerm, setOrderPrepSearchTerm] = useState("");
-  const [dcSearchTerm, setDcSearchTerm] = useState(""); // Add this for DC dropdown
+  const [dcSearchTerm, setDcSearchTerm] = useState("");
   const [snackbar, setSnackbar] = useState({
     open: false,
     message: "",
     severity: "info",
   });
 
-  const [returnQuantities, setReturnQuantities] = useState({});
-  const [newQuantities, setNewQuantities] = useState({});
-  const [newDeviceIds, setNewDeviceIds] = useState({});
-  const [returnedDeviceIds, setReturnedDeviceIds] = useState({});
   const [selectedMonth, setSelectedMonth] = useState("current");
   const [productOrderMap, setProductOrderMap] = useState({});
-  const [selectedReturnIds, setSelectedReturnIds] = useState({});
   const [selectedOrderId, setSelectedOrderId] = useState("");
 
   const [dateRanges, setDateRanges] = useState({
@@ -590,44 +577,117 @@ const InvoicesEditPage = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isOrdersLoaded, setIsOrdersLoaded] = useState(false);
 
+  // Add these state variables for customer products
+  const [customerProducts, setCustomerProducts] = useState([]);
+  const [loadingProducts, setLoadingProducts] = useState(false);
+  const [totalQuantityGlobal, setTotalQuantityGlobal] = useState(0);
+
+  // Add this function to fetch customer details
+  const fetchCustomerDetails = async (customerId) => {
+    if (!customerId) return;
+
+    setLoadingProducts(true);
+    try {
+      const response = await fetch(
+        `${API_URL}/delivery-challans/customer-details/${customerId}`,
+        {
+          headers: {
+            "Authorization": `Bearer ${userToken}`,
+          },
+        }
+      );
+
+      if (!response.ok) throw new Error("Failed to fetch customer details");
+
+      const data = await response.json();
+      console.log("Customer Details:", data);
+
+      let globalTotalQuantity = 0;
+      const productsMap = new Map();
+
+      data.challans?.forEach((challan) => {
+        challan.items?.forEach((item) => {
+          const productId = item.product_id;
+          globalTotalQuantity += item.quantity || 0;
+
+          if (!productsMap.has(productId)) {
+            productsMap.set(productId, {
+              product_id: productId,
+              product_name: item.product_name,
+              total_quantity: 0,
+              device_ids: [],
+              specifications: item.product ? {
+                model: item.product.model,
+                processor: item.product.processor_model || item.product.processor,
+                ram: item.product.ram,
+                storage: item.product.storage,
+                graphics: item.product.graphics,
+              } : {},
+            });
+          }
+
+          const product = productsMap.get(productId);
+          product.total_quantity += item.quantity || 0;
+          product.device_ids = [...new Set([...product.device_ids, ...(item.device_ids || [])])];
+        });
+      });
+
+      setTotalQuantityGlobal(globalTotalQuantity);
+      console.log("GLOBAL TOTAL QUANTITY:", globalTotalQuantity);
+
+      setCustomerProducts(Array.from(productsMap.values()));
+
+      // Auto-select all products
+      const productIds = Array.from(productsMap.keys());
+      setSelectedProductIds(productIds);
+
+      // Set quantities for each product
+      const initialQuantities = {};
+      productIds.forEach((id) => {
+        const product = productsMap.get(id);
+        initialQuantities[id] = product.total_quantity;
+      });
+      setQuantities(initialQuantities);
+
+    } catch (error) {
+      console.error("Error fetching customer details:", error);
+      setSnackbar({
+        open: true,
+        message: "Error fetching customer products: " + error.message,
+        severity: "error",
+      });
+    } finally {
+      setLoadingProducts(false);
+    }
+  };
+
   // Function to find order ID based on dc_id or dispatch_order_number
   const findOrderIdByDcId = (dcId, orders) => {
     if (!dcId || !orders.length) return "";
 
     console.log("Looking for order with dc_id:", dcId);
 
-    // Try multiple matching strategies
     let order = orders.find(order => {
-      // Strategy 1: Direct match with dc_id
       if (order.dc_id?.toString() === dcId.toString()) {
         console.log("Found by dc_id direct match:", order);
         return true;
       }
-
-      // Strategy 2: Match with dispatch_order_id
       if (order.dispatch_order_id?.toString() === dcId.toString()) {
         console.log("Found by dispatch_order_id match:", order);
         return true;
       }
-
-      // Strategy 3: Match with dispatch_order_number
       if (order.dispatch_order_number?.toString() === dcId.toString()) {
         console.log("Found by dispatch_order_number match:", order);
         return true;
       }
-
-      // Strategy 4: Match with quotation_id for direct invoices
       if (order.type === "direct_invoice" && order.quotation_id?.toString() === dcId.toString()) {
         console.log("Found by quotation_id match:", order);
         return true;
       }
-
-      // Strategy 5: Check if any dc_id in the order data matches
       if (order.dispatch_order?.delivery_challans?.some(dc => dc.dc_id?.toString() === dcId.toString())) {
         console.log("Found by delivery_challans dc_id match:", order);
         return true;
       }
-
       return false;
     });
 
@@ -820,7 +880,7 @@ const InvoicesEditPage = () => {
         setOrders(transformedOrders);
         setIsOrdersLoaded(true);
 
-        const prodResponse = await fetch(`${API_URL}/product-templete`, {
+        const prodResponse = await fetch(`${API_URL}/product-templete/without-active`, {
           headers: {
             "Authorization": `Bearer ${userToken}`,
           },
@@ -862,13 +922,17 @@ const InvoicesEditPage = () => {
       if (orderId) {
         setSelectedOrderId(orderId);
 
-        // Also trigger the handleCustomerSelect to populate all data
+        // Get customer ID from the order and fetch customer details
+        const selectedOrder = orders.find(order => order.id.toString() === orderId);
+        if (selectedOrder?.customer_id) {
+          fetchCustomerDetails(selectedOrder.customer_id);
+        }
+
         setTimeout(() => {
           handleCustomerSelect(orderId);
         }, 100);
       } else {
         console.warn("No order found for dc_id:", formData.dc_id);
-        // Try to find by dispatch_order_number as fallback
         if (formData.dispatch_order_number) {
           const fallbackOrderId = findOrderIdByDcId(formData.dispatch_order_number, orders);
           if (fallbackOrderId) {
@@ -909,97 +973,6 @@ const InvoicesEditPage = () => {
 
     return price;
   }, []);
-
-  const handleReturnQtyChange = useCallback((productId, value) => {
-    setReturnQuantities((prev) => ({
-      ...prev,
-      [productId]: parseInt(value) || 0,
-    }));
-  }, []);
-
-  const incrementReturnQty = useCallback((productId) => {
-    setReturnQuantities((prev) => ({
-      ...prev,
-      [productId]: (prev[productId] || 0) + 1,
-    }));
-  }, []);
-
-  const decrementReturnQty = useCallback((productId) => {
-    setReturnQuantities((prev) => ({
-      ...prev,
-      [productId]: Math.max((prev[productId] || 0) - 1, 0),
-    }));
-  }, []);
-
-  const handleNewDeviceCheckboxChange = (productId, deviceId, isChecked) => {
-    setNewDeviceIds((prev) => {
-      const currentSelected = prev[productId] || [];
-      let updatedSelected;
-
-      if (isChecked) {
-        if (currentSelected.length < (newQuantities[productId] || 0)) {
-          updatedSelected = [...currentSelected, deviceId];
-        } else {
-          return prev;
-        }
-      } else {
-        updatedSelected = currentSelected.filter((id) => id !== deviceId);
-      }
-
-      return {
-        ...prev,
-        [productId]: updatedSelected,
-      };
-    });
-  };
-
-  const handleReturnDeviceCheckboxChange = (productId, deviceId, isChecked) => {
-    setReturnedDeviceIds((prev) => {
-      const currentSelected = prev[productId] || [];
-      let updatedSelected;
-
-      if (isChecked) {
-        if (currentSelected.length < (returnQuantities[productId] || 0)) {
-          updatedSelected = [...currentSelected, deviceId];
-        } else {
-          return prev;
-        }
-      } else {
-        updatedSelected = currentSelected.filter((id) => id !== deviceId);
-      }
-
-      return {
-        ...prev,
-        [productId]: updatedSelected,
-      };
-    });
-  };
-
-  const handleNewQtyChange = useCallback((productId, value) => {
-    const updated = { ...newQuantities, [productId]: parseInt(value) || 0 };
-    setNewQuantities(updated);
-  }, []);
-
-  const incrementNewQty = useCallback((productId) => {
-    setNewQuantities((prev) => ({
-      ...prev,
-      [productId]: (prev[productId] || 0) + 1,
-    }));
-  }, []);
-
-  const decrementNewQty = useCallback((productId) => {
-    setNewQuantities((prev) => ({
-      ...prev,
-      [productId]: Math.max((prev[productId] || 0) - 1, 0),
-    }));
-  }, []);
-
-  const handleSelectReturnId = (productId, id) => {
-    setSelectedReturnIds((prev) => ({
-      ...prev,
-      [productId]: id,
-    }));
-  };
 
   const handleCustomerSelect = useCallback(
     (dispatchOrderId) => {
@@ -1043,19 +1016,14 @@ const InvoicesEditPage = () => {
         const address = selectedOrder.address;
         const orderItems = selectedOrder.items || [];
 
-        const productDeviceMap = {};
         const productOrderMapLocal = {};
 
         orderItems.forEach((item) => {
-          if (item.product_id && Array.isArray(item.device_ids)) {
-            productDeviceMap[item.product_id] = item.device_ids;
-          }
           if (item.product_id && item.order_id) {
             productOrderMapLocal[item.product_id] = item.order_id;
           }
         });
 
-        setReturnedDeviceIds(productDeviceMap);
         setProductOrderMap(productOrderMapLocal);
 
         const productIds = orderItems.map((item) => item.product_id);
@@ -1336,20 +1304,15 @@ const InvoicesEditPage = () => {
 
   useEffect(() => {
     const calculateTotals = () => {
-      const selectedProducts = products.filter((product) =>
+      const selectedProductsList = products.filter((product) =>
         selectedProductIds.includes(product.id)
       );
 
       let amount = 0;
 
-      const items = selectedProducts.map((product) => {
+      const items = selectedProductsList.map((product) => {
         const previous_quantity = quantities[product.id] || 0;
         const quantity = quantities[product.id] || 0;
-
-        const return_quantity = returnQuantities?.[product.id] || 0;
-        const new_quantity = newQuantities?.[product.id] || 0;
-        const new_device_ids = newDeviceIds?.[product.id] || [];
-        const returned_device_ids = returnedDeviceIds?.[product.id] || [];
 
         let price = product.purchase_price;
 
@@ -1386,7 +1349,7 @@ const InvoicesEditPage = () => {
           }
         }
 
-        const totalPrice = new_quantity * price;
+        const totalPrice = quantity * price;
         amount += totalPrice;
 
         return {
@@ -1394,10 +1357,6 @@ const InvoicesEditPage = () => {
           product_name: product.product_name,
           previous_quantity,
           quantity,
-          return_quantity,
-          new_quantity,
-          new_device_ids,
-          returned_device_ids,
         };
       });
 
@@ -1426,8 +1385,6 @@ const InvoicesEditPage = () => {
   }, [
     selectedProductIds,
     quantities,
-    returnQuantities,
-    newQuantities,
     products,
     taxTypes,
     formData.transaction_type,
@@ -1559,11 +1516,9 @@ const InvoicesEditPage = () => {
           return {
             ...item,
             order_id: productOrderMap[item.product_id] || "",
-            device_ids: returnedDeviceIds[item.product_id] || [],
-            new_device_ids: newDeviceIds[item.product_id] || [],
-            returned_device_ids: selectedReturnIds[item.product_id]
-              ? [selectedReturnIds[item.product_id]]
-              : [],
+            device_ids: [],
+            new_device_ids: [],
+            returned_device_ids: [],
             rental_duration: formData.rental_duration || "0",
             rental_duration_days: formData.rental_duration_days || 0,
             rental_duration_months: formData.rental_duration
@@ -1593,7 +1548,6 @@ const InvoicesEditPage = () => {
         throw new Error(errorData.message || "Failed to update invoice");
       }
 
-      const result = await response.json();
       setSnackbar({
         open: true,
         message: "Invoice updated successfully!",
@@ -1679,7 +1633,7 @@ const InvoicesEditPage = () => {
               />
 
               <div style={fieldContainerStyle}>
-                <label style={labelStyle}>Select DC</label>
+                <label style={labelStyle}>Select Client</label>
 
                 <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
                   <FormControl fullWidth size="small" error={!!errors.dc_id}>
@@ -1690,10 +1644,9 @@ const InvoicesEditPage = () => {
                         if (errors.dc_id) {
                           setErrors({ ...errors, dc_id: "" });
                         }
-                        // Reset search when selection is made
                         setDcSearchTerm("");
                       }}
-                      label="Select DC"
+                      label="Select Client"
                       displayEmpty
                       style={{
                         ...inputStyle,
@@ -1701,19 +1654,18 @@ const InvoicesEditPage = () => {
                       }}
                       MenuProps={{
                         PaperProps: { style: { maxHeight: 300 } },
-                        onEntered: () => setDcSearchTerm(""), // Reset search when dropdown opens
+                        onEntered: () => setDcSearchTerm(""),
                       }}
                       renderValue={(selected) => {
-                        if (!selected) return <em>Select DC</em>;
+                        if (!selected) return <em>Select Client</em>;
                         const order = orders.find(x => x.id === parseInt(selected));
-                        if (!order) return "Select DC";
+                        if (!order) return "Select Client";
 
                         return order.type === "dispatch_order"
                           ? `${order.dispatch_order_id} - ${order.personalDetails?.first_name} (${getCompanyName(order)})`
                           : `${order.quotation_id} - ${order.personalDetails?.first_name} ${order.personalDetails?.last_name} (${getCompanyName(order)})`;
                       }}
                     >
-                      {/* Search bar inside dropdown */}
                       <div
                         style={{
                           padding: "8px",
@@ -1727,7 +1679,7 @@ const InvoicesEditPage = () => {
                         <TextField
                           fullWidth
                           size="small"
-                          placeholder="Search DC"
+                          placeholder="Search client"
                           value={dcSearchTerm}
                           onChange={(e) => setDcSearchTerm(e.target.value)}
                           onClick={(e) => e.stopPropagation()}
@@ -1736,9 +1688,8 @@ const InvoicesEditPage = () => {
                         />
                       </div>
 
-                      {/* Smart multi-word search filter */}
                       {orders.length === 0 ? (
-                        <MenuItem disabled>No DCs available</MenuItem>
+                        <MenuItem disabled>No clients available</MenuItem>
                       ) : (
                         orders
                           .filter((order) => {
@@ -1748,7 +1699,6 @@ const InvoicesEditPage = () => {
                             const words = term.split(" ").filter(Boolean);
                             const personalDetails = order.personalDetails || {};
 
-                            // Create search text with all searchable fields
                             const searchText = [
                               order.type === "dispatch_order" ? order.dispatch_order_id : order.quotation_id,
                               personalDetails.first_name,
@@ -1866,28 +1816,6 @@ const InvoicesEditPage = () => {
                 onChange={handleInputChange}
                 placeholder="Enter PAN"
               />
-
-              {/* <Field
-                label="Consultant"
-                name="invoice_consulting_by"
-                value={formData.invoice_consulting_by}
-                onChange={handleInputChange}
-                placeholder="Enter Consultant Name"
-              /> */}
-              {/* <Field
-                label="Industry"
-                name="industry"
-                value={formData.industry}
-                onChange={handleInputChange}
-                placeholder="Enter Industry"
-              /> */}
-              {/* <Field
-                label="Remarks"
-                name="remarks"
-                value={formData.remarks}
-                onChange={handleInputChange}
-                placeholder="Enter Remarks"
-              /> */}
             </div>
           </div>
 

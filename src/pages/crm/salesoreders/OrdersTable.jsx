@@ -1,86 +1,147 @@
 import React, { useEffect, useState } from "react";
 import DynamicTable from "../../../components/table-format/DynamicTable";
 import axios from "axios";
-import API_URL, { IMAGE_API_URL } from "../../../api/Api_url";
+import API_URL from "../../../api/Api_url";
 import { useSelector } from "react-redux";
 
 const OrdersTable = () => {
+
   const [data, setData] = useState([]);
 
-    const { user, token } = useSelector((state) => state.auth);
-  
-    const userToken = token;
+  //------------------------------------------------
+  // PAGINATION
+  //------------------------------------------------
+
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [search, setSearch] = useState("");
+
+  const { token } = useSelector((state) => state.auth);
+
+  //------------------------------------------------
+  // FETCH
+  //------------------------------------------------
+
+  useEffect(() => {
+    fetchOrders();
+  }, [page, search]);
+
+  const fetchOrders = async () => {
+    try {
+
+      const res = await axios.get(
+        `${API_URL}/orders?page=${page}&limit=10&search=${search}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      const { orders, pagination } = res.data;
+
+      setTotalPages(pagination.totalPages);
+
+      //------------------------------------------------
+      // FORMAT
+      //------------------------------------------------
+
+      const formatted = orders.map((item, index) => {
+
+        const customerName =
+          `${item.personalDetails?.first_name || ""} ${item.personalDetails?.last_name || ""}`;
+
+        return {
+          ...item,
+
+          s_id: (page - 1) * 10 + index + 1,
+
+          order_id: item.order_id || "-",
+
+          customer_name: customerName,
+
+          transaction_type:
+            item.transaction_type === "Buy"
+              ? "Sale"
+              : item.transaction_type || "-",
+
+          payment_type:
+            item.payment_type || "Sale",
+
+          order_date:
+            item.created_at
+              ? new Date(item.created_at).toLocaleDateString("en-IN")
+              : "-",
+
+          rental_start_date:
+            item.rental_start_date
+              ? new Date(item.rental_start_date).toLocaleDateString("en-IN")
+              : "-",
+
+          rental_end_date:
+            item.rental_end_date
+              ? new Date(item.rental_end_date).toLocaleDateString("en-IN")
+              : "-",
+
+          rental_duration: item.rental_duration || "-",
+
+          owner: item.owner || "-",
+
+          order_status: item.order_status || "-",
+        };
+      });
+
+      setData(formatted);
+
+    } catch (error) {
+      console.error("Orders fetch error:", error);
+    }
+  };
+
+  //------------------------------------------------
+  // RESET PAGE WHEN SEARCH
+  //------------------------------------------------
+
+  useEffect(() => {
+    setPage(1);
+  }, [search]);
+
+  //------------------------------------------------
+
   const columns = [
     { id: "s_id", label: "S.No." },
     { id: "order_id", label: "Order ID" },
     { id: "customer_name", label: "Customer Name" },
-
     { id: "transaction_type", label: "Purchase Type" },
     { id: "payment_type", label: "Payment Type" },
-
     { id: "order_date", label: "Order Date" },
     { id: "rental_start_date", label: "Rental Start" },
-
     { id: "rental_end_date", label: "Rental End" },
     { id: "rental_duration", label: "Duration (months)" },
     { id: "owner", label: "Owner" },
-    // { id: "total_quantity", label: "Total Quantity" },
-    // { id: "total_order_value", label: "Total Amount (₹)" }, // ✅ new column
     { id: "order_status", label: "Order Status" },
   ];
 
-  useEffect(() => {
-    const fetchOrders = async () => {
-      try {
-        const token = localStorage.getItem("token");
-
-        const response = await axios.get(`${API_URL}/orders`, {
-          headers: {
-            "Authorization": `Bearer ${userToken}`,
-          },
-        });
-
-        if (response.status === 200) {
-          const dataWithSno = response.data.map((item, index) => {
-            // Format total_order_value in Indian currency
-            const formattedOrderValue = new Intl.NumberFormat("en-IN", {
-              style: "currency",
-              currency: "INR",
-              minimumFractionDigits: 2,
-            }).format(item.total_order_value || 0);
-
-            // Combine first and last name from personalDetails
-            const customerName = `${item.personalDetails?.first_name} ${item.personalDetails?.last_name}`;
-
-            return {
-              s_id: index + 1,
-              ...item,
-              transaction_type:
-                item.transaction_type === "Buy"
-                  ? "Sale"
-                  : item.transaction_type,
-              payment_type:
-                item.payment_type === "" ? "Sale" : item.payment_type,
-              customer_name: customerName, // ✅ added
-              total_order_value: formattedOrderValue,
-            };
-          });
-
-          setData(dataWithSno);
-        }
-      } catch (error) {
-        console.error("Error fetching orders:", error);
-      }
-    };
-
-    fetchOrders();
-  }, []);
+  //------------------------------------------------
 
   return (
     <div>
-      <h2 style={{ marginBottom: "10px" }}>Orders List</h2>
 
-      <DynamicTable columns={columns} data={data} />
+      <h2 style={{ marginBottom: "10px" }}>
+        Orders List
+      </h2>
+
+      <DynamicTable
+        columns={columns}
+        data={data}
+        page={page}
+        setPage={setPage}
+        totalPages={totalPages}
+        search={search}
+        setSearch={setSearch}
+        refreshData={fetchOrders}
+      />
+
     </div>
   );
 };

@@ -518,7 +518,7 @@ const DeliveryChallanAddPage = ({ product }) => {
         const dispatchOrderData = await dispatchOrderResponse.json();
         setDispatchOrders(dispatchOrderData);
 
-        const prodResponse = await fetch(`${API_URL}/product-templete`, {
+        const prodResponse = await fetch(`${API_URL}/product-templete/without-active`, {
           headers: {
             Authorization: `Bearer ${userToken}`,
           },
@@ -1000,7 +1000,6 @@ const DeliveryChallanAddPage = ({ product }) => {
                 placeholder="Enter DC ID"
                 value={formData.dc_id}
                 onChange={handleInputChange}
-                readOnly
               />
 
               {/* Select Order Preparation Dropdown */}

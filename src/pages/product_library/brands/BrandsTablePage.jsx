@@ -1,13 +1,19 @@
 import React, { useEffect, useState } from "react";
 import DynamicTable from "../../../components/table-format/DynamicTable";
 import axios from "axios";
-import API_URL, { IMAGE_API_URL } from "../../../api/Api_url"; // assuming IMAGE_API_URL is defined
+import API_URL from "../../../api/Api_url";
 import { useSelector } from "react-redux";
+
 const BrandsTablePage = () => {
+
+  const { token } = useSelector((state) => state.auth);
+
   const [data, setData] = useState([]);
-const { user, token } = useSelector((state) => state.auth);
-  
-    const userToken = token;
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [search, setSearch] = useState("");
+
+  //--------------------------------
 
   const columns = [
     { id: "s_no", label: "S.No." },
@@ -16,36 +22,57 @@ const { user, token } = useSelector((state) => state.auth);
     { id: "brand_description", label: "Description" },
   ];
 
-  useEffect(() => {
-    const fetchBrands = async () => {
-      try {
-        const token = localStorage.getItem("token");
-        const response = await axios.get(`${API_URL}/product-brands`,{
+  //--------------------------------
+
+  const fetchBrands = async () => {
+    try {
+
+      const response = await axios.get(
+        `${API_URL}/product-brands?page=${page}&limit=10&search=${search}`,
+        {
           headers: {
-            "Authorization": `Bearer ${userToken}`,
+            Authorization: `Bearer ${token}`,
           },
-        });
-
-        if (response.status === 200) {
-          const formattedData = response.data.map((item, index) => ({
-            s_no: index + 1,
-            ...item,
-            status: item.is_active ? "Active" : "Inactive",
-          }));
-
-          setData(formattedData);
         }
-      } catch (error) {
-        console.error("Error fetching brands:", error);
-      }
-    };
+      );
 
+      const formatted = response.data.data.map((item, index) => ({
+        ...item,
+
+        // ✅ Correct serial number across pages
+        s_no: (page - 1) * 10 + index + 1,
+
+        status: item.is_active ? "Active" : "Inactive",
+      }));
+
+      setData(formatted);
+      setTotalPages(response.data.totalPages);
+
+    } catch (error) {
+      console.error("Error fetching brands:", error);
+    }
+  };
+
+  //--------------------------------
+
+  useEffect(() => {
     fetchBrands();
-  }, []);
+  }, [page, search]);
+
+  //--------------------------------
 
   return (
     <div>
-      <DynamicTable columns={columns} data={data} rowsPerPage={10} />
+      <DynamicTable
+        columns={columns}
+        data={data}
+        page={page}
+        setPage={setPage}
+        totalPages={totalPages}
+        search={search}
+        setSearch={setSearch}
+        refreshData={fetchBrands}
+      />
     </div>
   );
 };

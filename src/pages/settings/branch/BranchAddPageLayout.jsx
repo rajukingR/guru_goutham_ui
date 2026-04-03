@@ -172,7 +172,7 @@ useEffect(() => {
         <div style={cardStyle}>
           <div style={cardHeaderContainerStyle}>
             <div style={iconStyle}>📍</div>
-            <h3 style={cardHeaderStyle}>Address:</h3>
+            <h3 style={cardHeaderStyle}>Personal Address:</h3>
           </div>
           <div style={fieldsGridStyle}>
             <Field

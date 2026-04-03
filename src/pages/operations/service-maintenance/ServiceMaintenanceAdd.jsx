@@ -194,7 +194,7 @@ const ServiceMaintenanceAdd = () => {
     const fetchClients = async () => {
       try {
         const token = localStorage.getItem("token");
-        const response = await axios.get(`${API_URL}/contacts`, {
+        const response = await axios.get(`${API_URL}/contacts/list`, {
           headers: { "Authorization": `Bearer ${userToken}` },
         });
 

@@ -75,7 +75,7 @@ const POQuotationEdit = () => {
               "Authorization": `Bearer ${userToken}`,
             },
           }),
-          fetch(`${API_URL}/supplier`, {
+          fetch(`${API_URL}/supplier/list`, {
             headers: {
               "Authorization": `Bearer ${userToken}`,
             },
@@ -268,14 +268,13 @@ const POQuotationEdit = () => {
         selected_products: selectedProductIds.map((id) => {
           const product = products.find((p) => p.id === id);
           const quantity = quantities[id] || 0;
-          const price_per_unit = product?.unit_price || 0;
+          const price_per_unit = product?.rent_price_per_month || 0;
           const gst_percentage = product?.gst_percentage || 18;
-          const total_price =
-            quantity * price_per_unit * (1 + gst_percentage / 100);
+          const total_price = product?.purchase_price || 0;
 
           return {
             product_id: id,
-            product_name: product?.name || "",
+            product_name: product?.product_name || "",
             quantity,
             price_per_unit,
             gst_percentage,

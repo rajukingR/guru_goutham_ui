@@ -49,7 +49,7 @@ const Dashboard = () => {
     const fetchDeliveryChallans = async () => {
       try {
         setLoading(true);
-        const response = await fetch(`${API_URL}/delivery-challans`, {
+        const response = await fetch(`${API_URL}/delivery-challans/list`, {
           headers: {
             "Authorization": `Bearer ${userToken}`,
           },

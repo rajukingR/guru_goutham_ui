@@ -106,7 +106,7 @@ const PurchaseOrderAddLayout = () => {
         setPurchaseQuotations(pqData);
 
         // Fetch suppliers
-        const supResponse = await fetch(`${API_URL}/supplier`, {
+        const supResponse = await fetch(`${API_URL}/supplier/list`, {
           headers: {
             "Authorization": `Bearer ${userToken}`,
           },

@@ -146,7 +146,7 @@ const fetchAddressFromPincode = async (pincode) => {
         role_id: parseInt(formData.roleId),
         role_name: "",
         login_id: formData.loginId,
-        branch: formData.branch,
+        branch: formData.branch || "",
         phone_number: formData.phoneNumber,
         pincode: formData.pincode,
         country: formData.country,
@@ -228,7 +228,7 @@ const fetchAddressFromPincode = async (pincode) => {
               options={roles.map((r) => ({ value: r.id, label: r.role_name }))}
             />
 
-            <Field
+            {/* <Field
               label="Branch"
               type="select"
               placeholder="Select Branch"
@@ -239,7 +239,7 @@ const fetchAddressFromPincode = async (pincode) => {
                 value: b.id,
                 label: b.branch_name,
               }))}
-            />
+            /> */}
             <Field
               label="Email ID"
               type="email"
@@ -271,7 +271,7 @@ const fetchAddressFromPincode = async (pincode) => {
         <div style={cardStyle}>
           <div style={cardHeaderContainerStyle}>
             <div style={iconStyle}>📍</div>
-            <h3 style={cardHeaderStyle}>Address:</h3>
+            <h3 style={cardHeaderStyle}>Personal Address:</h3>
           </div>
           <div style={fieldsGridStyle}>
             <Field

@@ -297,7 +297,7 @@ const EditProfile = () => {
               </Grid>
             </Grid>
             <Grid item xs={12} md={6}>
-              <Typography variant="h6">Address:</Typography>
+              <Typography variant="h6">Personal Address:</Typography>
 
               <TextField
                 label="Pincode*"

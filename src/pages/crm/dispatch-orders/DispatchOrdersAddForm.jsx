@@ -442,19 +442,53 @@ const DispatchOrdersAddForm = ({ product }) => {
   const [approvedReceiptProducts, setApprovedReceiptProducts] = useState([]);
   const [orderSearchTerm, setOrderSearchTerm] = useState(""); // ✅ FIXED: Added missing state
 
-  const getAvailableQty = (productId) => {
-    const entry = approvedReceiptProducts.find(
-      (item) => item.product_id === productId
-    );
-    return entry ? entry.available_quantity : 0;
-  };
+// Add this with other state declarations
+const [productSpecsMap, setProductSpecsMap] = useState({});
 
-  const getAvailableAssetIds = (productId) => {
-    const entry = approvedReceiptProducts.find(
-      (item) => item.product_id === productId
-    );
-    return entry ? entry.available_asset_ids : [];
-  };
+
+  // Add this helper function inside the DispatchOrdersAddForm component
+const findMatchingProduct = useCallback((orderProductId, orderProductSpecs) => {
+  // First try exact match by ID
+  let product = approvedReceiptProducts.find(
+    (item) => item.product_id === orderProductId
+  );
+  
+  if (product) return product;
+  
+  // If not found and it's an Assembled PC, try to match by specifications
+  if (orderProductSpecs && orderProductSpecs.product_category === 'Assembled PC') {
+    // Find product in approvedReceiptProducts with same specs
+    product = approvedReceiptProducts.find((item) => {
+      if (item.product?.product_category !== 'Assembled PC') return false;
+      
+      // Compare specifications
+      return (
+        item.product?.ram === orderProductSpecs.ram &&
+        item.product?.disk_type === orderProductSpecs.disk_type &&
+        item.product?.processor === orderProductSpecs.processor &&
+        item.product?.storage === orderProductSpecs.storage &&
+        item.product?.graphics === orderProductSpecs.graphics &&
+        item.product?.cabinet === orderProductSpecs.cabinet &&
+        item.product?.motherboard === orderProductSpecs.motherboard &&
+        item.product?.smps === orderProductSpecs.smps
+      );
+    });
+  }
+  
+  return product;
+}, [approvedReceiptProducts]);
+
+// Update the getAvailableQty function
+const getAvailableQty = useCallback((productId, productSpecs = null) => {
+  const product = findMatchingProduct(productId, productSpecs);
+  return product ? product.available_quantity : 0;
+}, [findMatchingProduct]);
+
+// Update the getAvailableAssetIds function
+const getAvailableAssetIds = useCallback((productId, productSpecs = null) => {
+  const product = findMatchingProduct(productId, productSpecs);
+  return product ? product.available_asset_ids : [];
+}, [findMatchingProduct]);
 
   const [errors, setErrors] = useState({
     order_id: "",
@@ -586,65 +620,78 @@ const DispatchOrdersAddForm = ({ product }) => {
   }, []);
 
   // Handle order selection
-  const handleOrderSelect = (orderId) => {
-    const selectedOrder = orders.find(
-      (order) => order.id === parseInt(orderId)
-    );
-    if (!selectedOrder) return;
+// Handle order selection
+const handleOrderSelect = (orderId) => {
+  const selectedOrder = orders.find(
+    (order) => order.id === parseInt(orderId)
+  );
+  if (!selectedOrder) return;
 
-    const { personalDetails, address, items } = selectedOrder;
+  const { personalDetails, address, items } = selectedOrder;
 
-    // Set device IDs for each product
-    const newDeviceIds = {};
+  // Store product specifications for later matching
+  const productSpecsMap = {};
+  items.forEach((item) => {
+    const product = products.find(p => p.id === item.product_id);
+    if (product) {
+      productSpecsMap[item.product_id] = product;
+    }
+  });
+  
+  setProductSpecsMap(productSpecsMap);
 
-    items.forEach((item) => {
-      newDeviceIds[item.product_id] = item.device_ids || [];
-    });
+  // Set device IDs for each product
+  const newDeviceIds = {};
 
-    setDeviceIds(newDeviceIds);
+  items.forEach((item) => {
+    newDeviceIds[item.product_id] = item.device_ids || [];
+  });
 
-    setFormData({
-      ...formData,
-      order_id: selectedOrder.id,
-      customer_code: selectedOrder.customer_id,
-      order_number: selectedOrder.order_id,
-      payment_type: selectedOrder.payment_type,
-      email: personalDetails.email,
-      gst_number: personalDetails.gst_number,
-      shipping_ordered_by: `${personalDetails.first_name} ${personalDetails.last_name}`,
-      shipping_phone_number: personalDetails.phone_number,
-      shipping_name: `${personalDetails.first_name} ${personalDetails.last_name}`,
-      street: address.street || "",
-      landmark: address.landmark || "",
-      pincode: address.pincode,
-      city: address.city,
-      state: address.state,
-      country: address.country,
-      transaction_type: selectedOrder.transaction_type,
-      items: items.map((item) => ({
-        product_id: item.product_id,
-        product_name: item.product_name,
-        quantity: item.requested_quantity,
-        item_total_value: item.item_total_value,
-        device_ids: item.device_ids || [],
-        offer_purchase_price: item.offer_purchase_price || 0,
-        offer_rent_price_per_month: item.offer_rent_price_per_month || 0,
-        purchase_price: item.purchase_price || 0,
-        rent_price_per_month: item.rent_price_per_month || 0,
-      })),
-    });
+  setDeviceIds(newDeviceIds);
 
-    // Auto-select products from the order
-    const productIds = items.map((item) => item.product_id);
-    setSelectedProductIds(productIds);
+  setFormData({
+    ...formData,
+    order_id: selectedOrder.id,
+    customer_code: selectedOrder.customer_id,
+    order_number: selectedOrder.order_id,
+    payment_type: selectedOrder.payment_type,
+    email: personalDetails.email,
+    gst_number: personalDetails.gst_number,
+    shipping_ordered_by: `${personalDetails.first_name} ${personalDetails.last_name}`,
+    shipping_phone_number: personalDetails.phone_number,
+    shipping_name: `${personalDetails.first_name} ${personalDetails.last_name}`,
+    street: address.street || "",
+    landmark: address.landmark || "",
+    pincode: address.pincode,
+    city: address.city,
+    state: address.state,
+    country: address.country,
+    transaction_type: selectedOrder.transaction_type,
+    items: items.map((item) => ({
+      product_id: item.product_id,
+      product_name: item.product_name,
+      quantity: item.requested_quantity,
+      item_total_value: item.item_total_value,
+      device_ids: item.device_ids || [],
+      offer_purchase_price: item.offer_purchase_price || 0,
+      offer_rent_price_per_month: item.offer_rent_price_per_month || 0,
+      purchase_price: item.purchase_price || 0,
+      rent_price_per_month: item.rent_price_per_month || 0,
+      product_specs: productSpecsMap[item.product_id] // Store specs
+    })),
+  });
 
-    // Set quantities
-    const newQuantities = {};
-    items.forEach((item) => {
-      newQuantities[item.product_id] = item.requested_quantity;
-    });
-    setQuantities(newQuantities);
-  };
+  // Auto-select products from the order
+  const productIds = items.map((item) => item.product_id);
+  setSelectedProductIds(productIds);
+
+  // Set quantities
+  const newQuantities = {};
+  items.forEach((item) => {
+    newQuantities[item.product_id] = item.requested_quantity;
+  });
+  setQuantities(newQuantities);
+};
 
   // Fetch location data when pincode changes
   useEffect(() => {
@@ -1005,7 +1052,7 @@ const DispatchOrdersAddForm = ({ product }) => {
           if (!order) return "Select Order";
           
           const customer = order.personalDetails || order.personal_details || {};
-          return `${order.order_id} - ${customer.first_name || ""} ${customer.last_name || ""} (${order.customer.company_name})`;
+          return `${order.order_id} - ${customer.first_name || ""} ${customer.last_name || ""}`;
         }}
       >
         {/* Search bar inside dropdown */}
@@ -1039,7 +1086,7 @@ const DispatchOrdersAddForm = ({ product }) => {
             const words = term.split(" ").filter(Boolean);
             const customer = order.personalDetails || order.personal_details || {};
             
-            const searchText = `${order.order_id} ${customer.first_name || ""} ${customer.last_name || ""} ${order.customer.company_name}`
+            const searchText = `${order.order_id} ${customer.first_name || ""} ${customer.last_name || ""}`
               .toLowerCase();
             
             return words.every(word => searchText.includes(word));
@@ -1048,8 +1095,7 @@ const DispatchOrdersAddForm = ({ product }) => {
             const customer = order.personalDetails || order.personal_details || {};
             return (
               <MenuItem key={order.id} value={order.id}>
-                {order.order_id} - {customer.first_name || ""} {customer.last_name || ""} (
-                {order.customer.company_name})
+                {order.order_id} - {customer.first_name || ""} {customer.last_name || ""}
               </MenuItem>
             );
           })}
@@ -1395,162 +1441,142 @@ const DispatchOrdersAddForm = ({ product }) => {
                       </TableRow>
                     </TableHead>
                     <TableBody>
-                      {filteredProducts
-                        .filter((product) =>
-                          selectedProductIds.includes(product.id)
-                        )
-                        .map((product) => (
-                          <TableRow key={product.id}>
-                            <TableCell padding="checkbox">
-                              <Checkbox
-                                checked={selectedProductIds.includes(
-                                  product.id
-                                )}
-                                onChange={() =>
-                                  handleProductSelection(product.id)
-                                }
-                              />
-                            </TableCell>
-                            <TableCell>{product.product_name}</TableCell>
-                            <TableCell>
-                              {generateSpecifications(product)}
-                            </TableCell>
-                            <TableCell>{getAvailableQty(product.id)}</TableCell>
+  {filteredProducts
+    .filter((product) =>
+      selectedProductIds.includes(product.id)
+    )
+    .map((product) => {
+      // Get the order item to get the original product specs
+      const orderItem = formData.items.find(item => item.product_id === product.id);
+      const productSpecs = orderItem?.product_specs || product;
+      
+      return (
+        <TableRow key={product.id}>
+          <TableCell padding="checkbox">
+            <Checkbox
+              checked={selectedProductIds.includes(product.id)}
+              onChange={() => handleProductSelection(product.id)}
+            />
+          </TableCell>
+          <TableCell>{product.product_name}</TableCell>
+          <TableCell>
+            {generateSpecifications(product)}
+          </TableCell>
+          <TableCell>
+            {getAvailableQty(product.id, productSpecs)}
+          </TableCell>
+          <TableCell>
+            <TextField
+              type="number"
+              size="small"
+              value={quantities[product.id] || ""}
+              disabled
+              inputProps={{
+                min: 0,
+                style: { width: 50, textAlign: "center" },
+              }}
+            />
+          </TableCell>
+          <TableCell>
+            {(deviceIds[product.id] || []).join(", ")}
+          </TableCell>
+          <TableCell>
+            {getAvailableAssetIds(product.id, productSpecs)?.length > 0 && (
+              <Box display="flex" flexDirection="column" gap={1}>
+                <TextField
+                  size="small"
+                  placeholder="Search Asset ID"
+                  value={assetSearchTerms[product.id] || ""}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    setAssetSearchTerms((prev) => ({
+                      ...prev,
+                      [product.id]: value,
+                    }));
+                  }}
+                />
 
-                            <TableCell>
-                              <TextField
-                                type="number"
-                                size="small"
-                                value={quantities[product.id] || ""}
-                                disabled
-                                inputProps={{
-                                  min: 0,
-                                  style: { width: 50, textAlign: "center" },
-                                }}
-                              />
-                            </TableCell>
-                            <TableCell>
-                              {(deviceIds[product.id] || []).join(", ")}
-                            </TableCell>
-                            <TableCell>
-                              {getAvailableAssetIds(product.id)?.length > 0 && (
-                                <Box
-                                  display="flex"
-                                  flexDirection="column"
-                                  gap={1}
-                                >
-                                  <TextField
-                                    size="small"
-                                    placeholder="Search Asset ID"
-                                    value={assetSearchTerms[product.id] || ""}
-                                    onChange={(e) => {
-                                      const value = e.target.value;
-                                      setAssetSearchTerms((prev) => ({
-                                        ...prev,
-                                        [product.id]: value,
-                                      }));
-                                    }}
-                                  />
+                {(assetSearchTerms[product.id] || "").trim() !== "" && (
+                  <Box
+                    sx={{
+                      maxHeight: 150,
+                      overflowY: "auto",
+                      border: "1px solid #e0e0e0",
+                      borderRadius: 1,
+                      p: 1,
+                    }}
+                  >
+                    {getAvailableAssetIds(product.id, productSpecs)
+                      .filter((assetId) =>
+                        assetId
+                          .toLowerCase()
+                          .includes(
+                            (assetSearchTerms[product.id] || "").toLowerCase()
+                          )
+                      )
+                      .map((assetId) => (
+                        <Box
+                          key={assetId}
+                          onClick={() => {
+                            const currentDeviceIds = deviceIds[product.id] || [];
+                            const maxQty = quantities[product.id] || 0;
 
-                                  {(
-                                    assetSearchTerms[product.id] || ""
-                                  ).trim() !== "" && (
-                                      <Box
-                                        sx={{
-                                          maxHeight: 150,
-                                          overflowY: "auto",
-                                          border: "1px solid #e0e0e0",
-                                          borderRadius: 1,
-                                          p: 1,
-                                        }}
-                                      >
-                                        {getAvailableAssetIds(product.id)
-                                          .filter((assetId) =>
-                                            assetId
-                                              .toLowerCase()
-                                              .includes(
-                                                (
-                                                  assetSearchTerms[product.id] ||
-                                                  ""
-                                                ).toLowerCase()
-                                              )
-                                          )
-                                          .map((assetId) => (
-                                            <Box
-                                              key={assetId}
-                                              onClick={() => {
-                                                const currentDeviceIds =
-                                                  deviceIds[product.id] || [];
-                                                const maxQty =
-                                                  quantities[product.id] || 0;
+                            if (currentDeviceIds.includes(assetId)) {
+                              setDeviceIdErrors((prev) => ({
+                                ...prev,
+                                [product.id]: `Asset ID "${assetId}" is already selected.`,
+                              }));
+                              return;
+                            }
 
-                                                if (
-                                                  currentDeviceIds.includes(
-                                                    assetId
-                                                  )
-                                                ) {
-                                                  setDeviceIdErrors((prev) => ({
-                                                    ...prev,
-                                                    [product.id]: `Asset ID "${assetId}" is already selected.`,
-                                                  }));
-                                                  return;
-                                                }
+                            if (currentDeviceIds.length >= maxQty) {
+                              setDeviceIdErrors((prev) => ({
+                                ...prev,
+                                [product.id]: `Only ${maxQty} asset ID(s) allowed.`,
+                              }));
+                              return;
+                            }
 
-                                                if (
-                                                  currentDeviceIds.length >=
-                                                  maxQty
-                                                ) {
-                                                  setDeviceIdErrors((prev) => ({
-                                                    ...prev,
-                                                    [product.id]: `Only ${maxQty} asset ID(s) allowed.`,
-                                                  }));
-                                                  return;
-                                                }
+                            setDeviceIdErrors((prev) => {
+                              const newErrors = { ...prev };
+                              delete newErrors[product.id];
+                              return newErrors;
+                            });
 
-                                                setDeviceIdErrors((prev) => {
-                                                  const newErrors = { ...prev };
-                                                  delete newErrors[product.id];
-                                                  return newErrors;
-                                                });
+                            setDeviceIds((prev) => ({
+                              ...prev,
+                              [product.id]: [...currentDeviceIds, assetId],
+                            }));
+                          }}
+                          sx={{
+                            p: 0.5,
+                            cursor: "pointer",
+                            backgroundColor: (deviceIds[product.id] || []).includes(assetId)
+                              ? "#e3f2fd"
+                              : "transparent",
+                            "&:hover": {
+                              backgroundColor: "#f5f5f5",
+                            },
+                          }}
+                        >
+                          {assetId}
+                        </Box>
+                      ))}
+                  </Box>
+                )}
 
-                                                setDeviceIds((prev) => ({
-                                                  ...prev,
-                                                  [product.id]: [
-                                                    ...currentDeviceIds,
-                                                    assetId,
-                                                  ],
-                                                }));
-                                              }}
-                                              sx={{
-                                                p: 0.5,
-                                                cursor: "pointer",
-                                                backgroundColor: (
-                                                  deviceIds[product.id] || []
-                                                ).includes(assetId)
-                                                  ? "#e3f2fd"
-                                                  : "transparent",
-                                                "&:hover": {
-                                                  backgroundColor: "#f5f5f5",
-                                                },
-                                              }}
-                                            >
-                                              {assetId}
-                                            </Box>
-                                          ))}
-                                      </Box>
-                                    )}
-
-                                  {deviceIdErrors[product.id] && (
-                                    <Typography color="error" variant="caption">
-                                      {deviceIdErrors[product.id]}
-                                    </Typography>
-                                  )}
-                                </Box>
-                              )}
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                    </TableBody>
+                {deviceIdErrors[product.id] && (
+                  <Typography color="error" variant="caption">
+                    {deviceIdErrors[product.id]}
+                  </Typography>
+                )}
+              </Box>
+            )}
+          </TableCell>
+        </TableRow>
+      );
+    })}
+</TableBody>
                   </Table>
                 </TableContainer>
               </Box>

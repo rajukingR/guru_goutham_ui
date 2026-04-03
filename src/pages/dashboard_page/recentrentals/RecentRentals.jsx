@@ -34,7 +34,7 @@ const RecentRentals = () => {
       setLoading(true);
       setError(null);
       try {
-        const response = await fetch(`${API_URL}/delivery-challans`, {
+        const response = await fetch(`${API_URL}/delivery-challans/list`, {
           headers: {
             "Authorization": `Bearer ${userToken}`,
           },
@@ -87,34 +87,52 @@ const RecentRentals = () => {
     return recentRentals.slice(startIndex, endIndex);
   }, [recentRentals, page]);
 
-  const getStatusColor = (status) => {
-    switch (status) {
-      case "Active":
-        return {
-          backgroundColor: "#dcfce7",
-          color: "#166534",
-          border: "1px solid #bbf7d0",
-        };
-      case "Completed":
-        return {
-          backgroundColor: "#dbeafe",
-          color: "#1e40af",
-          border: "1px solid #bfdbfe",
-        };
-      case "Overdue":
-        return {
-          backgroundColor: "#fee2e2",
-          color: "#991b1b",
-          border: "1px solid #fecaca",
-        };
-      default:
-        return {
-          backgroundColor: "#f3f4f6",
-          color: "#374151",
-          border: "1px solid #e5e7eb",
-        };
-    }
-  };
+const getStatusColor = (status) => {
+  switch (status) {
+    case "Delivered":
+      return {
+        backgroundColor: "#dcfce7", // light green
+        color: "#166534",
+        border: "1px solid #bbf7d0",
+      };
+
+    case "Completed":
+      return {
+        backgroundColor: "#dbeafe", // light blue
+        color: "#1e40af",
+        border: "1px solid #bfdbfe",
+      };
+
+    case "Overdue":
+      return {
+        backgroundColor: "#fee2e2", // light red
+        color: "#991b1b",
+        border: "1px solid #fecaca",
+      };
+
+    case "Pending":
+      return {
+        backgroundColor: "#fef9c3", // lite yellow
+        color: "#854d0e",
+        border: "1px solid #fde68a",
+      };
+
+    case "Rejected":
+      return {
+        backgroundColor: "#fee2e2", // red
+        color: "#7f1d1d",
+        border: "1px solid #fca5a5",
+      };
+
+    default:
+      return {
+        backgroundColor: "#f3f4f6",
+        color: "#374151",
+        border: "1px solid #e5e7eb",
+      };
+  }
+};
+
 
   return (
     <div style={tableCardStyle}>

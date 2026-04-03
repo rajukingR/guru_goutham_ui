@@ -480,7 +480,7 @@ const DeliveryChallanEditPage = () => {
         setDispatchOrders(dispatchOrderData);
 
         // Fetch products
-        const prodResponse = await fetch(`${API_URL}/product-templete`, {
+        const prodResponse = await fetch(`${API_URL}/product-templete/without-active`, {
           headers: {
             "Authorization": `Bearer ${userToken}`,
           },
@@ -984,7 +984,6 @@ const DeliveryChallanEditPage = () => {
                 placeholder="Enter DC ID"
                 value={formData.dc_id}
                 onChange={handleInputChange}
-                readOnly
               />
 
               {/* Select Order Preparation Dropdown */}

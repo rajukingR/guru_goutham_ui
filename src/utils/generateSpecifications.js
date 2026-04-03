@@ -8,9 +8,14 @@ export const generateSpecifications = (item) => {
     case "Laptop":
       return `
         RAM: ${item.ram || "N/A"},
+        RAM Type: ${item.ramType || "N/A"},
+        RAM Slots: ${item.ram_slots || "N/A"},
         Storage: ${item.storage || "N/A"},
         Disk: ${item.disk_type || "N/A"},
         Processor: ${item.processor_model || item.processor || "N/A"} ${item.generation || ""},
+        Processor Core: ${item.processor_core || "N/A"},
+        Battery: ${item.battery || "N/A"},
+        Adapter: ${item.adapter || "N/A"},
         Graphics Card: ${item.graphics || "N/A"},
         OS: ${item.os || "N/A"},
         Screen: ${item.display_size || item.screen_size || "N/A"}.
@@ -20,7 +25,9 @@ export const generateSpecifications = (item) => {
       return `
         Model: ${item.model},
         RAM: ${item.ram || "N/A"},
+        RAM Type: ${item.ramType || "N/A"},
         Processor: ${item.processor || "N/A"},
+        Processor Core: ${item.processor_core || "N/A"},
         Disk Type: ${item.disk_type},
         Storage: ${item.storage || "N/A"},
         Graphics Card: ${item.graphics || "N/A"},
@@ -28,8 +35,7 @@ export const generateSpecifications = (item) => {
         SMPS: ${item.smps || "N/A"},
         Cabinet: ${item.cabinet || "N/A"},
         OS: ${item.os || "N/A"},
-        Generation: ${item.generation || "N/A"},
-        Wi-Fi: ${item.wifi_standard || "N/A"}.
+        Generation: ${item.generation || "N/A"}.
 
       `;
 

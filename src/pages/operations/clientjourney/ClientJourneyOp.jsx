@@ -58,7 +58,7 @@ const ClientJourneyOp = () => {
       setLoading((prev) => ({ ...prev, client: true }));
       setError((prev) => ({ ...prev, client: null }));
       try {
-        const response = await fetch(`${API_URL}/contacts`, {
+        const response = await fetch(`${API_URL}/contacts/list`, {
           headers: {
             "Authorization": `Bearer ${userToken}`,
           },
@@ -88,7 +88,7 @@ const ClientJourneyOp = () => {
       setLoading((prev) => ({ ...prev, leads: true }));
       setError((prev) => ({ ...prev, leads: null }));
       try {
-        const response = await fetch(`${API_URL}/leads`, {
+        const response = await fetch(`${API_URL}/leads/list`, {
           headers: {
             "Authorization": `Bearer ${userToken}`,
           },
@@ -118,7 +118,7 @@ const ClientJourneyOp = () => {
       setLoading((prev) => ({ ...prev, quotation: true }));
       setError((prev) => ({ ...prev, quotation: null }));
       try {
-        const response = await fetch(`${API_URL}/quotations`, {
+        const response = await fetch(`${API_URL}/quotations/list`, {
           headers: {
             "Authorization": `Bearer ${userToken}`,
           },
@@ -150,7 +150,7 @@ const ClientJourneyOp = () => {
       setLoading((prev) => ({ ...prev, orders: true }));
       setError((prev) => ({ ...prev, orders: null }));
       try {
-        const response = await fetch(`${API_URL}/orders`, {
+        const response = await fetch(`${API_URL}/orders/list`, {
           headers: {
             "Authorization": `Bearer ${userToken}`,
           },
@@ -180,7 +180,7 @@ const ClientJourneyOp = () => {
       setLoading((prev) => ({ ...prev, dc: true }));
       setError((prev) => ({ ...prev, dc: null }));
       try {
-        const response = await fetch(`${API_URL}/delivery-challans`, {
+        const response = await fetch(`${API_URL}/delivery-challans/list`, {
           headers: {
             "Authorization": `Bearer ${userToken}`,
           },

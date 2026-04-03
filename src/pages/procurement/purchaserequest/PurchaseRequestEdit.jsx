@@ -102,7 +102,7 @@ const PurchaseRequestEdit = () => {
 
     const fetchSuppliers = async () => {
       try {
-        const response = await fetch(`${API_URL}/supplier`, {
+        const response = await fetch(`${API_URL}/supplier/list`, {
           headers: {
             Authorization: `Bearer ${userToken}`,
           },
@@ -552,7 +552,6 @@ const Field = ({
           {label === "Purchase Type" && (
             <>
               <option value="Buy">Buy</option>
-              <option value="Lease">Lease</option>
               <option value="Rent">Rent</option>
             </>
           )}
