@@ -66,7 +66,7 @@ useEffect(() => {
 
     if (pincode && pincode.length === 6) {
       try {
-        const response = await axios.get(`${POSTAL_API}/${pincode}`);
+        const response = await axios.get(`${API_URL}/pincode/${pincode}`);
         const result = response.data;
 
         // Check if PostOffice exists

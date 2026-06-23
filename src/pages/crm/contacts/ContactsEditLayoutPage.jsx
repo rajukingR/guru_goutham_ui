@@ -213,7 +213,7 @@ const ContactsEditLayoutPage = () => {
 
       if (pincode.length === 6 && validatePincode(pincode)) {
         try {
-          const response = await fetch(`${POSTAL_API}/${pincode}`);
+          const response = await fetch(`${API_URL}/pincode/${pincode}`);
           const result = await response.json();
 
           if (Array.isArray(result) && result.length > 0 && result[0]?.PostOffice) {

@@ -16,7 +16,7 @@ import {
   Tooltip,
   IconButton,
 } from "@mui/material";
-  import { useSelector } from "react-redux";
+import { useSelector } from "react-redux";
 
 import { Link, useLocation } from "react-router-dom";
 import { IoMdSwap } from "react-icons/io";
@@ -80,6 +80,9 @@ import ReceiptIcon from "@mui/icons-material/Receipt"; // For Tax List
 import AccountTreeIcon from "@mui/icons-material/AccountTree"; // For Branch
 import MemoryIcon from "@mui/icons-material/Memory"; // For RAM
 import StorageIcon from "@mui/icons-material/Storage"; // For Hard Disc
+import AssessmentIcon from "@mui/icons-material/Assessment";
+import TrendingUpIcon from "@mui/icons-material/TrendingUp";
+import SummarizeIcon from "@mui/icons-material/Summarize";
 
 import {
   FaUserTie,
@@ -403,10 +406,29 @@ const Sidebar = ({ section }) => {
       sectionIcon = <AssessmentIcon />;
       menuItems = [
         {
-          text: "Report Library",
+          text: "Employee_Reports",
           path: "/dashboard/reports",
           icon: <SummarizeIcon />,
+          description: "View Employee reports",
+        },
+        {
+          text: "Sales Performance Report",
+          path: "/dashboard/reports/sales_performance_report",
+          icon: <BarChartIcon />,
           description: "Track overall sales metrics",
+        },
+      ];
+      break;
+
+    case "employees":
+      sectionTitle = "Employees";
+      sectionIcon = <AssessmentIcon />;
+      menuItems = [
+        {
+          text: "Employees",
+          path: "/dashboard/employees",
+          icon: <SummarizeIcon />,
+          description: "Employees list",
         },
         // {
         //   text: "Sales Performance Report",
@@ -418,35 +440,35 @@ const Sidebar = ({ section }) => {
       break;
 
     case "settings":
-  sectionTitle = "Settings";
-  sectionIcon = <SettingsIcon />;
+      sectionTitle = "Settings";
+      sectionIcon = <SettingsIcon />;
 
-  menuItems = [
-    {
-      text: "Users",
-      path: "/dashboard/settings/users",
-      icon: <PeopleIcon />,
-      description: "Users",
-    },
+      menuItems = [
+        {
+          text: "Users",
+          path: "/dashboard/settings/users",
+          icon: <PeopleIcon />,
+          description: "Users",
+        },
 
-    // ⭐ Add these ONLY if Admin
-    ...(loginRoleName
-      ? [
-          {
-            text: "Roles",
-            path: "/dashboard/settings/roles",
-            icon: <VpnKeyIcon />,
-            description: "Roles",
-          },
-          // {
-          //   text: "Branch",
-          //   path: "/dashboard/settings/branches",
-          //   icon: <AccountTreeIcon />,
-          //   description: "Branches",
-          // },
-        ]
-      : []),
-        
+        // ⭐ Add these ONLY if Admin
+        ...(loginRoleName
+          ? [
+            {
+              text: "Roles",
+              path: "/dashboard/settings/roles",
+              icon: <VpnKeyIcon />,
+              description: "Roles",
+            },
+            // {
+            //   text: "Branch",
+            //   path: "/dashboard/settings/branches",
+            //   icon: <AccountTreeIcon />,
+            //   description: "Branches",
+            // },
+          ]
+          : []),
+
         // {
         //   text: "Address",
         //   path: "/dashboard/settings/address",
@@ -465,7 +487,7 @@ const Sidebar = ({ section }) => {
         //   icon: <ReceiptIcon />,
         //   description: "Tax configuration",
         // },
-       
+
         // {
         //   text: "RAM",
         //   path: "/dashboard/settings/ram",
@@ -736,7 +758,7 @@ const Sidebar = ({ section }) => {
 
       <List
         sx={{
-          width: "100%",
+          width: "90%",
           padding: "12px 20px 32px",
           zIndex: 1,
           position: "relative",

@@ -343,7 +343,7 @@ const SalesOrdersAddLayoutPage = ({ product }) => {
 
       if (shippingPincode && shippingPincode.length === 6) {
         try {
-          const response = await fetch(`${POSTAL_API}/${shippingPincode}`);
+          const response = await fetch(`${API_URL}/pincode/${shippingPincode}`);
           const result = await response.json();
 
           // Set Shipping Post Offices
@@ -395,7 +395,7 @@ const SalesOrdersAddLayoutPage = ({ product }) => {
       // Only make API call if pincode is 6 digits (India specific)
       if (pincode && pincode.length === 6) {
         try {
-          const response = await fetch(`${POSTAL_API}/${pincode}`);
+          const response = await fetch(`${API_URL}/pincode/${pincode}`);
           const result = await response.json();
 
           // Set Post Offices if available

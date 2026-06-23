@@ -737,7 +737,7 @@ const DispatchOrdersEditForm = () => {
 
       if (pincode && pincode.length === 6) {
         try {
-          const response = await fetch(`${POSTAL_API}/${pincode}`);
+          const response = await fetch(`${API_URL}/pincode/${pincode}`);
           const result = await response.json();
 
           // If API returns PostOffice array

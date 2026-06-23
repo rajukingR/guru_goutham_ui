@@ -204,7 +204,7 @@ const ContactsAddLayoutPage = () => {
     const fetchLocationData = async () => {
       if (formData.address.pincode.length === 6 && validatePincode(formData.address.pincode)) {
         try {
-          const response = await fetch(`${POSTAL_API}/${formData.address.pincode}`);
+          const response = await fetch(`${API_URL}/pincode/${formData.address.pincode}`);
           const result = await response.json();
 
           // Check if result is an array and has at least one item

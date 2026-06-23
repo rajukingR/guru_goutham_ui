@@ -9,6 +9,7 @@ import {
   Tooltip,
   Legend,
 } from "chart.js";
+import { useSelector } from "react-redux";
 
 import API_URL, { IMAGE_API_URL } from "../../../api/Api_url";
 
@@ -30,23 +31,23 @@ const reportOptions = [
     value: "Lead Source Analysis Report",
   },
   { label: "Inventory Valuation Report", value: "Inventory Valuation Report" },
-  { label: "Stock Movement Report", value: "Stock Movement Report" },
-  { label: "Order Status Report", value: "Order Status Report" },
-  {
-    label: "Inventory Availability Report",
-    value: "Inventory Availability Report",
-  },
-  {
-    label: "Supplier Performance Report",
-    value: "Supplier Performance Report",
-  },
-  {
-    label: "Purchase Order Cycle Time Report",
-    value: "Purchase Order Cycle Time Report",
-  },
-  { label: "Maintenance History Report", value: "Maintenance History Report" },
-  { label: "Downtime Analysis Report", value: "Downtime Analysis Report" },
-  { label: "Cost of Maintenance Report", value: "Cost of Maintenance Report" },
+  // { label: "Stock Movement Report", value: "Stock Movement Report" },
+  // { label: "Order Status Report", value: "Order Status Report" },
+  // {
+  //   label: "Inventory Availability Report",
+  //   value: "Inventory Availability Report",
+  // },
+  // {
+  //   label: "Supplier Performance Report",
+  //   value: "Supplier Performance Report",
+  // },
+  // {
+  //   label: "Purchase Order Cycle Time Report",
+  //   value: "Purchase Order Cycle Time Report",
+  // },
+  // { label: "Maintenance History Report", value: "Maintenance History Report" },
+  // { label: "Downtime Analysis Report", value: "Downtime Analysis Report" },
+  // { label: "Cost of Maintenance Report", value: "Cost of Maintenance Report" },
 ];
 
 const AllReportsDataLayout = () => {
@@ -54,6 +55,8 @@ const AllReportsDataLayout = () => {
   const [reportData, setReportData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const { token } = useSelector((state) => state.auth);
+  const userToken = token;
 
   const handleChange = (e) => {
     setSelectedReport(e.target.value);
@@ -75,8 +78,7 @@ const AllReportsDataLayout = () => {
             url = `${API_URL}/sales-report/leads-reports`;
             break;
           case "Inventory Valuation Report":
-            url =
-              `${API_URL}/goods-receipts/approved-receipt-products`;
+            url = `${API_URL}/goods-receipts/approved-receipt-products`;
             break;
           case "Stock Movement Report":
             url = `${API_URL}/orders`;
@@ -93,7 +95,15 @@ const AllReportsDataLayout = () => {
             return;
         }
 
-        const response = await fetch(url);
+        // Include the token in the request headers
+        const response = await fetch(url, {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${userToken}`,
+            'Content-Type': 'application/json',
+          },
+        });
+
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
@@ -157,7 +167,7 @@ const AllReportsDataLayout = () => {
     if (selectedReport) {
       fetchReportData();
     }
-  }, [selectedReport]);
+  }, [selectedReport, userToken]); // Added userToken as dependency
 
   const formatCurrency = (amount) => {
     if (isNaN(amount)) return "₹0";
@@ -436,47 +446,46 @@ const AllReportsDataLayout = () => {
           ],
           rows: Array.isArray(reportData)
             ? reportData.flatMap((lead) =>
-                (lead.quotations || []).flatMap((quotation) =>
-                  (quotation.orders || []).map((order) => {
-                    const itemsList = (order.items || [])
-                      .map(
-                        (item) =>
-                          `${item.product_name || "Unknown"} (${
-                            item.requested_quantity || 0
-                          })`
-                      )
-                      .join(", ");
-                    const rentalMonths = getMonthsDifference(
-                      order.rental_start_date,
-                      order.rental_end_date
+              (lead.quotations || []).flatMap((quotation) =>
+                (quotation.orders || []).map((order) => {
+                  const itemsList = (order.items || [])
+                    .map(
+                      (item) =>
+                        `${item.product_name || "Unknown"} (${item.requested_quantity || 0
+                        })`
+                    )
+                    .join(", ");
+                  const rentalMonths = getMonthsDifference(
+                    order.rental_start_date,
+                    order.rental_end_date
+                  );
+                  const revenue = (order.items || []).reduce((sum, item) => {
+                    const rentPrice = parseFloat(
+                      item.product?.rent_price_per_month || 0
                     );
-                    const revenue = (order.items || []).reduce((sum, item) => {
-                      const rentPrice = parseFloat(
-                        item.product?.rent_price_per_month || 0
-                      );
-                      return (
-                        sum +
-                        rentPrice *
-                          (item.requested_quantity || 0) *
-                          rentalMonths
-                      );
-                    }, 0);
-                    return [
-                      lead.lead_id || "-",
-                      lead.lead_title || "-",
-                      lead.owner || "-",
-                      quotation.quotation_id || "-",
-                      order.order_id || "-",
-                      order.order_status || "-",
-                      itemsList || "-",
-                      order.rental_start_date && order.rental_end_date
-                        ? `${order.rental_start_date} to ${order.rental_end_date} (${rentalMonths} months)`
-                        : "-",
-                      formatCurrency(revenue),
-                    ];
-                  })
-                )
+                    return (
+                      sum +
+                      rentPrice *
+                      (item.requested_quantity || 0) *
+                      rentalMonths
+                    );
+                  }, 0);
+                  return [
+                    lead.lead_id || "-",
+                    lead.lead_title || "-",
+                    lead.owner || "-",
+                    quotation.quotation_id || "-",
+                    order.order_id || "-",
+                    order.order_status || "-",
+                    itemsList || "-",
+                    order.rental_start_date && order.rental_end_date
+                      ? `${order.rental_start_date} to ${order.rental_end_date} (${rentalMonths} months)`
+                      : "-",
+                    formatCurrency(revenue),
+                  ];
+                })
               )
+            )
             : [],
           showTable: true,
         };
@@ -495,24 +504,24 @@ const AllReportsDataLayout = () => {
           ],
           rows: Array.isArray(reportData)
             ? reportData.map((item) => {
-                const mapping = {
-                  Website: { source: "Organic Search", converted: 60 },
-                  "Social Media": { source: "Instagram Ads", converted: 20 },
-                  Referral: { source: "Existing Customers", converted: 50 },
-                };
-                const converted =
-                  mapping[item.source_of_enquiry]?.converted || 0;
-                const total = item.lead_count || 0;
-                const rate =
-                  total > 0 ? ((converted / total) * 100).toFixed(1) : 0;
-                return [
-                  item.source_of_enquiry || "-",
-                  mapping[item.source_of_enquiry]?.source || "-",
-                  total,
-                  converted,
-                  `${rate}%`,
-                ];
-              })
+              const mapping = {
+                Website: { source: "Organic Search", converted: 60 },
+                "Social Media": { source: "Instagram Ads", converted: 20 },
+                Referral: { source: "Existing Customers", converted: 50 },
+              };
+              const converted =
+                mapping[item.source_of_enquiry]?.converted || 0;
+              const total = item.lead_count || 0;
+              const rate =
+                total > 0 ? ((converted / total) * 100).toFixed(1) : 0;
+              return [
+                item.source_of_enquiry || "-",
+                mapping[item.source_of_enquiry]?.source || "-",
+                total,
+                converted,
+                `${rate}%`,
+              ];
+            })
             : [],
           showTable: true,
         };
@@ -663,11 +672,11 @@ const AllReportsDataLayout = () => {
           ],
           rows: Array.isArray(reportData)
             ? reportData.map((item) => [
-                item.status || "-",
-                formatNumber(item.totalOrders || 0),
-                formatNumber(item.totalQuantity || 0),
-                formatCurrency(item.totalAmount || 0),
-              ])
+              item.status || "-",
+              formatNumber(item.totalOrders || 0),
+              formatNumber(item.totalQuantity || 0),
+              formatCurrency(item.totalAmount || 0),
+            ])
             : [],
           showTable: true,
         };

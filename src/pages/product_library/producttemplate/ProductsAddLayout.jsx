@@ -43,7 +43,6 @@ const ProductsAddLayout = () => {
     model: "",
     pro_model: "",
     st_number: "",
-    stock_location: "",
     description: "",
     hsn_code: "",
 
@@ -52,9 +51,12 @@ const ProductsAddLayout = () => {
     ram_speed: "",
     disk_type: "",
     processor: "",
+    cpu: "",
     processor_model: "",
     processor_speed: "",
+    max_processor_speed: "",
     generation: "",
+    monitor_number: "",
     storage: "",
     graphics: "",
     os: "",
@@ -117,7 +119,6 @@ const ProductsAddLayout = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(false);
-  const [stockLocations, setStockLocations] = useState([]);
 
   const [snackbar, setSnackbar] = useState({
     open: false,
@@ -139,7 +140,7 @@ const ProductsAddLayout = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [brandsRes, categoriesRes, stockLocationRes] = await Promise.all([
+        const [brandsRes, categoriesRes] = await Promise.all([
           axios.get(`${API_URL}/product-brands/active`, {
             headers: {
               "Authorization": `Bearer ${userToken}`,
@@ -150,21 +151,12 @@ const ProductsAddLayout = () => {
               "Authorization": `Bearer ${userToken}`,
             },
           }),
-          axios.get(`${API_URL}/stock-location/active-stock-location`, {
-            headers: {
-              "Authorization": `Bearer ${userToken}`,
-            },
-          }),
+          
         ]);
 
         setBrands(brandsRes.data);
         setCategories(categoriesRes.data);
-        setStockLocations(
-          stockLocationRes.data.map((item) => ({
-            stockLocationId: item.stock_location_id,
-            stockName: item.stock_name,
-          }))
-        );
+        
 
         setLoading(false);
       } catch (err) {
@@ -332,7 +324,6 @@ const ProductsAddLayout = () => {
         model: "",
         pro_model: "",
         st_number: "",
-        stock_location: "",
         description: "",
         hsn_code: "",
 
@@ -341,8 +332,12 @@ const ProductsAddLayout = () => {
         ram_speed: "",
         disk_type: "",
         processor: "",
+        cpu: "",
+
         processor_model: "",
         processor_speed: "",
+        max_processor_speed: "",
+        monitor_number: "",
         generation: "",
         storage: "",
         graphics: "",
@@ -353,7 +348,7 @@ const ProductsAddLayout = () => {
         adapter: "",
         resolution: "",
         brightness: "",
-        
+
 
         // Accessories
         mouse: true,
@@ -477,6 +472,14 @@ const ProductsAddLayout = () => {
                 name="processor_speed"
                 placeholder="Enter Speed (GHz)"
                 value={formData.processor_speed}
+                onChange={handleChange}
+              />
+
+              <Field
+                label="Max Processor Speed"
+                name="max_processor_speed"
+                placeholder="Enter Max Speed (GHz)"
+                value={formData.max_processor_speed}
                 onChange={handleChange}
               />
 
@@ -641,6 +644,205 @@ const ProductsAddLayout = () => {
           </>
         );
       }
+
+
+      case "Assembled":
+        return (
+          <>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "1fr 1fr",
+                gap: "16px",
+              }}
+            >
+              <Field
+                label="Processor Model"
+                name="processor"
+                placeholder="Enter Processor Model"
+                value={formData.processor}
+                onChange={handleChange}
+                required
+              />
+
+              <Field
+                label="Processor Core"
+                name="processor_core"
+                placeholder="e.g., i5, i7, Ryzen 5"
+                value={formData.processor_core}
+                onChange={handleChange}
+                required
+              />
+
+              <Field
+                label="Processor Speed"
+                name="processor_speed"
+                placeholder="Enter Processor Speed (GHz)"
+                value={formData.processor_speed}
+                onChange={handleChange}
+              />
+
+              <Field
+                label="Max Processor Speed"
+                name="max_processor_speed"
+                placeholder="Enter Max Speed (GHz)"
+                value={formData.max_processor_speed}
+                onChange={handleChange}
+              />
+
+              <Field
+                label="Generation"
+                name="generation"
+                placeholder="Enter Generation"
+                value={formData.generation}
+                onChange={handleChange}
+                required
+              />
+
+              <Field
+                label="Mother Board"
+                name="motherboard"
+                placeholder="Enter Mother Board"
+                value={formData.motherboard}
+                onChange={handleChange}
+                required
+              />
+
+              <Field
+                label="RAM"
+                name="ram"
+                placeholder="Enter RAM (GB)"
+                value={formData.ram}
+                onChange={handleChange}
+                required
+              />
+
+              <Field
+                label="RAM Type"
+                name="ramType"
+                type="select"
+                value={formData.ramType}
+                onChange={handleChange}
+                required
+              >
+                <option value="">Select RAM Type</option>
+                <option value="DDR3">DDR3</option>
+                <option value="DDR4">DDR4</option>
+                <option value="DDR5">DDR5</option>
+                <option value="LPDDR4">LPDDR4</option>
+                <option value="LPDDR5">LPDDR5</option>
+              </Field>
+
+              <Field
+                label="RAM Speed"
+                name="ram_speed"
+                placeholder="Enter RAM Speed (MHz)"
+                value={formData.ram_speed}
+                onChange={handleChange}
+              />
+
+              <Field
+                label="RAM Slots"
+                name="ram_slots"
+                placeholder="Enter Number of RAM Slots"
+                value={formData.ram_slots}
+                onChange={handleChange}
+              />
+
+              <Field
+                label="Storage Capacity"
+                name="storage"
+                placeholder="Enter Storage Capacity (e.g., 512GB / 1TB)"
+                value={formData.storage}
+                onChange={handleChange}
+                required
+              />
+
+              <Field
+                label="Disk Type"
+                type="select"
+                name="disk_type"
+                value={formData.disk_type}
+                onChange={handleChange}
+                required
+              >
+                <option value="">Select Disk Type</option>
+                <option value="HDD">HDD</option>
+                <option value="SSD">SSD</option>
+                <option value="NVMe SSD">NVMe SSD</option>
+                <option value="Hybrid">Hybrid</option>
+              </Field>
+
+              <Field
+                label="GPU"
+                name="graphics"
+                placeholder="Enter Graphics Card"
+                value={formData.graphics}
+                onChange={handleChange}
+              />
+
+              <Field
+                label="Cabinet"
+                name="cabinet"
+                placeholder="Enter Cabinet"
+                value={formData.cabinet}
+                onChange={handleChange}
+                required
+              />
+
+              <Field
+                label="Monitor Number"
+                name="monitor_number"
+                placeholder="Enter Monitor Number/Model"
+                value={formData.monitor_number}
+                onChange={handleChange}
+              />
+
+              <Field
+                label="SMPS"
+                name="smps"
+                placeholder="Enter SMPS (Power Supply)"
+                value={formData.smps}
+                onChange={handleChange}
+                required
+              />
+
+              <Field
+                label="Cooling Fan"
+                name="cooling_fan"
+                placeholder="Enter Cooling Fan (e.g., Stock, Liquid Cooler)"
+                value={formData.cooling_fan}
+                onChange={handleChange}
+              />
+
+              <Field
+                label="Operating System"
+                name="os"
+                placeholder="Enter Operating System"
+                value={formData.os}
+                onChange={handleChange}
+                required
+              />
+
+              {/* <Field
+              label="Warranty"
+              name="warranty"
+              placeholder="Enter Warranty (e.g., 1 Year, 3 Years)"
+              value={formData.warranty}
+              onChange={handleChange}
+            /> */}
+
+              <Field
+                label="HSN Code"
+                name="hsn_code"
+                placeholder="Enter HSN Code"
+                value={formData.hsn_code}
+                onChange={handleChange}
+                required
+              />
+            </div>
+          </>
+        );
 
 
       case "Projector":
@@ -1000,10 +1202,18 @@ const ProductsAddLayout = () => {
               />
 
               <Field
-                label="Processor Speed (optional)"
+                label="Processor Speed"
                 name="processor_speed"
                 placeholder="Enter Processor Speed (e.g., 3.5 GHz)"
                 value={formData.processor_speed}
+                onChange={handleChange}
+              />
+
+              <Field
+                label="Max Processor Speed"
+                name="max_processor_speed"
+                placeholder="Enter Max Speed (GHz)"
+                value={formData.max_processor_speed}
                 onChange={handleChange}
               />
 
@@ -1014,6 +1224,14 @@ const ProductsAddLayout = () => {
                 value={formData.generation}
                 onChange={handleChange}
                 required
+              />
+
+              <Field
+                label="CPU"
+                name="cpu"
+                placeholder="Enter CPU (e.g., Intel Core i7-13700K)"
+                value={formData.cpu}
+                onChange={handleChange}
               />
 
               <Field
@@ -1106,6 +1324,14 @@ const ProductsAddLayout = () => {
                 value={formData.cabinet}
                 onChange={handleChange}
                 required
+              />
+
+              <Field
+                label="Monitor Number"
+                name="monitor_number"
+                placeholder="Enter Monitor Number/Model"
+                value={formData.monitor_number}
+                onChange={handleChange}
               />
 
               <Field
@@ -1580,21 +1806,7 @@ const ProductsAddLayout = () => {
               required
             />
 
-            {/* <Field
-              label="Stock Location"
-              type="select"
-              name="stock_location"
-              value={formData.stock_location}
-              onChange={handleChange}
-              required
-            >
-              <option value="">Select Stock Location</option>
-              {stockLocations.map((loc) => (
-                <option key={loc.stockLocationId} value={loc.stockName}>
-                  {loc.stockName}
-                </option>
-              ))}
-            </Field> */}
+           
           </div>
         </div>
 
@@ -2294,7 +2506,6 @@ export default ProductsAddLayout;
 //   const [loading, setLoading] = useState(true);
 //   const [error, setError] = useState(null);
 //   const [success, setSuccess] = useState(false);
-//   const [stockLocations, setStockLocations] = useState([]);
 
 //   const [snackbar, setSnackbar] = useState({
 //     open: false,
@@ -2327,22 +2538,11 @@ export default ProductsAddLayout;
 //               "Authorization": `Bearer ${userToken}`,
 //             },
 //           }),
-//           axios.get(`${API_URL}/stock-location/active-stock-location`, {
-//             headers: {
-//               "Authorization": `Bearer ${userToken}`,
-//             },
-//           }),
+//           
 //         ]);
 
 //         setBrands(brandsRes.data);
 //         setCategories(categoriesRes.data);
-//         setStockLocations(
-//           stockLocationRes.data.map((item) => ({
-//             stockLocationId: item.stock_location_id,
-//             stockName: item.stock_name,
-//           }))
-//         );
-
 //         setLoading(false);
 //       } catch (err) {
 //         setError(err.message);
@@ -3614,21 +3814,6 @@ export default ProductsAddLayout;
 //               required
 //             />
 
-//             {/* <Field
-//               label="Stock Location"
-//               type="select"
-//               name="stock_location"
-//               value={formData.stock_location}
-//               onChange={handleChange}
-//               required
-//             >
-//               <option value="">Select Stock Location</option>
-//               {stockLocations.map((loc) => (
-//                 <option key={loc.stockLocationId} value={loc.stockName}>
-//                   {loc.stockName}
-//                 </option>
-//               ))}
-//             </Field> */}
 //           </div>
 //         </div>
 

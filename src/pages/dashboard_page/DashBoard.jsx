@@ -218,7 +218,7 @@ const Dashboard = () => {
       icon: "📅",
       color: "#10b981",
       gradient: "linear-gradient(135deg, #10b981, #059669)",
-      trend: "+12.5%",
+      // trend: "+12.5%",
       trendUp: true,
       description: "Currently active rental devices"
     },
@@ -232,7 +232,7 @@ const Dashboard = () => {
       icon: "💰",
       color: "#8b5cf6",
       gradient: "linear-gradient(135deg, #8b5cf6, #7c3aed)",
-      trend: "+8.3%",
+      // trend: "+8.3%",
       trendUp: true,
       description: "Total sales this month"
     },
@@ -242,7 +242,7 @@ const Dashboard = () => {
       icon: "📦",
       color: "#3b82f6",
       gradient: "linear-gradient(135deg, #3b82f6, #2563eb)",
-      trend: "+4.1%",
+      // trend: "+4.1%",
       trendUp: true,
       description: "Ready to handover devices"
     },
@@ -285,7 +285,7 @@ const Dashboard = () => {
               </div>
               <div style={statsTitleStyle}>
                 <h3 style={statTitleTextStyle}>{stat.title}</h3>
-                <div style={{
+                {/* <div style={{
                   ...trendBadgeStyle,
                   backgroundColor: stat.trendUp ? "#d1fae5" : "#fee2e2",
                   color: stat.trendUp ? "#065f46" : "#991b1b",
@@ -294,7 +294,7 @@ const Dashboard = () => {
                     {stat.trendUp ? "↗" : "↘"}
                   </span>
                   {stat.trend}
-                </div>
+                </div> */}
               </div>
             </div>
             

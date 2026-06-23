@@ -8,9 +8,7 @@ import API_URL from "../../../api/Api_url";
 
 const BrandsPageEditLayout = () => {
   const { user, token } = useSelector((state) => state.auth);
-
   const userToken = token;
-
   const navigate = useNavigate();
   const { id } = useParams();
 
@@ -37,11 +35,12 @@ const BrandsPageEditLayout = () => {
         });
         const brandData = response.data;
 
+        // Fixed: Map API response fields correctly
         setForm({
           brandNumber: brandData.brand_number,
           brandName: brandData.brand_name,
           description: brandData.brand_description,
-          active: brandData.active_status,
+          active: brandData.is_active, // Changed from active_status to is_active
         });
       } catch (error) {
         console.error("Error fetching brand:", error);
@@ -54,7 +53,7 @@ const BrandsPageEditLayout = () => {
     };
 
     fetchBrand();
-  }, [id]);
+  }, [id, userToken]);
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -66,7 +65,7 @@ const BrandsPageEditLayout = () => {
       brand_number: form.brandNumber,
       brand_name: form.brandName,
       brand_description: form.description,
-      active_status: form.active,
+      is_active: form.active, // Changed from active_status to is_active
     };
 
     try {
@@ -93,7 +92,7 @@ const BrandsPageEditLayout = () => {
       console.error("Error updating brand:", error);
       setSnackbar({
         open: true,
-        message: "Failed to update brand. Please try again.",
+        message: error.response?.data?.message || "Failed to update brand. Please try again.",
         severity: "error",
       });
     }
@@ -101,8 +100,7 @@ const BrandsPageEditLayout = () => {
 
   const containerStyle = {
     padding: "2rem",
-    fontFamily:
-      '"Inter", "Segoe UI", -apple-system, BlinkMacSystemFont, sans-serif',
+    fontFamily: '"Inter", "Segoe UI", -apple-system, BlinkMacSystemFont, sans-serif',
     minHeight: "100vh",
     lineHeight: 1.6,
   };
@@ -169,6 +167,13 @@ const BrandsPageEditLayout = () => {
     border: "1px solid #d1d5db",
     fontSize: "0.875rem",
     backgroundColor: "#ffffff",
+    transition: "border-color 0.2s ease",
+    outline: "none",
+  };
+
+  const inputFocusStyle = {
+    borderColor: "#2563eb",
+    boxShadow: "0 0 0 3px rgba(37, 99, 235, 0.1)",
   };
 
   const checkboxContainerStyle = {
@@ -177,37 +182,9 @@ const BrandsPageEditLayout = () => {
 
   const checkboxLabelStyle = {
     display: "flex",
-    alignItems: "flex-start",
+    alignItems: "center",
     cursor: "pointer",
     gap: "0.75rem",
-  };
-
-  const checkboxStyle = {
-    display: "none",
-  };
-
-  const checkboxCustomStyle = {
-    width: "20px",
-    height: "20px",
-    borderRadius: "4px",
-    border: form.active ? "2px solid #2563eb" : "2px solid #d1d5db",
-    backgroundColor: form.active ? "#2563eb" : "#ffffff",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-  };
-
-  const checkmarkStyle = {
-    color: "#ffffff",
-    fontSize: "12px",
-    fontWeight: "bold",
-    display: form.active ? "block" : "none",
-  };
-
-  const checkboxTextStyle = {
-    fontSize: "0.875rem",
-    fontWeight: "500",
-    color: "#374151",
   };
 
   const buttonContainerStyle = {
@@ -224,6 +201,9 @@ const BrandsPageEditLayout = () => {
     border: "1px solid #d1d5db",
     borderRadius: "8px",
     cursor: "pointer",
+    fontSize: "0.875rem",
+    fontWeight: "500",
+    transition: "all 0.2s ease",
   };
 
   const createBtnStyle = {
@@ -233,6 +213,9 @@ const BrandsPageEditLayout = () => {
     border: "none",
     borderRadius: "8px",
     cursor: "pointer",
+    fontSize: "0.875rem",
+    fontWeight: "500",
+    transition: "all 0.2s ease",
   };
 
   return (
@@ -295,14 +278,16 @@ const BrandsPageEditLayout = () => {
                 name="active"
                 checked={form.active}
                 onChange={handleChange}
-                style={checkboxStyle}
+                sx={{
+                  color: "#d1d5db",
+                  '&.Mui-checked': {
+                    color: "#2563eb",
+                  },
+                }}
               />
-              <div style={checkboxCustomStyle}>
-                <span style={checkmarkStyle}>✓</span>
-              </div>
-              <div>
-                <span style={checkboxTextStyle}>Active Status</span>
-              </div>
+              <span style={{ fontSize: "0.875rem", fontWeight: "500", color: "#374151" }}>
+                Active Status
+              </span>
             </label>
           </div>
         </div>
@@ -311,10 +296,25 @@ const BrandsPageEditLayout = () => {
           <button
             style={cancelBtnStyle}
             onClick={() => navigate("/dashboard/product_library/brands")}
+            onMouseEnter={(e) => {
+              e.target.style.backgroundColor = "#e5e7eb";
+            }}
+            onMouseLeave={(e) => {
+              e.target.style.backgroundColor = "#f3f4f6";
+            }}
           >
             Cancel
           </button>
-          <button style={createBtnStyle} onClick={handleSubmit}>
+          <button
+            style={createBtnStyle}
+            onClick={handleSubmit}
+            onMouseEnter={(e) => {
+              e.target.style.backgroundColor = "#1d4ed8";
+            }}
+            onMouseLeave={(e) => {
+              e.target.style.backgroundColor = "#2563eb";
+            }}
+          >
             Update
           </button>
         </div>
@@ -341,6 +341,14 @@ const Field = ({
       name={name}
       onChange={onChange}
       style={inputStyle}
+      onFocus={(e) => {
+        e.target.style.borderColor = "#2563eb";
+        e.target.style.boxShadow = "0 0 0 3px rgba(37, 99, 235, 0.1)";
+      }}
+      onBlur={(e) => {
+        e.target.style.borderColor = "#d1d5db";
+        e.target.style.boxShadow = "none";
+      }}
     />
   </div>
 );

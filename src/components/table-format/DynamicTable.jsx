@@ -27,7 +27,8 @@ import html2canvas from "html2canvas";
 import numWords from "num-words";
 import VisibilityIcon from "@mui/icons-material/Visibility";
 import Snackbar from "@mui/material/Snackbar";
-
+import IconButton from '@mui/material/IconButton';
+import CloseIcon from '@mui/icons-material/Close';
 // Import Icons
 import DeleteIcon from "../../assets/logos/delete.png";
 import EditIcon from "../../assets/logos/edit.png";
@@ -41,6 +42,8 @@ import CloudUploadIcon from "@mui/icons-material/CloudUpload";
 import CloudDownloadIcon from "@mui/icons-material/CloudDownload";
 import { generateSpecifications } from "../../utils/generateSpecifications";
 
+import QuotationPreview from "../quotation-view/QuotationPreview";
+import DeliveryChallanView from "../delivery-challan/DeliveryChallanView";
 
 // API Endpoints Mapping
 const apiEndpoints = {
@@ -55,7 +58,6 @@ const apiEndpoints = {
   product_library: `${API_URL}/product-templete`,
   brands: `${API_URL}/product-brands`,
   product_categories: `${API_URL}/product-categories`,
-  stock_locations: `${API_URL}/stock-location`,
   "purchase-orders": `${API_URL}/purchase-orders`,
   "client-list": `${API_URL}/contacts`,
   lead: `${API_URL}/leads`,
@@ -77,313 +79,236 @@ const apiEndpoints = {
   scrap: `${API_URL}/asset-swaps`,
 };
 
-// Delivery Challan Dialog Component
+
+const DeliveryChallanDialog = ({ open, onClose, dcData }) => {
+  if (!dcData) return null;
+
+  return (
+    <Dialog 
+      open={open} 
+      onClose={onClose} 
+      maxWidth="lg" 
+      fullWidth
+      PaperProps={{
+        style: {
+          width: '100%',
+          maxWidth: '1000px',
+          margin: '20px',
+          maxHeight: '90vh',
+        }
+      }}
+    >
+      <DialogContent sx={{ p: 0, position: 'relative' }}>
+        <IconButton
+          onClick={onClose}
+          sx={{
+            position: 'sticky',
+            top: 10,
+            right: 10,
+            float: 'right',
+            zIndex: 9999,
+            backgroundColor: 'white',
+            '&:hover': { backgroundColor: '#f5f5f5' },
+            boxShadow: '0 2px 10px rgba(0,0,0,0.1)',
+            margin: '10px'
+          }}
+        >
+          <CloseIcon />
+        </IconButton>
+        <DeliveryChallanView 
+          dcData={dcData} 
+        />
+      </DialogContent>
+    </Dialog>
+  );
+};
+
+
 // const DeliveryChallanDialog = ({ open, onClose, dcData }) => {
 //   if (!dcData) return null;
 
-//   const handleDownloadPDF = () => {
-//     const input = document.getElementById("delivery-challan-container");
+//   // Handle PDF download
+//   const handleDownloadPDF = async () => {
+//     try {
+//       // Wait for dialog to fully render
+//       await new Promise((resolve) => setTimeout(resolve, 300));
 
-//     html2canvas(input, {
-//       scale: 2,
-//       logging: false,
-//       useCORS: true,
-//       allowTaint: true,
-//     }).then((canvas) => {
+//       // Find the delivery-challan container element
+//       const element = document.getElementById("delivery-challan-container");
+
+//       if (!element) {
+//         throw new Error("Could not find delivery-challan element in DOM");
+//       }
+
+//       // Create a clone for PDF generation to avoid layout issues
+//       const clone = element.cloneNode(true);
+//       clone.style.position = "absolute";
+//       clone.style.left = "-9999px";
+//       clone.style.visibility = "visible";
+//       clone.style.width = "210mm";
+//       document.body.appendChild(clone);
+
+//       const options = {
+//         scale: 2,
+//         logging: true,
+//         useCORS: true,
+//         scrollX: 0,
+//         scrollY: 0,
+//         windowWidth: clone.scrollWidth,
+//         windowHeight: clone.scrollHeight,
+//         backgroundColor: "#FFFFFF",
+//       };
+
+//       const canvas = await html2canvas(clone, options);
+//       document.body.removeChild(clone);
+
 //       const imgData = canvas.toDataURL("image/png");
 //       const pdf = new jsPDF("p", "mm", "a4");
-//       const imgWidth = 210;
-//       const imgHeight = (canvas.height * imgWidth) / canvas.width;
 
-//       pdf.addImage(imgData, "PNG", 0, 0, imgWidth, imgHeight);
-//       pdf.save(`delivery-challan-${dcData.dc_id}.pdf`);
-//     });
+//       const imgProps = pdf.getImageProperties(imgData);
+//       const pdfWidth = pdf.internal.pageSize.getWidth();
+//       const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+
+//       // Handle multi-page PDF
+//       let heightLeft = pdfHeight;
+//       let position = 0;
+//       const pageHeight = pdf.internal.pageSize.getHeight();
+
+//       pdf.addImage(imgData, "PNG", 0, position, pdfWidth, pdfHeight);
+//       heightLeft -= pageHeight;
+
+//       while (heightLeft >= 0) {
+//         position = heightLeft - pdfHeight;
+//         pdf.addPage();
+//         pdf.addImage(imgData, "PNG", 0, position, pdfWidth, pdfHeight);
+//         heightLeft -= pageHeight;
+//       }
+
+//       pdf.save(`delivery-challan-${dcData.dc_id || "DC"}.pdf`);
+//     } catch (error) {
+//       console.error("PDF Generation Error:", error);
+//       alert(`Failed to generate PDF: ${error.message}`);
+//     }
 //   };
 
-//   return (
-//     <Dialog open={open} onClose={onClose} maxWidth="lg" fullWidth>
-//       <DialogTitle>Delivery Challan Details</DialogTitle>
-//       <DialogContent>
-//         <div style={containerStyle}>
-//           <div id="delivery-challan-container" style={receiptContainerStyle}>
-//             {/* Header Color Bar */}
-//             <div style={headerBarStyle}></div>
+//   const handlePrint = () => {
+//     const element = document.getElementById("delivery-challan-container");
 
-//             {/* Company Header */}
-//             <div style={companyHeaderStyle}>
-//               <div style={companyInfoContainerStyle}>
-//                 <div style={logoStyle}>
-//                   <img
-//                     src="/SORT-ICON.png"
-//                     alt="Company Logo"
-//                     style={{
-//                       width: "100%",
-//                       height: "100%",
-//                       objectFit: "contain",
-//                     }}
-//                   />
-//                 </div>
-//                 <div>
-//                   <div style={companyNameStyle}>
-//                     Guru Goutam Infotech Pvt. Ltd.
-//                   </div>
-//                   <div style={companyDetailsStyle}>
-//                     CIN: U72200KA2008PTC047679
-//                     <br />
-//                     GST: {dcData.gst_number || "29AADCG2608Q1Z6"}
-//                   </div>
-//                 </div>
-//               </div>
-//               <div style={challanHeaderStyle}>
-//                 <div style={challanTitleStyle}>DELIVERY CHALLAN</div>
-//                 <div style={challanDetailsStyle}>
-//                   Challan No. &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;:{" "}
-//                   {dcData.dc_id}
-//                   <br />
-//                   Challan Date. &nbsp;&nbsp;&nbsp;:{" "}
-//                   {new Date(dcData.dc_date).toLocaleDateString("en-GB")}
-//                 </div>
-//               </div>
-//             </div>
+//     if (!element) {
+//       console.error("Print element not found");
+//       alert("Could not find the delivery-challan content for printing");
+//       return;
+//     }
 
-//             {/* Recipient Section */}
-//             <div style={recipientSectionStyle}>
-//               <div style={recipientContainerStyle}>
-//                 <div style={recipientAddressStyle}>
-//                   <div style={recipientLabelStyle}>To</div>
-//                   {dcData.shipping_name}
-//                   <br />
-//                   {dcData.street && `${dcData.street}, `}
-//                   {dcData.landmark && `${dcData.landmark}, `}
-//                   {dcData.city}, {dcData.state}
-//                   <br />
-//                   {dcData.country} - {dcData.pincode}
-//                 </div>
-//                 <div style={recipientDetailsGridStyle}>
-//                   <div>
-//                     <div style={detailLabelStyle}>Customer Code :</div>
-//                     {dcData.customer_code}
-//                   </div>
-//                   <div>
-//                     <div style={detailLabelStyle}>Contact Person :</div>
-//                     {dcData.shipping_ordered_by}
-//                   </div>
-//                   <div>
-//                     <div style={detailLabelStyle}>Received Person :</div>
-//                     {dcData.receiver_name}
-//                   </div>
-//                   <div>
-//                     <div style={detailLabelStyle}>Delivered Staff :</div>
-//                     {dcData.delivery_person_name}
-//                   </div>
-//                   <div>
-//                     <div style={detailLabelStyle}>PO Number:</div>
-//                     {dcData.order_number || "N/A"}
-//                   </div>
-//                   <div>
-//                     <div style={detailLabelStyle}>Contact Number :</div>
-//                     {dcData.shipping_phone_number}
-//                   </div>
-//                   <div>
-//                     <div style={detailLabelStyle}>Receiver Number :</div>
-//                     {dcData.receiver_phone_number}
-//                   </div>
-//                   <div>
-//                     <div style={detailLabelStyle}>Vehicle Number :</div>
-//                     {dcData.vehicle_number}
-//                   </div>
-//                 </div>
-//               </div>
-//             </div>
-
-//             <table style={tableStyle}>
-//               <thead>
-//                 <tr>
-//                   <th style={tableHeaderNoStyle}>S.NO.</th>
-//                   <th style={tableHeaderQtyStyle1}>Asset Id's</th>
-
-//                   <th style={tableHeaderParticularsStyle}>Product Name</th>
-//                   <th style={tableHeaderQtyStyle}>QTY</th>
-//                 </tr>
-//               </thead>
-//               <tbody>
-//                 {(() => {
-//                   let serial = 1;
-//                   return dcData.items?.flatMap((item, itemIndex) =>
-//                     (item.device_ids?.length > 0
-//                       ? item.device_ids
-//                       : [null]
-//                     ).map((deviceId, deviceIndex) => (
-//                       <tr
-//                         key={`${item.id}-${deviceIndex}`}
-//                         style={
-//                           serial % 2 === 0
-//                             ? tableRowEvenStyle
-//                             : tableRowOddStyle
-//                         }
-//                       >
-//                         <td style={tableCellCenterStyle}>{serial++}</td>
-//                         <td style={tableCellCenterStyle}>{deviceId}</td>
-
-//                         <td style={tableCellStyle}>
-//                           <div style={itemTitleStyle}>{item.product_name}</div>
-//                           <div
-//                             style={{
-//                               marginTop: 4,
-//                               fontSize: "10px",
-//                               color: "#555",
-//                             }}
-//                           >
-//                             <div style={specificationsTitleStyle}>
-//                               Specifications:
-//                             </div>
-//                             <div>
-//                               <strong>Brand:</strong> {item.product?.brand},{" "}
-//                               <strong>Model:</strong> {item.product?.model},{" "}
-//                               <strong>RAM:</strong> {item.product?.ram},{" "}
-//                               <strong>Storage:</strong> {item.product?.storage},{" "}
-//                               <strong>Processor:</strong>{" "}
-//                               {item.product?.processor}, <strong>OS:</strong>{" "}
-//                               {item.product?.os}, <strong>Asset ID:</strong>{" "}
-//                               {deviceId || "N/A"}
-//                             </div>
-//                           </div>
-//                         </td>
-//                         <td style={tableCellCenterStyle}>1</td>
-//                       </tr>
-//                     ))
-//                   );
-//                 })()}
-//               </tbody>
-//             </table>
-
-//             {/* Footer Info */}
-//             <div style={footerInfoStyle}>
-//               <div style={taxDetailsStyle}>
-//                 PAN No. &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;:{" "}
-//                 {dcData.pan_number}
-//                 <br />
-//                 GST No. &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;:{" "}
-//                 {dcData.gst_number}
-//               </div>
-
-//               <div style={totalContainerStyle}>
-//                 <div style={totalLabelStyle}>TOTAL QTY :</div>
-//                 <div style={totalValueStyle}>{dcData.totalQuantity}</div>
-//               </div>
-//             </div>
-
-//             {/* Not For Sale */}
-//             <div style={notForSaleStyle}>
-//               {dcData.type === "Rent"
-//                 ? "NOT FOR SALE - RETURNABLE BASIS ONLY"
-//                 : "FOR SALE"}
-//             </div>
-
-//             {/* Signature Section */}
-//             <div style={signatureSectionStyle}>
-//               <div style={leftSignatureAreaStyle}>
-//                 <div style={jurisdictionNoteStyle}>
-//                   Note: Subjected to Bengaluru Jurisdiction
-//                 </div>
-//                 <table style={signatureTableStyle}>
-//                   <tbody>
-//                     <tr>
-//                       <td style={signatureTableHeaderStyle}>
-//                         Delivery Address
-//                       </td>
-//                       <td style={signatureTableHeaderStyle}>
-//                         Receiver Date and Signature
-//                       </td>
-//                     </tr>
-//                     <tr>
-//                       <td style={signatureTableCellStyle}>
-//                         {dcData.shipping_name}
-//                         <br />
-//                         {dcData.street && `${dcData.street}, `}
-//                         {dcData.landmark && `${dcData.landmark}, `}
-//                         {dcData.city}, {dcData.state}
-//                         <br />
-//                         {dcData.country} - {dcData.pincode}
-//                       </td>
-//                       <td style={signatureTableCellStyle}></td>
-//                     </tr>
-//                   </tbody>
-//                 </table>
-//               </div>
-//               <div style={rightSignatureAreaStyle}>
-//                 <div style={companySignatureLabelStyle}>
-//                   For Guru Goutham Infotech Private Limited
-//                 </div>
-//                 <div style={signatureBoxStyle}>SD/-</div>
-//                 <div style={signatureDesignationStyle}>
-//                   Authorised Signatory
-//                 </div>
-//               </div>
-//             </div>
-
-//             {/* Company Footer */}
-//             <div style={companyFooterStyle}>
-//               <div style={footerAddressStyle}>
-//                 <span>📍</span>
-//                 <span>
-//                   No. 8, 2nd Cross, Diagonal Road, 3rd Block,
-//                   <br />
-//                   Jayanagar Bengaluru-560011.
-//                 </span>
-//               </div>
-//               <div style={footerContactStyle}>
-//                 <div style={footerContactItemStyle}>
-//                   <span>🌐</span>
-//                   <span>gurugoutam.com</span>
-//                 </div>
-//                 <div style={footerContactItemStyle}>
-//                   <span>📞</span>
-//                   <span>080-2242 9955, +91 9449 0789 55</span>
-//                 </div>
-//                 <div style={footerContactItemStyle}>
-//                   <span>✉️</span>
-//                   <span>info@gurugoutam.com</span>
-//                 </div>
-//               </div>
-//             </div>
+//     const printWindow = window.open("", "_blank");
+//     printWindow.document.write(`
+//       <!DOCTYPE html>
+//       <html>
+//         <head>
+//           <title>Delivery-Challan - ${dcData.dc_id || "DC"}</title>
+//           <style>
+//             @page { 
+//               size: A4; 
+//               margin: 10mm; 
+//             }
+//             body { 
+//               margin: 0; 
+//               padding: 0; 
+//               font-family: Arial, sans-serif;
+//               -webkit-print-color-adjust: exact;
+//               print-color-adjust: exact;
+//             }
+//             .print-container { 
+//               width: 190mm; 
+//               min-height: 277mm; 
+//               padding: 0;
+//               box-sizing: border-box;
+//             }
+//             table {
+//               width: 100%;
+//               border-collapse: collapse;
+//             }
+//             th, td {
+//               border: 1px solid #000;
+//               padding: 8px;
+//               text-align: left;
+//             }
+//             th {
+//               background-color: #f0f0f0;
+//             }
+//           </style>
+//         </head>
+//         <body>
+//           <div class="print-container">
+//             ${element.innerHTML}
 //           </div>
-//         </div>
-//       </DialogContent>
-//       <DialogActions>
-//         <Button onClick={onClose}>Close</Button>
-//         <Button onClick={handleDownloadPDF} variant="contained" color="primary">
-//           Download PDF
-//         </Button>
-//         <Button onClick={() => window.print()}>Print</Button>
-//       </DialogActions>
-//     </Dialog>
-//   );
-// };
+//           <script>
+//             window.onload = function() {
+//               setTimeout(function() {
+//                 window.print();
+//                 setTimeout(function() {
+//                   window.close();
+//                 }, 500);
+//               }, 300);
+//             }
+//           </script>
+//         </body>
+//       </html>
+//     `);
+//     printWindow.document.close();
+//   };
 
-///25-08-2025
+//   // Function to render accessories information
+//   const renderAccessories = () => {
+//     const accessories = [];
 
-// Goods Return Note Dialog Component
-// const DeliveryChallanDialog = ({ open, onClose, dcData }) => {
-//   if (!dcData) return null;
+//     // Helper function to format accessory with quantity
+//     const formatAccessory = (name, quantity) => {
+//       return `${name} (Qty: ${quantity})`;
+//     };
 
-//   const handleDownloadPDF = () => {
-//     const input = document.getElementById("delivery-challan-container");
+//     // Add standard accessories with quantities
+//     if (dcData.mouse) {
+//       accessories.push(formatAccessory("Mouse", dcData.mouse_qty || 1));
+//     }
 
-//     html2canvas(input, {
-//       scale: 2,
-//       logging: false,
-//       useCORS: true,
-//       allowTaint: true,
-//     }).then((canvas) => {
-//       const imgData = canvas.toDataURL("image/png");
-//       const pdf = new jsPDF("p", "mm", "a4");
-//       const imgWidth = 210;
-//       const imgHeight = (canvas.height * imgWidth) / canvas.width;
+//     if (dcData.cable) {
+//       accessories.push(formatAccessory("Cable", dcData.cable_qty || 1));
+//     }
 
-//       pdf.addImage(imgData, "PNG", 0, 0, imgWidth, imgHeight);
-//       pdf.save(`delivery-challan-${dcData.dc_id}.pdf`);
-//     });
+//     if (dcData.bag) {
+//       accessories.push(formatAccessory("Bag", dcData.bag_qty || 1));
+//     }
+
+//     // Add other accessories from the array WITH quantities
+//     if (dcData.other_accessory && dcData.other_accessory.length > 0) {
+//       const othersQty = dcData.others_qty || 1;
+
+//       if (Array.isArray(dcData.other_accessory)) {
+//         // If there are multiple other accessories, show each with the total others quantity
+//         dcData.other_accessory.forEach((item) => {
+//           accessories.push(formatAccessory(item, othersQty));
+//         });
+//       }
+//     }
+
+//     // Add "Others" if the others field is true but no specific accessories listed
+//     if (dcData.others && accessories.length === 0) {
+//       accessories.push(formatAccessory("Others", dcData.others_qty || 1));
+//     }
+
+//     return accessories.length > 0 ? (
+//       <div style={accessoriesContainerStyle}>
+//         <div style={accessoriesTitleStyle}>Accessories Included:</div>
+//         <ul style={accessoriesListStyle}>
+//           {accessories.map((item, index) => (
+//             <li key={index} style={accessoriesListItemStyle}>
+//               {item}
+//             </li>
+//           ))}
+//         </ul>
+//       </div>
+//     ) : null;
 //   };
 
 //   return (
@@ -435,7 +360,7 @@ const apiEndpoints = {
 //             <div style={recipientSectionStyle}>
 //               <div style={recipientContainerStyle}>
 //                 <div style={recipientAddressStyle}>
-//                   <div style={recipientLabelStyle}>To</div>
+//                   <div style={recipientLabelStyle}>Ship To</div>
 //                   {dcData.shipping_name}
 //                   <br />
 //                   {dcData.street && `${dcData.street}, `}
@@ -445,21 +370,13 @@ const apiEndpoints = {
 //                   {dcData.country} - {dcData.pincode}
 //                 </div>
 //                 <div style={recipientDetailsGridStyle}>
-//                   {/* <div>
-//                     <div style={detailLabelStyle}>Customer Code :</div>
-//                     {dcData.customer_code}
-//                   </div> */}
 //                   <div>
-//                     <div style={detailLabelStyle}>Contact Person :</div>
-//                     {dcData.shipping_ordered_by}
-//                   </div>
-//                   {/* <div>
-//                     <div style={detailLabelStyle}>Received Person :</div>
+//                     <div style={detailLabelStyle}>Receiver Person :</div>
 //                     {dcData.receiver_name}
-//                   </div> */}
+//                   </div>
 //                   <div>
-//                     <div style={detailLabelStyle}>Contact Number :</div>
-//                     {dcData.shipping_phone_number}
+//                     <div style={detailLabelStyle}>Receiver Number :</div>
+//                     {dcData.receiver_phone_number}
 //                   </div>
 //                   <div>
 //                     <div style={detailLabelStyle}>PO Number:</div>
@@ -519,12 +436,12 @@ const apiEndpoints = {
 //                         }}
 //                       >
 //                         <strong>Specifications:</strong> Brand:{" "}
-//                         {item.product?.brand}. Model: {item.product?.model}.
-//                         Processor: {item.product?.processor}. RAM:{" "}
-//                         {item.product?.ram}. Storage: {item.product?.storage}.
+//                         {item.product?.brand}, Model: {item.product?.model},
+//                         Processor: {item.product?.processor}, RAM:{" "}
+//                         {item.product?.ram}, Storage: {item.product?.storage},
 //                         <br />
-//                         Disk Type: {item.product?.disk_type}. Graphics:{" "}
-//                         {item.product?.graphics}. OS: {item.product?.os}.
+//                         Disk Type: {item.product?.disk_type}, Graphics:{" "}
+//                         {item.product?.graphics}, OS: {item.product?.os}.
 //                       </div>
 //                       <br />
 //                       {item.device_ids?.length > 0 && (
@@ -540,6 +457,9 @@ const apiEndpoints = {
 //                 ))}
 //               </tbody>
 //             </table>
+
+//             {/* Accessories Section */}
+//             {renderAccessories()}
 
 //             {/* Footer Info */}
 //             <div style={footerInfoStyle}>
@@ -639,892 +559,496 @@ const apiEndpoints = {
 //         <Button onClick={handleDownloadPDF} variant="contained" color="primary">
 //           Download PDF
 //         </Button>
-//         <Button onClick={() => window.print()}>Print</Button>
+//         <Button onClick={handlePrint} variant="contained" color="secondary">
+//           Print
+//         </Button>
 //       </DialogActions>
 //     </Dialog>
 //   );
 // };
 
-const DeliveryChallanDialog = ({ open, onClose, dcData }) => {
-  if (!dcData) return null;
-
-  // Handle PDF download
-  const handleDownloadPDF = async () => {
-    try {
-      // Wait for dialog to fully render
-      await new Promise((resolve) => setTimeout(resolve, 300));
-
-      // Find the delivery-challan container element
-      const element = document.getElementById("delivery-challan-container");
-
-      if (!element) {
-        throw new Error("Could not find delivery-challan element in DOM");
-      }
-
-      // Create a clone for PDF generation to avoid layout issues
-      const clone = element.cloneNode(true);
-      clone.style.position = "absolute";
-      clone.style.left = "-9999px";
-      clone.style.visibility = "visible";
-      clone.style.width = "210mm";
-      document.body.appendChild(clone);
-
-      const options = {
-        scale: 2,
-        logging: true,
-        useCORS: true,
-        scrollX: 0,
-        scrollY: 0,
-        windowWidth: clone.scrollWidth,
-        windowHeight: clone.scrollHeight,
-        backgroundColor: "#FFFFFF",
-      };
-
-      const canvas = await html2canvas(clone, options);
-      document.body.removeChild(clone);
-
-      const imgData = canvas.toDataURL("image/png");
-      const pdf = new jsPDF("p", "mm", "a4");
-
-      const imgProps = pdf.getImageProperties(imgData);
-      const pdfWidth = pdf.internal.pageSize.getWidth();
-      const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
-
-      // Handle multi-page PDF
-      let heightLeft = pdfHeight;
-      let position = 0;
-      const pageHeight = pdf.internal.pageSize.getHeight();
-
-      pdf.addImage(imgData, "PNG", 0, position, pdfWidth, pdfHeight);
-      heightLeft -= pageHeight;
-
-      while (heightLeft >= 0) {
-        position = heightLeft - pdfHeight;
-        pdf.addPage();
-        pdf.addImage(imgData, "PNG", 0, position, pdfWidth, pdfHeight);
-        heightLeft -= pageHeight;
-      }
-
-      pdf.save(`delivery-challan-${dcData.dc_id || "DC"}.pdf`);
-    } catch (error) {
-      console.error("PDF Generation Error:", error);
-      alert(`Failed to generate PDF: ${error.message}`);
-    }
-  };
-
-  const handlePrint = () => {
-    const element = document.getElementById("delivery-challan-container");
-
-    if (!element) {
-      console.error("Print element not found");
-      alert("Could not find the delivery-challan content for printing");
-      return;
-    }
-
-    const printWindow = window.open("", "_blank");
-    printWindow.document.write(`
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <title>Delivery-Challan - ${dcData.dc_id || "DC"}</title>
-          <style>
-            @page { 
-              size: A4; 
-              margin: 10mm; 
-            }
-            body { 
-              margin: 0; 
-              padding: 0; 
-              font-family: Arial, sans-serif;
-              -webkit-print-color-adjust: exact;
-              print-color-adjust: exact;
-            }
-            .print-container { 
-              width: 190mm; 
-              min-height: 277mm; 
-              padding: 0;
-              box-sizing: border-box;
-            }
-            table {
-              width: 100%;
-              border-collapse: collapse;
-            }
-            th, td {
-              border: 1px solid #000;
-              padding: 8px;
-              text-align: left;
-            }
-            th {
-              background-color: #f0f0f0;
-            }
-          </style>
-        </head>
-        <body>
-          <div class="print-container">
-            ${element.innerHTML}
-          </div>
-          <script>
-            window.onload = function() {
-              setTimeout(function() {
-                window.print();
-                setTimeout(function() {
-                  window.close();
-                }, 500);
-              }, 300);
-            }
-          </script>
-        </body>
-      </html>
-    `);
-    printWindow.document.close();
-  };
-
-  // Function to render accessories information
-  const renderAccessories = () => {
-    const accessories = [];
-
-    // Helper function to format accessory with quantity
-    const formatAccessory = (name, quantity) => {
-      return `${name} (Qty: ${quantity})`;
-    };
-
-    // Add standard accessories with quantities
-    if (dcData.mouse) {
-      accessories.push(formatAccessory("Mouse", dcData.mouse_qty || 1));
-    }
-
-    if (dcData.cable) {
-      accessories.push(formatAccessory("Cable", dcData.cable_qty || 1));
-    }
-
-    if (dcData.bag) {
-      accessories.push(formatAccessory("Bag", dcData.bag_qty || 1));
-    }
-
-    // Add other accessories from the array WITH quantities
-    if (dcData.other_accessory && dcData.other_accessory.length > 0) {
-      const othersQty = dcData.others_qty || 1;
-
-      if (Array.isArray(dcData.other_accessory)) {
-        // If there are multiple other accessories, show each with the total others quantity
-        dcData.other_accessory.forEach((item) => {
-          accessories.push(formatAccessory(item, othersQty));
-        });
-      }
-    }
-
-    // Add "Others" if the others field is true but no specific accessories listed
-    if (dcData.others && accessories.length === 0) {
-      accessories.push(formatAccessory("Others", dcData.others_qty || 1));
-    }
-
-    return accessories.length > 0 ? (
-      <div style={accessoriesContainerStyle}>
-        <div style={accessoriesTitleStyle}>Accessories Included:</div>
-        <ul style={accessoriesListStyle}>
-          {accessories.map((item, index) => (
-            <li key={index} style={accessoriesListItemStyle}>
-              {item}
-            </li>
-          ))}
-        </ul>
-      </div>
-    ) : null;
-  };
-
-  return (
-    <Dialog open={open} onClose={onClose} maxWidth="lg" fullWidth>
-      <DialogTitle>Delivery Challan Details</DialogTitle>
-      <DialogContent>
-        <div style={containerStyle}>
-          <div id="delivery-challan-container" style={receiptContainerStyle}>
-            {/* Header Color Bar */}
-            <div style={headerBarStyle}></div>
-
-            {/* Company Header */}
-            <div style={companyHeaderStyle}>
-              <div style={companyInfoContainerStyle}>
-                <div style={logoStyle}>
-                  <img
-                    src="/SORT-ICON.png"
-                    alt="Company Logo"
-                    style={{
-                      width: "100%",
-                      height: "100%",
-                      objectFit: "contain",
-                    }}
-                  />
-                </div>
-                <div>
-                  <div style={companyNameStyle}>
-                    Guru Goutam Infotech Pvt. Ltd.
-                  </div>
-                  <div style={companyDetailsStyle}>
-                    {/* CIN: U72200KA2008PTC047679 */}
-                    <br />
-                    {/* GST: {dcData.gst_number || "29AADCG2608Q1Z6"} */}
-                  </div>
-                </div>
-              </div>
-              <div style={challanHeaderStyle}>
-                <div style={challanTitleStyle}>DELIVERY CHALLAN</div>
-                <div style={challanDetailsStyle}>
-                  Challan No: {dcData.dc_id}
-                  <br />
-                  Challan Date:{" "}
-                  {new Date(dcData.dc_date).toLocaleDateString("en-GB")}
-                </div>
-              </div>
-            </div>
-
-            {/* Recipient Section */}
-            <div style={recipientSectionStyle}>
-              <div style={recipientContainerStyle}>
-                <div style={recipientAddressStyle}>
-                  <div style={recipientLabelStyle}>Ship To</div>
-                  {dcData.shipping_name}
-                  <br />
-                  {dcData.street && `${dcData.street}, `}
-                  {dcData.landmark && `${dcData.landmark}, `}
-                  {dcData.city}, {dcData.state},
-                  <br />
-                  {dcData.country} - {dcData.pincode}
-                </div>
-                <div style={recipientDetailsGridStyle}>
-                  <div>
-                    <div style={detailLabelStyle}>Receiver Person :</div>
-                    {dcData.receiver_name}
-                  </div>
-                  <div>
-                    <div style={detailLabelStyle}>Receiver Number :</div>
-                    {dcData.receiver_phone_number}
-                  </div>
-                  <div>
-                    <div style={detailLabelStyle}>PO Number:</div>
-                    {dcData.dc_id || "N/A"}
-                  </div>
-                  <div>
-                    <div style={detailLabelStyle}>Delivered Person :</div>
-                    {dcData.delivery_person_name}
-                  </div>
-
-                  <div>
-                    <div style={detailLabelStyle}>Deliver Perso Number :</div>
-                    {dcData.delivery_person_phone_number}
-                  </div>
-                  <div>
-                    <div style={detailLabelStyle}>Vehicle Number :</div>
-                    {dcData.vehicle_number}
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Items Table */}
-            <table style={tableStyle}>
-              <thead>
-                <tr>
-                  <th style={tableHeaderNoStyle}>NO.</th>
-                  <th style={tableHeaderParticularsStyle}>Product Name</th>
-                  <th style={tableHeaderQtyStyle}>QTY</th>
-                </tr>
-              </thead>
-              <tbody>
-                {dcData.items?.map((item, index) => (
-                  <tr
-                    key={item.id}
-                    style={
-                      index % 2 === 0 ? tableRowOddStyle : tableRowEvenStyle
-                    }
-                  >
-                    <td style={tableCellCenterStyle}>{index + 1}</td>
-                    <td style={tableCellStyle}>
-                      <div
-                        style={{
-                          fontWeight: "bold",
-                          fontSize: "14px",
-                          color: "#000",
-                        }}
-                      >
-                        {item.product_name}
-                      </div>
-                      <div
-                        style={{
-                          fontSize: "11px",
-                          color: "#555",
-                          marginTop: 4,
-                          lineHeight: "1.4",
-                        }}
-                      >
-                        <strong>Specifications:</strong> Brand:{" "}
-                        {item.product?.brand}, Model: {item.product?.model},
-                        Processor: {item.product?.processor}, RAM:{" "}
-                        {item.product?.ram}, Storage: {item.product?.storage},
-                        <br />
-                        Disk Type: {item.product?.disk_type}, Graphics:{" "}
-                        {item.product?.graphics}, OS: {item.product?.os}.
-                      </div>
-                      <br />
-                      {item.device_ids?.length > 0 && (
-                        <div style={itemTitleStyle}>
-                          <strong>Asset IDs:</strong>{" "}
-                          {item.device_ids.join(", ")}
-                        </div>
-                      )}
-                    </td>
-
-                    <td style={tableCellCenterStyle}>{item.quantity}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-
-            {/* Accessories Section */}
-            {renderAccessories()}
-
-            {/* Footer Info */}
-            <div style={footerInfoStyle}>
-              <div style={taxDetailsStyle}>
-                {/* PAN No. &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;:{" "}
-                {dcData.pan_number}
-                <br />
-                GST No. &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;:{" "}
-                {dcData.gst_number} */}
-              </div>
-
-              <div style={totalContainerStyle}>
-                <div style={totalLabelStyle}>TOTAL QTY :</div>
-                <div style={totalValueStyle}>{dcData.totalQuantity}</div>
-              </div>
-            </div>
-
-            {/* Not For Sale */}
-            <div style={notForSaleStyle}>
-              {dcData.type === "Rent"
-                ? "NOT FOR SALE - RETURNABLE BASIS ONLY"
-                : "FOR SALE"}
-            </div>
-
-            {/* Signature Section */}
-            <div style={signatureSectionStyle}>
-              <div style={leftSignatureAreaStyle}>
-                <div style={jurisdictionNoteStyle}>
-                  Note: Subjected to Bengaluru Jurisdiction
-                </div>
-                <table style={signatureTableStyle}>
-                  <tbody>
-                    <tr>
-                      <td style={signatureTableHeaderStyle}>
-                        Delivery Address
-                      </td>
-                      <td style={signatureTableHeaderStyle}>
-                        Receiver Date and Signature
-                      </td>
-                    </tr>
-                    <tr>
-                      <td style={signatureTableCellStyle}>
-                        {dcData.shipping_name}
-                        <br />
-                        {dcData.street && `${dcData.street}, `}
-                        {dcData.landmark && `${dcData.landmark}, `}
-                        {dcData.city}, {dcData.state}
-                        <br />
-                        {dcData.country} - {dcData.pincode}
-                      </td>
-                      <td style={signatureTableCellStyle}></td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-              <div style={rightSignatureAreaStyle}>
-                <div style={companySignatureLabelStyle}>
-                  For Guru Goutham Infotech Private Limited
-                </div>
-                <div style={signatureBoxStyle}>SD/-</div>
-                <div style={signatureDesignationStyle}>
-                  Authorised Signatory
-                </div>
-              </div>
-            </div>
-
-            {/* Company Footer */}
-            <div style={companyFooterStyle}>
-              <div style={footerAddressStyle}>
-                <span>📍</span>
-                <span>
-                  No. 8, 2nd Cross, Diagonal Road, 3rd Block,
-                  <br />
-                  Jayanagar Bengaluru-560011.
-                </span>
-              </div>
-              <div style={footerContactStyle}>
-                <div style={footerContactItemStyle}>
-                  <span>🌐</span>
-                  <span>gurugoutam.com</span>
-                </div>
-                <div style={footerContactItemStyle}>
-                  <span>📞</span>
-                  <span>080-2242 9955, +91 9449 0789 55</span>
-                </div>
-                <div style={footerContactItemStyle}>
-                  <span>✉️</span>
-                  <span>info@gurugoutam.com</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </DialogContent>
-      <DialogActions>
-        <Button onClick={onClose}>Close</Button>
-        <Button onClick={handleDownloadPDF} variant="contained" color="primary">
-          Download PDF
-        </Button>
-        <Button onClick={handlePrint} variant="contained" color="secondary">
-          Print
-        </Button>
-      </DialogActions>
-    </Dialog>
-  );
-};
 
 const QuotationDialog = ({ open, onClose, quotationData }) => {
   if (!quotationData) return null;
 
-  // Handle PDF download
-  const handleDownloadPDF = async () => {
-    try {
-      // Wait for dialog to fully render
-      await new Promise((resolve) => setTimeout(resolve, 300));
-
-      // Find the quotation container element
-      const element = document.getElementById("quotation-container");
-
-      if (!element) {
-        throw new Error("Could not find quotation element in DOM");
-      }
-
-      // Create a clone for PDF generation to avoid layout issues
-      const clone = element.cloneNode(true);
-      clone.style.position = "absolute";
-      clone.style.left = "-9999px";
-      clone.style.visibility = "visible";
-      clone.style.width = "210mm";
-      document.body.appendChild(clone);
-
-      const options = {
-        scale: 2,
-        logging: true,
-        useCORS: true,
-        scrollX: 0,
-        scrollY: 0,
-        windowWidth: clone.scrollWidth,
-        windowHeight: clone.scrollHeight,
-        backgroundColor: "#FFFFFF",
-      };
-
-      const canvas = await html2canvas(clone, options);
-      document.body.removeChild(clone);
-
-      const imgData = canvas.toDataURL("image/png");
-      const pdf = new jsPDF("p", "mm", "a4");
-
-      const imgProps = pdf.getImageProperties(imgData);
-      const pdfWidth = pdf.internal.pageSize.getWidth();
-      const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
-
-      // Handle multi-page PDF
-      let heightLeft = pdfHeight;
-      let position = 0;
-      const pageHeight = pdf.internal.pageSize.getHeight();
-
-      pdf.addImage(imgData, "PNG", 0, position, pdfWidth, pdfHeight);
-      heightLeft -= pageHeight;
-
-      while (heightLeft >= 0) {
-        position = heightLeft - pdfHeight;
-        pdf.addPage();
-        pdf.addImage(imgData, "PNG", 0, position, pdfWidth, pdfHeight);
-        heightLeft -= pageHeight;
-      }
-
-      pdf.save(`quotation-${quotationData.quotation_id || "QI"}.pdf`);
-    } catch (error) {
-      console.error("PDF Generation Error:", error);
-      alert(`Failed to generate PDF: ${error.message}`);
-    }
-  };
-
-  const handlePrint = () => {
-    const element = document.getElementById("quotation-container");
-
-    if (!element) {
-      console.error("Print element not found");
-      alert("Could not find the invoice content for printing");
-      return;
-    }
-
-    const printWindow = window.open("", "_blank");
-    printWindow.document.write(`
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <title>Quotation - ${quotationData.quotation_id || "QI"}</title>
-          <style>
-            @page { 
-              size: A4; 
-              margin: 10mm; 
-            }
-            body { 
-              margin: 0; 
-              padding: 0; 
-              font-family: Arial, sans-serif;
-              -webkit-print-color-adjust: exact;
-              print-color-adjust: exact;
-            }
-            .print-container { 
-              width: 190mm; 
-              min-height: 277mm; 
-              padding: 0;
-              box-sizing: border-box;
-            }
-            table {
-              width: 100%;
-              border-collapse: collapse;
-            }
-            th, td {
-              border: 1px solid #000;
-              padding: 8px;
-              text-align: left;
-            }
-            th {
-              background-color: #f0f0f0;
-            }
-          </style>
-        </head>
-        <body>
-          <div class="print-container">
-            ${element.innerHTML}
-          </div>
-          <script>
-            window.onload = function() {
-              setTimeout(function() {
-                window.print();
-                setTimeout(function() {
-                  window.close();
-                }, 500);
-              }, 300);
-            }
-          </script>
-        </body>
-      </html>
-    `);
-    printWindow.document.close();
-  };
-
-  // Calculate total quantity
-  const totalQuantity = quotationData.items?.reduce((total, item) => {
-    return total + (item.quotation_quantity || 0);
-  }, 0);
-
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="lg" fullWidth>
-      <DialogTitle>Quotation Details</DialogTitle>
-      <DialogContent>
-        <div style={containerStyle}>
-          <div id="quotation-container" style={receiptContainerStyle}>
-            {/* Header Color Bar */}
-            <div style={headerBarStyle}></div>
-
-            {/* Company Header */}
-            <div style={companyHeaderStyle}>
-              <div style={companyInfoContainerStyle}>
-                <div style={logoStyle}>
-                  <img
-                    src="/SORT-ICON.png"
-                    alt="Company Logo"
-                    style={{
-                      width: "100%",
-                      height: "100%",
-                      objectFit: "contain",
-                    }}
-                  />
-                </div>
-                <div>
-                  <div style={companyNameStyle}>
-                    Guru Goutam Infotech Pvt. Ltd.
-                  </div>
-                  <div style={companyDetailsStyle}>
-                    CIN: U72200KA2008PTC047679
-                    <br />
-                    GST: 29AADCG2608Q1Z6
-                  </div>
-                </div>
-              </div>
-              <div style={challanHeaderStyle}>
-                <div style={challanTitleStyle}>QUOTATION</div>
-                <div style={challanDetailsStyle}>
-                  Quotation No: {quotationData.quotation_id}
-                  <br />
-                  Quotation Date:{" "}
-                  {new Date(quotationData.quotation_date).toLocaleDateString(
-                    "en-GB"
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* Recipient Section */}
-            <div style={recipientSectionStyle}>
-              <div style={recipientContainerStyle}>
-                <div style={recipientAddressStyle}>
-                  <div style={recipientLabelStyle}>Ship To</div>
-                  {quotationData.customer_first_name}{" "}
-                  {quotationData.customer_last_name}
-                  <br />
-                  {quotationData.customer?.company_name && (
-                    <>
-                      {quotationData.customer.company_name}
-                      <br />
-                    </>
-                  )}
-                  {quotationData.customer.address.street &&
-                    `${quotationData.customer.address.street}, `}
-                  {quotationData.customer.address.city},<br />{" "}
-                  {quotationData.customer.address.state},
-                  <br />
-                  {quotationData.customer.address.country} -{" "}
-                  {quotationData.customer.address.pincode}.
-                </div>
-                <div style={recipientDetailsGridStyle}>
-                  <div>
-                    <div style={detailLabelStyle}>Receiver Person :</div>
-                    {quotationData.customer.first_name}{" "}
-                    {quotationData.customer.last_name}
-                  </div>
-                  <div>
-                    <div style={detailLabelStyle}>Receiver Number :</div>
-                    {quotationData.customer.phone_number}
-                  </div>
-                  {/* <div>
-                    <div style={detailLabelStyle}>PO Number:</div>
-                    {quotationData.dc_id || "N/A"}
-                  </div>
-                  <div>
-                    <div style={detailLabelStyle}>Delivered Person :</div>
-                    {quotationData.delivery_person_name}
-                  </div>
-
-                  <div>
-                    <div style={detailLabelStyle}>Deliver Perso Number :</div>
-                    {quotationData.delivery_person_phone_number}
-                  </div>
-                  <div>
-                    <div style={detailLabelStyle}>Vehicle Number :</div>
-                    {quotationData.vehicle_number}
-                  </div> */}
-                </div>
-              </div>
-            </div>
-
-            {/* Items Table */}
-            <table style={tableStyle}>
-              <thead>
-                <tr>
-                  <th style={tableHeaderNoStyle}>NO.</th>
-                  <th style={tableHeaderParticularsStyle}>Product Details</th>
-                  <th style={tableHeaderParticularsStyle}>
-                    {quotationData.transaction_type === "Rent"
-                      ? "Price Per Month"
-                      : "Purchase Price"}
-                  </th>
-                  <th style={tableHeaderQtyStyle}>QTY</th>
-                </tr>
-              </thead>
-              <tbody>
-                {quotationData.items?.map((item, index) => {
-                  // Select base price & offer price
-                  const basePrice =
-                    quotationData.transaction_type === "Buy"
-                      ? parseFloat(item.purchase_price)
-                      : parseFloat(item.rent_price_per_month);
-
-                  const offerPrice =
-                    quotationData.transaction_type === "Buy"
-                      ? parseFloat(item.offer_purchase_price)
-                      : parseFloat(item.offer_rent_price_per_month);
-
-                  // Use offer price if not zero, otherwise normal price
-                  const finalPrice = offerPrice > 0 ? offerPrice : basePrice;
-
-                  const total = finalPrice * item.quotation_quantity;
-
-                  return (
-                    <tr
-                      key={item.id}
-                      style={
-                        index % 2 === 0 ? tableRowOddStyle : tableRowEvenStyle
-                      }
-                    >
-                      <td style={tableCellCenterStyle}>{index + 1}</td>
-                      <td style={tableCellStyle}>
-                        <div
-                          style={{
-                            fontWeight: "bold",
-                            fontSize: "14px",
-                            color: "#000",
-                          }}
-                        >
-                          {item.product_name}
-                        </div>
-                        <div
-                          style={{
-                            fontSize: "11px",
-                            color: "#555",
-                            marginTop: 4,
-                            lineHeight: "1.4",
-                          }}
-                        >
-                          <strong>Specifications:</strong> {generateSpecifications(item.product)}
-
-
-                          {/* <strong>Specifications:</strong> Brand:{" "}
-                          {item.product?.brand}, Model: {item.product?.model},
-                          Processor: {item.product?.processor_model}, RAM:{" "}
-                          {item.product?.ram}, Storage: {item.product?.storage},
-                          <br />
-                          Disk Type: {item.product?.disk_type}, Graphics:{" "}
-                          {item.product?.graphics}, OS: {item.product?.os}. */}
-                        </div>
-                        <br />
-                      </td>
-
-                      {/* Price Cell */}
-                      <td style={tableCellStyle}>{finalPrice.toFixed(2)}</td>
-
-                      {/* Quantity Cell */}
-                      <td style={tableCellCenterStyle}>
-                        {item.quotation_quantity}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-
-            {/* Footer Info */}
-            <div style={footerInfoStyle}>
-              <div style={taxDetailsStyle}>
-                {/* PAN No. &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;:{" "}
-                {dcData.pan_number}
-                <br />
-                GST No. &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;:{" "}
-                {dcData.gst_number} */}
-              </div>
-
-              <div style={totalContainerStyle}>
-                <div style={totalLabelStyle}>TOTAL QTY :</div>
-                <div style={totalValueStyle}>
-                  {quotationData.items?.reduce(
-                    (sum, item) => sum + (item.quotation_quantity || 0),
-                    0
-                  )}
-                </div>{" "}
-              </div>
-            </div>
-
-            {/* Not For Sale */}
-            <div style={notForSaleStyle}>
-              {quotationData.transaction_type === "Rent"
-                ? "NOT FOR SALE - RETURNABLE BASIS ONLY"
-                : "FOR SALE"}
-            </div>
-
-            {/* Signature Section */}
-            <div style={signatureSectionStyle}>
-              <div style={leftSignatureAreaStyle}>
-                <div style={jurisdictionNoteStyle}>
-                  Note: Subjected to Bengaluru Jurisdiction
-                </div>
-                <table style={signatureTableStyle}>
-                  <tbody>
-                    <tr>
-                      <td style={signatureTableHeaderStyle}>
-                        Quotation Address
-                      </td>
-                      <td style={signatureTableHeaderStyle}>
-                        Receiver Date and Signature
-                      </td>
-                    </tr>
-                    <tr>
-                      <td style={signatureTableCellStyle}>
-                        {quotationData.customer_first_name}{" "}
-                        {quotationData.customer_last_name},
-                        <br />
-                        {quotationData.customer.address.street &&
-                          `${quotationData.customer.address.street}, `}
-                        {quotationData.customer.address.city},{" "}
-                        {quotationData.customer.address.state}
-                        <br />
-                        {quotationData.customer.address.country} -{" "}
-                        {quotationData.customer.address.pincode}.
-                      </td>
-                      <td style={signatureTableCellStyle}></td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-              <div style={rightSignatureAreaStyle}>
-                <div style={companySignatureLabelStyle}>
-                  For Guru Goutham Infotech Private Limited
-                </div>
-                <div style={signatureBoxStyle}>SD/-</div>
-                <div style={signatureDesignationStyle}>
-                  Authorised Signatory
-                </div>
-              </div>
-            </div>
-
-            {/* Company Footer */}
-            <div style={companyFooterStyle}>
-              <div style={footerAddressStyle}>
-                <span>📍</span>
-                <span>
-                  No. 8, 2nd Cross, Diagonal Road, 3rd Block,
-                  <br />
-                  Jayanagar Bengaluru-560011.
-                </span>
-              </div>
-              <div style={footerContactStyle}>
-                <div style={footerContactItemStyle}>
-                  <span>🌐</span>
-                  <span>gurugoutam.com</span>
-                </div>
-                <div style={footerContactItemStyle}>
-                  <span>📞</span>
-                  <span>080-2242 9955, +91 9449 0789 55</span>
-                </div>
-                <div style={footerContactItemStyle}>
-                  <span>✉️</span>
-                  <span>info@gurugoutam.com</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+    <Dialog 
+      open={open} 
+      onClose={onClose} 
+      maxWidth="lg" 
+      fullWidth
+      PaperProps={{
+        style: {
+          width: '100%',
+          maxWidth: '1000px',
+          margin: '20px',
+          maxHeight: '90vh',
+        }
+      }}
+    >
+      <DialogContent sx={{ p: 0, position: 'relative' }}>
+        <IconButton
+          onClick={onClose}
+          sx={{
+            position: 'sticky',
+            top: 10,
+            right: 10,
+            float: 'right',
+            zIndex: 9999,
+            backgroundColor: 'white',
+            '&:hover': { backgroundColor: '#f5f5f5' },
+            boxShadow: '0 2px 10px rgba(0,0,0,0.1)',
+            margin: '10px'
+          }}
+        >
+          <CloseIcon />
+        </IconButton>
+        <QuotationPreview 
+          quotationData={quotationData} 
+        />
       </DialogContent>
-      <DialogActions>
-        <Button onClick={onClose}>Close</Button>
-        <Button onClick={handleDownloadPDF} variant="contained" color="primary">
-          Download PDF
-        </Button>
-        <Button onClick={handlePrint} variant="contained" color="secondary">
-          Print
-        </Button>
-      </DialogActions>
     </Dialog>
   );
 };
+
+
+// const QuotationDialog = ({ open, onClose, quotationData }) => {
+//   if (!quotationData) return null;
+
+//   // Handle PDF download
+//   const handleDownloadPDF = async () => {
+//     try {
+//       // Wait for dialog to fully render
+//       await new Promise((resolve) => setTimeout(resolve, 300));
+
+//       // Find the quotation container element
+//       const element = document.getElementById("quotation-container");
+
+//       if (!element) {
+//         throw new Error("Could not find quotation element in DOM");
+//       }
+
+//       // Create a clone for PDF generation to avoid layout issues
+//       const clone = element.cloneNode(true);
+//       clone.style.position = "absolute";
+//       clone.style.left = "-9999px";
+//       clone.style.visibility = "visible";
+//       clone.style.width = "210mm";
+//       document.body.appendChild(clone);
+
+//       const options = {
+//         scale: 2,
+//         logging: true,
+//         useCORS: true,
+//         scrollX: 0,
+//         scrollY: 0,
+//         windowWidth: clone.scrollWidth,
+//         windowHeight: clone.scrollHeight,
+//         backgroundColor: "#FFFFFF",
+//       };
+
+//       const canvas = await html2canvas(clone, options);
+//       document.body.removeChild(clone);
+
+//       const imgData = canvas.toDataURL("image/png");
+//       const pdf = new jsPDF("p", "mm", "a4");
+
+//       const imgProps = pdf.getImageProperties(imgData);
+//       const pdfWidth = pdf.internal.pageSize.getWidth();
+//       const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+
+//       // Handle multi-page PDF
+//       let heightLeft = pdfHeight;
+//       let position = 0;
+//       const pageHeight = pdf.internal.pageSize.getHeight();
+
+//       pdf.addImage(imgData, "PNG", 0, position, pdfWidth, pdfHeight);
+//       heightLeft -= pageHeight;
+
+//       while (heightLeft >= 0) {
+//         position = heightLeft - pdfHeight;
+//         pdf.addPage();
+//         pdf.addImage(imgData, "PNG", 0, position, pdfWidth, pdfHeight);
+//         heightLeft -= pageHeight;
+//       }
+
+//       pdf.save(`quotation-${quotationData.quotation_id || "QI"}.pdf`);
+//     } catch (error) {
+//       console.error("PDF Generation Error:", error);
+//       alert(`Failed to generate PDF: ${error.message}`);
+//     }
+//   };
+
+//   const handlePrint = () => {
+//     const element = document.getElementById("quotation-container");
+
+//     if (!element) {
+//       console.error("Print element not found");
+//       alert("Could not find the invoice content for printing");
+//       return;
+//     }
+
+//     const printWindow = window.open("", "_blank");
+//     printWindow.document.write(`
+//       <!DOCTYPE html>
+//       <html>
+//         <head>
+//           <title>Quotation - ${quotationData.quotation_id || "QI"}</title>
+//           <style>
+//             @page { 
+//               size: A4; 
+//               margin: 10mm; 
+//             }
+//             body { 
+//               margin: 0; 
+//               padding: 0; 
+//               font-family: Arial, sans-serif;
+//               -webkit-print-color-adjust: exact;
+//               print-color-adjust: exact;
+//             }
+//             .print-container { 
+//               width: 190mm; 
+//               min-height: 277mm; 
+//               padding: 0;
+//               box-sizing: border-box;
+//             }
+//             table {
+//               width: 100%;
+//               border-collapse: collapse;
+//             }
+//             th, td {
+//               border: 1px solid #000;
+//               padding: 8px;
+//               text-align: left;
+//             }
+//             th {
+//               background-color: #f0f0f0;
+//             }
+//           </style>
+//         </head>
+//         <body>
+//           <div class="print-container">
+//             ${element.innerHTML}
+//           </div>
+//           <script>
+//             window.onload = function() {
+//               setTimeout(function() {
+//                 window.print();
+//                 setTimeout(function() {
+//                   window.close();
+//                 }, 500);
+//               }, 300);
+//             }
+//           </script>
+//         </body>
+//       </html>
+//     `);
+//     printWindow.document.close();
+//   };
+
+//   // Calculate total quantity
+//   const totalQuantity = quotationData.items?.reduce((total, item) => {
+//     return total + (item.quotation_quantity || 0);
+//   }, 0);
+
+//   return (
+//     <Dialog open={open} onClose={onClose} maxWidth="lg" fullWidth>
+//       <DialogTitle>Quotation Details</DialogTitle>
+//       <DialogContent>
+//         <div style={containerStyle}>
+//           <div id="quotation-container" style={receiptContainerStyle}>
+//             {/* Header Color Bar */}
+//             <div style={headerBarStyle}></div>
+
+//             {/* Company Header */}
+//             <div style={companyHeaderStyle}>
+//               <div style={companyInfoContainerStyle}>
+//                 <div style={logoStyle}>
+//                   <img
+//                     src="/SORT-ICON.png"
+//                     alt="Company Logo"
+//                     style={{
+//                       width: "100%",
+//                       height: "100%",
+//                       objectFit: "contain",
+//                     }}
+//                   />
+//                 </div>
+//                 <div>
+//                   <div style={companyNameStyle}>
+//                     Guru Goutam Infotech Pvt. Ltd.
+//                   </div>
+//                   <div style={companyDetailsStyle}>
+//                     CIN: U72200KA2008PTC047679
+//                     <br />
+//                     GST: 29AADCG2608Q1Z6
+//                   </div>
+//                 </div>
+//               </div>
+//               <div style={challanHeaderStyle}>
+//                 <div style={challanTitleStyle}>QUOTATION</div>
+//                 <div style={challanDetailsStyle}>
+//                   Quotation No: {quotationData.quotation_id}
+//                   <br />
+//                   Quotation Date:{" "}
+//                   {new Date(quotationData.quotation_date).toLocaleDateString(
+//                     "en-GB"
+//                   )}
+//                 </div>
+//               </div>
+//             </div>
+
+//             {/* Recipient Section */}
+//             <div style={recipientSectionStyle}>
+//               <div style={recipientContainerStyle}>
+//                 <div style={recipientAddressStyle}>
+//                   <div style={recipientLabelStyle}>Ship To</div>
+//                   {quotationData.customer_first_name}{" "}
+//                   {quotationData.customer_last_name}
+//                   <br />
+//                   {quotationData.customer?.company_name && (
+//                     <>
+//                       {quotationData.customer.company_name}
+//                       <br />
+//                     </>
+//                   )}
+//                   {quotationData.customer.address.street &&
+//                     `${quotationData.customer.address.street}, `}
+//                   {quotationData.customer.address.city},<br />{" "}
+//                   {quotationData.customer.address.state},
+//                   <br />
+//                   {quotationData.customer.address.country} -{" "}
+//                   {quotationData.customer.address.pincode}.
+//                 </div>
+//                 <div style={recipientDetailsGridStyle}>
+//                   <div>
+//                     <div style={detailLabelStyle}>Receiver Person :</div>
+//                     {quotationData.customer.first_name}{" "}
+//                     {quotationData.customer.last_name}
+//                   </div>
+//                   <div>
+//                     <div style={detailLabelStyle}>Receiver Number :</div>
+//                     {quotationData.customer.phone_number}
+//                   </div>
+//                   {/* <div>
+//                     <div style={detailLabelStyle}>PO Number:</div>
+//                     {quotationData.dc_id || "N/A"}
+//                   </div>
+//                   <div>
+//                     <div style={detailLabelStyle}>Delivered Person :</div>
+//                     {quotationData.delivery_person_name}
+//                   </div>
+
+//                   <div>
+//                     <div style={detailLabelStyle}>Deliver Perso Number :</div>
+//                     {quotationData.delivery_person_phone_number}
+//                   </div>
+//                   <div>
+//                     <div style={detailLabelStyle}>Vehicle Number :</div>
+//                     {quotationData.vehicle_number}
+//                   </div> */}
+//                 </div>
+//               </div>
+//             </div>
+
+//             {/* Items Table */}
+//             <table style={tableStyle}>
+//               <thead>
+//                 <tr>
+//                   <th style={tableHeaderNoStyle}>NO.</th>
+//                   <th style={tableHeaderParticularsStyle}>Product Details</th>
+//                   <th style={tableHeaderParticularsStyle}>
+//                     {quotationData.transaction_type === "Rent"
+//                       ? "Price Per Month"
+//                       : "Purchase Price"}
+//                   </th>
+//                   <th style={tableHeaderQtyStyle}>QTY</th>
+//                 </tr>
+//               </thead>
+//               <tbody>
+//                 {quotationData.items?.map((item, index) => {
+//                   // Select base price & offer price
+//                   const basePrice =
+//                     quotationData.transaction_type === "Buy"
+//                       ? parseFloat(item.purchase_price)
+//                       : parseFloat(item.rent_price_per_month);
+
+//                   const offerPrice =
+//                     quotationData.transaction_type === "Buy"
+//                       ? parseFloat(item.offer_purchase_price)
+//                       : parseFloat(item.offer_rent_price_per_month);
+
+//                   // Use offer price if not zero, otherwise normal price
+//                   const finalPrice = offerPrice > 0 ? offerPrice : basePrice;
+
+//                   const total = finalPrice * item.quotation_quantity;
+
+//                   return (
+//                     <tr
+//                       key={item.id}
+//                       style={
+//                         index % 2 === 0 ? tableRowOddStyle : tableRowEvenStyle
+//                       }
+//                     >
+//                       <td style={tableCellCenterStyle}>{index + 1}</td>
+//                       <td style={tableCellStyle}>
+//                         <div
+//                           style={{
+//                             fontWeight: "bold",
+//                             fontSize: "14px",
+//                             color: "#000",
+//                           }}
+//                         >
+//                           {item.product_name}
+//                         </div>
+//                         <div
+//                           style={{
+//                             fontSize: "11px",
+//                             color: "#555",
+//                             marginTop: 4,
+//                             lineHeight: "1.4",
+//                           }}
+//                         >
+//                           <strong>Specifications:</strong> {generateSpecifications(item.product)}
+
+
+//                           {/* <strong>Specifications:</strong> Brand:{" "}
+//                           {item.product?.brand}, Model: {item.product?.model},
+//                           Processor: {item.product?.processor_model}, RAM:{" "}
+//                           {item.product?.ram}, Storage: {item.product?.storage},
+//                           <br />
+//                           Disk Type: {item.product?.disk_type}, Graphics:{" "}
+//                           {item.product?.graphics}, OS: {item.product?.os}. */}
+//                         </div>
+//                         <br />
+//                       </td>
+
+//                       {/* Price Cell */}
+//                       <td style={tableCellStyle}>{finalPrice.toFixed(2)}</td>
+
+//                       {/* Quantity Cell */}
+//                       <td style={tableCellCenterStyle}>
+//                         {item.quotation_quantity}
+//                       </td>
+//                     </tr>
+//                   );
+//                 })}
+//               </tbody>
+//             </table>
+
+//             {/* Footer Info */}
+//             <div style={footerInfoStyle}>
+//               <div style={taxDetailsStyle}>
+//                 {/* PAN No. &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;:{" "}
+//                 {dcData.pan_number}
+//                 <br />
+//                 GST No. &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;:{" "}
+//                 {dcData.gst_number} */}
+//               </div>
+
+//               <div style={totalContainerStyle}>
+//                 <div style={totalLabelStyle}>TOTAL QTY :</div>
+//                 <div style={totalValueStyle}>
+//                   {quotationData.items?.reduce(
+//                     (sum, item) => sum + (item.quotation_quantity || 0),
+//                     0
+//                   )}
+//                 </div>{" "}
+//               </div>
+//             </div>
+
+//             {/* Not For Sale */}
+//             <div style={notForSaleStyle}>
+//               {quotationData.transaction_type === "Rent"
+//                 ? "NOT FOR SALE - RETURNABLE BASIS ONLY"
+//                 : "FOR SALE"}
+//             </div>
+
+//             {/* Signature Section */}
+//             <div style={signatureSectionStyle}>
+//               <div style={leftSignatureAreaStyle}>
+//                 <div style={jurisdictionNoteStyle}>
+//                   Note: Subjected to Bengaluru Jurisdiction
+//                 </div>
+//                 <table style={signatureTableStyle}>
+//                   <tbody>
+//                     <tr>
+//                       <td style={signatureTableHeaderStyle}>
+//                         Quotation Address
+//                       </td>
+//                       <td style={signatureTableHeaderStyle}>
+//                         Receiver Date and Signature
+//                       </td>
+//                     </tr>
+//                     <tr>
+//                       <td style={signatureTableCellStyle}>
+//                         {quotationData.customer_first_name}{" "}
+//                         {quotationData.customer_last_name},
+//                         <br />
+//                         {quotationData.customer.address.street &&
+//                           `${quotationData.customer.address.street}, `}
+//                         {quotationData.customer.address.city},{" "}
+//                         {quotationData.customer.address.state}
+//                         <br />
+//                         {quotationData.customer.address.country} -{" "}
+//                         {quotationData.customer.address.pincode}.
+//                       </td>
+//                       <td style={signatureTableCellStyle}></td>
+//                     </tr>
+//                   </tbody>
+//                 </table>
+//               </div>
+//               <div style={rightSignatureAreaStyle}>
+//                 <div style={companySignatureLabelStyle}>
+//                   For Guru Goutham Infotech Private Limited
+//                 </div>
+//                 <div style={signatureBoxStyle}>SD/-</div>
+//                 <div style={signatureDesignationStyle}>
+//                   Authorised Signatory
+//                 </div>
+//               </div>
+//             </div>
+
+//             {/* Company Footer */}
+//             <div style={companyFooterStyle}>
+//               <div style={footerAddressStyle}>
+//                 <span>📍</span>
+//                 <span>
+//                   No. 8, 2nd Cross, Diagonal Road, 3rd Block,
+//                   <br />
+//                   Jayanagar Bengaluru-560011.
+//                 </span>
+//               </div>
+//               <div style={footerContactStyle}>
+//                 <div style={footerContactItemStyle}>
+//                   <span>🌐</span>
+//                   <span>gurugoutam.com</span>
+//                 </div>
+//                 <div style={footerContactItemStyle}>
+//                   <span>📞</span>
+//                   <span>080-2242 9955, +91 9449 0789 55</span>
+//                 </div>
+//                 <div style={footerContactItemStyle}>
+//                   <span>✉️</span>
+//                   <span>info@gurugoutam.com</span>
+//                 </div>
+//               </div>
+//             </div>
+//           </div>
+//         </div>
+//       </DialogContent>
+//       <DialogActions>
+//         <Button onClick={onClose}>Close</Button>
+//         <Button onClick={handleDownloadPDF} variant="contained" color="primary">
+//           Download PDF
+//         </Button>
+//         <Button onClick={handlePrint} variant="contained" color="secondary">
+//           Print
+//         </Button>
+//       </DialogActions>
+//     </Dialog>
+//   );
+// };
 
 // Goods Return Note Dialog Component
 const GoodsReturnNoteDialog = ({ open, onClose, grnData }) => {
@@ -2852,7 +2376,6 @@ const CreditNoteDialog = ({ open, onClose, creditNoteData }) => {
                             <br />
                             Asset IDs: {item.device_ids.join(", ")}
                           </div>
-                          <br />
                           {/* <div>
                             <br />
                             Used for {item.daysUsed + 1} days{" "}
@@ -3024,486 +2547,6 @@ const noteContainerStyle = {
 
 //25-08-2025
 
-// const CreditNoteDialog = ({ open, onClose, creditNoteData }) => {
-//   if (!creditNoteData) return null;
-
-//   const isSameMonth = (date1, date2) => {
-//     if (!date1 || !date2) return false;
-//     const d1 = new Date(date1);
-//     const d2 = new Date(date2);
-//     return (
-//       d1.getFullYear() === d2.getFullYear() && d1.getMonth() === d2.getMonth()
-//     );
-//   };
-
-//   // Set the flag
-//   const sameMonthFlag = isSameMonth(
-//     creditNoteData.dc_date,
-//     creditNoteData.returned_date
-//   );
-
-//   // Debug / output
-
-//   // Helper functions
-//   const formatDate = (dateStr) => {
-//     if (!dateStr) return "-";
-//     const date = new Date(dateStr);
-//     const day = String(date.getDate()).padStart(2, "0");
-//     const month = String(date.getMonth() + 1).padStart(2, "0");
-//     const year = date.getFullYear();
-//     return `${day}/${month}/${year}`;
-//   };
-
-//   // Calculate days between returned_date and rental_end_date
-//   const calculateDaysDifference = (returnedDate, rentalEndDate) => {
-//     if (!returnedDate || !rentalEndDate) return 0;
-
-//     const ret = new Date(returnedDate);
-//     const end = new Date(rentalEndDate);
-
-//     // Extract day, month, year
-//     const retDay = ret.getDate();
-//     const retMonth = ret.getMonth(); // 0-based
-//     const retYear = ret.getFullYear();
-
-//     const endDay = end.getDate();
-//     const endMonth = end.getMonth();
-//     const endYear = end.getFullYear();
-
-//     // Convert to total "billing days" using 30-day months and 360-day years
-//     const totalRetDays = retYear * 360 + retMonth * 30 + retDay;
-//     const totalEndDays = endYear * 360 + endMonth * 30 + endDay;
-
-//     // Inclusive difference (+1)
-//     return Math.abs(totalEndDays - totalRetDays) + 1;
-//   };
-
-//   // Calculate item prices based on days difference
-//   const calculateItemPrices = (items) => {
-//     const returnedDate = new Date(creditNoteData.returned_date);
-
-//     // Calculate end of returnedDate's month
-//     const endOfMonth = new Date(
-//       returnedDate.getFullYear(),
-//       returnedDate.getMonth() + 1,
-//       0
-//     );
-
-//     const monthStartDate = new Date(
-//       returnedDate.getFullYear(),
-//       returnedDate.getMonth(),
-//       1
-//     );
-
-//     // Calculate days used (from 1st July to 20th July 2025 = 20 days)
-//     const daysUsed = sameMonthFlag
-//       ? calculateDaysDifference(creditNoteData.dc_date, returnedDate)
-//       : calculateDaysDifference(monthStartDate, returnedDate);
-
-//     // Calculate day difference
-//     const daysDifference = Math.ceil(
-//       (endOfMonth - returnedDate) / (1000 * 60 * 60 * 24)
-//     );
-
-//     return items.map((item) => {
-//       const unitPrice = parseFloat(item.unit_price || 0);
-//       const dailyRate = unitPrice / 30;
-//       const totalPrice = daysDifference * item.quantity * dailyRate;
-
-//       return {
-//         ...item,
-//         days: daysDifference,
-//         daily_rate: dailyRate,
-//         total_price: totalPrice,
-//         daysUsed,
-//         monthStartDate,
-//         returnedDate,
-//         endOfMonth,
-//       };
-//     });
-//   };
-
-//   const itemsWithCalculatedPrices = calculateItemPrices(
-//     creditNoteData.items || []
-//   );
-
-//   // Calculate tax values (assuming 9% GST split into CGST and SGST)
-//   const subtotal = itemsWithCalculatedPrices.reduce(
-//     (sum, item) => sum + (item.total_price || 0),
-//     0
-//   );
-
-//   const cgstRate = 0.09; // 9%
-//   const sgstRate = 0.09; // 9%
-//   const cgst = subtotal * cgstRate;
-//   const sgst = subtotal * sgstRate;
-//   const totalTax = cgst + sgst;
-//   const grandTotal = subtotal + totalTax;
-
-//   // Format currency for Indian Rupees
-//   const formatINRCurrency = (amount) => {
-//     return new Intl.NumberFormat("en-IN", {
-//       style: "currency",
-//       currency: "INR",
-//       minimumFractionDigits: 2,
-//       maximumFractionDigits: 2,
-//     })
-//       .format(amount)
-//       .replace("₹", "₹ ");
-//   };
-
-//   // Format currency without symbol
-//   const formatINRCurrency1 = (amount) => {
-//     return new Intl.NumberFormat("en-IN", {
-//       minimumFractionDigits: 2,
-//       maximumFractionDigits: 2,
-//     }).format(amount);
-//   };
-
-//   const handleDownloadPDF = () => {
-//     const input = document.getElementById("credit-note-container");
-
-//     html2canvas(input, {
-//       scale: 2,
-//       logging: false,
-//       useCORS: true,
-//       allowTaint: true,
-//     }).then((canvas) => {
-//       const imgData = canvas.toDataURL("image/png");
-//       const pdf = new jsPDF("p", "mm", "a4");
-//       const imgWidth = 210;
-//       const imgHeight = (canvas.height * imgWidth) / canvas.width;
-
-//       pdf.addImage(imgData, "PNG", 0, 0, imgWidth, imgHeight);
-//       pdf.save(`credit-note-${creditNoteData.credit_note_number}.pdf`);
-//     });
-//   };
-
-//   return (
-//     <Dialog open={open} onClose={onClose} maxWidth="lg" fullWidth>
-//       <DialogTitle>Credit Note Details</DialogTitle>
-//       <DialogContent>
-//         <div style={containerStyle}>
-//           <div id="credit-note-container" style={receiptContainerStyle}>
-//             {/* Header Color Bar */}
-//             <div style={headerBarStyle}></div>
-
-//             {/* Company Header */}
-//             <div style={companyHeaderStyle}>
-//               <div style={companyInfoContainerStyle}>
-//                 <div style={logoStyle}>
-//                   <img
-//                     src="/SORT-ICON.png"
-//                     alt="Company Logo"
-//                     style={{
-//                       width: "100%",
-//                       height: "100%",
-//                       objectFit: "contain",
-//                     }}
-//                   />
-//                 </div>
-//                 <div>
-//                   <div style={companyNameStyle}>
-//                     Guru Goutam Infotech Pvt. Ltd.
-//                   </div>
-//                   <div style={companyDetailsStyle}>
-//                     CIN: U72200KA2008PTC047679
-//                     <br />
-//                     GST: {creditNoteData.customer?.gst || "29AADCG2608Q1Z6"}
-//                   </div>
-//                 </div>
-//               </div>
-//               <div style={challanHeaderStyle}>
-//                 <div style={challanTitleStyle}>CREDIT NOTE</div>
-//                 <div style={challanDetailsStyle}>
-//                   Credit Note No: {creditNoteData.credit_note_number}
-//                   <br />
-//                   Return Date:{" "}
-//                   {new Date(creditNoteData.returned_date).toLocaleDateString(
-//                     "en-GB"
-//                   )}
-//                   <br />
-//                 </div>
-//               </div>
-//             </div>
-
-//             {/* Recipient Section */}
-//             <div style={recipientSectionStyle}>
-//               <div style={recipientContainerStyle}>
-//                 <div style={recipientAddressStyle}>
-//                   <div style={recipientLabelStyle}>To</div>
-//                   {creditNoteData.customer_name}
-//                   <br />
-//                   {creditNoteData.customer?.company_name &&
-//                     `${creditNoteData.customer.company_name}, `}
-//                   {creditNoteData.customer?.address?.street &&
-//                     `${creditNoteData.customer.address.street}, `}
-//                   {creditNoteData.customer?.address?.city},{" "}
-//                   {creditNoteData.customer?.address?.state},
-//                   <br />
-//                   {creditNoteData.customer?.address?.country} -{" "}
-//                   {creditNoteData.customer?.address?.pincode}
-//                   <br />
-//                   <br />
-//                 </div>
-//                 <div style={recipientDetailsGridStyle}>
-//                   <div>
-//                     <div style={detailLabelStyle}>Contact No:</div>
-//                     {creditNoteData.customer?.phone_number}
-//                   </div>
-//                   <div>
-//                     <div style={detailLabelStyle}>PAN:</div>
-//                     {creditNoteData.pan ||
-//                       creditNoteData.customer?.pan_no ||
-//                       "N/A"}
-//                   </div>
-
-//                   <div>
-//                     <div style={detailLabelStyle}>Payment Type:</div>
-//                     {creditNoteData.payment_type}
-//                   </div>
-//                   <div>
-//                     <div style={detailLabelStyle}>Industry:</div>
-//                     {creditNoteData.industry}
-//                   </div>
-//                   <div>
-//                     <div style={detailLabelStyle}>Email:</div>
-//                     {creditNoteData.email}
-//                   </div>
-//                   <div>
-//                     <div style={detailLabelStyle}>Created By:</div>
-//                     {creditNoteData.created_by}
-//                   </div>
-//                 </div>
-//               </div>
-//             </div>
-
-//             <table style={tableStyle}>
-//               <thead>
-//                 <tr>
-//                   <th style={tableHeaderNoStyle}>NO.</th>
-//                   <th style={tableHeaderParticularsStyle}>Product Details</th>
-//                   <th style={tableHeaderQtyStyle}>QTY</th>
-//                   <th style={tableHeaderQtyStyle}>Days</th>
-//                   <th style={tableHeaderQtyStyle}>Daily Rate</th>
-//                   <th style={tableHeaderQtyStyle}>Total</th>
-//                 </tr>
-//               </thead>
-//               <tbody>
-//                 {itemsWithCalculatedPrices.map((item, index) => (
-//                   <tr
-//                     key={item.id}
-//                     style={
-//                       index % 2 === 0 ? tableRowOddStyle : tableRowEvenStyle
-//                     }
-//                   >
-//                     <td style={tableCellCenterStyle}>{index + 1}</td>
-//                     <td style={tableCellStyle}>
-//                       <div style={productNameStyle}>{item.product_name}</div>
-//                       <div
-//                         style={{
-//                           fontSize: "12px",
-//                           color: "#555",
-//                           textAlign: "justify",
-//                           lineHeight: "1.4",
-//                         }}
-//                       >
-//                         Specifications:{" "}
-//                         {item.product?.brand && (
-//                           <>
-//                             <strong>Brand:</strong> {item.product.brand}.{" "}
-//                           </>
-//                         )}
-//                         {item.product?.model && (
-//                           <>
-//                             <strong>Model:</strong> {item.product.model}.{" "}
-//                           </>
-//                         )}
-//                         {item.product?.processor && (
-//                           <>
-//                             <strong>Processor:</strong> {item.product.processor}
-//                             .{" "}
-//                           </>
-//                         )}
-//                         {item.product?.ram && (
-//                           <>
-//                             <strong>RAM:</strong> {item.product.ram}.{" "}
-//                           </>
-//                         )}
-//                         <br />
-//                         {item.product?.storage && (
-//                           <>
-//                             <strong>Storage:</strong> {item.product.storage}.{" "}
-//                           </>
-//                         )}
-//                         {item.product?.disk_type && (
-//                           <>
-//                             <strong>Disk Type:</strong> {item.product.disk_type}
-//                             .{" "}
-//                           </>
-//                         )}
-//                         {item.product?.graphics && (
-//                           <>
-//                             <strong>Graphics:</strong> {item.product.graphics}.{" "}
-//                           </>
-//                         )}
-//                         {item.product?.os && (
-//                           <>
-//                             <strong>OS:</strong> {item.product.os}.{" "}
-//                           </>
-//                         )}
-//                       </div>
-//                       {item.device_ids?.length > 0 && (
-//                         <>
-//                           <div style={itemTitleStyle}>
-//                             <br />
-//                             Asset IDs: {item.device_ids.join(", ")}
-//                           </div>
-//                           <div>
-//                             <br />
-//                             Used for {item.daysUsed} days{" "}
-//                             {formatDate(item.returnedDate)} to{" "}
-//                             {formatDate(item.endOfMonth)}
-//                           </div>
-//                         </>
-//                       )}
-//                     </td>
-//                     <td style={tableCellCenterStyle}>{item.quantity}</td>
-//                     <td style={tableCellCenterStyle}>{item.days}</td>
-//                     <td style={tableCellRightStyle}>
-//                       {formatINRCurrency1(item.daily_rate || 0)}
-//                     </td>
-//                     <td style={tableCellRightStyle}>
-//                       {formatINRCurrency1(item.total_price || 0)}
-//                     </td>
-//                   </tr>
-//                 ))}
-
-//                 {/* Total Row */}
-//                 <tr style={totalsRowStyle}>
-//                   <td colSpan={5} style={tableCellRightStyle}>
-//                     <strong>TOTAL</strong>
-//                   </td>
-//                   <td style={tableCellRightStyle}>
-//                     {formatINRCurrency1(subtotal)}
-//                   </td>
-//                 </tr>
-//               </tbody>
-//             </table>
-
-//             {/* Tax and Total Section */}
-//             <div style={taxTotalContainerStyle}>
-//               <div style={taxDetailsStyle}>
-//                 <div style={taxRowStyle}>
-//                   <span>Subtotal:</span>
-//                   <span>{formatINRCurrency1(subtotal)}</span>
-//                 </div>
-
-//                 <div style={taxRowStyle}>
-//                   <span>CGST @9%:</span>
-//                   <span>{formatINRCurrency1(cgst)}</span>
-//                 </div>
-//                 <div style={taxRowStyle}>
-//                   <span>SGST @9%:</span>
-//                   <span>{formatINRCurrency1(sgst)}</span>
-//                 </div>
-//                 <div style={taxRowTotalStyle}>
-//                   <span>Total Tax:</span>
-//                   <span>₹ {formatINRCurrency1(totalTax)}</span>
-//                 </div>
-
-//                 <div style={grandTotalStyle}>
-//                   <span>Grand Total:</span>
-//                   <span>₹ {formatINRCurrency1(grandTotal)}</span>
-//                 </div>
-//               </div>
-//             </div>
-
-//             {/* Bank Details Section */}
-//             <div style={bankDetailsContainerStyle}>
-//               <div style={bankDetailsTitleStyle}>Bank Details:</div>
-//               <div style={bankLineStyle}>
-//                 Guru Goutham Infotech Pvt. Ltd., HDFC Bank Ltd, Jayanagar Branch
-//               </div>
-//               <div style={bankLineStyle}>
-//                 Current A/c No: 50200066787843. &nbsp;&nbsp; IFSC Code:
-//                 HDFC0000261
-//               </div>
-
-//               <div style={amountWordsStyle}>
-//                 Amt. in Words: <span>{numberToWords(grandTotal)}</span>
-//               </div>
-
-//               <div style={jurisdictionNoteStyle}>
-//                 Note:{" "}
-//                 <span style={highlightTextStyle}>
-//                   Subject to Bengaluru Jurisdiction
-//                 </span>
-//               </div>
-//             </div>
-
-//             {/* Signature Section */}
-//             <div style={signatureSectionStyle}>
-//               {/* Left: Receiver Signature */}
-//               <div style={leftSignatureAreaStyle}>
-//                 <div style={companySignatureLabelStyle}></div>
-//                 <div style={signatureBoxStyle}></div>
-//                 <div style={signatureDesignationStyle}>
-//                   {" "}
-//                   Receiver Signature with Seal
-//                 </div>
-//               </div>
-
-//               {/* Right: Authorised Signatory */}
-//               <div style={rightSignatureAreaStyle}>
-//                 <div style={companySignatureLabelStyle}>
-//                   For Guru Goutham Infotech Private Limited
-//                 </div>
-//                 <div style={signatureBoxStyle}>SD/-</div>
-//                 <div style={signatureDesignationStyle}>
-//                   Authorised Signatory
-//                 </div>
-//               </div>
-//             </div>
-
-//             {/* Company Footer */}
-//             <div style={companyFooterStyle}>
-//               <div style={footerAddressStyle}>
-//                 <span>📍</span>
-//                 <span>
-//                   No. 8, 2nd Cross, Diagonal Road, 3rd Block,
-//                   <br />
-//                   Jayanagar Bengaluru-560011.
-//                 </span>
-//               </div>
-//               <div style={footerContactStyle}>
-//                 <div style={footerContactItemStyle}>
-//                   <span>🌐</span>
-//                   <span>gurugoutam.com</span>
-//                 </div>
-//                 <div style={footerContactItemStyle}>
-//                   <span>📞</span>
-//                   <span>080-2242 9955, +91 9449 0789 55</span>
-//                 </div>
-//                 <div style={footerContactItemStyle}>
-//                   <span>✉️</span>
-//                   <span>info@gurugoutam.com</span>
-//                 </div>
-//               </div>
-//             </div>
-//           </div>
-//         </div>
-//       </DialogContent>
-//       <DialogActions>
-//         <Button onClick={onClose}>Close</Button>
-//         <Button onClick={handleDownloadPDF} variant="contained" color="primary">
-//           Download PDF
-//         </Button>
-//         <Button onClick={() => window.print()}>Print</Button>
-//       </DialogActions>
-//     </Dialog>
-//   );
-// };
 
 const formatINRCurrency = (value) => {
   return new Intl.NumberFormat("en-IN", {
@@ -3536,1028 +2579,6 @@ const capitalize = (text) =>
 
 // Invoices Dialog Component
 
-// Invoices Dialog Component
-// Invoices Dialog Component
-// const InvoiceDialog = ({ open, onClose, invoiceData }) => {
-//   if (!invoiceData) return null;
-
-//   const invoiceType = invoiceData.type || "current";
-//   const isBuyTransaction = invoiceData.transaction_type === "Buy";
-
-//   // Use invoice dates instead of rental dates
-//   const invoiceStartDate = new Date(invoiceData.invoice_start_date);
-//   const invoiceDate = new Date(invoiceData.invoice_date);
-
-//   const dcDate = new Date(invoiceData.dc_date);
-//   const showDcPeriod = dcDate.getDate() !== 1; // Only show if not 1st of month
-
-//   const invoiceEndDate = new Date(invoiceData.invoice_end_date);
-//   const previousDeliveredStartDate = new Date(
-//     invoiceData.previous_delivered_start_date
-//   );
-//   const previousDeliveredEndDate = new Date(
-//     invoiceData.previous_delivered_end_date
-//   );
-//   const creditNoteStartDate = (() => {
-//     const firstItem = invoiceData.items[0];
-//     if (!firstItem) return null;
-
-//     const date = new Date(firstItem.returned_date);
-//     return isNaN(date.getTime()) ? null : date;
-//   })();
-
-//   const creditNoteEndDate = creditNoteStartDate
-//     ? new Date(
-//         creditNoteStartDate.getFullYear(),
-//         creditNoteStartDate.getMonth() + 1,
-//         0
-//       )
-//     : null;
-
-//   // Calculate date ranges based on invoice dates
-//   const currentMonthStart = new Date(
-//     invoiceStartDate.getFullYear(),
-//     invoiceStartDate.getMonth(),
-//     1
-//   );
-//   const currentMonthEnd = new Date(
-//     invoiceStartDate.getFullYear(),
-//     invoiceStartDate.getMonth() + 1,
-//     0
-//   );
-
-//   // Calculate next month dates
-//   const nextMonthStart = new Date(
-//     invoiceStartDate.getFullYear(),
-//     invoiceStartDate.getMonth() + 1,
-//     1
-//   );
-//   const nextMonthEnd = new Date(
-//     nextMonthStart.getFullYear(),
-//     nextMonthStart.getMonth() + 1,
-//     0
-//   );
-
-//   // Helper functions
-//   const formatDate = (dateStr) => {
-//     if (!dateStr) return "-";
-//     const date = new Date(dateStr);
-//     const day = String(date.getDate()).padStart(2, "0");
-//     const month = String(date.getMonth() + 1).padStart(2, "0");
-//     const year = date.getFullYear();
-//     return `${day}/${month}/${year}`;
-//   };
-
-//   const isSameMonth = (date1, date2) => {
-//     return (
-//       date1 &&
-//       date2 &&
-//       new Date(date1).getMonth() === new Date(date2).getMonth() &&
-//       new Date(date1).getFullYear() === new Date(date2).getFullYear()
-//     );
-//   };
-
-//   const calculateInvoiceItems = () => {
-//     return invoiceData.items
-//       ?.map((item) => {
-//         const invoiceType = invoiceData.type || "current";
-
-//         // Common data
-//         const rate = isBuyTransaction
-//           ? Number(item.productDetails?.purchase_price || 0)
-//           : Number(item.unit_price) || 0;
-
-//         const dailyRate = isBuyTransaction ? 0 : rate / 30; // Only relevant for rental
-
-//         const addedDate = item.added_date ? new Date(item.added_date) : null;
-//         const returnedDate = item.returned_date
-//           ? new Date(item.returned_date)
-//           : null;
-
-//         const isReturnInSameMonth = isSameMonth(returnedDate, invoiceStartDate);
-//         const safeReturnQty = isReturnInSameMonth
-//           ? Number(item.return_quantity) || 0
-//           : 0;
-
-//         const calculateDays = (startDate, endDate) => {
-//           if (!startDate || !endDate || isBuyTransaction) return 0;
-
-//           const start = new Date(startDate);
-//           const end = new Date(endDate);
-
-//           // If start is 1st and end is last day of month, return 30
-//           const isFullMonth =
-//             start.getDate() === 1 &&
-//             (end.getDate() === 30 ||
-//               end.getDate() === 31 ||
-//               (end.getMonth() === 1 &&
-//                 (end.getDate() === 28 || end.getDate() === 29)));
-
-//           if (isFullMonth) return 30;
-
-//           const diffTime = Math.abs(end - start);
-//           return Math.ceil(diffTime / (1000 * 60 * 60 * 24)); // +1 to include both days
-//         };
-
-//         const getReturnEndDate = () => {
-//           switch (invoiceType) {
-//             case "previous":
-//               return previousDeliveredEndDate;
-//             case "current":
-//               return invoiceEndDate;
-//             case "next":
-//               return nextMonthEnd;
-//             case "credit":
-//               return returnedDate
-//                 ? new Date(
-//                     returnedDate.getFullYear(),
-//                     returnedDate.getMonth() + 1,
-//                     0
-//                   )
-//                 : invoiceEndDate; // fallback to something safe
-//             default:
-//               return invoiceEndDate;
-//           }
-//         };
-
-//         const getReturnStartDate = () => {
-//           switch (invoiceType) {
-//             case "previous":
-//               return previousDeliveredStartDate;
-//             case "current":
-//               return invoiceDate;
-//             case "next":
-//               return nextMonthStart;
-//             case "credit":
-//               return returnedDate || invoiceStartDate; // Use returned date or fallback
-//             default:
-//               return invoiceStartDate;
-//           }
-//         };
-
-//         const creditNoteEndDate = new Date(getReturnEndDate());
-
-//         // Return days (only for rental)
-//         const returnQtyDays =
-//           !isBuyTransaction && returnedDate
-//             ? calculateDays(returnedDate, getReturnEndDate())
-//             : 0;
-
-//         const creditReturnDays =
-//           !isBuyTransaction && returnedDate
-//             ? calculateDays(returnedDate, getReturnStartDate())
-//             : 0;
-
-//         // Added (new) device days (only for rental)
-//         let newQtyDays = 0;
-//         if (!isBuyTransaction && addedDate) {
-//           const endOfAddedMonth = new Date(
-//             addedDate.getFullYear(),
-//             addedDate.getMonth() + 1,
-//             0
-//           );
-//           newQtyDays = calculateDays(addedDate, endOfAddedMonth);
-//         }
-
-//         // Init result variables
-//         let quantity = 0;
-//         let days = 0;
-//         let amount = 0;
-//         let description = "";
-//         let deviceIds = [];
-//         let PrevQty = 0;
-//         let NextQty = 0;
-//         let CreditNoteQty = 0;
-//         let returnedQtyAmount = 0;
-//         let currentNewQtyAmount = 0;
-//         let currentReturnedAmount = 0;
-//         let currentFinalQty = 0;
-//         let usedAmount = 0;
-//         let dcAmount = 0;
-
-//         let dcPeriodEnd = 0;
-//         let dcDays = 0;
-
-//         if (showDcPeriod) {
-//           dcPeriodEnd = new Date(
-//             dcDate.getFullYear(),
-//             dcDate.getMonth() + 1,
-//             0
-//           );
-//           dcDays =
-//             Math.ceil((dcPeriodEnd - dcDate) / (1000 * 60 * 60 * 24));
-//         }
-
-//         if (isBuyTransaction) {
-//           // Handle Buy transaction type
-//           quantity = Number(item.quantity) || 0;
-//           amount = quantity * rate;
-//           description = `Purchase of ${quantity} Qty ${
-//             item.product_name
-//           } at ${rate.toFixed(2)} each`;
-//           deviceIds = item.device_ids || [];
-//         } else {
-//           // Handle Rent transaction type (original logic)
-//           switch (invoiceType) {
-//             case "previous":
-//               quantity = Number(item.previous_quantity) || 0;
-//               PrevQty = quantity;
-//               days = calculateDays(
-//                 previousDeliveredStartDate,
-//                 previousDeliveredEndDate
-//               );
-//               amount = quantity * dailyRate * days;
-//               description = `Billing Start Date: ${formatDate(
-//                 previousDeliveredStartDate
-//               )} - Billing End Date: ${formatDate(previousDeliveredEndDate)}`;
-//               deviceIds = item.device_ids || [];
-//               break;
-
-//             case "current":
-//               const currentbaseQty = Number(item.previous_quantity) || 0;
-//               const currentnewQty = Number(item.new_quantity) || 0;
-//               const currentreturnQty = safeReturnQty;
-
-//               usedAmount = currentreturnQty * dailyRate * creditReturnDays;
-
-//               quantity = currentbaseQty;
-//               currentFinalQty = quantity;
-//               days = calculateDays(invoiceStartDate, invoiceEndDate);
-//               currentNewQtyAmount = dailyRate;
-//               currentReturnedAmount = dailyRate;
-//               dcAmount = dailyRate * quantity * dcDays;
-
-//               amount = quantity * dailyRate * days;
-//               deviceIds = [
-//                 ...(item.device_ids || []),
-//                 ...(item.new_device_ids || []),
-//               ].filter((id) =>
-//                 isReturnInSameMonth
-//                   ? !(item.returned_device_ids || []).includes(id)
-//                   : true
-//               );
-
-//               description = `Billing Start Date: ${formatDate(
-//                 invoiceStartDate
-//               )} - Billing End Date: ${formatDate(invoiceEndDate)}`;
-//               break;
-
-//             case "next":
-//               const baseQty = Number(item.previous_quantity) || 0;
-//               const newQty = Number(item.new_quantity) || 0;
-//               const returnQty =
-//                 item.return_quantity != null
-//                   ? Number(item.return_quantity)
-//                   : "-";
-
-//               quantity = baseQty + newQty - returnQty;
-//               NextQty = quantity;
-//               days = calculateDays(nextMonthStart, nextMonthEnd);
-//               const mainAmount = quantity * rate;
-//               const newQtyAmount = newQty * dailyRate * newQtyDays;
-//               returnedQtyAmount = returnQty * dailyRate * creditReturnDays;
-//               amount = mainAmount + newQtyAmount;
-//               description = `Billing Start Date: ${formatDate(
-//                 nextMonthStart
-//               )} - Billing End Date: ${formatDate(nextMonthEnd)}`;
-//               deviceIds = [
-//                 ...(item.device_ids || []),
-//                 ...(item.new_device_ids || []),
-//               ];
-//               break;
-
-//             case "credit":
-//               quantity =
-//                 item.return_quantity != null
-//                   ? Number(item.return_quantity)
-//                   : "-";
-//               CreditNoteQty = quantity;
-
-//               if (quantity > 0 && returnedDate) {
-//                 days = returnQtyDays;
-//                 amount = quantity * dailyRate * days;
-//                 description = `Credit for returned devices ${returnQtyDays} Days (${formatDate(
-//                   returnedDate
-//                 )} to ${formatDate(creditNoteEndDate)})`;
-//                 deviceIds = item.returned_device_ids || [];
-//               }
-//               break;
-
-//             default:
-//               break;
-//           }
-//         }
-
-//         return {
-//           ...item,
-//           quantity,
-//           PrevQty,
-//           NextQty,
-//           CreditNoteQty,
-//           days,
-//           dcDays,
-//           amount,
-//           description,
-//           deviceIds,
-//           rate,
-//           total: amount,
-//           newQtyDays,
-//           returnQtyDays,
-//           returnedQtyAmount,
-//           creditReturnDays,
-//           currentNewQtyAmount,
-//           currentReturnedAmount,
-//           currentFinalQty,
-//           usedAmount,
-//           dcAmount,
-//         };
-//       })
-//       .filter((item) => item.amount > 0 || item.quantity > 0);
-//   };
-
-//   const items = calculateInvoiceItems();
-//   const totalReturnedAmount = items.reduce(
-//     (sum, item) => sum + (item.returnedQtyAmount || 0),
-//     0
-//   );
-//   const totalAmount = items.reduce((sum, item) => sum + item.amount + item.dcAmount, 0);
-
-//   const finalTotalAmount = items.reduce((sum, item) => sum + item.amount, 0);
-
-//   const renderInvoice = () => {
-//     const isCreditNote = invoiceType === "credit";
-//     const title =
-//       invoiceType === "current"
-//         ? "Current Month Invoice"
-//         : invoiceType === "next"
-//         ? "Next Month Projection"
-//         : invoiceType === "previous"
-//         ? "Previous Month Invoice"
-//         : "Return Credit Note";
-
-//     const cgst = totalAmount * 0.09;
-//     const sgst = totalAmount * 0.09;
-//     const totalTax = cgst + sgst;
-//     const grandTotal = totalAmount + totalTax;
-
-//     const transformedItems = items.flatMap((item) => {
-//       const assetIds = Array.isArray(item.deviceIds) ? item.deviceIds : [];
-
-//       return assetIds.map((assetId) => ({
-//         ...item,
-//         singleAssetId: assetId,
-//         days: item.days || 0,
-//         perDay: item.rate / 30,
-//         totalAmount: ((item.rate / 30) * item.days).toFixed(2),
-//       }));
-//     });
-
-//     const calculateDaysBetweenDates = (startDate, endDate) => {
-//       const diffTime = Math.abs(endDate - startDate);
-//       return Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1; // +1 to include both start and end dates
-//     };
-
-//     return (
-//       <div
-//         className="invoice-container"
-//         style={receiptContainerStyle}
-//         id={`invoice-${
-//           invoiceType === "current"
-//             ? "current-month-invoice"
-//             : invoiceType === "next"
-//             ? "next-month-projection"
-//             : "return-credit-note"
-//         }`}
-//       >
-//         {/* Header and company info */}
-//         <div style={headerBarStyle}></div>
-//         <div style={companyHeaderStyle}>
-//           <div style={companyInfoContainerStyle}>
-//             <div style={logoStyle}>
-//               <img
-//                 src="/SORT-ICON.png"
-//                 alt="Company Logo"
-//                 style={{ width: "100%", height: "100%", objectFit: "contain" }}
-//               />
-//             </div>
-//             <div>
-//               <div style={companyNameStyle}>Guru Goutam Infotech Pvt. Ltd.</div>
-//               <div style={companyDetailsStyle}>
-//                 CIN: U72200KA2008PTC047679
-//                 <br />
-//                 GST: {invoiceData.customer_gst_number || "29AADCG2608Q1Z6"}
-//               </div>
-//             </div>
-//           </div>
-//           <div style={challanHeaderStyle}>
-//             <div style={challanTitleStyle}>
-//               {isCreditNote ? "CREDIT NOTE" : "TAX INVOICE"}
-//             </div>
-//             <div style={challanDetailsStyle}>
-//               {isCreditNote ? "Credit Note No." : "Invoice No"}:{" "}
-//               {invoiceData.invoice_number}
-//               <br />
-//               Invoice Date:{" "}
-//               {invoiceType === "credit"
-//                 ? formatDate(
-//                     invoiceData?.items?.find((item) => item.returned_date)
-//                       ?.returned_date || invoiceEndDate
-//                   )
-//                 : invoiceType === "next"
-//                 ? formatDate(nextMonthStart)
-//                 : formatDate(invoiceDate)}
-//             </div>
-//           </div>
-//         </div>
-
-//         {/* Recipient Section */}
-//         <div style={recipientSectionStyle}>
-//           <div style={recipientContainerStyle}>
-//             <div style={recipientAddressStyle}>
-//               <div style={recipientLabelStyle}>Bill To</div>
-//               {invoiceData.customer_name}
-//               <br />
-//               {invoiceData.shippingDetail?.street &&
-//                 `${invoiceData.shippingDetail.street}, `}
-//               {invoiceData.shippingDetail?.landmark &&
-//                 `${invoiceData.shippingDetail.landmark}, `}
-//               {invoiceData.shippingDetail?.city},{" "}
-//               {invoiceData.shippingDetail?.state}
-//               <br />
-//               {invoiceData.shippingDetail?.country} -{" "}
-//               {invoiceData.shippingDetail?.pincode}
-//             </div>
-//             <div style={recipientDetailsGridStyle}>
-//               <div>
-//                 <div style={detailLabelStyle}>Customer GST :</div>
-//                 {invoiceData.customer_gst_number}
-//               </div>
-//               <div>
-//                 <div style={detailLabelStyle}>PAN Number :</div>
-//                 {invoiceData.pan_number}
-//               </div>
-//               <div>
-//                 <div style={detailLabelStyle}>PO Number :</div>
-//                 {invoiceData.purchase_order_number}
-//               </div>
-//               <div>
-//                 <div style={detailLabelStyle}>PO Date :</div>
-//                 {invoiceData.purchase_order_date}
-//               </div>
-//               <div>
-//                 <div style={detailLabelStyle}>Email :</div>
-//                 {invoiceData.email}
-//               </div>
-//               <div>
-//                 <div style={detailLabelStyle}>Phone :</div>
-//                 {invoiceData.phone_number}
-//               </div>
-//             </div>
-//           </div>
-//         </div>
-
-//         {/* Invoice Period */}
-
-//         {!isBuyTransaction && (
-//           <>
-//             <div style={invoicePeriodStyle}>
-//               {invoiceType === "previous" && (
-//                 <div>
-//                   <strong>Previous Invoice Period:</strong>{" "}
-//                   {formatDate(previousDeliveredStartDate)} to{" "}
-//                   {formatDate(previousDeliveredEndDate)}
-//                 </div>
-//               )}
-//               {invoiceType === "current" && (
-//                 <div>
-//                   <strong>Invoice Period:</strong> {formatDate(invoiceDate)} to{" "}
-//                   {formatDate(invoiceEndDate)}
-//                 </div>
-//               )}
-//               {invoiceType === "next" && (
-//                 <div>
-//                   <strong>Next Month Period:</strong>{" "}
-//                   {formatDate(nextMonthStart)} to {formatDate(nextMonthEnd)}
-//                 </div>
-//               )}
-
-//             </div>
-//           </>
-//         )}
-
-//         <table style={tableStyle}>
-//   <thead>
-//     <tr>
-//       <th style={tableHeaderNoStyle}>NO.</th>
-//       <th style={tableHeaderParticularsStyle}>Product Details</th>
-
-//       {invoiceType === "credit" && <th style={tableHeaderQtyStyle}></th>}
-//       {invoiceType !== "credit" && <th style={tableHeaderQtyStyle}>Qty</th>}
-//       {invoiceType === "credit" && (
-//         <th style={tableHeaderQtyStyle}>Return Qty</th>
-//       )}
-
-//       {(invoiceType === "credit" ||
-//         invoiceType === "next" ||
-//         invoiceType === "previous" ||
-//         invoiceType === "current") && (
-//         <>
-//           <th style={tableHeaderDaysStyle}>Days</th>
-//           <th style={tableHeaderDaysStyle}>Per Day</th>
-//         </>
-//       )}
-
-//       {invoiceType !== "credit" && (
-//         <th style={tableHeaderRateStyle}>
-//           {isBuyTransaction ? "Purchase Amount" : "Per Month"}
-//         </th>
-//       )}
-//       <th style={tableHeaderRateStyle}>TOTAL</th>
-//     </tr>
-//   </thead>
-
-//   <tbody>
-//     {items.map((item, index) => {
-//       const showCurrentDays =
-//         invoiceType === "current" ||
-//         invoiceType === "next" ||
-//         invoiceType === "previous";
-
-//       const assetLabel =
-//         invoiceType === "credit" ? "Returned Asset IDs:" : "Asset IDs:";
-
-//       const assetIds =
-//         invoiceType === "next"
-//           ? item.remaining_device_ids
-//           : invoiceType === "credit"
-//           ? item.returned_device_ids
-//           : item.device_ids;
-
-//       const validIds = (assetIds || []).filter(
-//         (id) =>
-//           typeof id === "string" &&
-//           id.trim() &&
-//           !id.startsWith("[") &&
-//           !id.endsWith("]")
-//       );
-
-//       return (
-//         <React.Fragment key={item.id}>
-//           <tr
-//             style={index % 2 === 0 ? tableRowOddStyle : tableRowEvenStyle}
-//           >
-//             <td style={tableCellCenterStyle}>{index + 1}</td>
-
-//             <td style={tableCellStyle}>
-//               <div style={itemTitleStyle}>{item.product_name}</div>
-//               <div style={{ marginTop: 4, fontSize: "10px", color: "#555" }}>
-//                 <div
-//                   style={{
-//                     fontSize: "12px",
-//                     color: "#555",
-//                     textAlign: "justify",
-//                     lineHeight: "1.4",
-//                   }}
-//                 >
-//                   Specifications:{" "}
-//                   {item.productDetails?.brand && (
-//                     <>
-//                       <strong>Brand:</strong> {item.productDetails.brand}.{" "}
-//                     </>
-//                   )}
-//                   {item.productDetails?.model && (
-//                     <>
-//                       <strong>Model:</strong> {item.productDetails.model}.{" "}
-//                     </>
-//                   )}
-//                   {item.productDetails?.processor && (
-//                     <>
-//                       <strong>Processor:</strong>{" "}
-//                       {item.productDetails.processor}.{" "}
-//                     </>
-//                   )}
-//                   {item.productDetails?.ram && (
-//                     <>
-//                       <strong>RAM:</strong> {item.productDetails.ram}.{" "}
-//                     </>
-//                   )}
-//                   {item.productDetails?.storage && (
-//                     <>
-//                       <strong>Storage:</strong>{" "}
-//                       {item.productDetails.storage}.{" "}
-//                     </>
-//                   )}
-//                   {item.productDetails?.disk_type && (
-//                     <>
-//                       <strong>Disk Type:</strong>{" "}
-//                       {item.productDetails.disk_type}.{" "}
-//                     </>
-//                   )}
-//                   {item.productDetails?.graphics && (
-//                     <>
-//                       <strong>Graphics:</strong>{" "}
-//                       {item.productDetails.graphics}.{" "}
-//                     </>
-//                   )}
-//                   {item.productDetails?.os && (
-//                     <>
-//                       <strong>OS:</strong> {item.productDetails.os}.{" "}
-//                     </>
-//                   )}
-//                 </div>
-//               </div>
-//               <br />
-
-//               {validIds.length > 0 && (
-//                 <div style={itemTitleStyle}>
-//                   {assetLabel} {validIds.join(", ")}
-//                 </div>
-//               )}
-//               <br />
-//               <div style={itemTitleStyle}>{item.description}</div>
-//             </td>
-
-//             {invoiceType !== "credit" && (
-//               <td style={tableCellCenterStyle}>{item.quantity || 0}</td>
-//             )}
-
-//             {invoiceType === "credit" && (
-//               <>
-//                 <td style={tableCellCenterStyle}></td>
-//                 <td style={tableCellCenterStyle}>
-//                   {item.return_quantity || "-"}
-//                 </td>
-//                 <td style={tableCellCenterStyle}>{item.returnQtyDays}</td>
-//                 <td style={tableCellRightStyle}>
-//                   {formatINRCurrency(item.rate / 30)}
-//                 </td>
-//               </>
-//             )}
-
-//             {showCurrentDays && (
-//               <>
-//                 <td style={tableCellCenterStyle}>
-//                   {item.days > 0 && <div>{item.days}</div>}
-//                   {item.newQtyDays > 0 && <div>{item.newQtyDays}</div>}
-//                 </td>
-//                 <td style={tableCellCenterStyle}>
-//                   {formatINRCurrency(item.rate / 30)}
-//                 </td>
-//               </>
-//             )}
-
-//             {invoiceType !== "credit" && (
-//               <td style={tableCellRightStyle}>
-//                 {formatINRCurrency(item.rate)}
-//               </td>
-//             )}
-
-//             <td style={tableCellRightStyle}>
-//               {formatINRCurrency(item.amount)}
-//             </td>
-//           </tr>
-
-//           {/* 🔸 MID-MONTH (DC) USAGE ROW */}
-//           {invoiceType === "current" &&
-//   showDcPeriod &&
-//   item.dcAmount > 0 && (
-//     <tr
-//       key={`dc-${item.id}`}
-//       style={
-//         index % 2 === 0 ? tableRowOddStyle : tableRowEvenStyle
-//       }
-//     >
-//       <td style={tableCellCenterStyle}></td>
-//       <td style={tableCellStyle}>
-//         <strong style={{ color: "#333" }}>Mid-Month Usage</strong><br />
-//         From {formatDate(dcDate)} to {formatDate(
-//           new Date(dcDate.getFullYear(), dcDate.getMonth() + 1, 0)
-//         )}
-//       </td>
-//       <td style={tableCellCenterStyle}>{item.quantity}</td>
-//       <td style={tableCellCenterStyle}>{item.dcDays}</td>
-//       <td style={tableCellCenterStyle}>
-//         {formatINRCurrency(item.rate / 30)}
-//       </td>
-//       <td style={tableCellRightStyle}></td>
-//       <td style={tableCellRightStyle}>
-//         {formatINRCurrency(item.dcAmount)}
-//       </td>
-//     </tr>
-//   )}
-
-//         </React.Fragment>
-//       );
-//     })}
-
-//     {/* Totals Row */}
-//     <tr style={totalsRowStyle}>
-//       <td style={tableCellCenterStyle} colSpan={2}>
-//         <strong>TOTAL</strong>
-//       </td>
-
-//       {invoiceType !== "credit" && <td></td>}
-//       {invoiceType === "credit" && (
-//         <>
-//           <td></td>
-//           <td></td>
-//         </>
-//       )}
-//       {(invoiceType === "credit" ||
-//         invoiceType === "next" ||
-//         invoiceType === "previous" ||
-//         invoiceType === "current") && (
-//         <>
-//           <td></td>
-//           <td></td>
-//         </>
-//       )}
-//       {invoiceType !== "credit" && <td></td>}
-
-//       <td style={tableCellRightStyle}>
-//         {formatINRCurrency(totalAmount)}
-//       </td>
-//     </tr>
-//   </tbody>
-// </table>
-
-//         {/* Tax and Total Section */}
-//         <div style={taxTotalContainerStyle}>
-//           <div style={taxDetailsStyle}>
-//             <div style={taxRowStyle}>
-//               <span>Subtotal:</span>
-//               <span>{formatINRCurrency(totalAmount)}</span>
-//             </div>
-
-//             <div style={taxRowStyle}>
-//               <span>CGST @9%:</span>
-//               <span>{formatINRCurrency(cgst)}</span>
-//             </div>
-//             <div style={taxRowStyle}>
-//               <span>SGST @9%:</span>
-//               <span>{formatINRCurrency(sgst)}</span>
-//             </div>
-//             <div style={taxRowTotalStyle}>
-//               <span>Total Tax:</span>
-//               <span>{formatINRCurrency(totalTax)}</span>
-//             </div>
-
-//             <div style={grandTotalStyle}>
-//               <span>
-//                 {invoiceType === "credit" ? "Credit Amount" : "Grand Total"}:
-//               </span>
-//               <span>{formatINRCurrency(grandTotal)}</span>
-//             </div>
-//           </div>
-//         </div>
-
-//         {/* Bank Details Section */}
-//         <div style={bankDetailsContainerStyle}>
-//           <div style={bankDetailsTitleStyle}>Bank Details:</div>
-//           <div style={bankLineStyle}>
-//             Guru Goutham Infotech Pvt. Ltd., HDFC Bank Ltd, Jayanagar Branch
-//           </div>
-//           <div style={bankLineStyle}>
-//             Current A/c No: 50200066787843. &nbsp;&nbsp; IFSC Code: HDFC0000261.
-//           </div>
-
-//           <div style={amountWordsStyle}>
-//             Amt. in Words: <span>{numberToWords(grandTotal)}</span>
-//           </div>
-
-//           <div style={jurisdictionNoteStyle}>
-//             Note:{" "}
-//             <span style={highlightTextStyle}>
-//               Subject to Bengaluru Jurisdiction
-//             </span>
-//           </div>
-//         </div>
-
-//         {/* Signature Section */}
-//         <div style={signatureSectionStyle}>
-//           {/* Left: Receiver Signature */}
-//           <div style={leftSignatureAreaStyle}>
-//             <div style={companySignatureLabelStyle}></div>
-//             <div style={signatureBoxStyle}></div>
-//             <div style={signatureDesignationStyle}>
-//               {" "}
-//               Receiver Signature with Seal
-//             </div>
-//           </div>
-
-//           {/* Right: Authorised Signatory */}
-//           <div style={rightSignatureAreaStyle}>
-//             <div style={companySignatureLabelStyle}>
-//               For Guru Goutham Infotech Private Limited
-//             </div>
-//             <div style={signatureBoxStyle}>SD/-</div>
-//             <div style={signatureDesignationStyle}>Authorised Signatory</div>
-//           </div>
-//         </div>
-
-//         {/* Company Footer */}
-//         <div style={companyFooterStyle}>
-//           <div style={footerAddressStyle}>
-//             <span>📍</span>
-//             <span>
-//               No. 8, 2nd Cross, Diagonal Road, 3rd Block,
-//               <br />
-//               Jayanagar Bengaluru-560011.
-//             </span>
-//           </div>
-//           <div style={footerContactStyle}>
-//             <div style={footerContactItemStyle}>
-//               <span>🌐</span>
-//               <span>gurugoutam.com</span>
-//             </div>
-//             <div style={footerContactItemStyle}>
-//               <span>📞</span>
-//               <span>080-2242 9955, +91 9449 0789 55</span>
-//             </div>
-//             <div style={footerContactItemStyle}>
-//               <span>✉️</span>
-//               <span>info@gurugoutam.com</span>
-//             </div>
-//           </div>
-//         </div>
-//       </div>
-//     );
-//   };
-
-//   // Handle PDF download
-//   // Handle PDF download
-//   const handleDownloadPDF = async () => {
-//     try {
-//       // Wait for dialog to fully render
-//       await new Promise((resolve) => setTimeout(resolve, 300));
-
-//       const title =
-//         invoiceType === "current"
-//           ? "current-month-invoice"
-//           : invoiceType === "next"
-//           ? "next-month-projection"
-//           : invoiceType === "previous"
-//           ? "previous-month-invoice"
-//           : "return-credit-note";
-
-//       // Try multiple selectors to find the invoice element
-//       const element =
-//         document.getElementById(`invoice-${title}`) ||
-//         document.querySelector(".MuiDialog-paper .invoice-container");
-
-//       if (!element) {
-//         throw new Error("Could not find invoice element in DOM");
-//       }
-
-//       // Create a clone for PDF generation to avoid layout issues
-//       const clone = element.cloneNode(true);
-//       clone.style.position = "absolute";
-//       clone.style.left = "-9999px";
-//       clone.style.visibility = "visible";
-//       clone.style.width = "210mm";
-//       document.body.appendChild(clone);
-
-//       const options = {
-//         scale: 2,
-//         logging: true,
-//         useCORS: true,
-//         scrollX: 0,
-//         scrollY: 0,
-//         windowWidth: clone.scrollWidth,
-//         windowHeight: clone.scrollHeight,
-//         backgroundColor: "#FFFFFF",
-//       };
-
-//       const canvas = await html2canvas(clone, options);
-//       document.body.removeChild(clone);
-
-//       const imgData = canvas.toDataURL("image/png");
-//       const pdf = new jsPDF("p", "mm", "a4");
-
-//       const imgProps = pdf.getImageProperties(imgData);
-//       const pdfWidth = pdf.internal.pageSize.getWidth();
-//       const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
-
-//       // Handle multi-page PDF
-//       let heightLeft = pdfHeight;
-//       let position = 0;
-//       const pageHeight = pdf.internal.pageSize.getHeight();
-
-//       pdf.addImage(imgData, "PNG", 0, position, pdfWidth, pdfHeight);
-//       heightLeft -= pageHeight;
-
-//       while (heightLeft >= 0) {
-//         position = heightLeft - pdfHeight;
-//         pdf.addPage();
-//         pdf.addImage(imgData, "PNG", 0, position, pdfWidth, pdfHeight);
-//         heightLeft -= pageHeight;
-//       }
-
-//       pdf.save(`invoice-${invoiceData.invoice_number}.pdf`);
-//     } catch (error) {
-//       console.error("PDF Generation Error:", error);
-//       alert(`Failed to generate PDF: ${error.message}`);
-//     }
-//   };
-
-//   const handlePrint = () => {
-//     const title =
-//       invoiceType === "current"
-//         ? "current-month-invoice"
-//         : invoiceType === "next"
-//         ? "next-month-projection"
-//         : invoiceType === "previous"
-//         ? "previous-month-invoice"
-//         : "return-credit-note";
-
-//     const element = document.getElementById(`invoice-${title}`);
-
-//     if (!element) {
-//       console.error("Print element not found");
-//       return;
-//     }
-
-//     const printWindow = window.open("", "_blank");
-//     printWindow.document.write(`
-//       <!DOCTYPE html>
-//       <html>
-//         <head>
-//           <title>${title}</title>
-//           <style>
-//             @page { size: A4; margin: 0; }
-//             body { margin: 0; padding: 0; }
-//             .print-container {
-//               width: 210mm;
-//               min-height: 297mm;
-//               padding: 10mm;
-//               box-sizing: border-box;
-//             }
-//           </style>
-//         </head>
-//         <body>
-//           <div class="print-container">
-//             ${element.innerHTML}
-//           </div>
-//           <script>
-//             window.onload = function() {
-//               setTimeout(function() {
-//                 window.print();
-//                 window.close();
-//               }, 300);
-//             }
-//           </script>
-//         </body>
-//       </html>
-//     `);
-//     printWindow.document.close();
-//   };
-
-//   return (
-//     <Dialog
-//       open={open}
-//       onClose={onClose}
-//       maxWidth="lg"
-//       fullWidth
-//       scroll="paper"
-//       TransitionProps={{
-//         onEntered: () => {
-//           // Ensures content is rendered before PDF/print
-//         },
-//       }}
-//     >
-//       <DialogTitle>
-//         {invoiceType === "current"
-//           ? "Invoice"
-//           : invoiceType === "next"
-//           ? "Next Month Invoice"
-//           : invoiceType === "previous"
-//           ? "Previous Month Invoice"
-//           : "Return Credit Note"}
-//       </DialogTitle>
-//       <DialogContent>
-//         <div style={{ padding: "20px" }}>{renderInvoice()}</div>
-//       </DialogContent>
-//       <DialogActions>
-//         <Button onClick={onClose}>Close</Button>
-//         <Button onClick={handlePrint} variant="contained" color="secondary">
-//           Print
-//         </Button>
-//         <Button
-//           onClick={handleDownloadPDF}
-//           variant="contained"
-//           color="primary"
-//           style={{ marginLeft: "10px" }}
-//         >
-//           Download PDF
-//         </Button>
-//       </DialogActions>
-//     </Dialog>
-//   );
-// };
-
-// Invoices Dialog Component
-
-
 
 
 const InvoiceDialog = ({ open, onClose, invoiceData }) => {
@@ -4587,7 +2608,6 @@ const InvoiceDialog = ({ open, onClose, invoiceData }) => {
   };
 
   const hasSameMonthReturn =
-    // Check direct credit_notes array
     invoiceData.credit_notes?.some((note) => {
       if (!note.returned_date) return false;
       return isSameMonthYear(
@@ -4595,7 +2615,6 @@ const InvoiceDialog = ({ open, onClose, invoiceData }) => {
         new Date(note.returned_date)
       );
     }) ||
-    // Check inside additional_delivery_challans
     invoiceData.additional_delivery_challans?.some((challan) =>
       challan.credit_notes?.some((note) => {
         if (!note.returned_date) return false;
@@ -4609,12 +2628,10 @@ const InvoiceDialog = ({ open, onClose, invoiceData }) => {
 
   const hasMonthDifference = invoiceData.credit_notes?.some((creditNote) => {
     if (!creditNote.returned_date) return false;
-
     const returnDate = new Date(creditNote.returned_date);
     const monthDiff =
       (invoiceDate.getFullYear() - returnDate.getFullYear()) * 12 +
       (invoiceDate.getMonth() - returnDate.getMonth());
-
     return monthDiff >= 1;
   });
 
@@ -4625,33 +2642,25 @@ const InvoiceDialog = ({ open, onClose, invoiceData }) => {
   const dcPeriodEnd = new Date(dcDate.getFullYear(), dcDate.getMonth() + 1, 0);
 
   const hasCreditNoteReturnedDate =
-    // Check direct credit_notes array
     invoiceData.credit_notes?.some((note) => !!note.returned_date) ||
-    // Check each additional_delivery_challan's credit_notes
     invoiceData.additional_delivery_challans?.some((challan) =>
       challan.credit_notes?.some((note) => !!note.returned_date)
     );
 
-  // Count all DC dates (main + additional)
   function countAllDcDates(invoiceData) {
     if (!invoiceData) return 0;
-
-    const mainDcCount = 1; // Always 1 main DC
+    const mainDcCount = 1;
     const additionalDcsCount =
       invoiceData.additional_delivery_challans?.length || 0;
-
     return mainDcCount + additionalDcsCount;
   }
 
-  // Usage:
   const dcDatesCount = countAllDcDates(invoiceData);
 
-  // Calculate month difference between invoice start date and DC date
   const monthDiff =
     (invoiceStartDate.getFullYear() - dcDate.getFullYear()) * 12 +
     (invoiceStartDate.getMonth() - dcDate.getMonth());
 
-  // Check for special case conditions
   const hasAdditionalChallans =
     invoiceData.additional_delivery_challans?.length > 0;
   let additionalChallanMonthDiff = 0;
@@ -4675,11 +2684,9 @@ const InvoiceDialog = ({ open, onClose, invoiceData }) => {
     monthDiff === 0 &&
     (hasSameMonthChallan || hasPrevMonthChallan);
 
-  // Only show DC period if exactly 0 or 1 month difference and not starting on 1st
   const showDcPeriod =
     (monthDiff === 1 || monthDiff === 0) && dcDate.getDate() !== 1;
 
-  // Helper functions
   const formatDate = (dateStr) => {
     if (!dateStr) return "-";
     const date = new Date(dateStr);
@@ -4689,7 +2696,15 @@ const InvoiceDialog = ({ open, onClose, invoiceData }) => {
     return `${day}/${month}/${year}`;
   };
 
-  // Utility: always 30 days per month, 360 days per year
+  const formatINRCurrency = (amount) => {
+    if (amount === undefined || amount === null) return "₹0.00";
+    return new Intl.NumberFormat("en-IN", {
+      style: "currency",
+      currency: "INR",
+      minimumFractionDigits: 2,
+    }).format(amount);
+  };
+
   const calculateDays = (startDate, endDate) => {
     const start = new Date(startDate);
     const end = new Date(endDate);
@@ -4697,7 +2712,6 @@ const InvoiceDialog = ({ open, onClose, invoiceData }) => {
     let startDay = Math.min(start.getDate(), 30);
     let endDay = Math.min(end.getDate(), 30);
 
-    // ✅ If endDate is last day of the month → treat as 30
     const lastDayOfMonth = new Date(
       end.getFullYear(),
       end.getMonth() + 1,
@@ -4716,18 +2730,14 @@ const InvoiceDialog = ({ open, onClose, invoiceData }) => {
 
   const calculateReturnDays = (returnDate) => {
     const returnDateObj = new Date(returnDate);
-
-    // Find the matching dc_date for this return
     let matchedDcDate = null;
 
-    // Check main credit_notes
     invoiceData.credit_notes?.forEach((note) => {
       if (note.returned_date === returnDate) {
         matchedDcDate = new Date(invoiceData.dc_date);
       }
     });
 
-    // Check additional_delivery_challans credit_notes
     if (!matchedDcDate) {
       invoiceData.additional_delivery_challans?.forEach((challan) => {
         challan.credit_notes?.forEach((note) => {
@@ -4738,25 +2748,21 @@ const InvoiceDialog = ({ open, onClose, invoiceData }) => {
       });
     }
 
-    // Fallback to invoice dc_date if no match found
     if (!matchedDcDate) {
       matchedDcDate = new Date(invoiceData.dc_date);
     }
 
-    // Calculate days based on hasSameMonthReturn logic
     if (hasSameMonthReturn) {
-      // Same month: calculate days between dc_date and return_date
       const diffTime = Math.abs(returnDateObj - matchedDcDate);
       return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
     } else {
-      // Different month: calculate days from start of return month to return_date
       const startOfMonth = new Date(
         returnDateObj.getFullYear(),
         returnDateObj.getMonth(),
         1
       );
       const diffTime = Math.abs(returnDateObj - startOfMonth);
-      return Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1; // +1 to include both start and end
+      return Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
     }
   };
 
@@ -4782,15 +2788,278 @@ const InvoiceDialog = ({ open, onClose, invoiceData }) => {
     }
   });
 
-  const calculateInvoiceItems = () => {
-    // Step 1: Preprocess returned devices from all sources (root and additional challans)
-    const allReturnsMap = {};
-    const allSwapsMap = {}; // New map for asset swaps
+  // Helper for safe number conversion
+  const toNum = (v) => Number(v || 0);
 
-    // Process root credit notes
+  // Helper: month difference
+  const monthDiffHelper = (date1, date2) => {
+    const d1 = new Date(date1);
+    const d2 = new Date(date2);
+    return (
+      d1.getFullYear() * 12 +
+      d1.getMonth() -
+      (d2.getFullYear() * 12 + d2.getMonth())
+    );
+  };
+
+  // ==================== COMPLETE SPECIFICATIONS FUNCTION FOR ALL COMPONENTS ====================
+  const getFinalSpecificationsForDevice = (deviceId, baseProduct, invoiceStartDate) => {
+    if (!baseProduct) return baseProduct;
+    if (!invoiceData) return baseProduct;
+
+    const deviceAssetTransactions = getAssetTransactionsForDevices([deviceId]);
+    const sortedTransactions = [...deviceAssetTransactions].sort((a, b) => new Date(a.action_date) - new Date(b.action_date));
+
+    const filteredTransactions = sortedTransactions.filter((txn) => {
+      const actionDate = new Date(txn.action_date);
+      return actionDate <= invoiceStartDate;
+    });
+
+    // Initialize all hardware specifications
+    let currentSpecs = {
+      // Processor / CPU
+      processor: baseProduct.processor_model || baseProduct.processor || null,
+      processor_speed: baseProduct.processor_speed || null,
+      processor_cores: baseProduct.processor_cores || null,
+
+      // RAM
+      ram: baseProduct.ram || null,
+      ram_type: baseProduct.ram_type || null,
+      ram_speed: baseProduct.ram_speed || null,
+
+      // Storage
+      storage: baseProduct.storage || null,
+      storage_type: baseProduct.disk_type || baseProduct.storage_type || null,
+      storage_capacity: baseProduct.capacity || null,
+
+      // Motherboard
+      motherboard: baseProduct.motherboard_model || baseProduct.motherboard || null,
+      motherboard_chipset: baseProduct.chipset || null,
+      motherboard_socket: baseProduct.socket_type || null,
+
+      // Cabinet / Case
+      cabinet: baseProduct.cabinet_model || baseProduct.cabinet || null,
+      cabinet_form_factor: baseProduct.form_factor || null,
+
+      // GPU / Graphics Card
+      gpu: baseProduct.graphics_card || baseProduct.gpu || null,
+      gpu_memory: baseProduct.vram || baseProduct.gpu_memory || null,
+
+      // SMPS / Power Supply
+      smps: baseProduct.smps_model || baseProduct.smps || null,
+      smps_wattage: baseProduct.wattage || null,
+      smps_efficiency: baseProduct.efficiency || null,
+
+      // Network / LAN Card
+      lan_card: baseProduct.lan_card || null,
+      network_speed: baseProduct.network_speed || null,
+      wifi_standard: baseProduct.wifi_standard || null,
+
+      // Basic info
+      brand: baseProduct.brand || null,
+      model: baseProduct.model || null,
+      os: baseProduct.os || null
+    };
+
+    // Track components for combining multiple items
+    let ramComponents = [];
+    let storageComponents = [];
+    let processorComponents = [];
+    let motherboardComponents = [];
+    let cabinetComponents = [];
+    let gpuComponents = [];
+    let smpsComponents = [];
+    let lanCardComponents = [];
+
+    if (currentSpecs.ram) ramComponents.push(currentSpecs.ram);
+    if (currentSpecs.storage) storageComponents.push(currentSpecs.storage);
+    if (currentSpecs.processor) processorComponents.push(currentSpecs.processor);
+    if (currentSpecs.motherboard) motherboardComponents.push(currentSpecs.motherboard);
+    if (currentSpecs.cabinet) cabinetComponents.push(currentSpecs.cabinet);
+    if (currentSpecs.gpu) gpuComponents.push(currentSpecs.gpu);
+    if (currentSpecs.smps) smpsComponents.push(currentSpecs.smps);
+    if (currentSpecs.lan_card) lanCardComponents.push(currentSpecs.lan_card);
+
+    // Process all transactions
+    filteredTransactions.forEach((txn) => {
+      const type = (txn.item_type || "").toLowerCase();
+      const value = txn.size || txn.specification || null;
+      const status = (txn.status || "").toLowerCase();
+
+      if (status === "added") {
+        // RAM handling
+        if (type === "ram" && value) {
+          ramComponents.push(value);
+          currentSpecs.ram = ramComponents.join(" + ");
+        }
+        // Storage handling (SSD, HDD, NVMe)
+        else if ((type === "storage" || type === "ssd" || type === "hdd" || type === "nvme") && value) {
+          storageComponents.push(value);
+          currentSpecs.storage = storageComponents.join(" + ");
+        }
+        // Processor handling
+        else if (type === "processor" && value) {
+          processorComponents.push(value);
+          currentSpecs.processor = processorComponents.join(" + ");
+        }
+        // Motherboard handling
+        else if (type === "motherboard" && value) {
+          motherboardComponents.push(value);
+          currentSpecs.motherboard = motherboardComponents.join(" + ");
+        }
+        // Cabinet handling
+        else if (type === "cabinet" && value) {
+          cabinetComponents.push(value);
+          currentSpecs.cabinet = cabinetComponents.join(" + ");
+        }
+        // GPU handling
+        else if (type === "gpu" && value) {
+          gpuComponents.push(value);
+          currentSpecs.gpu = gpuComponents.join(" + ");
+        }
+        // SMPS handling
+        else if (type === "smps" && value) {
+          smpsComponents.push(value);
+          currentSpecs.smps = smpsComponents.join(" + ");
+        }
+        // LAN Card handling
+        else if ((type === "lan_card" || type === "network_card" || type === "ethernet_card" || type === "wifi_card") && value) {
+          lanCardComponents.push(value);
+          currentSpecs.lan_card = lanCardComponents.join(" + ");
+        }
+      }
+      else if (status === "removed") {
+        // RAM removal
+        if (type === "ram" && value) {
+          const index = ramComponents.indexOf(value);
+          if (index > -1) ramComponents.splice(index, 1);
+          currentSpecs.ram = ramComponents.length > 0 ? ramComponents.join(" + ") : null;
+        }
+        // Storage removal
+        else if ((type === "storage" || type === "ssd" || type === "hdd" || type === "nvme") && value) {
+          const index = storageComponents.indexOf(value);
+          if (index > -1) storageComponents.splice(index, 1);
+          currentSpecs.storage = storageComponents.length > 0 ? storageComponents.join(" + ") : null;
+        }
+        // Processor removal - revert to base
+        else if (type === "processor") {
+          currentSpecs.processor = baseProduct.processor_model || baseProduct.processor || null;
+        }
+        // Motherboard removal - revert to base
+        else if (type === "motherboard") {
+          currentSpecs.motherboard = baseProduct.motherboard_model || baseProduct.motherboard || null;
+        }
+        // Cabinet removal - revert to base
+        else if (type === "cabinet") {
+          currentSpecs.cabinet = baseProduct.cabinet_model || baseProduct.cabinet || null;
+        }
+        // GPU removal - revert to base
+        else if (type === "gpu") {
+          currentSpecs.gpu = baseProduct.graphics_card || baseProduct.gpu || null;
+        }
+        // SMPS removal - revert to base
+        else if (type === "smps") {
+          currentSpecs.smps = baseProduct.smps_model || baseProduct.smps || null;
+        }
+        // LAN Card removal
+        else if ((type === "lan_card" || type === "network_card" || type === "ethernet_card" || type === "wifi_card") && value) {
+          const index = lanCardComponents.indexOf(value);
+          if (index > -1) lanCardComponents.splice(index, 1);
+          currentSpecs.lan_card = lanCardComponents.length > 0 ? lanCardComponents.join(" + ") : null;
+        }
+      }
+    });
+
+    const finalSpecs = { ...baseProduct };
+    finalSpecs.ram = currentSpecs.ram;
+    finalSpecs.storage = currentSpecs.storage;
+    finalSpecs.processor = currentSpecs.processor;
+    finalSpecs.motherboard = currentSpecs.motherboard;
+    finalSpecs.cabinet = currentSpecs.cabinet;
+    finalSpecs.gpu = currentSpecs.gpu;
+    finalSpecs.smps = currentSpecs.smps;
+    finalSpecs.lan_card = currentSpecs.lan_card;
+    finalSpecs.processor_speed = currentSpecs.processor_speed;
+    finalSpecs.processor_cores = currentSpecs.processor_cores;
+    finalSpecs.ram_type = currentSpecs.ram_type;
+    finalSpecs.ram_speed = currentSpecs.ram_speed;
+    finalSpecs.storage_type = currentSpecs.storage_type;
+    finalSpecs.storage_capacity = currentSpecs.storage_capacity;
+    finalSpecs.motherboard_chipset = currentSpecs.motherboard_chipset;
+    finalSpecs.motherboard_socket = currentSpecs.motherboard_socket;
+    finalSpecs.cabinet_form_factor = currentSpecs.cabinet_form_factor;
+    finalSpecs.gpu_memory = currentSpecs.gpu_memory;
+    finalSpecs.smps_wattage = currentSpecs.smps_wattage;
+    finalSpecs.smps_efficiency = currentSpecs.smps_efficiency;
+    finalSpecs.network_speed = currentSpecs.network_speed;
+    finalSpecs.wifi_standard = currentSpecs.wifi_standard;
+
+    return finalSpecs;
+  };
+
+  // ==================== COMPLETE SPECIFICATIONS FORMATTING ====================
+  const formatSpecifications = (specs) => {
+    const parts = [];
+
+    // Basic Info
+    if (specs.brand) parts.push(`Brand: ${specs.brand}`);
+    if (specs.model) parts.push(`Model: ${specs.model}`);
+
+    // Processor / CPU
+    if (specs.processor) parts.push(`Processor: ${specs.processor}`);
+    if (specs.processor_speed) parts.push(`Speed: ${specs.processor_speed}`);
+    if (specs.processor_cores) parts.push(`Cores: ${specs.processor_cores}`);
+
+    // RAM
+    if (specs.ram) parts.push(`RAM: ${specs.ram}`);
+    if (specs.ram_type) parts.push(`RAM Type: ${specs.ram_type}`);
+    if (specs.ram_speed) parts.push(`RAM Speed: ${specs.ram_speed}`);
+
+    // Storage
+    if (specs.storage) parts.push(`Storage: ${specs.storage}`);
+    if (specs.storage_type) parts.push(`Storage Type: ${specs.storage_type}`);
+    if (specs.storage_capacity) parts.push(`Capacity: ${specs.storage_capacity}`);
+
+    // Motherboard
+    if (specs.motherboard) parts.push(`Motherboard: ${specs.motherboard}`);
+    if (specs.motherboard_chipset) parts.push(`Chipset: ${specs.motherboard_chipset}`);
+    if (specs.motherboard_socket) parts.push(`Socket: ${specs.motherboard_socket}`);
+
+    // Cabinet
+    if (specs.cabinet) parts.push(`Cabinet: ${specs.cabinet}`);
+    if (specs.cabinet_form_factor) parts.push(`Form Factor: ${specs.cabinet_form_factor}`);
+
+    // GPU
+    if (specs.gpu) parts.push(`GPU: ${specs.gpu}`);
+    if (specs.gpu_memory) parts.push(`VRAM: ${specs.gpu_memory}`);
+
+    // SMPS / Power Supply
+    if (specs.smps) parts.push(`SMPS: ${specs.smps}`);
+    if (specs.smps_wattage) parts.push(`Wattage: ${specs.smps_wattage}W`);
+    if (specs.smps_efficiency) parts.push(`Efficiency: ${specs.smps_efficiency}`);
+
+    // Network / LAN Card
+    if (specs.lan_card) parts.push(`LAN Card: ${specs.lan_card}`);
+    if (specs.network_speed) parts.push(`Network Speed: ${specs.network_speed}`);
+    if (specs.wifi_standard) parts.push(`WiFi: ${specs.wifi_standard}`);
+
+    // OS
+    if (specs.os) parts.push(`OS: ${specs.os}`);
+
+    return parts.join(', ');
+  };
+
+  // ==================== CALCULATE INVOICE ITEMS ====================
+  const calculateInvoiceItems = () => {
+    const allReturnsMap = {};
+    const allSwapsMap = {};
+    const invoiceStartDateObj = new Date(invoiceData.invoice_start_date);
+
+    // Process main credit notes
     invoiceData.credit_notes?.forEach((cn) => {
       const returnedDate = new Date(cn.returned_date);
       const dcDate = new Date(cn.dc_date || invoiceData.dc_date);
+      const isReturnBeforeInvoiceStart = returnedDate < invoiceStartDateObj;
 
       cn.items?.forEach((ri) => {
         const key = `${ri.product_id}`;
@@ -4825,14 +3094,16 @@ const InvoiceDialog = ({ open, onClose, invoiceData }) => {
           ),
           source: "root",
           dcDate: dcDate,
+          isReturnBeforeInvoiceStart,
         });
       });
     });
 
-    // Process asset swaps (similar to credit notes)
+    // Process main asset swaps
     invoiceData.asset_swaps?.forEach((swap) => {
       const swappedDate = new Date(swap.swapped_on);
-      const dcDate = new Date(invoiceData.dc_date); // Use main invoice DC date
+      const dcDate = new Date(invoiceData.dc_date);
+      const isSwapBeforeInvoiceStart = swappedDate < invoiceStartDateObj;
 
       const key = `${swap.product_id}`;
       if (!allSwapsMap[key]) allSwapsMap[key] = [];
@@ -4859,21 +3130,23 @@ const InvoiceDialog = ({ open, onClose, invoiceData }) => {
       allSwapsMap[key].push({
         swappedDate,
         daysUsed,
-        deviceIds: [swap.asset_id], // Single device per swap
+        deviceIds: [swap.asset_id],
         amount: parseFloat((daysUsed * dailyRate).toFixed(2)),
         source: "root",
         dcDate: dcDate,
         reason: swap.reason,
-        newDeviceIds: swap.new_device_ids || [], // If you have new device IDs
+        newDeviceIds: swap.new_device_ids || [],
+        isSwapBeforeInvoiceStart,
       });
     });
 
-    // Process additional delivery challans' credit notes
+    // Process additional delivery challans
     invoiceData.additional_delivery_challans?.forEach((challan) => {
       const challanDcDate = new Date(challan.dc_date);
 
       challan.credit_notes?.forEach((cn) => {
         const returnedDate = new Date(cn.returned_date);
+        const isReturnBeforeInvoiceStart = returnedDate < invoiceStartDateObj;
 
         cn.items?.forEach((ri) => {
           const key = `${ri.product_id}`;
@@ -4908,13 +3181,14 @@ const InvoiceDialog = ({ open, onClose, invoiceData }) => {
             ),
             source: "additional",
             dcDate: challanDcDate,
+            isReturnBeforeInvoiceStart,
           });
         });
       });
 
-      // Process additional delivery challans' asset swaps if they exist
       challan.asset_swaps?.forEach((swap) => {
         const swappedDate = new Date(swap.swapped_on);
+        const isSwapBeforeInvoiceStart = swappedDate < invoiceStartDateObj;
 
         const key = `${swap.product_id}`;
         if (!allSwapsMap[key]) allSwapsMap[key] = [];
@@ -4947,22 +3221,11 @@ const InvoiceDialog = ({ open, onClose, invoiceData }) => {
           dcDate: challanDcDate,
           reason: swap.reason,
           newDeviceIds: swap.new_device_ids || [],
+          isSwapBeforeInvoiceStart,
         });
       });
     });
 
-    // Step 2: Gather all returned device IDs (from all sources)
-    const allReturnedDeviceIds = Object.values(allReturnsMap).flatMap((arr) =>
-      arr.flatMap((r) => r.deviceIds)
-    );
-
-    // Gather all swapped device IDs (from all sources)
-    const allSwappedDeviceIds = Object.values(allSwapsMap).flatMap((arr) =>
-      arr.flatMap((s) => s.deviceIds)
-    );
-
-    // Step 3: Process main invoice items
-    // Step 3: Process main invoice items
     const mainItems =
       invoiceData.items?.map((item) => {
         const rate = isBuyTransaction
@@ -4977,71 +3240,53 @@ const InvoiceDialog = ({ open, onClose, invoiceData }) => {
           ? originalDeviceIds.length
           : item.quantity || 0;
 
-        // ✅ FIXED: Proper pro-rata calculation
         let days;
 
-        // Check if this is a mid-month delivery (pro-rata case)
         const isMidMonthDelivery = dcDate.getDate() !== 1;
 
         if (isMidMonthDelivery && sameMonth) {
-          // CASE 1: Delivered this month but not on 1st → pro-rata from delivery date to month end
           days = calculateDays(dcDate, invoiceEndDate);
         } else if (!sameMonth && monthDiff === 1) {
-          // CASE 2: Delivered previous month → full month + pro-rata?
-          // For your case with DC on 11th Jan, this shouldn't happen
           days = calculateDays(invoiceStartDate, invoiceEndDate);
         } else {
-          // CASE 3: Normal full month billing
           days = calculateDays(invoiceStartDate, invoiceEndDate);
         }
 
         const isFullMonth = isBuyTransaction ? true : days >= 28;
 
-
-        // Get returns for this product from all sources
         const returnedDevices =
           allReturnsMap[item.product_id]?.filter(
             (rd) => new Date(rd.returnedDate) <= invoiceEndDate
           ) || [];
 
-        // Get swaps for this product from all sources
         const swappedDevices =
           allSwapsMap[item.product_id]?.filter(
             (sd) => new Date(sd.swappedDate) <= invoiceEndDate
           ) || [];
 
-        // Filter out pre-invoice returns
+        // ONLY get devices that were returned/swapped BEFORE invoice start for subtraction
         const preInvoiceReturnedDeviceIds = returnedDevices
-          .filter((rd) => new Date(rd.returnedDate) < invoiceStartDate)
+          .filter((rd) => rd.isReturnBeforeInvoiceStart)
           .flatMap((rd) => rd.deviceIds);
 
-        // Filter out pre-invoice swaps
         const preInvoiceSwappedDeviceIds = swappedDevices
-          .filter((sd) => new Date(sd.swappedDate) < invoiceStartDate)
+          .filter((sd) => sd.isSwapBeforeInvoiceStart)
           .flatMap((sd) => sd.deviceIds);
 
         let effectiveDeviceIds = [];
         let effectiveQty = baseQuantity;
 
         if (hasDeviceIds) {
+          // ONLY subtract devices that were returned/swapped BEFORE invoice start date
           effectiveDeviceIds = originalDeviceIds.filter(
             (id) =>
               !preInvoiceReturnedDeviceIds.includes(id) &&
-              !preInvoiceSwappedDeviceIds.includes(id) &&
-              !allReturnedDeviceIds.includes(id) &&
-              !allSwappedDeviceIds.includes(id)
+              !preInvoiceSwappedDeviceIds.includes(id)
           );
           effectiveQty = effectiveDeviceIds.length;
         } else {
-          // For direct invoices: subtract returned quantities
-          const totalReturnedQty = returnedDevices.reduce(
-            (sum, rd) => sum + (rd.quantity || 0),
-            0
-          );
-          const totalSwappedQty = swappedDevices.reduce(
-            (sum, sd) => sum + (sd.quantity || 0),
-            0
-          );
+          const totalReturnedQty = preInvoiceReturnedDeviceIds.length;
+          const totalSwappedQty = preInvoiceSwappedDeviceIds.length;
           effectiveQty = Math.max(
             0,
             baseQuantity - totalReturnedQty - totalSwappedQty
@@ -5050,10 +3295,8 @@ const InvoiceDialog = ({ open, onClose, invoiceData }) => {
 
         const dcDays = calculateDays(dcDate, dcPeriodEnd);
 
-        // Calculate amount based on payment mode
         let fullMonthAmount;
         if (paymentMode) {
-          // For postpaid, always use the calculated days
           fullMonthAmount = effectiveQty * dailyRate * days;
         } else {
           fullMonthAmount = isFullMonth
@@ -5079,7 +3322,6 @@ const InvoiceDialog = ({ open, onClose, invoiceData }) => {
         let description;
 
         if (isMidMonthDelivery && sameMonth) {
-          // ✅ FIXED: Show pro-rata description
           description = `Billing Start Date: ${formatDate(dcDate)} - Billing End Date: ${formatDate(invoiceEndDate)}`;
         } else {
           description = `Billing Start Date: ${formatDate(invoiceStartDate)} - Billing End Date: ${formatDate(invoiceEndDate)}`;
@@ -5097,7 +3339,7 @@ const InvoiceDialog = ({ open, onClose, invoiceData }) => {
           amount: fullMonthAmount,
           dcAmountBeforeReturns,
           returnedDevices,
-          swappedDevices, // Add swapped devices to the item
+          swappedDevices,
           totalReturnedQtyAmount: returnedDevicesAmount + swappedDevicesAmount,
           description,
           isFullMonth,
@@ -5105,7 +3347,6 @@ const InvoiceDialog = ({ open, onClose, invoiceData }) => {
         };
       }) || [];
 
-    // Step 4: Process additional delivery challan items
     const additionalItems =
       invoiceData.additional_delivery_challans?.flatMap((challan) => {
         const challanDateObj = new Date(challan.dc_date);
@@ -5173,7 +3414,6 @@ const InvoiceDialog = ({ open, onClose, invoiceData }) => {
             )} - Billing End Date: ${formatDate(invoiceEndDate)}`;
           }
 
-          // Get returns for this product from all sources
           const returnedDevices =
             allReturnsMap[item.product_id]?.filter(
               (rd) =>
@@ -5181,7 +3421,6 @@ const InvoiceDialog = ({ open, onClose, invoiceData }) => {
                 rd.source === "additional"
             ) || [];
 
-          // Get swaps for this product from all sources
           const swappedDevices =
             allSwapsMap[item.product_id]?.filter(
               (sd) =>
@@ -5211,31 +3450,26 @@ const InvoiceDialog = ({ open, onClose, invoiceData }) => {
               monthDiff === 1 ||
               (monthDiff === 0 && challanDateObj.getDate() !== 1),
             returnedDevices,
-            swappedDevices, // Add swapped devices to additional items
+            swappedDevices,
           };
         });
       }) || [];
 
     return [...mainItems, ...additionalItems];
   };
+  // ==================== END OF CALCULATE INVOICE ITEMS ====================
 
   const items = calculateInvoiceItems();
 
-  ///25-08-2025
-
   let totalAmount = 0;
   let rowCounter = 0;
-
-  // Keep track of already-rendered Asset IDs globally for this invoice render
   let renderedAssetIds = new Set();
 
-  // Utility to merge device IDs without duplicates
   const mergeDeviceIds = (items) => {
     const allIds = items.flatMap((i) => i.device_ids || []);
     return [...new Set(allIds)];
   };
 
-  // Utility: calculate amount consistently
   const calculateAmount = (daysUsed, dailyRate, baseCount, monthlyRate) => {
     const roundedRate = parseFloat(dailyRate.toFixed(2));
     const rawAmount =
@@ -5244,8 +3478,6 @@ const InvoiceDialog = ({ open, onClose, invoiceData }) => {
         : daysUsed * roundedRate * baseCount;
     return parseFloat(rawAmount.toFixed(2));
   };
-
-
 
   const buildTransactionsMap = (invoiceData) => {
     const map = {};
@@ -5270,7 +3502,6 @@ const InvoiceDialog = ({ open, onClose, invoiceData }) => {
       });
     });
 
-    // sort by action_date asc
     Object.keys(map).forEach((k) => {
       map[k].sort((a, b) => new Date(a.action_date) - new Date(b.action_date));
     });
@@ -5285,191 +3516,9 @@ const InvoiceDialog = ({ open, onClose, invoiceData }) => {
     deviceIds.forEach((did) => {
       (txnsMap[did] || []).forEach((t) => results.push(t));
     });
-    // already chronological per device, but combine and sort
     return results.sort((a, b) => new Date(a.action_date) - new Date(b.action_date));
   };
 
-  const groupDevicesBySpecifications = (deviceIds, baseProduct) => {
-    const groups = {};
-
-    deviceIds.forEach(deviceId => {
-      // Get final specifications for this device using the same logic as renderSpecifications
-      const finalSpecs = getFinalSpecificationsForDevice(deviceId, baseProduct);
-
-      // Create a unique key based on the specifications
-      const specKey = createSpecificationKey(finalSpecs);
-
-      if (!groups[specKey]) {
-        groups[specKey] = {
-          deviceIds: [],
-          specifications: finalSpecs
-        };
-      }
-
-      groups[specKey].deviceIds.push(deviceId);
-    });
-
-    return groups;
-  };
-
-
-
-
-  // Update formatSpecifications to handle removed items with visual indication
-  const formatSpecifications = (specs) => {
-    const parts = [];
-
-    if (specs.brand) parts.push(`Brand: ${specs.brand}`);
-    if (specs.model) parts.push(`Model: ${specs.model}`);
-    if (specs.processor) parts.push(`Processor: ${specs.processor}`);
-
-    // Check if RAM has been removed or modified
-    if (specs.ram) {
-      // Check if this device has had RAM removed (you might want to pass deviceId to check)
-      parts.push(`RAM: ${specs.ram}`);
-    }
-
-    if (specs.storage) parts.push(`Storage: ${specs.storage}`);
-    if (specs.disk_type) parts.push(`Disk Type: ${specs.disk_type}`);
-    if (specs.graphics) parts.push(`Graphics: ${specs.graphics}`);
-    if (specs.os) parts.push(`OS: ${specs.os}`);
-
-    return parts.join(', ');
-  };
-
-
-
-
-  const createSpecificationKey = (specs) => {
-    return [
-      specs.ram || "",
-      specs.storage || "",
-      specs.disk_type || "",
-      specs.processor || specs.processor_model || "",
-      specs.graphics || "",
-      specs.os || ""
-    ].join("|");
-  };
-
-  const specificationType = (itemType) => {
-    if (!itemType || typeof itemType !== "string") return "";
-    switch (itemType.toLowerCase()) {
-      case "ram": return "RAM";
-      case "storage": return "Storage";
-      case "hdd": return "HDD";
-      case "ssd": return "SSD";
-      case "processor": return "Processor";
-      case "graphics": return "Graphics";
-      case "gpu": return "GPU";
-      case "os": return "OS";
-      case "motherboard": return "Motherboard";
-      case "power_supply": return "Power Supply";
-      case "monitor": return "Monitor";
-      default:
-        return itemType.charAt(0).toUpperCase() + itemType.slice(1);
-    }
-  };
-
-
-
-
-
-
-  const renderSpecifications = (product, deviceIds = []) => {
-    if (!product) return null;
-    if (!invoiceData) return null;
-
-    // Use invoice start date for month-diff calculations if needed
-    const invoiceStart = invoiceDate ? new Date(invoiceDate) : (invoiceData ? new Date(invoiceData.invoice_start_date) : null);
-
-    // Build merged transactions for these devices (flat chronological)
-    const deviceAssetTransactions = getAssetTransactionsForDevices(deviceIds);
-
-    // Already sorted by date in getAssetTransactionsForDevices
-    const sortedTransactions = [...deviceAssetTransactions].sort((a, b) => new Date(a.action_date) - new Date(b.action_date));
-
-    // Apply same filter you had but use invoiceStart safely
-    const filteredTransactions = sortedTransactions.filter((txn) => {
-      if (!invoiceStart) return true; // keep everything if invoiceStart absent
-      const actionDate = new Date(txn.action_date);
-      const monthDiff = (actionDate.getFullYear() - invoiceStart.getFullYear()) * 12 + (actionDate.getMonth() - invoiceStart.getMonth());
-      return paymentMode ? monthDiff <= 0 : monthDiff < 0;
-    });
-
-    // collect active specs using filteredTransactions (but keep full history separately)
-    let ramList = product.ram ? [product.ram] : [];
-    let processorList = product.processor_model ? [product.processor_model] : [];
-    let storageList = product.storage ? [product.storage] : [];
-    const activeSpecs = {};
-
-    filteredTransactions.forEach((txn) => {
-      const type = (txn.item_type || "").toLowerCase();
-      const value = txn.size || txn.specification || txn.asset_id || txn.item_name || null;
-      const status = (txn.status || "").toLowerCase();
-
-      if (status === "added") {
-        if (type === "ram" && value) ramList.push(value);
-        else if (type === "processor" && value) processorList.push(value);
-        else if ((type === "storage" || type === "ssd" || type === "hdd") && value) storageList.push(value);
-        else if (value) activeSpecs[type] = value;
-      } else if (status === "removed") {
-        if (type === "ram") {
-          if (value) {
-            const idx = ramList.indexOf(value);
-            if (idx >= 0) ramList.splice(idx, 1);
-            else if (ramList.length) ramList.splice(ramList.length - 1, 1);
-          }
-        } else if (type === "processor") {
-          if (value) {
-            const idx = processorList.indexOf(value);
-            if (idx >= 0) processorList.splice(idx, 1);
-            else if (processorList.length) processorList.splice(processorList.length - 1, 1);
-          }
-        } else if (type === "storage" || type === "ssd" || type === "hdd") {
-          if (value) {
-            const idx = storageList.indexOf(value);
-            if (idx >= 0) storageList.splice(idx, 1);
-            else if (storageList.length) storageList.splice(storageList.length - 1, 1);
-          }
-        } else {
-          delete activeSpecs[type];
-        }
-      }
-    });
-
-    // Final specs merge
-    const finalSpecs = { ...product };
-    finalSpecs.processor = processorList.length ? processorList.join(" + ") : product.processor_model || null;
-    finalSpecs.ram = ramList.length ? ramList.join(" + ") : product.ram || null;
-    finalSpecs.storage = storageList.length ? storageList.join(" + ") : product.storage || null;
-
-    // Build history list (full chronological for these devices)
-    const history = sortedTransactions.slice(); // we kept it chronologically
-
-    // Render JSX (current specs + history)
-    return (
-      <div style={{ fontSize: "12px", color: "#555", textAlign: "justify", lineHeight: "1.4" }}>
-        <div>
-          <strong>Specifications:</strong>{" "}
-          {finalSpecs?.brand && (<><strong>Brand:</strong> {finalSpecs.brand}, </>)}
-          {finalSpecs?.model && (<><strong>Model:</strong> {finalSpecs.model}, </>)}
-          {finalSpecs.processor && (<><strong>Processor:</strong> {finalSpecs.processor}, </>)}
-          {finalSpecs.ram && (<><strong>RAM:</strong> {finalSpecs.ram}, </>)}
-          {finalSpecs.storage && (<><strong>Storage:</strong> {finalSpecs.storage}, </>)}
-          {finalSpecs?.disk_type && (<><strong>Disk Type:</strong> {finalSpecs.disk_type}, </>)}
-          {finalSpecs?.graphics && (<><strong>Graphics:</strong> {finalSpecs.graphics}, </>)}
-          {finalSpecs?.os && (<><strong>OS:</strong> {finalSpecs.os}. </>)}
-        </div>
-
-
-      </div>
-    );
-  };
-
-
-
-
-  // Check if a row should be displayed (updated)
   const shouldShowRow = (item) => {
     const hasReturnedDevices = item.returnedDevices?.some(
       (rd) => rd.deviceIds?.length > 0 || rd.quantity > 0
@@ -5485,9 +3534,253 @@ const InvoiceDialog = ({ open, onClose, invoiceData }) => {
     );
   };
 
+  const groupDevicesBySpecifications = (deviceIds, product) => {
+    const invoiceStartDateObj = new Date(invoiceData.invoice_start_date);
+    const devicesByConfig = new Map();
 
+    deviceIds.forEach(deviceId => {
+      const finalSpecs = getFinalSpecificationsForDevice(
+        deviceId,
+        product,
+        invoiceStartDateObj
+      );
 
+      const configKey = JSON.stringify({
+        ram: finalSpecs.ram || 'N/A',
+        storage: finalSpecs.storage || 'N/A',
+        processor: finalSpecs.processor || 'N/A',
+        motherboard: finalSpecs.motherboard || 'N/A',
+        cabinet: finalSpecs.cabinet || 'N/A',
+        gpu: finalSpecs.gpu || 'N/A',
+        smps: finalSpecs.smps || 'N/A',
+        lan_card: finalSpecs.lan_card || 'N/A'
+      });
 
+      if (!devicesByConfig.has(configKey)) {
+        devicesByConfig.set(configKey, {
+          deviceIds: [],
+          specifications: finalSpecs
+        });
+      }
+
+      devicesByConfig.get(configKey).deviceIds.push(deviceId);
+    });
+
+    return Object.fromEntries(devicesByConfig);
+  };
+
+  const findDeviceDcDate = (deviceId) => {
+    const mainItem = invoiceData.items.find(item =>
+      item.device_ids?.includes(deviceId)
+    );
+    if (mainItem) {
+      return {
+        dc_date: new Date(invoiceData.dc_date),
+        times_created_in_invoice: invoiceData.times_created_in_invoice
+      };
+    }
+
+    for (const challan of invoiceData.additional_delivery_challans || []) {
+      const challanItem = challan.items.find(item =>
+        item.device_ids?.includes(deviceId)
+      );
+      if (challanItem) {
+        return {
+          dc_date: new Date(challan.dc_date),
+          times_created_in_invoice: challan.times_created_in_invoice
+        };
+      }
+    }
+
+    return {
+      dc_date: new Date(invoiceData.dc_date || invoiceData.invoice_start_date),
+      times_created_in_invoice: invoiceData.times_created_in_invoice || 1
+    };
+  };
+
+  const renderAssetTransactionRow = (product, parentItem) => {
+    if (invoiceData.is_small_amount) return null;
+
+    const invoiceDate = new Date(invoiceData.invoice_start_date);
+    const paymentMode = invoiceData.payment_mode === "Postpaid";
+
+    // Get transactions from multiple sources
+    let allAssetTransactions = [...(invoiceData.asset_transactions || [])];
+
+    // Also check items for nested asset_transactions
+    (invoiceData.items || []).forEach((item) => {
+      if (item.asset_transactions && Array.isArray(item.asset_transactions)) {
+        item.asset_transactions.forEach((at) => {
+          if (at.transactions && Array.isArray(at.transactions)) {
+            allAssetTransactions.push(...at.transactions);
+          } else {
+            allAssetTransactions.push(at);
+          }
+        });
+      }
+    });
+
+    const productAssetTransactions = allAssetTransactions.filter(
+      (at) => at.product_id === parentItem.product_id
+    );
+
+    if (!productAssetTransactions?.length) return;
+
+    // Strong deduplication
+    const uniqueMap = new Map();
+
+    productAssetTransactions.forEach((txn) => {
+      const actionDate = new Date(txn.action_date);
+      const monthStartDate = new Date(
+        actionDate.getFullYear(),
+        actionDate.getMonth(),
+        1
+      );
+      const monthEndDate = new Date(
+        actionDate.getFullYear(),
+        actionDate.getMonth() + 1,
+        0
+      );
+
+      let daysUsed = 0;
+      let billingStartDate = "";
+      let billingEndDate = "";
+
+      if (txn.status === "Removed") {
+        daysUsed = calculateDays(monthStartDate, actionDate);
+        billingStartDate = formatDate(monthStartDate);
+        billingEndDate = formatDate(actionDate);
+      } else if (txn.status === "Added") {
+        daysUsed = calculateDays(actionDate, monthEndDate);
+        billingStartDate = formatDate(actionDate);
+        billingEndDate = formatDate(monthEndDate);
+      }
+
+      const uniqueKey = `${txn.parent_asset_id}|${txn.status}|${txn.action_date}|${txn.specification}|${txn.price}|${billingStartDate}|${billingEndDate}`;
+
+      if (!uniqueMap.has(uniqueKey)) {
+        uniqueMap.set(uniqueKey, txn);
+      }
+    });
+
+    const uniqueTransactions = Array.from(uniqueMap.values());
+
+    const groupedTransactions = {};
+
+    uniqueTransactions.forEach((assetTxn) => {
+      const actionDate = new Date(assetTxn.action_date);
+      const monthStartDate = new Date(
+        actionDate.getFullYear(),
+        actionDate.getMonth(),
+        1
+      );
+      const monthEndDate = new Date(
+        actionDate.getFullYear(),
+        actionDate.getMonth() + 1,
+        0
+      );
+
+      const monthDiff =
+        (invoiceDate.getFullYear() - actionDate.getFullYear()) * 12 +
+        (invoiceDate.getMonth() - actionDate.getMonth());
+
+      const specialCase = paymentMode ? monthDiff === 0 : monthDiff === 1;
+
+      if (!specialCase) return;
+
+      let daysUsed = 0;
+      let billingStartDate = "";
+      let billingEndDate = "";
+
+      if (assetTxn.status === "Removed") {
+        if (!paymentMode) return;
+        daysUsed = calculateDays(monthStartDate, actionDate);
+        billingStartDate = formatDate(monthStartDate);
+        billingEndDate = formatDate(actionDate);
+      } else if (assetTxn.status === "Added") {
+        daysUsed = calculateDays(actionDate, monthEndDate);
+        billingStartDate = formatDate(actionDate);
+        billingEndDate = formatDate(monthEndDate);
+      }
+
+      const dailyRate = Math.round((assetTxn.price / 30) * 100) / 100;
+      const amountPerItem = Math.round(daysUsed * dailyRate * 100) / 100;
+
+      const groupKey = `${assetTxn.specification}|${assetTxn.status}|${billingStartDate}|${billingEndDate}|${daysUsed}`;
+
+      if (!groupedTransactions[groupKey]) {
+        groupedTransactions[groupKey] = {
+          assetIds: new Set(),
+          daysUsed,
+          billingStartDate,
+          billingEndDate,
+          price: assetTxn.price,
+          dailyRate,
+          amountPerItem,
+          totalAmount: 0,
+          specification: assetTxn.specification,
+          status: assetTxn.status
+        };
+      }
+
+      groupedTransactions[groupKey].assetIds.add(assetTxn.parent_asset_id);
+    });
+
+    const rows = [];
+    Object.values(groupedTransactions).forEach((group, index) => {
+      const quantity = group.assetIds.size;
+      const totalGroupAmount = Math.round(group.amountPerItem * quantity * 100) / 100;
+
+      totalAmount += totalGroupAmount;
+
+      const uniqueAssetIds = Array.from(group.assetIds).sort((a, b) => {
+        const numA = parseInt(a.match(/\d+/) || 0);
+        const numB = parseInt(b.match(/\d+/) || 0);
+        return numA - numB;
+      });
+
+      rows.push(
+        <tr
+          key={`asset-group-${index}`}
+          style={rowCounter++ % 2 === 0 ? tableRowEvenStyle : tableRowOddStyle}
+        >
+          <td style={tableCellCenterStyle}>{rowCounter}</td>
+          <td style={tableCellStyle}>
+            <div style={itemTitleStyle}>
+              {parentItem.product_name} - {group.specification} ({group.status})
+            </div>
+            <br />
+            <div style={specificationsStyle}>
+              Asset IDs: {uniqueAssetIds.join(", ")}
+            </div>
+            <div style={itemTitleStyle}>
+              Billing Start Date: {group.billingStartDate} - Billing End Date:{" "}
+              {group.billingEndDate}
+            </div>
+          </td>
+          <td style={tableCellCenterStyle}>{quantity}</td>
+          {invoiceData.transaction_type === "Rent" && (
+            <>
+              <td style={tableCellCenterStyle}>{group.daysUsed}</td>
+              <td style={tableCellCenterStyle}>
+                {formatINRCurrency(group.dailyRate)}
+              </td>
+            </>
+          )}
+          <td style={tableCellRightStyle}>
+            {formatINRCurrency(group.price)}
+          </td>
+          <td style={tableCellRightStyle}>
+            {formatINRCurrency(totalGroupAmount)}
+          </td>
+        </tr>
+      );
+    });
+
+    return rows;
+  };
+
+  // ==================== UPDATED renderProductRow WITH ASSET TRANSACTION PRICE LOGIC ====================
   const renderProductRow = (items, product, combinedDeviceIds) => {
     const quantity = items.reduce((acc, i) => acc + (i.quantity || 0), 0);
     if (quantity === 0 && combinedDeviceIds.length === 0) return null;
@@ -5501,41 +3794,11 @@ const InvoiceDialog = ({ open, onClose, invoiceData }) => {
 
     Object.values(devicesBySpecs).forEach((deviceGroup, groupIndex) => {
       const deviceIds = deviceGroup.deviceIds;
-      const specifications = deviceGroup.specifications; // This now has dynamic specs
+      const specifications = deviceGroup.specifications;
       const invoiceStart = new Date(invoiceData.invoice_start_date);
       const baseMonthly = Number(firstItem.rate || 0);
 
-      const deviceDcDates = deviceIds.map((deviceId) => findDeviceDcDate(deviceId));
-
-      const dcDateFromat = deviceDcDates.length > 0
-        ? deviceDcDates[0].dc_date
-        : 1;
-
-      const timesCreatedInInvoice = deviceDcDates.length > 0
-        ? deviceDcDates[0].times_created_in_invoice
-        : 1;
-
-      const monthDiff123 =
-        (invoiceStart.getFullYear() - dcDateFromat.getFullYear()) * 12 +
-        (invoiceStart.getMonth() - dcDateFromat.getMonth());
-
-      const isSameMonth = paymentMode ? monthDiff123 >= 1 : monthDiff123 >= 1;
-
-      // Helper for safe number conversion
-      const toNum = (v) => Number(v || 0);
-
-      // Helper: month difference
-      const monthDiff = (date1, date2) => {
-        const d1 = new Date(date1);
-        const d2 = new Date(date2);
-        return (
-          d1.getFullYear() * 12 +
-          d1.getMonth() -
-          (d2.getFullYear() * 12 + d2.getMonth())
-        );
-      };
-
-      // 🔹 Calculate per-device rates based on add/remove transactions
+      // 🔹 Calculate per-device rates based on add/remove transactions with NEXT MONTH effect
       const perDeviceRates = deviceIds.map((deviceId) => {
         const transactions = getAssetTransactionsForDevices([deviceId]) || [];
         const added = transactions.filter((t) => t.status === "Added");
@@ -5543,17 +3806,27 @@ const InvoiceDialog = ({ open, onClose, invoiceData }) => {
 
         let deviceMonthly = baseMonthly;
 
+        // For ADDED transactions: Price starts from NEXT month
         added.forEach((txn) => {
-          const diff = monthDiff(txn.action_date, invoiceStart);
-          if ((paymentMode && diff < 0) || (!paymentMode && diff < 0)) {
-            deviceMonthly += toNum(txn.price);
+          const actionDate = new Date(txn.action_date);
+          const nextMonthStart = new Date(actionDate.getFullYear(), actionDate.getMonth() + 1, 1);
+          const txnPrice = toNum(txn.price);
+          
+          // Check if invoice start is on or after the next month start
+          if (invoiceStart >= nextMonthStart) {
+            deviceMonthly += txnPrice;
           }
         });
 
+        // For REMOVED transactions: Price stops from NEXT month
         removed.forEach((txn) => {
-          const diff = monthDiff(txn.action_date, invoiceStart);
-          if ((paymentMode && diff <= 0) || (!paymentMode && diff < 0)) {
-            deviceMonthly -= toNum(txn.price);
+          const actionDate = new Date(txn.action_date);
+          const nextMonthStart = new Date(actionDate.getFullYear(), actionDate.getMonth() + 1, 1);
+          const txnPrice = toNum(txn.price);
+          
+          // Check if invoice start is on or after the next month start
+          if (invoiceStart >= nextMonthStart) {
+            deviceMonthly -= txnPrice;
           }
         });
 
@@ -5586,6 +3859,10 @@ const InvoiceDialog = ({ open, onClose, invoiceData }) => {
 
         totalAmount += Number(amount) || 0;
 
+        // Check if there are price adjustments to show
+        const hasPriceAdjustment = monthlyRate !== baseMonthly;
+
+
         rows.push(
           <tr
             key={`group-${product.id}-${groupIndex}-${monthlyRate}`}
@@ -5600,21 +3877,19 @@ const InvoiceDialog = ({ open, onClose, invoiceData }) => {
               <div style={itemTitleStyle}>{firstItem.product_name}</div>
 
               {/* Specifications - Now using dynamic specs from groupDevicesBySpecifications */}
-              {paymentMode ? isSameMonth ? (
-                <div style={specificationsStyle}>
-                  {formatSpecifications(specifications)}
-                </div>
-              ) : renderSpecifications(product, deviceIds) : isSameMonth ? (
-                <div style={specificationsStyle}>
-                  {formatSpecifications(specifications)}
-                </div>
-              ) : renderSpecifications(product, deviceIds)}
+              <div style={specificationsStyle}>
+                {formatSpecifications(specifications)}
+              </div>
 
               <br />
 
               {/* Asset IDs as comma-separated list */}
               <div style={assetIdsStyle}>
-                Asset IDs: {subgroup.deviceIds.sort((a, b) => a - b).join(", ")}
+                Asset IDs: {subgroup.deviceIds.sort((a, b) => {
+                  const numA = parseInt(a.match(/\d+/) || 0);
+                  const numB = parseInt(b.match(/\d+/) || 0);
+                  return numA - numB;
+                }).join(", ")}
               </div>
 
               {invoiceData.transaction_type === "Rent" && (
@@ -5655,493 +3930,40 @@ const InvoiceDialog = ({ open, onClose, invoiceData }) => {
     return rows;
   };
 
-
-
-
-
-
-  // Styles for specifications and asset IDs
-  const specificationsStyle = {
-    fontSize: '12px',
-    color: '#666',
-    marginBottom: '4px',
-    lineHeight: '1.4'
-  };
-
-  const assetIdsStyle = {
-    fontSize: '12px',
-    color: '#333',
-    fontWeight: '500',
-    marginBottom: '4px'
-  };
-
-  const billingPeriodStyle = {
-    fontSize: '12px',
-    color: '#0066cc',
-    fontStyle: 'italic',
-    marginBottom: '4px'
-  };
-
-
-
-  // const renderAssetTransactionRow = (_, product, parentItem) => {
-
-  //   if (invoiceData.is_small_amount) return null;
-
-  //   const invoiceDate = new Date(invoiceData.invoice_start_date);
-  //   const paymentMode = invoiceData.payment_mode === "Postpaid";
-
-  //   // Filter asset transactions only once per product
-  //   const productAssetTransactions = invoiceData.asset_transactions?.filter(
-  //     (at) => at.product_id === parentItem.product_id
-  //   );
-
-  //   // Avoid duplicates by checking unique IDs
-  //   const uniqueTransactions = [];
-  //   productAssetTransactions?.forEach((txn) => {
-  //     if (!uniqueTransactions.some((t) => t.id === txn.id)) {
-  //       uniqueTransactions.push(txn);
-  //     }
-  //   });
-
-  //   // Loop through unique asset transactions
-  //   uniqueTransactions.forEach((assetTxn, index) => {
-
-  //     const actionDate = new Date(assetTxn.action_date);
-  //     const monthStartDate = new Date(actionDate.getFullYear(), actionDate.getMonth(), 1);
-  //     const monthEndDate = new Date(actionDate.getFullYear(), actionDate.getMonth() + 1, 0);
-
-  //     const deviceInfo = findDeviceDcDate(assetTxn.parent_asset_id);
-  //     const deviceDcDate = new Date(deviceInfo.dc_date);
-  //     const timesCreatedInInvoice = deviceInfo.times_created_in_invoice === 0 || deviceInfo.times_created_in_invoice === 1;
-
-  //     const monthDiff =
-  //       (invoiceDate.getFullYear() - actionDate.getFullYear()) * 12 +
-  //       (invoiceDate.getMonth() - actionDate.getMonth());
-
-  //     const specialCase = paymentMode ? monthDiff === 0 : monthDiff === 1;
-
-  //     if (!specialCase) return null;
-
-
-  //     let daysUsed = 0;
-  //     let billingStartDate = "";
-  //     let billingEndDate = "";
-
-
-  //     // ✅ DaysUsed & Billing period calculation
-  //     if (assetTxn.status === "Removed") {
-  //       // Prepaid: show Removed only if timesCreatedInInvoice is true
-  //       if (!paymentMode && !timesCreatedInInvoice) return; // skip this assetTxn
-
-  //       daysUsed = specialCase
-  //         ? calculateDays(monthStartDate, actionDate)
-  //         : calculateDays(monthStartDate, actionDate);
-  //       billingStartDate = specialCase ? formatDate(monthStartDate) : formatDate(monthStartDate);
-  //       billingEndDate = formatDate(actionDate);
-  //     } else if (assetTxn.status === "Added") {
-  //       daysUsed = calculateDays(actionDate, monthEndDate);
-  //       billingStartDate = formatDate(actionDate);
-  //       billingEndDate = formatDate(monthEndDate);
-  //     }
-
-  //     // 💰 Amount calculation
-  //     const dailyRate = Math.round((assetTxn.price / 30) * 100) / 100;
-  //     let amount = Math.round(daysUsed * dailyRate * 100) / 100;
-
-  //     totalAmount += Number(amount) || 0;
-
-  //     // 🔹 Push directly to the main rows array
-  //     rows.push(
-  //       <tr
-  //         key={`asset-txn-${assetTxn.id}-${index}`}
-  //         style={++rowCounter % 2 === 0 ? tableRowEvenStyle : tableRowOddStyle}
-  //       >
-  //         <td style={tableCellCenterStyle}>{rowCounter}</td>
-  //         <td style={tableCellStyle}>
-  //           <div style={itemTitleStyle}>
-  //             {parentItem.product_name} - {assetTxn.item_type.toUpperCase()} -{" "}
-  //             {assetTxn.specification} ({assetTxn.status})
-  //           </div>
-  //           <div style={itemTitleStyle}>
-  //             Asset ID: {assetTxn.parent_asset_id}
-  //           </div>
-  //           <br />
-  //           <div>
-  //             Billing Start Date: {billingStartDate} - Billing End Date:{" "}
-  //             {billingEndDate}
-  //           </div>
-  //         </td>
-  //         <td style={tableCellCenterStyle}>1</td>
-
-  //         {invoiceData.transaction_type === "Rent" && (
-  //           <>
-  //             <td style={tableCellCenterStyle}>{daysUsed}</td>
-  //             <td style={tableCellCenterStyle}>
-  //               {formatINRCurrency(dailyRate)}
-  //             </td>
-  //           </>
-  //         )}
-
-  //         <td style={tableCellRightStyle}>
-  //           {formatINRCurrency(assetTxn.price)}
-  //         </td>
-  //         <td style={tableCellRightStyle}>
-  //           {formatINRCurrency(amount)}
-  //         </td>
-  //       </tr>
-  //     );
-  //   });
-  // };
-
-
-
-
-
-  const renderAssetTransactionRow = (_, product, parentItem) => {
-    if (invoiceData.is_small_amount) return null;
-
-    const invoiceDate = new Date(invoiceData.invoice_start_date);
-    const paymentMode = invoiceData.payment_mode === "Postpaid";
-
-    const productAssetTransactions = invoiceData.asset_transactions?.filter(
-      (at) => at.product_id === parentItem.product_id
-    );
-
-    if (!productAssetTransactions?.length) return;
-
-    // Remove duplicate transactions
-    const uniqueTransactions = [];
-    productAssetTransactions.forEach((txn) => {
-      if (!uniqueTransactions.some((t) => t.id === txn.id)) {
-        uniqueTransactions.push(txn);
-      }
-    });
-
-    const groupedTransactions = {};
-
-    uniqueTransactions.forEach((assetTxn) => {
-      const actionDate = new Date(assetTxn.action_date);
-
-      const monthStartDate = new Date(
-        actionDate.getFullYear(),
-        actionDate.getMonth(),
-        1
-      );
-
-      const monthEndDate = new Date(
-        actionDate.getFullYear(),
-        actionDate.getMonth() + 1,
-        0
-      );
-
-      const deviceInfo = findDeviceDcDate(assetTxn.parent_asset_id);
-
-      const timesCreatedInInvoice =
-        deviceInfo?.times_created_in_invoice === 0 ||
-        deviceInfo?.times_created_in_invoice === 1;
-
-      const monthDiff =
-        (invoiceDate.getFullYear() - actionDate.getFullYear()) * 12 +
-        (invoiceDate.getMonth() - actionDate.getMonth());
-
-      const specialCase = paymentMode ? monthDiff === 0 : monthDiff === 1;
-
-      if (!specialCase) return;
-
-      let daysUsed = 0;
-      let billingStartDate = "";
-      let billingEndDate = "";
-
-      if (assetTxn.status === "Removed") {
-        // if (!paymentMode && !timesCreatedInInvoice) return;
-        if (!paymentMode) return;
-
-        daysUsed = calculateDays(monthStartDate, actionDate);
-        billingStartDate = formatDate(monthStartDate);
-        billingEndDate = formatDate(actionDate);
-      } else if (assetTxn.status === "Added") {
-        daysUsed = calculateDays(actionDate, monthEndDate);
-        billingStartDate = formatDate(actionDate);
-        billingEndDate = formatDate(monthEndDate);
-      }
-
-      const dailyRate = Math.round((assetTxn.price / 30) * 100) / 100;
-      const amountPerItem = Math.round(daysUsed * dailyRate * 100) / 100;
-
-      // 🔑 Group key (everything must match)
-      const groupKey = `${parentItem.product_name}-${assetTxn.specification}-${assetTxn.status}-${billingStartDate}-${billingEndDate}-${daysUsed}-${assetTxn.price}`;
-
-      if (!groupedTransactions[groupKey]) {
-        groupedTransactions[groupKey] = {
-          assetIds: new Set(), // Use Set to store unique asset IDs
-          daysUsed,
-          billingStartDate,
-          billingEndDate,
-          price: assetTxn.price,
-          dailyRate,
-          amountPerItem, // Store amount per item
-          totalAmount: 0, // Will calculate total based on quantity
-          specification: assetTxn.specification,
-          status: assetTxn.status
-        };
-      }
-
-      // Add asset ID to Set (automatically handles duplicates)
-      groupedTransactions[groupKey].assetIds.add(assetTxn.parent_asset_id);
-    });
-
-    Object.values(groupedTransactions).forEach((group, index) => {
-      const quantity = group.assetIds.size;
-      const totalGroupAmount = Math.round(group.amountPerItem * quantity * 100) / 100;
-
-      totalAmount += totalGroupAmount;
-
-      // Convert Set back to array for display
-      const uniqueAssetIds = Array.from(group.assetIds);
-
-      rows.push(
-        <tr
-          key={`asset-group-${index}`}
-          style={++rowCounter % 2 === 0 ? tableRowEvenStyle : tableRowOddStyle}
-        >
-          <td style={tableCellCenterStyle}>{rowCounter}</td>
-
-          <td style={tableCellStyle}>
-            <div style={itemTitleStyle}>
-              {parentItem.product_name} - {group.specification} ({group.status})
-            </div>
-
-            <div style={itemTitleStyle}>
-              Asset IDs: {uniqueAssetIds.join(", ")}
-            </div>
-
-            <br />
-
-            <div>
-              Billing Start Date: {group.billingStartDate} - Billing End Date:{" "}
-              {group.billingEndDate}
-            </div>
-          </td>
-
-          <td style={tableCellCenterStyle}>
-            {quantity}
-          </td>
-
-          {invoiceData.transaction_type === "Rent" && (
-            <>
-              <td style={tableCellCenterStyle}>{group.daysUsed}</td>
-              <td style={tableCellCenterStyle}>
-                {formatINRCurrency(group.dailyRate)}
-              </td>
-            </>
-          )}
-
-          <td style={tableCellRightStyle}>
-            {formatINRCurrency(group.price)}
-          </td>
-
-          <td style={tableCellRightStyle}>
-            {formatINRCurrency(totalGroupAmount)}
-          </td>
-        </tr>
-      );
-    });
-  };
-
-
-  // Helper function to find DC date for specific device
-  const findDeviceDcDate = (deviceId) => {
-    // Check main invoice items
-    const mainItem = invoiceData.items.find(item =>
-      item.device_ids.includes(deviceId)
-    );
-    if (mainItem) {
-      return {
-        dc_date: new Date(invoiceData.dc_date),
-        times_created_in_invoice: invoiceData.times_created_in_invoice
-      };
-    }
-
-    // Check additional delivery challans
-    for (const challan of invoiceData.additional_delivery_challans || []) {
-      const challanItem = challan.items.find(item =>
-        item.device_ids.includes(deviceId)
-      );
-      return {
-        dc_date: new Date(challan.dc_date),
-        times_created_in_invoice: challan.times_created_in_invoice
-      };
-    }
-
-    // Fallback to main DC date or invoice start date
-    return {
-      dc_date: new Date(invoiceData.dc_date || invoiceData.invoice_start_date),
-      times_created_in_invoice: invoiceData.times_created_in_invoice || 1
-    };
-  };
-
-  const getFinalSpecificationsForDevice = (deviceId, baseProduct) => {
-    if (!baseProduct) return baseProduct;
-    if (!invoiceData) return baseProduct;
-
-
-
-    const invoiceStart = new Date(invoiceData.invoice_start_date);
-    const deviceAssetTransactions = getAssetTransactionsForDevices([deviceId]);
-
-    // Sort transactions by date
-    const sortedTransactions = [...deviceAssetTransactions].sort((a, b) => new Date(a.action_date) - new Date(b.action_date));
-
-    const filteredTransactions = sortedTransactions.filter((txn) => {
-      const actionDate = new Date(txn.action_date);
-      const invoiceStartDate = new Date(invoiceData.invoice_start_date);
-
-      return actionDate <= invoiceStartDate;
-    });
-
-
-    // Start with base product specs
-    let ramList = baseProduct.ram ? [baseProduct.ram] : [];
-    let processorList = baseProduct.processor_model ? [baseProduct.processor_model] : [];
-    let storageList = baseProduct.storage ? [baseProduct.storage] : [];
-    const activeSpecs = {};
-
-    // Process transactions in chronological order
-    filteredTransactions.forEach((txn) => {
-      const type = (txn.item_type || "").toLowerCase();
-      const value = txn.size || txn.specification || txn.asset_id || txn.item_name || null;
-      const status = (txn.status || "").toLowerCase();
-
-      console.log(`Processing ${status} for ${type}: ${value}`);
-
-      if (status === "added") {
-        if (type === "ram" && value) {
-          ramList.push(value);
-        } else if (type === "processor" && value) {
-          processorList.push(value);
-        } else if ((type === "storage" || type === "ssd" || type === "hdd") && value) {
-          storageList.push(value);
-        } else if (value) {
-          activeSpecs[type] = value;
-        }
-      } else if (status === "removed") {
-        if (type === "ram") {
-          if (value) {
-            const idx = ramList.indexOf(value);
-            if (idx >= 0) {
-              ramList.splice(idx, 1);
-            } else if (ramList.length) {
-              // If exact value not found, remove the last one (or handle differently)
-              ramList.splice(ramList.length - 1, 1);
-            }
-          }
-        } else if (type === "processor") {
-          if (value) {
-            const idx = processorList.indexOf(value);
-            if (idx >= 0) {
-              processorList.splice(idx, 1);
-            } else if (processorList.length) {
-              processorList.splice(processorList.length - 1, 1);
-            }
-          }
-        } else if (type === "storage" || type === "ssd" || type === "hdd") {
-          if (value) {
-            const idx = storageList.indexOf(value);
-            if (idx >= 0) {
-              storageList.splice(idx, 1);
-            } else if (storageList.length) {
-              storageList.splice(storageList.length - 1, 1);
-            }
-          }
-        } else {
-          delete activeSpecs[type];
-        }
-      }
-    });
-
-    // Build final specifications object
-    const finalSpecs = { ...baseProduct };
-    finalSpecs.processor = processorList.length ? processorList.join(" + ") : baseProduct.processor_model || null;
-    finalSpecs.ram = ramList.length ? ramList.join(" + ") : null; // If empty, set to null
-    finalSpecs.storage = storageList.length ? storageList.join(" + ") : baseProduct.storage || null;
-
-    // If RAM list is empty, remove RAM from specifications
-    if (!finalSpecs.ram || finalSpecs.ram === "") {
-      delete finalSpecs.ram;
-    }
-
-    return finalSpecs;
-  };
-
-
-
-
-
   const shouldRenderMidMonth = (item, isAdditionalChallan = false) => {
-    // If it's an additional challan, NEVER show mid-month data
-    if (isAdditionalChallan) {
-      return false;
-    }
-
-    // For main invoice items only
+    if (isAdditionalChallan) return false;
     const challanDate = new Date(invoiceData.dc_date);
     const invoiceStartDate = new Date(invoiceData.invoice_start_date);
-
-    // Make sure we're comparing dates correctly (set to first of month)
-    const challanMonth = new Date(
-      challanDate.getFullYear(),
-      challanDate.getMonth(),
-      1
-    );
-    const invoiceMonth = new Date(
-      invoiceStartDate.getFullYear(),
-      invoiceStartDate.getMonth(),
-      1
-    );
-
-    // Calculate month difference
-    const monthDiff =
-      (invoiceMonth.getFullYear() - challanMonth.getFullYear()) * 12 +
+    const challanMonth = new Date(challanDate.getFullYear(), challanDate.getMonth(), 1);
+    const invoiceMonth = new Date(invoiceStartDate.getFullYear(), invoiceStartDate.getMonth(), 1);
+    const monthDiff = (invoiceMonth.getFullYear() - challanMonth.getFullYear()) * 12 +
       (invoiceMonth.getMonth() - challanMonth.getMonth());
-
-    // Should be exactly 1 month difference
     if (monthDiff !== 1) return false;
-
-    // Main invoice rule - only show mid-month for first invoice creation
     return invoiceData.times_created_in_invoice === 1;
   };
 
   const renderReturnedDeviceRow = (item, product, rd) => {
     if (!paymentMode && !shouldRenderMidMonth(item)) return null;
-
     let deviceIds = [...new Set((rd.deviceIds || []).map((id) => id.trim()))];
     deviceIds = deviceIds.filter((id) => !renderedAssetIds.has(id));
-    if (deviceIds.length === 0) return null; // stop duplicate rows
-
+    if (deviceIds.length === 0) return null;
     deviceIds.forEach((id) => renderedAssetIds.add(id));
-
     const daysUsed = rd.daysUsed || 1;
     const baseCount = deviceIds.length > 0 ? deviceIds.length : rd.quantity;
     const dailyRate = rd.dailyRate || item.dailyRate || item.rate / 30;
-    const amount = calculateAmount(daysUsed, dailyRate, baseCount);
-
+    const amount = calculateAmount(daysUsed, dailyRate, baseCount, item.rate);
     totalAmount += Number(amount) || 0;
-
     return (
-      <tr style={++rowCounter % 2 === 0 ? tableRowEvenStyle : tableRowOddStyle}>
+      <tr style={rowCounter++ % 2 === 0 ? tableRowEvenStyle : tableRowOddStyle}>
         <td style={tableCellCenterStyle}>{rowCounter}</td>
         <td style={tableCellStyle}>
           <div style={itemTitleStyle}>{item.product_name}</div>
-          {renderSpecifications(product)}
-          <br />
-          <div>
-            <strong>Returned Asset IDs:</strong> {deviceIds.join(", ")}
+          <div style={specificationsStyle}>
+            {formatSpecifications(product)}
           </div>
           <br />
-          <div style={itemTitleStyle}>
-            Return Date: {formatDate(new Date(rd.returnedDate))}
-          </div>
+          <div><strong>Returned Asset IDs:</strong> {deviceIds.join(", ")}</div>
+          <div style={itemTitleStyle}>Return Date: {formatDate(new Date(rd.returnedDate))}</div>
         </td>
         <td style={tableCellCenterStyle}>{baseCount}</td>
         {invoiceData.transaction_type === "Rent" && (
@@ -6150,50 +3972,36 @@ const InvoiceDialog = ({ open, onClose, invoiceData }) => {
             <td style={tableCellCenterStyle}>{formatINRCurrency(dailyRate)}</td>
           </>
         )}
-        <td style={tableCellRightStyle}></td>
+        <td style={tableCellRightStyle}>-</td>
         <td style={tableCellRightStyle}>{formatINRCurrency(amount)}</td>
       </tr>
     );
   };
 
-  // Render swapped device row
   const renderSwappedDeviceRow = (item, product, sd) => {
-    if (!paymentMode && !shouldRenderMidMonth(item)) {
-      return null;
-    }
-
+    if (!paymentMode && !shouldRenderMidMonth(item)) return null;
     let deviceIds = [...new Set(sd.deviceIds || [])];
     deviceIds = deviceIds.filter((id) => !renderedAssetIds.has(id));
     deviceIds.forEach((id) => renderedAssetIds.add(id));
-
     if (deviceIds.length === 0) return null;
-
     const daysUsed = sd.daysUsed || 1;
     const baseCount = deviceIds.length;
     const dailyRate = sd.dailyRate || item.dailyRate || item.rate / 30;
     const amount = calculateAmount(daysUsed, dailyRate, baseCount, item.rate);
-
     totalAmount += Number(amount) || 0;
-
     return (
-      <tr style={++rowCounter % 2 === 0 ? tableRowEvenStyle : tableRowOddStyle}>
+      <tr style={rowCounter++ % 2 === 0 ? tableRowEvenStyle : tableRowOddStyle}>
         <td style={tableCellCenterStyle}>{rowCounter}</td>
         <td style={tableCellStyle}>
           <div style={itemTitleStyle}>{item.product_name}</div>
-          {renderSpecifications(product)}
-          <br />
-          <div>
-            <strong>Swapped Asset IDs:</strong> {deviceIds.join(", ")}
+          <div style={specificationsStyle}>
+            {formatSpecifications(product)}
           </div>
-
           <br />
+          <div><strong>Swapped Asset IDs:</strong> {deviceIds.join(", ")}</div>
           <div style={itemTitleStyle}>
             Swap Date: {formatDate(new Date(sd.swappedDate))}
-            {sd.reason && (
-              <div>
-                <strong>Reason:</strong> {sd.reason}
-              </div>
-            )}
+            {sd.reason && <div><strong>Reason:</strong> {sd.reason}</div>}
           </div>
         </td>
         <td style={tableCellCenterStyle}>{baseCount}</td>
@@ -6203,86 +4011,43 @@ const InvoiceDialog = ({ open, onClose, invoiceData }) => {
             <td style={tableCellCenterStyle}>{formatINRCurrency(dailyRate)}</td>
           </>
         )}
-        <td style={tableCellRightStyle}></td>
+        <td style={tableCellRightStyle}>-</td>
         <td style={tableCellRightStyle}>{formatINRCurrency(amount)}</td>
       </tr>
     );
   };
-
-
-
-  // -----------------------------
-  // Render mid-month row
-  // -----------------------------
 
   const renderMidMonthRow = (item, product) => {
     if (!shouldRenderMidMonth(item)) return null;
-    if (
-      item.quantity === 0 &&
-      (!item.device_ids || item.device_ids.length === 0)
-    )
-      return null;
-
+    if (item.quantity === 0 && (!item.device_ids || item.device_ids.length === 0)) return null;
     const deviceIds = item.device_ids || [];
     const baseCount = deviceIds.length > 0 ? deviceIds.length : item.quantity;
-
-    const challanDate = item.isAdditionalChallan
-      ? new Date(item.challanDate)
-      : new Date(invoiceData.dc_date);
+    const challanDate = item.isAdditionalChallan ? new Date(item.challanDate) : new Date(invoiceData.dc_date);
     const startDate = challanDate;
-    const endDate = new Date(
-      challanDate.getFullYear(),
-      challanDate.getMonth() + 1,
-      0
-    );
-
+    const endDate = new Date(challanDate.getFullYear(), challanDate.getMonth() + 1, 0);
     const invoiceStartDate = new Date(invoiceData.invoice_start_date);
-
-    // Helper to check if two dates are within 1 month
     const isWithinOneMonth = (d1, d2) => {
-      const diff =
-        (d2.getFullYear() - d1.getFullYear()) * 12 +
-        (d2.getMonth() - d1.getMonth());
+      const diff = (d2.getFullYear() - d1.getFullYear()) * 12 + (d2.getMonth() - d1.getMonth());
       return diff === 0 || diff === 1;
     };
-
-
-
     const daysUsed = calculateDays(startDate, endDate);
     const dailyRate = item.dailyRate || item.rate / 30;
-    const amount = calculateAmount(daysUsed, dailyRate, baseCount);
-
+    const amount = calculateAmount(daysUsed, dailyRate, baseCount, item.rate);
     totalAmount += Number(amount) || 0;
-
-    // 🚫 If not within 1 month → skip
-    if (!isWithinOneMonth(startDate, invoiceStartDate)) {
-
-      return null;
-    }
-
-    if (!amount) {
-
-      return null;
-    }
-
-
+    if (!isWithinOneMonth(startDate, invoiceStartDate)) return null;
+    if (!amount) return null;
     return (
-      <tr style={++rowCounter % 2 === 0 ? tableRowEvenStyle : tableRowOddStyle}>
+      <tr style={rowCounter++ % 2 === 0 ? tableRowEvenStyle : tableRowOddStyle}>
         <td style={tableCellCenterStyle}>{rowCounter}</td>
         <td style={tableCellStyle}>
-          <div>
-            <strong>Mid-Month Usage:</strong>
-          </div>
+          <div><strong>Mid-Month Usage:</strong></div>
           <br />
           <div style={itemTitleStyle}>{item.product_name}</div>
-          {renderSpecifications(product)}
-          {deviceIds.length > 0 && (
-            <div style={itemTitleStyle}>Asset IDs: {deviceIds.join(", ")}</div>
-          )}
-          <br />
-          <div style={itemTitleStyle}>
-            Billing Start Date: {formatDate(startDate)} to {formatDate(endDate)}
+          <div style={specificationsStyle}>
+            {formatSpecifications(product)}
           </div>
+          {deviceIds.length > 0 && <div style={assetIdsStyle}>Asset IDs: {deviceIds.join(", ")}</div>}
+          <div style={itemTitleStyle}>Billing Start Date: {formatDate(startDate)} to {formatDate(endDate)}</div>
         </td>
         <td style={tableCellCenterStyle}>{baseCount}</td>
         {invoiceData.transaction_type === "Rent" && (
@@ -6291,70 +4056,62 @@ const InvoiceDialog = ({ open, onClose, invoiceData }) => {
             <td style={tableCellCenterStyle}>{formatINRCurrency(dailyRate)}</td>
           </>
         )}
-        <td style={tableCellRightStyle}></td>
+        <td style={tableCellRightStyle}>-</td>
         <td style={tableCellRightStyle}>{formatINRCurrency(amount)}</td>
       </tr>
     );
   };
 
-  // -----------------------------
-  // 🔥 Main rendering loop
-  // -----------------------------
+  // ==================== MAIN RENDERING LOOP ====================
   const rows = [];
-  const groupedItems = {};
 
-  // Group items
+  // Group items by product name
+  const groupedItems = new Map();
   items.forEach((item) => {
     if (!shouldShowRow(item)) return;
-
-    const daysUsed = item.isFullMonth ? 30 : item.days || 1;
-    const dailyRate = item.dailyRate || item.rate / 30;
-    const monthlyRate = item.rate;
-
-    const key = [
-      item.product_name,
-      item.billingPeriod || "full",
-      daysUsed,
-      dailyRate.toFixed(2),
-      monthlyRate,
-    ].join("_");
-
-    if (!groupedItems[key]) groupedItems[key] = [];
-    groupedItems[key].push(item);
+    const productName = item.product_name;
+    if (!groupedItems.has(productName)) {
+      groupedItems.set(productName, []);
+    }
+    groupedItems.get(productName).push(item);
   });
 
   // Render grouped items
-  Object.values(groupedItems).forEach((group) => {
+  for (const [productName, group] of groupedItems.entries()) {
     const product = group[0].productDetails || group[0].product;
     const combinedDeviceIds = mergeDeviceIds(group);
 
-    // Main row
-    const mainRow = renderProductRow(group, product, combinedDeviceIds);
-    if (mainRow) rows.push(mainRow);
+    // Main row using updated renderProductRow with asset transaction price logic
+    const mainRows = renderProductRow(group, product, combinedDeviceIds);
+    if (mainRows && mainRows.length) {
+      rows.push(...mainRows);
+    }
 
     // ✅ Asset Transactions (only once per product)
-    renderAssetTransactionRow(null, product, group[0]);
+    const firstItem = group[0];
+    const assetRows = renderAssetTransactionRow(product, firstItem);
+    if (assetRows && assetRows.length) {
+      rows.push(...assetRows);
+    }
 
-    // Mid-month + Returns + Swaps
+    // Render other rows (returns, swaps, mid-month) for each item
     group.forEach((item) => {
       if (!isBuyTransaction && !paymentMode && showDcPeriod) {
-        const midRow = renderMidMonthRow(item, product);
+        const midRow = renderMidMonthRow(item, item.productDetails);
         if (midRow) rows.push(midRow);
       }
 
-      // Returned devices
       item.returnedDevices?.forEach((rd) => {
-        const retRow = renderReturnedDeviceRow(item, product, rd);
+        const retRow = renderReturnedDeviceRow(item, item.productDetails, rd);
         if (retRow) rows.push(retRow);
       });
 
-      // Swapped devices
       item.swappedDevices?.forEach((sd) => {
-        const swapRow = renderSwappedDeviceRow(item, product, sd);
+        const swapRow = renderSwappedDeviceRow(item, item.productDetails, sd);
         if (swapRow) rows.push(swapRow);
       });
     });
-  });
+  }
 
   const netAmount = totalAmount;
   let cgst = isKarnataka ? netAmount * 0.09 : 0;
@@ -6364,6 +4121,7 @@ const InvoiceDialog = ({ open, onClose, invoiceData }) => {
   const grandTotal = netAmount + totalTax;
 
 
+
   const renderInvoice = () => {
     return (
       <div
@@ -6371,7 +4129,6 @@ const InvoiceDialog = ({ open, onClose, invoiceData }) => {
         style={receiptContainerStyle}
         id="invoice-current-month-invoice"
       >
-        {/* Header and company info */}
         <div style={headerBarStyle}></div>
         <div style={companyHeaderStyle}>
           <div style={companyInfoContainerStyle}>
@@ -6393,69 +4150,39 @@ const InvoiceDialog = ({ open, onClose, invoiceData }) => {
           </div>
           <div style={challanHeaderStyle}>
             <div style={challanTitleStyle}>TAX INVOICE</div>
-
             <div style={challanDetailsStyle}>
               Invoice No: {invoiceData.invoice_number}
               <br />
               Invoice Date: {formatDate(startDate)}
-
             </div>
           </div>
         </div>
 
-        {/* Recipient Section */}
         <div style={recipientSectionStyle}>
           <div style={recipientContainerStyle}>
             <div style={recipientAddressStyle}>
               <div style={recipientLabelStyle}>Bill To</div>
               {invoiceData.customer_name}
               <br />
-              {invoiceData.shippingDetail?.street &&
-                `${invoiceData.shippingDetail.street}, `}
-              {invoiceData.shippingDetail?.landmark &&
-                `${invoiceData.shippingDetail.landmark}, `}
-              {invoiceData.shippingDetail?.city},{" "}
-              {invoiceData.shippingDetail?.state},
+              {invoiceData.shippingDetail?.street && `${invoiceData.shippingDetail.street}, `}
+              {invoiceData.shippingDetail?.landmark && `${invoiceData.shippingDetail.landmark}, `}
+              {invoiceData.shippingDetail?.city}, {invoiceData.shippingDetail?.state},
               <br />
-              {invoiceData.shippingDetail?.country} -{" "}
-              {invoiceData.shippingDetail?.pincode}
+              {invoiceData.shippingDetail?.country} - {invoiceData.shippingDetail?.pincode}
             </div>
             <div style={recipientDetailsGridStyle}>
-
-              <div>
-                <div style={detailLabelStyle}>PAN Number :</div>
-                {invoiceData.pan_number}
-              </div>
-              <div>
-                <div style={detailLabelStyle}>Order Number :</div>
-                {invoiceData.dispatch_order_number}
-              </div>
-              {invoiceData.dc_date !== null && (
-                <div>
-                  <div style={detailLabelStyle}>DC Date :</div>
-                  {invoiceData.dc_date}
-                </div>
-              )}
-
-              <div>
-                <div style={detailLabelStyle}>Email :</div>
-                {invoiceData.email}
-              </div>
-              <div>
-                <div style={detailLabelStyle}>Phone :</div>
-                {invoiceData.phone_number}
-              </div>
+              <div><div style={detailLabelStyle}>PAN Number :</div>{invoiceData.pan_number}</div>
+              <div><div style={detailLabelStyle}>Order Number :</div>{invoiceData.dispatch_order_number}</div>
+              {invoiceData.dc_date !== null && <div><div style={detailLabelStyle}>DC Date :</div>{invoiceData.dc_date}</div>}
+              <div><div style={detailLabelStyle}>Email :</div>{invoiceData.email}</div>
+              <div><div style={detailLabelStyle}>Phone :</div>{invoiceData.phone_number}</div>
             </div>
           </div>
         </div>
 
-        {/* Invoice Period */}
         {!isBuyTransaction && (
           <div style={invoicePeriodStyle}>
-            <div>
-              <strong>Invoice Period:</strong> {formatDate(invoiceDate)} to{" "}
-              {formatDate(invoiceEndDate)}
-            </div>
+            <div><strong>Invoice Period:</strong> {formatDate(invoiceDate)} to {formatDate(invoiceEndDate)}</div>
           </div>
         )}
 
@@ -6472,135 +4199,67 @@ const InvoiceDialog = ({ open, onClose, invoiceData }) => {
                 </>
               )}
               <th style={tableHeaderDaysStyle}>
-                {invoiceData.transaction_type === "Rent"
-                  ? "Per Month"
-                  : "Purchase Price"}
+                {invoiceData.transaction_type === "Rent" ? "Per Month" : "Purchase Price"}
               </th>
               <th style={tableHeaderRateStyle}>TOTAL</th>
             </tr>
           </thead>
           <tbody>
             {rows}
-            {/* Add total row at the end */}
             <tr key="total-row" style={totalsRowStyle}>
-              <td
-                style={tableCellCenterStyle}
-                colSpan={invoiceData.transaction_type === "Rent" ? 6 : 4}
-              >
+              <td style={tableCellCenterStyle} colSpan={invoiceData.transaction_type === "Rent" ? 6 : 4}>
                 <strong>TOTAL</strong>
               </td>
-              <td style={tableCellRightStyle}>
-                {formatINRCurrency(totalAmount)}
-              </td>
+              <td style={tableCellRightStyle}>{formatINRCurrency(totalAmount)}</td>
             </tr>
           </tbody>
         </table>
 
-        {/* Tax and Total Section */}
         <div style={taxTotalContainerStyle}>
           <div style={taxDetailsStyle}>
-            <div style={taxRowStyle}>
-              <span>Subtotal:</span>
-              <span>{formatINRCurrency(totalAmount)}</span>
-            </div>
-
+            <div style={taxRowStyle}><span>Subtotal:</span><span>{formatINRCurrency(totalAmount)}</span></div>
             {isKarnataka && (
               <>
-                <div style={taxRowStyle}>
-                  <span>CGST @9%:</span>
-                  <span>{formatINRCurrency(cgst)}</span>
-                </div>
-                <div style={taxRowStyle}>
-                  <span>SGST @9%:</span>
-                  <span>{formatINRCurrency(sgst)}</span>
-                </div>
+                <div style={taxRowStyle}><span>CGST @9%:</span><span>{formatINRCurrency(cgst)}</span></div>
+                <div style={taxRowStyle}><span>SGST @9%:</span><span>{formatINRCurrency(sgst)}</span></div>
               </>
             )}
-            {!isKarnataka && (
-              <div style={taxRowStyle}>
-                <span>IGST @18%:</span>
-                <span>{formatINRCurrency(igst)}</span>
-              </div>
-            )}
-            <div style={taxRowTotalStyle}>
-              <span>Total Tax:</span>
-              <span>{formatINRCurrency(totalTax)}</span>
-            </div>
-
-            <div style={grandTotalStyle}>
-              <span>Grand Total:</span>
-              <span>{formatINRCurrency(grandTotal)}</span>
-            </div>
+            {!isKarnataka && <div style={taxRowStyle}><span>IGST @18%:</span><span>{formatINRCurrency(igst)}</span></div>}
+            <div style={taxRowTotalStyle}><span>Total Tax:</span><span>{formatINRCurrency(totalTax)}</span></div>
+            <div style={grandTotalStyle}><span>Grand Total:</span><span>{formatINRCurrency(grandTotal)}</span></div>
           </div>
         </div>
 
-        {/* Bank Details Section */}
         <div style={bankDetailsContainerStyle}>
           <div style={bankDetailsTitleStyle}>Bank Details:</div>
-          <div style={bankLineStyle}>
-            Guru Goutham Infotech Pvt. Ltd., HDFC Bank Ltd, Jayanagar Branch.
-          </div>
-          <div style={bankLineStyle}>
-            Current A/c No: 50200066787843, IFSC Code: HDFC0000261.
-          </div>
-
-          <div style={amountWordsStyle}>
-            Amt. in Words: <span>{numberToWords(grandTotal)}</span>
-          </div>
-
-          <div style={jurisdictionNoteStyle}>
-            Note:{" "}
-            <span style={highlightTextStyle}>
-              Subject to Bengaluru Jurisdiction
-            </span>
-          </div>
+          <div style={bankLineStyle}>Guru Goutham Infotech Pvt. Ltd., HDFC Bank Ltd, Jayanagar Branch.</div>
+          <div style={bankLineStyle}>Current A/c No: 50200066787843, IFSC Code: HDFC0000261.</div>
+          <div style={amountWordsStyle}>Amt. in Words: <span>{numberToWords(grandTotal)}</span></div>
+          <div style={jurisdictionNoteStyle}>Note: <span style={highlightTextStyle}>Subject to Bengaluru Jurisdiction</span></div>
         </div>
 
-        {/* Signature Section */}
         <div style={signatureSectionStyle}>
-          {/* Left: Receiver Signature */}
           <div style={leftSignatureAreaStyle}>
             <div style={companySignatureLabelStyle}></div>
             <div style={signatureBoxStyle}></div>
-            <div style={signatureDesignationStyle}>
-              {" "}
-              Receiver Signature with Seal
-            </div>
+            <div style={signatureDesignationStyle}>Receiver Signature with Seal</div>
           </div>
-
-          {/* Right: Authorised Signatory */}
           <div style={rightSignatureAreaStyle}>
-            <div style={companySignatureLabelStyle}>
-              For Guru Goutham Infotech Private Limited
-            </div>
+            <div style={companySignatureLabelStyle}>For Guru Goutham Infotech Private Limited</div>
             <div style={signatureBoxStyle}>SD/-</div>
             <div style={signatureDesignationStyle}>Authorised Signatory</div>
           </div>
         </div>
 
-        {/* Company Footer */}
         <div style={companyFooterStyle}>
           <div style={footerAddressStyle}>
             <span>📍</span>
-            <span>
-              No. 8, 2nd Cross, Diagonal Road, 3rd Block,
-              <br />
-              Jayanagar Bengaluru-560011.
-            </span>
+            <span>No. 8, 2nd Cross, Diagonal Road, 3rd Block,<br />Jayanagar Bengaluru-560011.</span>
           </div>
           <div style={footerContactStyle}>
-            <div style={footerContactItemStyle}>
-              <span>🌐</span>
-              <span>gurugoutam.com</span>
-            </div>
-            <div style={footerContactItemStyle}>
-              <span>📞</span>
-              <span>080-2242 9955, +91 9449 0789 55</span>
-            </div>
-            <div style={footerContactItemStyle}>
-              <span>✉️</span>
-              <span>info@gurugoutam.com</span>
-            </div>
+            <div style={footerContactItemStyle}><span>🌐</span><span>gurugoutam.com</span></div>
+            <div style={footerContactItemStyle}><span>📞</span><span>080-2242 9955, +91 9449 0789 55</span></div>
+            <div style={footerContactItemStyle}><span>✉️</span><span>info@gurugoutam.com</span></div>
           </div>
         </div>
       </div>
@@ -6609,24 +4268,15 @@ const InvoiceDialog = ({ open, onClose, invoiceData }) => {
 
   const handleDownloadPDF = async () => {
     try {
-      // Wait for dialog to fully render
       await new Promise((resolve) => setTimeout(resolve, 300));
-
-      // Find the invoice container element
       const element = document.getElementById("invoice-current-month-invoice");
-
-      if (!element) {
-        throw new Error("Could not find invoice element in DOM");
-      }
-
-      // Create a clone for PDF generation to avoid layout issues
+      if (!element) throw new Error("Could not find invoice element in DOM");
       const clone = element.cloneNode(true);
       clone.style.position = "absolute";
       clone.style.left = "-9999px";
       clone.style.visibility = "visible";
       clone.style.width = "210mm";
       document.body.appendChild(clone);
-
       const options = {
         scale: 2,
         logging: true,
@@ -6637,32 +4287,24 @@ const InvoiceDialog = ({ open, onClose, invoiceData }) => {
         windowHeight: clone.scrollHeight,
         backgroundColor: "#FFFFFF",
       };
-
       const canvas = await html2canvas(clone, options);
       document.body.removeChild(clone);
-
       const imgData = canvas.toDataURL("image/png");
       const pdf = new jsPDF("p", "mm", "a4");
-
       const imgProps = pdf.getImageProperties(imgData);
       const pdfWidth = pdf.internal.pageSize.getWidth();
       const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
-
-      // Handle multi-page PDF
       let heightLeft = pdfHeight;
       let position = 0;
       const pageHeight = pdf.internal.pageSize.getHeight();
-
       pdf.addImage(imgData, "PNG", 0, position, pdfWidth, pdfHeight);
       heightLeft -= pageHeight;
-
       while (heightLeft >= 0) {
         position = heightLeft - pdfHeight;
         pdf.addPage();
         pdf.addImage(imgData, "PNG", 0, position, pdfWidth, pdfHeight);
         heightLeft -= pageHeight;
       }
-
       pdf.save(`invoice-${invoiceData.invoice_number || "INV"}.pdf`);
     } catch (error) {
       console.error("PDF Generation Error:", error);
@@ -6672,13 +4314,11 @@ const InvoiceDialog = ({ open, onClose, invoiceData }) => {
 
   const handlePrint = () => {
     const element = document.getElementById("invoice-current-month-invoice");
-
     if (!element) {
       console.error("Print element not found");
       alert("Could not find the invoice content for printing");
       return;
     }
-
     const printWindow = window.open("", "_blank");
     printWindow.document.write(`
       <!DOCTYPE html>
@@ -6686,49 +4326,19 @@ const InvoiceDialog = ({ open, onClose, invoiceData }) => {
         <head>
           <title>Invoice - ${invoiceData.invoice_number || "INV"}</title>
           <style>
-            @page { 
-              size: A4; 
-              margin: 10mm; 
-            }
-            body { 
-              margin: 0; 
-              padding: 0; 
-              font-family: Arial, sans-serif;
-              -webkit-print-color-adjust: exact;
-              print-color-adjust: exact;
-            }
-            .print-container { 
-              width: 190mm; 
-              min-height: 277mm; 
-              padding: 0;
-              box-sizing: border-box;
-            }
-            table {
-              width: 100%;
-              border-collapse: collapse;
-            }
-            th, td {
-              border: 1px solid #000;
-              padding: 8px;
-              text-align: left;
-            }
-            th {
-              background-color: #f0f0f0;
-            }
+            @page { size: A4; margin: 10mm; }
+            body { margin: 0; padding: 0; font-family: Arial, sans-serif; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            .print-container { width: 190mm; min-height: 277mm; padding: 0; box-sizing: border-box; }
+            table { width: 100%; border-collapse: collapse; }
+            th, td { border: 1px solid #000; padding: 8px; text-align: left; }
+            th { background-color: #f0f0f0; }
           </style>
         </head>
         <body>
-          <div class="print-container">
-            ${element.innerHTML}
-          </div>
+          <div class="print-container">${element.innerHTML}</div>
           <script>
             window.onload = function() {
-              setTimeout(function() {
-                window.print();
-                setTimeout(function() {
-                  window.close();
-                }, 500);
-              }, 300);
+              setTimeout(function() { window.print(); setTimeout(function() { window.close(); }, 500); }, 300);
             }
           </script>
         </body>
@@ -6738,18 +4348,7 @@ const InvoiceDialog = ({ open, onClose, invoiceData }) => {
   };
 
   return (
-    <Dialog
-      open={open}
-      onClose={onClose}
-      maxWidth="lg"
-      fullWidth
-      scroll="paper"
-      TransitionProps={{
-        onEntered: () => {
-          // Ensures content is rendered before PDF/print
-        },
-      }}
-    >
+    <Dialog open={open} onClose={onClose} maxWidth="lg" fullWidth scroll="paper">
       <DialogTitle>Invoice</DialogTitle>
       <DialogContent>
         <div style={{ padding: "20px" }} id="invoice-current-month-invoice">
@@ -6758,24 +4357,4827 @@ const InvoiceDialog = ({ open, onClose, invoiceData }) => {
       </DialogContent>
       <DialogActions>
         <Button onClick={onClose}>Close</Button>
-
-        <Button
-          onClick={handleDownloadPDF}
-          variant="contained"
-          color="primary"
-          style={{ marginLeft: "10px" }}
-        >
-          Download PDF
-        </Button>
-        <Button onClick={handlePrint} variant="contained" color="secondary">
-          Print
-        </Button>
+        <Button onClick={handleDownloadPDF} variant="contained" color="primary" style={{ marginLeft: "10px" }}>Download PDF</Button>
+        <Button onClick={handlePrint} variant="contained" color="secondary">Print</Button>
       </DialogActions>
     </Dialog>
   );
 };
 
 
+////25-05-2026
+
+
+
+// const InvoiceDialog = ({ open, onClose, invoiceData }) => {
+//   if (!invoiceData) return null;
+
+//   const invoiceType = invoiceData.type;
+//   const isBuyTransaction = invoiceData.transaction_type === "Buy";
+//   const isRentTransaction = invoiceData.transaction_type === "Rent";
+//   const startDate = new Date(invoiceData.invoice_date);
+//   const invoiceDate = new Date(invoiceData.invoice_start_date);
+//   const paymentMode = invoiceData.payment_mode === "Postpaid";
+//   const isKarnataka = invoiceData.shippingDetail?.state === "Karnataka";
+
+//   const dcDate123 = new Date(invoiceData.dc_date);
+//   const invoiceDateOnly = new Date(invoiceData.invoice_date);
+
+//   const sameMonth =
+//     dcDate123.getMonth() === invoiceDateOnly.getMonth() &&
+//     dcDate123.getFullYear() === invoiceDateOnly.getFullYear();
+
+//   // Helper: same month & year check
+//   const isSameMonthYear = (date1, date2) => {
+//     return (
+//       date1.getFullYear() === date2.getFullYear() &&
+//       date1.getMonth() === date2.getMonth()
+//     );
+//   };
+
+//   const hasSameMonthReturn =
+//     invoiceData.credit_notes?.some((note) => {
+//       if (!note.returned_date) return false;
+//       return isSameMonthYear(
+//         new Date(invoiceData.dc_date),
+//         new Date(note.returned_date)
+//       );
+//     }) ||
+//     invoiceData.additional_delivery_challans?.some((challan) =>
+//       challan.credit_notes?.some((note) => {
+//         if (!note.returned_date) return false;
+//         return isSameMonthYear(
+//           new Date(challan.dc_date || invoiceData.dc_date),
+//           new Date(note.returned_date)
+//         );
+//       })
+//     ) ||
+//     false;
+
+//   const hasMonthDifference = invoiceData.credit_notes?.some((creditNote) => {
+//     if (!creditNote.returned_date) return false;
+//     const returnDate = new Date(creditNote.returned_date);
+//     const monthDiff =
+//       (invoiceDate.getFullYear() - returnDate.getFullYear()) * 12 +
+//       (invoiceDate.getMonth() - returnDate.getMonth());
+//     return monthDiff >= 1;
+//   });
+
+//   // Date calculations
+//   const invoiceStartDate = new Date(invoiceData.invoice_start_date);
+//   const dcDate = new Date(invoiceData.dc_date);
+//   const invoiceEndDate = new Date(invoiceData.invoice_end_date);
+//   const dcPeriodEnd = new Date(dcDate.getFullYear(), dcDate.getMonth() + 1, 0);
+
+//   const hasCreditNoteReturnedDate =
+//     invoiceData.credit_notes?.some((note) => !!note.returned_date) ||
+//     invoiceData.additional_delivery_challans?.some((challan) =>
+//       challan.credit_notes?.some((note) => !!note.returned_date)
+//     );
+
+//   function countAllDcDates(invoiceData) {
+//     if (!invoiceData) return 0;
+//     const mainDcCount = 1;
+//     const additionalDcsCount =
+//       invoiceData.additional_delivery_challans?.length || 0;
+//     return mainDcCount + additionalDcsCount;
+//   }
+
+//   const dcDatesCount = countAllDcDates(invoiceData);
+
+//   const monthDiff =
+//     (invoiceStartDate.getFullYear() - dcDate.getFullYear()) * 12 +
+//     (invoiceStartDate.getMonth() - dcDate.getMonth());
+
+//   const hasAdditionalChallans =
+//     invoiceData.additional_delivery_challans?.length > 0;
+//   let additionalChallanMonthDiff = 0;
+
+//   if (hasAdditionalChallans) {
+//     const additionalChallanDate = new Date(
+//       invoiceData.additional_delivery_challans[0].dc_date
+//     );
+//     additionalChallanMonthDiff =
+//       (invoiceStartDate.getFullYear() - additionalChallanDate.getFullYear()) *
+//       12 +
+//       (invoiceStartDate.getMonth() - additionalChallanDate.getMonth());
+//   }
+
+//   const hasSameMonthChallan =
+//     hasAdditionalChallans && additionalChallanMonthDiff === 0;
+//   const hasPrevMonthChallan =
+//     hasAdditionalChallans && additionalChallanMonthDiff === 1;
+//   const specialCase =
+//     paymentMode &&
+//     monthDiff === 0 &&
+//     (hasSameMonthChallan || hasPrevMonthChallan);
+
+//   const showDcPeriod =
+//     (monthDiff === 1 || monthDiff === 0) && dcDate.getDate() !== 1;
+
+//   const formatDate = (dateStr) => {
+//     if (!dateStr) return "-";
+//     const date = new Date(dateStr);
+//     const day = String(date.getDate()).padStart(2, "0");
+//     const month = String(date.getMonth() + 1).padStart(2, "0");
+//     const year = date.getFullYear();
+//     return `${day}/${month}/${year}`;
+//   };
+
+//   const formatINRCurrency = (amount) => {
+//     if (amount === undefined || amount === null) return "₹0.00";
+//     return new Intl.NumberFormat("en-IN", {
+//       style: "currency",
+//       currency: "INR",
+//       minimumFractionDigits: 2,
+//     }).format(amount);
+//   };
+
+//   const calculateDays = (startDate, endDate) => {
+//     const start = new Date(startDate);
+//     const end = new Date(endDate);
+
+//     let startDay = Math.min(start.getDate(), 30);
+//     let endDay = Math.min(end.getDate(), 30);
+
+//     const lastDayOfMonth = new Date(
+//       end.getFullYear(),
+//       end.getMonth() + 1,
+//       0
+//     ).getDate();
+//     if (end.getDate() === lastDayOfMonth) {
+//       endDay = 30;
+//     }
+
+//     const totalStartDays =
+//       start.getFullYear() * 360 + start.getMonth() * 30 + startDay;
+//     const totalEndDays = end.getFullYear() * 360 + end.getMonth() * 30 + endDay;
+
+//     return totalEndDays - totalStartDays + 1;
+//   };
+
+//   const calculateReturnDays = (returnDate) => {
+//     const returnDateObj = new Date(returnDate);
+//     let matchedDcDate = null;
+
+//     invoiceData.credit_notes?.forEach((note) => {
+//       if (note.returned_date === returnDate) {
+//         matchedDcDate = new Date(invoiceData.dc_date);
+//       }
+//     });
+
+//     if (!matchedDcDate) {
+//       invoiceData.additional_delivery_challans?.forEach((challan) => {
+//         challan.credit_notes?.forEach((note) => {
+//           if (note.returned_date === returnDate) {
+//             matchedDcDate = new Date(challan.dc_date || invoiceData.dc_date);
+//           }
+//         });
+//       });
+//     }
+
+//     if (!matchedDcDate) {
+//       matchedDcDate = new Date(invoiceData.dc_date);
+//     }
+
+//     if (hasSameMonthReturn) {
+//       const diffTime = Math.abs(returnDateObj - matchedDcDate);
+//       return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+//     } else {
+//       const startOfMonth = new Date(
+//         returnDateObj.getFullYear(),
+//         returnDateObj.getMonth(),
+//         1
+//       );
+//       const diffTime = Math.abs(returnDateObj - startOfMonth);
+//       return Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+//     }
+//   };
+
+//   let finalCondition = false;
+
+//   invoiceData.additional_delivery_challans?.forEach((challan) => {
+//     const challanDate = new Date(challan.dc_date);
+//     const mainDcDate = new Date(invoiceData.dc_date);
+//     const invoiceStartDate = new Date(invoiceData.invoice_start_date);
+
+//     const dcMonthDiff =
+//       (mainDcDate.getFullYear() - challanDate.getFullYear()) * 12 +
+//       (mainDcDate.getMonth() - challanDate.getMonth());
+
+//     const isSameMonthBetweenDCs = dcMonthDiff === 0;
+
+//     const dcToInvoiceMonthDiff =
+//       (invoiceStartDate.getFullYear() - mainDcDate.getFullYear()) * 12 +
+//       (invoiceStartDate.getMonth() - mainDcDate.getMonth());
+
+//     if (isSameMonthBetweenDCs && dcToInvoiceMonthDiff === 1) {
+//       finalCondition = true;
+//     }
+//   });
+
+//   // ==================== COMPLETE SPECIFICATIONS FUNCTION FOR ALL COMPONENTS ====================
+//   const getFinalSpecificationsForDevice = (deviceId, baseProduct, invoiceStartDate) => {
+//     if (!baseProduct) return baseProduct;
+//     if (!invoiceData) return baseProduct;
+
+//     const deviceAssetTransactions = getAssetTransactionsForDevices([deviceId]);
+//     const sortedTransactions = [...deviceAssetTransactions].sort((a, b) => new Date(a.action_date) - new Date(b.action_date));
+
+//     const filteredTransactions = sortedTransactions.filter((txn) => {
+//       const actionDate = new Date(txn.action_date);
+//       return actionDate <= invoiceStartDate;
+//     });
+
+//     // Initialize all hardware specifications
+//     let currentSpecs = {
+//       // Processor / CPU
+//       processor: baseProduct.processor_model || baseProduct.processor || null,
+//       processor_speed: baseProduct.processor_speed || null,
+//       processor_cores: baseProduct.processor_cores || null,
+
+//       // RAM
+//       ram: baseProduct.ram || null,
+//       ram_type: baseProduct.ram_type || null,
+//       ram_speed: baseProduct.ram_speed || null,
+
+//       // Storage
+//       storage: baseProduct.storage || null,
+//       storage_type: baseProduct.disk_type || baseProduct.storage_type || null,
+//       storage_capacity: baseProduct.capacity || null,
+
+//       // Motherboard
+//       motherboard: baseProduct.motherboard_model || baseProduct.motherboard || null,
+//       motherboard_chipset: baseProduct.chipset || null,
+//       motherboard_socket: baseProduct.socket_type || null,
+
+//       // Cabinet / Case
+//       cabinet: baseProduct.cabinet_model || baseProduct.cabinet || null,
+//       cabinet_form_factor: baseProduct.form_factor || null,
+
+//       // GPU / Graphics Card
+//       gpu: baseProduct.graphics_card || baseProduct.gpu || null,
+//       gpu_memory: baseProduct.vram || baseProduct.gpu_memory || null,
+
+//       // SMPS / Power Supply
+//       smps: baseProduct.smps_model || baseProduct.smps || null,
+//       smps_wattage: baseProduct.wattage || null,
+//       smps_efficiency: baseProduct.efficiency || null,
+
+//       // Network / LAN Card
+//       lan_card: baseProduct.lan_card || null,
+//       network_speed: baseProduct.network_speed || null,
+//       wifi_standard: baseProduct.wifi_standard || null,
+
+//       // Basic info
+//       brand: baseProduct.brand || null,
+//       model: baseProduct.model || null,
+//       os: baseProduct.os || null
+//     };
+
+//     // Track components for combining multiple items
+//     let ramComponents = [];
+//     let storageComponents = [];
+//     let processorComponents = [];
+//     let motherboardComponents = [];
+//     let cabinetComponents = [];
+//     let gpuComponents = [];
+//     let smpsComponents = [];
+//     let lanCardComponents = [];
+
+//     if (currentSpecs.ram) ramComponents.push(currentSpecs.ram);
+//     if (currentSpecs.storage) storageComponents.push(currentSpecs.storage);
+//     if (currentSpecs.processor) processorComponents.push(currentSpecs.processor);
+//     if (currentSpecs.motherboard) motherboardComponents.push(currentSpecs.motherboard);
+//     if (currentSpecs.cabinet) cabinetComponents.push(currentSpecs.cabinet);
+//     if (currentSpecs.gpu) gpuComponents.push(currentSpecs.gpu);
+//     if (currentSpecs.smps) smpsComponents.push(currentSpecs.smps);
+//     if (currentSpecs.lan_card) lanCardComponents.push(currentSpecs.lan_card);
+
+//     // Process all transactions
+//     filteredTransactions.forEach((txn) => {
+//       const type = (txn.item_type || "").toLowerCase();
+//       const value = txn.size || txn.specification || null;
+//       const status = (txn.status || "").toLowerCase();
+
+//       if (status === "added") {
+//         // RAM handling
+//         if (type === "ram" && value) {
+//           ramComponents.push(value);
+//           currentSpecs.ram = ramComponents.join(" + ");
+//         }
+//         // Storage handling (SSD, HDD, NVMe)
+//         else if ((type === "storage" || type === "ssd" || type === "hdd" || type === "nvme") && value) {
+//           storageComponents.push(value);
+//           currentSpecs.storage = storageComponents.join(" + ");
+//         }
+//         // Processor handling
+//         else if (type === "processor" && value) {
+//           processorComponents.push(value);
+//           currentSpecs.processor = processorComponents.join(" + ");
+//         }
+//         // Motherboard handling
+//         else if (type === "motherboard" && value) {
+//           motherboardComponents.push(value);
+//           currentSpecs.motherboard = motherboardComponents.join(" + ");
+//         }
+//         // Cabinet handling
+//         else if (type === "cabinet" && value) {
+//           cabinetComponents.push(value);
+//           currentSpecs.cabinet = cabinetComponents.join(" + ");
+//         }
+//         // GPU handling
+//         else if (type === "gpu" && value) {
+//           gpuComponents.push(value);
+//           currentSpecs.gpu = gpuComponents.join(" + ");
+//         }
+//         // SMPS handling
+//         else if (type === "smps" && value) {
+//           smpsComponents.push(value);
+//           currentSpecs.smps = smpsComponents.join(" + ");
+//         }
+//         // LAN Card handling
+//         else if ((type === "lan_card" || type === "network_card" || type === "ethernet_card" || type === "wifi_card") && value) {
+//           lanCardComponents.push(value);
+//           currentSpecs.lan_card = lanCardComponents.join(" + ");
+//         }
+//       }
+//       else if (status === "removed") {
+//         // RAM removal
+//         if (type === "ram" && value) {
+//           const index = ramComponents.indexOf(value);
+//           if (index > -1) ramComponents.splice(index, 1);
+//           currentSpecs.ram = ramComponents.length > 0 ? ramComponents.join(" + ") : null;
+//         }
+//         // Storage removal
+//         else if ((type === "storage" || type === "ssd" || type === "hdd" || type === "nvme") && value) {
+//           const index = storageComponents.indexOf(value);
+//           if (index > -1) storageComponents.splice(index, 1);
+//           currentSpecs.storage = storageComponents.length > 0 ? storageComponents.join(" + ") : null;
+//         }
+//         // Processor removal - revert to base
+//         else if (type === "processor") {
+//           currentSpecs.processor = baseProduct.processor_model || baseProduct.processor || null;
+//         }
+//         // Motherboard removal - revert to base
+//         else if (type === "motherboard") {
+//           currentSpecs.motherboard = baseProduct.motherboard_model || baseProduct.motherboard || null;
+//         }
+//         // Cabinet removal - revert to base
+//         else if (type === "cabinet") {
+//           currentSpecs.cabinet = baseProduct.cabinet_model || baseProduct.cabinet || null;
+//         }
+//         // GPU removal - revert to base
+//         else if (type === "gpu") {
+//           currentSpecs.gpu = baseProduct.graphics_card || baseProduct.gpu || null;
+//         }
+//         // SMPS removal - revert to base
+//         else if (type === "smps") {
+//           currentSpecs.smps = baseProduct.smps_model || baseProduct.smps || null;
+//         }
+//         // LAN Card removal
+//         else if ((type === "lan_card" || type === "network_card" || type === "ethernet_card" || type === "wifi_card") && value) {
+//           const index = lanCardComponents.indexOf(value);
+//           if (index > -1) lanCardComponents.splice(index, 1);
+//           currentSpecs.lan_card = lanCardComponents.length > 0 ? lanCardComponents.join(" + ") : null;
+//         }
+//       }
+//     });
+
+//     const finalSpecs = { ...baseProduct };
+//     finalSpecs.ram = currentSpecs.ram;
+//     finalSpecs.storage = currentSpecs.storage;
+//     finalSpecs.processor = currentSpecs.processor;
+//     finalSpecs.motherboard = currentSpecs.motherboard;
+//     finalSpecs.cabinet = currentSpecs.cabinet;
+//     finalSpecs.gpu = currentSpecs.gpu;
+//     finalSpecs.smps = currentSpecs.smps;
+//     finalSpecs.lan_card = currentSpecs.lan_card;
+//     finalSpecs.processor_speed = currentSpecs.processor_speed;
+//     finalSpecs.processor_cores = currentSpecs.processor_cores;
+//     finalSpecs.ram_type = currentSpecs.ram_type;
+//     finalSpecs.ram_speed = currentSpecs.ram_speed;
+//     finalSpecs.storage_type = currentSpecs.storage_type;
+//     finalSpecs.storage_capacity = currentSpecs.storage_capacity;
+//     finalSpecs.motherboard_chipset = currentSpecs.motherboard_chipset;
+//     finalSpecs.motherboard_socket = currentSpecs.motherboard_socket;
+//     finalSpecs.cabinet_form_factor = currentSpecs.cabinet_form_factor;
+//     finalSpecs.gpu_memory = currentSpecs.gpu_memory;
+//     finalSpecs.smps_wattage = currentSpecs.smps_wattage;
+//     finalSpecs.smps_efficiency = currentSpecs.smps_efficiency;
+//     finalSpecs.network_speed = currentSpecs.network_speed;
+//     finalSpecs.wifi_standard = currentSpecs.wifi_standard;
+
+//     return finalSpecs;
+//   };
+
+//   // ==================== COMPLETE SPECIFICATIONS FORMATTING ====================
+//   const formatSpecifications = (specs) => {
+//     const parts = [];
+
+//     // Basic Info
+//     if (specs.brand) parts.push(`Brand: ${specs.brand}`);
+//     if (specs.model) parts.push(`Model: ${specs.model}`);
+
+//     // Processor / CPU
+//     if (specs.processor) parts.push(`Processor: ${specs.processor}`);
+//     if (specs.processor_speed) parts.push(`Speed: ${specs.processor_speed}`);
+//     if (specs.processor_cores) parts.push(`Cores: ${specs.processor_cores}`);
+
+//     // RAM
+//     if (specs.ram) parts.push(`RAM: ${specs.ram}`);
+//     if (specs.ram_type) parts.push(`RAM Type: ${specs.ram_type}`);
+//     if (specs.ram_speed) parts.push(`RAM Speed: ${specs.ram_speed}`);
+
+//     // Storage
+//     if (specs.storage) parts.push(`Storage: ${specs.storage}`);
+//     if (specs.storage_type) parts.push(`Storage Type: ${specs.storage_type}`);
+//     if (specs.storage_capacity) parts.push(`Capacity: ${specs.storage_capacity}`);
+
+//     // Motherboard
+//     if (specs.motherboard) parts.push(`Motherboard: ${specs.motherboard}`);
+//     if (specs.motherboard_chipset) parts.push(`Chipset: ${specs.motherboard_chipset}`);
+//     if (specs.motherboard_socket) parts.push(`Socket: ${specs.motherboard_socket}`);
+
+//     // Cabinet
+//     if (specs.cabinet) parts.push(`Cabinet: ${specs.cabinet}`);
+//     if (specs.cabinet_form_factor) parts.push(`Form Factor: ${specs.cabinet_form_factor}`);
+
+//     // GPU
+//     if (specs.gpu) parts.push(`GPU: ${specs.gpu}`);
+//     if (specs.gpu_memory) parts.push(`VRAM: ${specs.gpu_memory}`);
+
+//     // SMPS / Power Supply
+//     if (specs.smps) parts.push(`SMPS: ${specs.smps}`);
+//     if (specs.smps_wattage) parts.push(`Wattage: ${specs.smps_wattage}W`);
+//     if (specs.smps_efficiency) parts.push(`Efficiency: ${specs.smps_efficiency}`);
+
+//     // Network / LAN Card
+//     if (specs.lan_card) parts.push(`LAN Card: ${specs.lan_card}`);
+//     if (specs.network_speed) parts.push(`Network Speed: ${specs.network_speed}`);
+//     if (specs.wifi_standard) parts.push(`WiFi: ${specs.wifi_standard}`);
+
+//     // OS
+//     if (specs.os) parts.push(`OS: ${specs.os}`);
+
+//     return parts.join(', ');
+//   };
+
+//   // ==================== CALCULATE INVOICE ITEMS ====================
+//   const calculateInvoiceItems = () => {
+//     const allReturnsMap = {};
+//     const allSwapsMap = {};
+//     const invoiceStartDateObj = new Date(invoiceData.invoice_start_date);
+
+//     // Process main credit notes
+//     invoiceData.credit_notes?.forEach((cn) => {
+//       const returnedDate = new Date(cn.returned_date);
+//       const dcDate = new Date(cn.dc_date || invoiceData.dc_date);
+//       const isReturnBeforeInvoiceStart = returnedDate < invoiceStartDateObj;
+
+//       cn.items?.forEach((ri) => {
+//         const key = `${ri.product_id}`;
+//         if (!allReturnsMap[key]) allReturnsMap[key] = [];
+
+//         const returnedStartDate = new Date(
+//           returnedDate.getFullYear(),
+//           returnedDate.getMonth(),
+//           1
+//         );
+
+//         const daysUsed = hasSameMonthReturn
+//           ? calculateDays(dcDate, returnedDate)
+//           : calculateDays(returnedStartDate, returnedDate);
+
+//         const dailyRate = invoiceData.items?.find(
+//           (item) => item.product_id === ri.product_id
+//         )
+//           ? Number(
+//             invoiceData.items.find(
+//               (item) => item.product_id === ri.product_id
+//             ).unit_price
+//           ) / 30
+//           : 0;
+
+//         allReturnsMap[key].push({
+//           returnedDate,
+//           daysUsed,
+//           deviceIds: ri.device_ids,
+//           amount: parseFloat(
+//             (daysUsed * dailyRate * ri.device_ids.length).toFixed(2)
+//           ),
+//           source: "root",
+//           dcDate: dcDate,
+//           isReturnBeforeInvoiceStart,
+//         });
+//       });
+//     });
+
+//     // Process main asset swaps
+//     invoiceData.asset_swaps?.forEach((swap) => {
+//       const swappedDate = new Date(swap.swapped_on);
+//       const dcDate = new Date(invoiceData.dc_date);
+//       const isSwapBeforeInvoiceStart = swappedDate < invoiceStartDateObj;
+
+//       const key = `${swap.product_id}`;
+//       if (!allSwapsMap[key]) allSwapsMap[key] = [];
+
+//       const swappedStartDate = new Date(
+//         swappedDate.getFullYear(),
+//         swappedDate.getMonth(),
+//         1
+//       );
+
+//       const sameMonth = isSameMonthYear(dcDate, swappedDate);
+
+//       const daysUsed = sameMonth
+//         ? calculateDays(dcDate, swappedDate)
+//         : calculateDays(swappedStartDate, swappedDate);
+
+//       const dailyRateSource =
+//         invoiceData.items?.find((item) => item.product_id === swap.product_id)?.unit_price ||
+//         swap.rent_price_per_month ||
+//         0;
+
+//       const dailyRate = Number(dailyRateSource) / 30;
+
+//       allSwapsMap[key].push({
+//         swappedDate,
+//         daysUsed,
+//         deviceIds: [swap.asset_id],
+//         amount: parseFloat((daysUsed * dailyRate).toFixed(2)),
+//         source: "root",
+//         dcDate: dcDate,
+//         reason: swap.reason,
+//         newDeviceIds: swap.new_device_ids || [],
+//         isSwapBeforeInvoiceStart,
+//       });
+//     });
+
+//     // Process additional delivery challans
+//     invoiceData.additional_delivery_challans?.forEach((challan) => {
+//       const challanDcDate = new Date(challan.dc_date);
+
+//       challan.credit_notes?.forEach((cn) => {
+//         const returnedDate = new Date(cn.returned_date);
+//         const isReturnBeforeInvoiceStart = returnedDate < invoiceStartDateObj;
+
+//         cn.items?.forEach((ri) => {
+//           const key = `${ri.product_id}`;
+//           if (!allReturnsMap[key]) allReturnsMap[key] = [];
+
+//           const returnedStartDate = new Date(
+//             returnedDate.getFullYear(),
+//             returnedDate.getMonth(),
+//             1
+//           );
+
+//           const daysUsed = hasSameMonthReturn
+//             ? calculateDays(challanDcDate, returnedDate)
+//             : calculateDays(returnedStartDate, returnedDate);
+
+//           const dailyRate = challan.items?.find(
+//             (item) => item.product_id === ri.product_id
+//           )
+//             ? Number(
+//               challan.items.find((item) => item.product_id === ri.product_id)
+//                 .unit_price
+//             ) / 30
+//             : 0;
+
+//           allReturnsMap[key].push({
+//             returnedDate,
+//             daysUsed,
+//             dailyRate,
+//             deviceIds: ri.device_ids,
+//             amount: parseFloat(
+//               (daysUsed * dailyRate * ri.device_ids.length).toFixed(2)
+//             ),
+//             source: "additional",
+//             dcDate: challanDcDate,
+//             isReturnBeforeInvoiceStart,
+//           });
+//         });
+//       });
+
+//       challan.asset_swaps?.forEach((swap) => {
+//         const swappedDate = new Date(swap.swapped_on);
+//         const isSwapBeforeInvoiceStart = swappedDate < invoiceStartDateObj;
+
+//         const key = `${swap.product_id}`;
+//         if (!allSwapsMap[key]) allSwapsMap[key] = [];
+
+//         const swappedStartDate = new Date(
+//           swappedDate.getFullYear(),
+//           swappedDate.getMonth(),
+//           1
+//         );
+
+//         const daysUsed = hasSameMonthReturn
+//           ? calculateDays(challanDcDate, swappedDate)
+//           : calculateDays(swappedStartDate, swappedDate);
+
+//         const dailyRate = challan.items?.find(
+//           (item) => item.product_id === swap.product_id
+//         )
+//           ? Number(
+//             challan.items.find((item) => item.product_id === swap.product_id)
+//               .unit_price
+//           ) / 30
+//           : 0;
+
+//         allSwapsMap[key].push({
+//           swappedDate,
+//           daysUsed,
+//           deviceIds: [swap.asset_id],
+//           amount: parseFloat((daysUsed * dailyRate).toFixed(2)),
+//           source: "additional",
+//           dcDate: challanDcDate,
+//           reason: swap.reason,
+//           newDeviceIds: swap.new_device_ids || [],
+//           isSwapBeforeInvoiceStart,
+//         });
+//       });
+//     });
+
+//     const mainItems =
+//       invoiceData.items?.map((item) => {
+//         const rate = isBuyTransaction
+//           ? Number(item.total_price) || 0
+//           : Number(item.unit_price) || 0;
+//         const dailyRate = rate / 30;
+
+//         const originalDeviceIds = item.device_ids || [];
+//         const hasDeviceIds = originalDeviceIds.length > 0;
+
+//         const baseQuantity = hasDeviceIds
+//           ? originalDeviceIds.length
+//           : item.quantity || 0;
+
+//         let days;
+
+//         const isMidMonthDelivery = dcDate.getDate() !== 1;
+
+//         if (isMidMonthDelivery && sameMonth) {
+//           days = calculateDays(dcDate, invoiceEndDate);
+//         } else if (!sameMonth && monthDiff === 1) {
+//           days = calculateDays(invoiceStartDate, invoiceEndDate);
+//         } else {
+//           days = calculateDays(invoiceStartDate, invoiceEndDate);
+//         }
+
+//         const isFullMonth = isBuyTransaction ? true : days >= 28;
+
+//         const returnedDevices =
+//           allReturnsMap[item.product_id]?.filter(
+//             (rd) => new Date(rd.returnedDate) <= invoiceEndDate
+//           ) || [];
+
+//         const swappedDevices =
+//           allSwapsMap[item.product_id]?.filter(
+//             (sd) => new Date(sd.swappedDate) <= invoiceEndDate
+//           ) || [];
+
+//         // ONLY get devices that were returned/swapped BEFORE invoice start for subtraction
+//         const preInvoiceReturnedDeviceIds = returnedDevices
+//           .filter((rd) => rd.isReturnBeforeInvoiceStart)
+//           .flatMap((rd) => rd.deviceIds);
+
+//         const preInvoiceSwappedDeviceIds = swappedDevices
+//           .filter((sd) => sd.isSwapBeforeInvoiceStart)
+//           .flatMap((sd) => sd.deviceIds);
+
+//         let effectiveDeviceIds = [];
+//         let effectiveQty = baseQuantity;
+
+//         if (hasDeviceIds) {
+//           // ONLY subtract devices that were returned/swapped BEFORE invoice start date
+//           effectiveDeviceIds = originalDeviceIds.filter(
+//             (id) =>
+//               !preInvoiceReturnedDeviceIds.includes(id) &&
+//               !preInvoiceSwappedDeviceIds.includes(id)
+//           );
+//           effectiveQty = effectiveDeviceIds.length;
+//         } else {
+//           const totalReturnedQty = preInvoiceReturnedDeviceIds.length;
+//           const totalSwappedQty = preInvoiceSwappedDeviceIds.length;
+//           effectiveQty = Math.max(
+//             0,
+//             baseQuantity - totalReturnedQty - totalSwappedQty
+//           );
+//         }
+
+//         const dcDays = calculateDays(dcDate, dcPeriodEnd);
+
+//         let fullMonthAmount;
+//         if (paymentMode) {
+//           fullMonthAmount = effectiveQty * dailyRate * days;
+//         } else {
+//           fullMonthAmount = isFullMonth
+//             ? effectiveQty * rate
+//             : effectiveQty * dailyRate * days;
+//         }
+
+//         const returnedDevicesAmount = returnedDevices.reduce(
+//           (sum, rd) => sum + rd.amount,
+//           0
+//         );
+
+//         const swappedDevicesAmount = swappedDevices.reduce(
+//           (sum, sd) => sum + sd.amount,
+//           0
+//         );
+
+//         const dcAmountBeforeReturns =
+//           showDcPeriod && !paymentMode && !isBuyTransaction
+//             ? effectiveQty * dailyRate * dcDays
+//             : 0;
+
+//         let description;
+
+//         if (isMidMonthDelivery && sameMonth) {
+//           description = `Billing Start Date: ${formatDate(dcDate)} - Billing End Date: ${formatDate(invoiceEndDate)}`;
+//         } else {
+//           description = `Billing Start Date: ${formatDate(invoiceStartDate)} - Billing End Date: ${formatDate(invoiceEndDate)}`;
+//         }
+
+//         return {
+//           ...item,
+//           originalDeviceIds,
+//           device_ids: effectiveDeviceIds,
+//           quantity: effectiveQty,
+//           rate,
+//           dailyRate,
+//           days,
+//           dcDays,
+//           amount: fullMonthAmount,
+//           dcAmountBeforeReturns,
+//           returnedDevices,
+//           swappedDevices,
+//           totalReturnedQtyAmount: returnedDevicesAmount + swappedDevicesAmount,
+//           description,
+//           isFullMonth,
+//           isSpecialCase: specialCase,
+//         };
+//       }) || [];
+
+//     const additionalItems =
+//       invoiceData.additional_delivery_challans?.flatMap((challan) => {
+//         const challanDateObj = new Date(challan.dc_date);
+//         const orderSaleDateObj = new Date(challan.order_sale_date);
+//         const challanMonthStart = new Date(
+//           orderSaleDateObj.getFullYear(),
+//           orderSaleDateObj.getMonth(),
+//           1
+//         );
+
+//         const invoiceStartDateObj = new Date(invoiceData.invoice_start_date);
+//         const invoiceEndDateObj = new Date(invoiceData.invoice_end_date);
+
+//         const monthDiff =
+//           (invoiceStartDateObj.getFullYear() - challanDateObj.getFullYear()) *
+//           12 +
+//           (invoiceStartDateObj.getMonth() - challanDateObj.getMonth());
+
+//         return challan.items.map((item) => {
+//           const quantity = Number(item.quantity) || 0;
+//           const unit_price = quantity > 0 ? Number(item.unit_price) : 0;
+
+//           const dailyRate = unit_price / 30;
+//           const device_ids = item.device_ids || [];
+
+//           let days,
+//             amount,
+//             description,
+//             midMonthDays = 0;
+
+//           if (monthDiff === 1) {
+//             const deliveryMonthEnd = new Date(
+//               challanDateObj.getFullYear(),
+//               challanDateObj.getMonth() + 1,
+//               0
+//             );
+//             midMonthDays = calculateDays(challanDateObj, deliveryMonthEnd);
+//             days = calculateDays(invoiceStartDateObj, invoiceEndDateObj);
+//             amount =
+//               quantity * dailyRate * midMonthDays + quantity * unit_price;
+//             description = `Billing Start Date: ${formatDate(
+//               invoiceStartDateObj
+//             )} to ${formatDate(invoiceEndDate)}`;
+//           } else if (monthDiff === 0 && challanDateObj.getDate() !== 1) {
+//             days = calculateDays(challanDateObj, invoiceEndDateObj);
+
+//             amount = quantity * dailyRate * days;
+//             description = `Billing Start Date: ${formatDate(
+//               challan.dc_date
+//             )} to ${formatDate(invoiceEndDate)}`;
+//           } else {
+//             if (paymentMode) {
+//               if (
+//                 challan.order_sale_date &&
+//                 isSameMonthYear(invoiceStartDateObj, orderSaleDateObj)
+//               ) {
+//                 days = calculateDays(challanMonthStart, orderSaleDateObj);
+//               }
+//             }
+//             days = calculateDays(invoiceStartDateObj, invoiceEndDateObj);
+
+//             amount = quantity * unit_price;
+//             description = `Billing Start Date: ${formatDate(
+//               invoiceStartDate
+//             )} - Billing End Date: ${formatDate(invoiceEndDate)}`;
+//           }
+
+//           const returnedDevices =
+//             allReturnsMap[item.product_id]?.filter(
+//               (rd) =>
+//                 new Date(rd.returnedDate) <= invoiceEndDate &&
+//                 rd.source === "additional"
+//             ) || [];
+
+//           const swappedDevices =
+//             allSwapsMap[item.product_id]?.filter(
+//               (sd) =>
+//                 new Date(sd.swappedDate) <= invoiceEndDate &&
+//                 sd.source === "additional"
+//             ) || [];
+
+//           return {
+//             ...item,
+//             isAdditionalChallan: true,
+//             challanNumber: challan.dc_id,
+//             challanDate: challan.dc_date,
+//             device_ids,
+//             quantity,
+//             unit_price,
+//             rate: unit_price,
+//             dailyRate,
+//             amount,
+//             days,
+//             midMonthDays,
+//             description,
+//             productDetails: item.product,
+//             isFullMonth: days >= 28,
+//             isSpecialCase: specialCase,
+//             isPrevMonthDelivery: monthDiff === 1,
+//             shouldShowMidMonth:
+//               monthDiff === 1 ||
+//               (monthDiff === 0 && challanDateObj.getDate() !== 1),
+//             returnedDevices,
+//             swappedDevices,
+//           };
+//         });
+//       }) || [];
+
+//     return [...mainItems, ...additionalItems];
+//   };
+//   // ==================== END OF CALCULATE INVOICE ITEMS ====================
+
+//   const items = calculateInvoiceItems();
+
+//   let totalAmount = 0;
+//   let rowCounter = 0;
+//   let renderedAssetIds = new Set();
+
+//   const mergeDeviceIds = (items) => {
+//     const allIds = items.flatMap((i) => i.device_ids || []);
+//     return [...new Set(allIds)];
+//   };
+
+//   const calculateAmount = (daysUsed, dailyRate, baseCount, monthlyRate) => {
+//     const roundedRate = parseFloat(dailyRate.toFixed(2));
+//     const rawAmount =
+//       daysUsed === 30
+//         ? monthlyRate * baseCount
+//         : daysUsed * roundedRate * baseCount;
+//     return parseFloat(rawAmount.toFixed(2));
+//   };
+
+//   const buildTransactionsMap = (invoiceData) => {
+//     const map = {};
+
+//     const pushTxn = (txn) => {
+//       if (!txn) return;
+//       const deviceId = txn.parent_asset_id || txn.parentAssetId || txn.asset_parent_id || txn.asset_parent || txn.parent_asset || txn.device_id;
+//       if (!deviceId) return;
+//       if (!map[deviceId]) map[deviceId] = [];
+//       map[deviceId].push(txn);
+//     };
+
+//     (invoiceData.asset_transactions || []).forEach(pushTxn);
+
+//     (invoiceData.items || []).forEach((it) => {
+//       (it.asset_transactions || []).forEach((x) => {
+//         if (x && x.device_id && Array.isArray(x.transactions)) {
+//           x.transactions.forEach(pushTxn);
+//         } else {
+//           pushTxn(x);
+//         }
+//       });
+//     });
+
+//     Object.keys(map).forEach((k) => {
+//       map[k].sort((a, b) => new Date(a.action_date) - new Date(b.action_date));
+//     });
+
+//     return map;
+//   };
+
+//   const getAssetTransactionsForDevices = (deviceIds = []) => {
+//     if (!invoiceData) return [];
+//     const txnsMap = buildTransactionsMap(invoiceData);
+//     const results = [];
+//     deviceIds.forEach((did) => {
+//       (txnsMap[did] || []).forEach((t) => results.push(t));
+//     });
+//     return results.sort((a, b) => new Date(a.action_date) - new Date(b.action_date));
+//   };
+
+//   const shouldShowRow = (item) => {
+//     const hasReturnedDevices = item.returnedDevices?.some(
+//       (rd) => rd.deviceIds?.length > 0 || rd.quantity > 0
+//     );
+//     const hasSwappedDevices = item.swappedDevices?.some(
+//       (sd) => sd.deviceIds?.length > 0
+//     );
+//     return (
+//       item.quantity > 0 ||
+//       item.isAdditionalChallan ||
+//       hasReturnedDevices ||
+//       hasSwappedDevices
+//     );
+//   };
+
+
+
+//   const renderAssetTransactionRow = (product, parentItem) => {
+//     if (invoiceData.is_small_amount) return null;
+
+//     const invoiceDate = new Date(invoiceData.invoice_start_date);
+//     const paymentMode = invoiceData.payment_mode === "Postpaid";
+
+//     // Get transactions from multiple sources
+//     let allAssetTransactions = [...(invoiceData.asset_transactions || [])];
+
+//     // Also check items for nested asset_transactions
+//     (invoiceData.items || []).forEach((item) => {
+//       if (item.asset_transactions && Array.isArray(item.asset_transactions)) {
+//         item.asset_transactions.forEach((at) => {
+//           if (at.transactions && Array.isArray(at.transactions)) {
+//             allAssetTransactions.push(...at.transactions);
+//           } else {
+//             allAssetTransactions.push(at);
+//           }
+//         });
+//       }
+//     });
+
+//     const productAssetTransactions = allAssetTransactions.filter(
+//       (at) => at.product_id === parentItem.product_id
+//     );
+
+//     if (!productAssetTransactions?.length) return;
+
+//     // Strong deduplication
+//     const uniqueMap = new Map();
+
+//     productAssetTransactions.forEach((txn) => {
+//       const actionDate = new Date(txn.action_date);
+//       const monthStartDate = new Date(
+//         actionDate.getFullYear(),
+//         actionDate.getMonth(),
+//         1
+//       );
+//       const monthEndDate = new Date(
+//         actionDate.getFullYear(),
+//         actionDate.getMonth() + 1,
+//         0
+//       );
+
+//       let daysUsed = 0;
+//       let billingStartDate = "";
+//       let billingEndDate = "";
+
+//       if (txn.status === "Removed") {
+//         daysUsed = calculateDays(monthStartDate, actionDate);
+//         billingStartDate = formatDate(monthStartDate);
+//         billingEndDate = formatDate(actionDate);
+//       } else if (txn.status === "Added") {
+//         daysUsed = calculateDays(actionDate, monthEndDate);
+//         billingStartDate = formatDate(actionDate);
+//         billingEndDate = formatDate(monthEndDate);
+//       }
+
+//       const uniqueKey = `${txn.parent_asset_id}|${txn.status}|${txn.action_date}|${txn.specification}|${txn.price}|${billingStartDate}|${billingEndDate}`;
+
+//       if (!uniqueMap.has(uniqueKey)) {
+//         uniqueMap.set(uniqueKey, txn);
+//       }
+//     });
+
+//     const uniqueTransactions = Array.from(uniqueMap.values());
+
+//     const groupedTransactions = {};
+
+//     uniqueTransactions.forEach((assetTxn) => {
+//       const actionDate = new Date(assetTxn.action_date);
+//       const monthStartDate = new Date(
+//         actionDate.getFullYear(),
+//         actionDate.getMonth(),
+//         1
+//       );
+//       const monthEndDate = new Date(
+//         actionDate.getFullYear(),
+//         actionDate.getMonth() + 1,
+//         0
+//       );
+
+//       const monthDiff =
+//         (invoiceDate.getFullYear() - actionDate.getFullYear()) * 12 +
+//         (invoiceDate.getMonth() - actionDate.getMonth());
+
+//       const specialCase = paymentMode ? monthDiff === 0 : monthDiff === 1;
+
+//       if (!specialCase) return;
+
+//       let daysUsed = 0;
+//       let billingStartDate = "";
+//       let billingEndDate = "";
+
+//       if (assetTxn.status === "Removed") {
+//         if (!paymentMode) return;
+//         daysUsed = calculateDays(monthStartDate, actionDate);
+//         billingStartDate = formatDate(monthStartDate);
+//         billingEndDate = formatDate(actionDate);
+//       } else if (assetTxn.status === "Added") {
+//         daysUsed = calculateDays(actionDate, monthEndDate);
+//         billingStartDate = formatDate(actionDate);
+//         billingEndDate = formatDate(monthEndDate);
+//       }
+
+//       const dailyRate = Math.round((assetTxn.price / 30) * 100) / 100;
+//       const amountPerItem = Math.round(daysUsed * dailyRate * 100) / 100;
+
+//       const groupKey = `${assetTxn.specification}|${assetTxn.status}|${billingStartDate}|${billingEndDate}|${daysUsed}`;
+
+//       if (!groupedTransactions[groupKey]) {
+//         groupedTransactions[groupKey] = {
+//           assetIds: new Set(),
+//           daysUsed,
+//           billingStartDate,
+//           billingEndDate,
+//           price: assetTxn.price,
+//           dailyRate,
+//           amountPerItem,
+//           totalAmount: 0,
+//           specification: assetTxn.specification,
+//           status: assetTxn.status
+//         };
+//       }
+
+//       groupedTransactions[groupKey].assetIds.add(assetTxn.parent_asset_id);
+//     });
+
+//     const rows = [];
+//     Object.values(groupedTransactions).forEach((group, index) => {
+//       const quantity = group.assetIds.size;
+//       const totalGroupAmount = Math.round(group.amountPerItem * quantity * 100) / 100;
+
+//       totalAmount += totalGroupAmount;
+
+//       const uniqueAssetIds = Array.from(group.assetIds).sort((a, b) => {
+//         const numA = parseInt(a.match(/\d+/) || 0);
+//         const numB = parseInt(b.match(/\d+/) || 0);
+//         return numA - numB;
+//       });
+
+//       rows.push(
+//         <tr
+//           key={`asset-group-${index}`}
+//           style={rowCounter++ % 2 === 0 ? tableRowEvenStyle : tableRowOddStyle}
+//         >
+//           <td style={tableCellCenterStyle}>{rowCounter}</td>
+//           <td style={tableCellStyle}>
+//             <div style={itemTitleStyle}>
+//               {parentItem.product_name} - {group.specification} ({group.status})
+//             </div>
+//             <br />
+//             <div style={specificationsStyle}>
+//               Asset IDs: {uniqueAssetIds.join(", ")}
+//             </div>
+//             <div style={itemTitleStyle}>
+//               Billing Start Date: {group.billingStartDate} - Billing End Date:{" "}
+//               {group.billingEndDate}
+//             </div>
+//           </td>
+//           <td style={tableCellCenterStyle}>{quantity}</td>
+//           {invoiceData.transaction_type === "Rent" && (
+//             <>
+//               <td style={tableCellCenterStyle}>{group.daysUsed}</td>
+//               <td style={tableCellCenterStyle}>
+//                 {formatINRCurrency(group.dailyRate)}
+//               </td>
+//             </>
+//           )}
+//           <td style={tableCellRightStyle}>
+//             {formatINRCurrency(group.price)}
+//           </td>
+//           <td style={tableCellRightStyle}>
+//             {formatINRCurrency(totalGroupAmount)}
+//           </td>
+//         </tr>
+//       );
+//     });
+
+//     return rows;
+//   };
+
+//   const findDeviceDcDate = (deviceId) => {
+//     const mainItem = invoiceData.items.find(item =>
+//       item.device_ids.includes(deviceId)
+//     );
+//     if (mainItem) {
+//       return {
+//         dc_date: new Date(invoiceData.dc_date),
+//         times_created_in_invoice: invoiceData.times_created_in_invoice
+//       };
+//     }
+
+//     for (const challan of invoiceData.additional_delivery_challans || []) {
+//       const challanItem = challan.items.find(item =>
+//         item.device_ids.includes(deviceId)
+//       );
+//       if (challanItem) {
+//         return {
+//           dc_date: new Date(challan.dc_date),
+//           times_created_in_invoice: challan.times_created_in_invoice
+//         };
+//       }
+//     }
+
+//     return {
+//       dc_date: new Date(invoiceData.dc_date || invoiceData.invoice_start_date),
+//       times_created_in_invoice: invoiceData.times_created_in_invoice || 1
+//     };
+//   };
+
+//   const shouldRenderMidMonth = (item, isAdditionalChallan = false) => {
+//     if (isAdditionalChallan) return false;
+//     const challanDate = new Date(invoiceData.dc_date);
+//     const invoiceStartDate = new Date(invoiceData.invoice_start_date);
+//     const challanMonth = new Date(challanDate.getFullYear(), challanDate.getMonth(), 1);
+//     const invoiceMonth = new Date(invoiceStartDate.getFullYear(), invoiceStartDate.getMonth(), 1);
+//     const monthDiff = (invoiceMonth.getFullYear() - challanMonth.getFullYear()) * 12 +
+//       (invoiceMonth.getMonth() - challanMonth.getMonth());
+//     if (monthDiff !== 1) return false;
+//     return invoiceData.times_created_in_invoice === 1;
+//   };
+
+//   const renderReturnedDeviceRow = (item, product, rd) => {
+//     if (!paymentMode && !shouldRenderMidMonth(item)) return null;
+//     let deviceIds = [...new Set((rd.deviceIds || []).map((id) => id.trim()))];
+//     deviceIds = deviceIds.filter((id) => !renderedAssetIds.has(id));
+//     if (deviceIds.length === 0) return null;
+//     deviceIds.forEach((id) => renderedAssetIds.add(id));
+//     const daysUsed = rd.daysUsed || 1;
+//     const baseCount = deviceIds.length > 0 ? deviceIds.length : rd.quantity;
+//     const dailyRate = rd.dailyRate || item.dailyRate || item.rate / 30;
+//     const amount = calculateAmount(daysUsed, dailyRate, baseCount, item.rate);
+//     totalAmount += Number(amount) || 0;
+//     return (
+//       <tr style={rowCounter++ % 2 === 0 ? tableRowEvenStyle : tableRowOddStyle}>
+//         <td style={tableCellCenterStyle}>{rowCounter}</td>
+//         <td style={tableCellStyle}>
+//           <div style={itemTitleStyle}>{item.product_name}</div>
+//           <div style={specificationsStyle}>
+//             {formatSpecifications(product)}
+//           </div>
+//           <br />
+//           <div><strong>Returned Asset IDs:</strong> {deviceIds.join(", ")}</div>
+//           <div style={itemTitleStyle}>Return Date: {formatDate(new Date(rd.returnedDate))}</div>
+//         </td>
+//         <td style={tableCellCenterStyle}>{baseCount}</td>
+//         {invoiceData.transaction_type === "Rent" && (
+//           <>
+//             <td style={tableCellCenterStyle}>{daysUsed}</td>
+//             <td style={tableCellCenterStyle}>{formatINRCurrency(dailyRate)}</td>
+//           </>
+//         )}
+//         <td style={tableCellRightStyle}>-</td>
+//         <td style={tableCellRightStyle}>{formatINRCurrency(amount)}</td>
+//       </tr>
+//     );
+//   };
+
+//   const renderSwappedDeviceRow = (item, product, sd) => {
+//     if (!paymentMode && !shouldRenderMidMonth(item)) return null;
+//     let deviceIds = [...new Set(sd.deviceIds || [])];
+//     deviceIds = deviceIds.filter((id) => !renderedAssetIds.has(id));
+//     deviceIds.forEach((id) => renderedAssetIds.add(id));
+//     if (deviceIds.length === 0) return null;
+//     const daysUsed = sd.daysUsed || 1;
+//     const baseCount = deviceIds.length;
+//     const dailyRate = sd.dailyRate || item.dailyRate || item.rate / 30;
+//     const amount = calculateAmount(daysUsed, dailyRate, baseCount, item.rate);
+//     totalAmount += Number(amount) || 0;
+//     return (
+//       <tr style={rowCounter++ % 2 === 0 ? tableRowEvenStyle : tableRowOddStyle}>
+//         <td style={tableCellCenterStyle}>{rowCounter}</td>
+//         <td style={tableCellStyle}>
+//           <div style={itemTitleStyle}>{item.product_name}</div>
+//           <div style={specificationsStyle}>
+//             {formatSpecifications(product)}
+//           </div>
+//           <br />
+//           <div><strong>Swapped Asset IDs:</strong> {deviceIds.join(", ")}</div>
+//           <div style={itemTitleStyle}>
+//             Swap Date: {formatDate(new Date(sd.swappedDate))}
+//             {sd.reason && <div><strong>Reason:</strong> {sd.reason}</div>}
+//           </div>
+//         </td>
+//         <td style={tableCellCenterStyle}>{baseCount}</td>
+//         {invoiceData.transaction_type === "Rent" && (
+//           <>
+//             <td style={tableCellCenterStyle}>{daysUsed}</td>
+//             <td style={tableCellCenterStyle}>{formatINRCurrency(dailyRate)}</td>
+//           </>
+//         )}
+//         <td style={tableCellRightStyle}>-</td>
+//         <td style={tableCellRightStyle}>{formatINRCurrency(amount)}</td>
+//       </tr>
+//     );
+//   };
+
+//   const renderMidMonthRow = (item, product) => {
+//     if (!shouldRenderMidMonth(item)) return null;
+//     if (item.quantity === 0 && (!item.device_ids || item.device_ids.length === 0)) return null;
+//     const deviceIds = item.device_ids || [];
+//     const baseCount = deviceIds.length > 0 ? deviceIds.length : item.quantity;
+//     const challanDate = item.isAdditionalChallan ? new Date(item.challanDate) : new Date(invoiceData.dc_date);
+//     const startDate = challanDate;
+//     const endDate = new Date(challanDate.getFullYear(), challanDate.getMonth() + 1, 0);
+//     const invoiceStartDate = new Date(invoiceData.invoice_start_date);
+//     const isWithinOneMonth = (d1, d2) => {
+//       const diff = (d2.getFullYear() - d1.getFullYear()) * 12 + (d2.getMonth() - d1.getMonth());
+//       return diff === 0 || diff === 1;
+//     };
+//     const daysUsed = calculateDays(startDate, endDate);
+//     const dailyRate = item.dailyRate || item.rate / 30;
+//     const amount = calculateAmount(daysUsed, dailyRate, baseCount, item.rate);
+//     totalAmount += Number(amount) || 0;
+//     if (!isWithinOneMonth(startDate, invoiceStartDate)) return null;
+//     if (!amount) return null;
+//     return (
+//       <tr style={rowCounter++ % 2 === 0 ? tableRowEvenStyle : tableRowOddStyle}>
+//         <td style={tableCellCenterStyle}>{rowCounter}</td>
+//         <td style={tableCellStyle}>
+//           <div><strong>Mid-Month Usage:</strong></div>
+//           <br />
+//           <div style={itemTitleStyle}>{item.product_name}</div>
+//           <div style={specificationsStyle}>
+//             {formatSpecifications(product)}
+//           </div>
+//           {deviceIds.length > 0 && <div style={assetIdsStyle}>Asset IDs: {deviceIds.join(", ")}</div>}
+//           <div style={itemTitleStyle}>Billing Start Date: {formatDate(startDate)} to {formatDate(endDate)}</div>
+//         </td>
+//         <td style={tableCellCenterStyle}>{baseCount}</td>
+//         {invoiceData.transaction_type === "Rent" && (
+//           <>
+//             <td style={tableCellCenterStyle}>{daysUsed}</td>
+//             <td style={tableCellCenterStyle}>{formatINRCurrency(dailyRate)}</td>
+//           </>
+//         )}
+//         <td style={tableCellRightStyle}>-</td>
+//         <td style={tableCellRightStyle}>{formatINRCurrency(amount)}</td>
+//       </tr>
+//     );
+//   };
+
+//   // ==================== MAIN RENDERING LOOP ====================
+//   const rows = [];
+
+//   const productGroups = new Map();
+//   items.forEach((item) => {
+//     if (!shouldShowRow(item)) return;
+//     const productName = item.product_name;
+//     if (!productGroups.has(productName)) {
+//       productGroups.set(productName, []);
+//     }
+//     productGroups.get(productName).push(item);
+//   });
+
+//   for (const [productName, productItems] of productGroups.entries()) {
+//     const invoiceStartDateObj = new Date(invoiceData.invoice_start_date);
+
+//     const deviceToItemMap = new Map();
+//     productItems.forEach(item => {
+//       if (item.device_ids && item.device_ids.length > 0) {
+//         item.device_ids.forEach(deviceId => {
+//           if (!deviceToItemMap.has(deviceId)) {
+//             deviceToItemMap.set(deviceId, item);
+//           }
+//         });
+//       }
+//     });
+
+//     const allDeviceIds = [...deviceToItemMap.keys()];
+
+//     if (allDeviceIds.length === 0) continue;
+
+//     const devicesByConfig = new Map();
+
+//     allDeviceIds.forEach(deviceId => {
+//       const sourceItem = deviceToItemMap.get(deviceId);
+//       if (sourceItem && sourceItem.productDetails) {
+//         const finalSpecs = getFinalSpecificationsForDevice(
+//           deviceId,
+//           sourceItem.productDetails,
+//           invoiceStartDateObj
+//         );
+
+//         // Create a comprehensive config key including all component types
+//         const configKey = JSON.stringify({
+//           ram: finalSpecs.ram || 'N/A',
+//           storage: finalSpecs.storage || 'N/A',
+//           processor: finalSpecs.processor || 'N/A',
+//           motherboard: finalSpecs.motherboard || 'N/A',
+//           cabinet: finalSpecs.cabinet || 'N/A',
+//           gpu: finalSpecs.gpu || 'N/A',
+//           smps: finalSpecs.smps || 'N/A',
+//           lan_card: finalSpecs.lan_card || 'N/A'
+//         });
+
+//         if (!devicesByConfig.has(configKey)) {
+//           devicesByConfig.set(configKey, {
+//             deviceIds: [],
+//             specifications: finalSpecs,
+//             rate: sourceItem.rate,
+//             dailyRate: sourceItem.dailyRate,
+//             productName: sourceItem.product_name,
+//             description: sourceItem.description,
+//             days: sourceItem.days
+//           });
+//         }
+
+//         devicesByConfig.get(configKey).deviceIds.push(deviceId);
+//       }
+//     });
+
+//     for (const [configKey, group] of devicesByConfig.entries()) {
+//       const daysUsed = group.days || 30;
+//       const deviceIds = group.deviceIds;
+//       const baseCount = deviceIds.length;
+//       const monthlyRate = group.rate;
+//       const dailyRate = monthlyRate / 30;
+
+//       let amount = isBuyTransaction
+//         ? monthlyRate * baseCount
+//         : calculateAmount(daysUsed, dailyRate, baseCount, monthlyRate);
+
+//       totalAmount += Number(amount) || 0;
+
+//       rows.push(
+//         <tr
+//           key={`row-${productName}-${configKey}`}
+//           style={rowCounter++ % 2 === 0 ? tableRowEvenStyle : tableRowOddStyle}
+//         >
+//           <td style={tableCellCenterStyle}>{rowCounter}</td>
+//           <td style={tableCellStyle}>
+//             <div style={itemTitleStyle}>{group.productName}</div>
+//             <div style={specificationsStyle}>
+//               {formatSpecifications(group.specifications)}
+//             </div>
+//             <br />
+//             <div style={assetIdsStyle}>
+//               Asset IDs: {deviceIds.sort((a, b) => {
+//                 const numA = parseInt(a.match(/\d+/) || 0);
+//                 const numB = parseInt(b.match(/\d+/) || 0);
+//                 return numA - numB;
+//               }).join(", ")}
+//             </div>
+//             {invoiceData.transaction_type === "Rent" && (
+//               <>
+//                 <br />
+//                 <div style={itemTitleStyle}>{group.description}</div>
+//               </>
+//             )}
+//           </td>
+//           <td style={tableCellCenterStyle}>{baseCount}</td>
+//           {invoiceData.transaction_type === "Rent" && (
+//             <>
+//               <td style={tableCellCenterStyle}>{daysUsed}</td>
+//               <td style={tableCellCenterStyle}>
+//                 {formatINRCurrency(dailyRate)}
+//               </td>
+//             </>
+//           )}
+//           <td style={tableCellRightStyle}>
+//             {formatINRCurrency(monthlyRate)}
+//           </td>
+//           <td style={tableCellRightStyle}>
+//             {formatINRCurrency(amount)}
+//           </td>
+//         </tr>
+//       );
+//     }
+
+//     // Render asset transactions for each product
+//     const firstItem = productItems[0];
+//     const hasAssetTransactions = invoiceData.asset_transactions?.some(
+//       (at) => at.product_id === firstItem?.product_id
+//     );
+
+//     if (hasAssetTransactions && firstItem) {
+//       const assetRows = renderAssetTransactionRow(firstItem.productDetails, firstItem);
+//       if (assetRows && assetRows.length) {
+//         rows.push(...assetRows);
+//       }
+//     }
+
+//     // Render other rows (returns, swaps, mid-month) for each item
+//     productItems.forEach((item) => {
+//       if (!isBuyTransaction && !paymentMode && showDcPeriod) {
+//         const midRow = renderMidMonthRow(item, item.productDetails);
+//         if (midRow) rows.push(midRow);
+//       }
+
+//       item.returnedDevices?.forEach((rd) => {
+//         const retRow = renderReturnedDeviceRow(item, item.productDetails, rd);
+//         if (retRow) rows.push(retRow);
+//       });
+
+//       item.swappedDevices?.forEach((sd) => {
+//         const swapRow = renderSwappedDeviceRow(item, item.productDetails, sd);
+//         if (swapRow) rows.push(swapRow);
+//       });
+//     });
+//   }
+
+//   const netAmount = totalAmount;
+//   let cgst = isKarnataka ? netAmount * 0.09 : 0;
+//   let sgst = isKarnataka ? netAmount * 0.09 : 0;
+//   let igst = isKarnataka ? 0 : netAmount * 0.18;
+//   let totalTax = cgst + sgst + igst;
+//   const grandTotal = netAmount + totalTax;
+
+//   const renderInvoice = () => {
+//     return (
+//       <div
+//         className="invoice-container"
+//         style={receiptContainerStyle}
+//         id="invoice-current-month-invoice"
+//       >
+//         <div style={headerBarStyle}></div>
+//         <div style={companyHeaderStyle}>
+//           <div style={companyInfoContainerStyle}>
+//             <div style={logoStyle}>
+//               <img
+//                 src="/SORT-ICON.png"
+//                 alt="Company Logo"
+//                 style={{ width: "100%", height: "100%", objectFit: "contain" }}
+//               />
+//             </div>
+//             <div>
+//               <div style={companyNameStyle}>Guru Goutam Infotech Pvt. Ltd.</div>
+//               <div style={companyDetailsStyle}>
+//                 CIN: U72200KA2008PTC047679
+//                 <br />
+//                 GST: {invoiceData.customer_gst_number || "29AADCG2608Q1Z6"}
+//               </div>
+//             </div>
+//           </div>
+//           <div style={challanHeaderStyle}>
+//             <div style={challanTitleStyle}>TAX INVOICE</div>
+//             <div style={challanDetailsStyle}>
+//               Invoice No: {invoiceData.invoice_number}
+//               <br />
+//               Invoice Date: {formatDate(startDate)}
+//             </div>
+//           </div>
+//         </div>
+
+//         <div style={recipientSectionStyle}>
+//           <div style={recipientContainerStyle}>
+//             <div style={recipientAddressStyle}>
+//               <div style={recipientLabelStyle}>Bill To</div>
+//               {invoiceData.customer_name}
+//               <br />
+//               {invoiceData.shippingDetail?.street && `${invoiceData.shippingDetail.street}, `}
+//               {invoiceData.shippingDetail?.landmark && `${invoiceData.shippingDetail.landmark}, `}
+//               {invoiceData.shippingDetail?.city}, {invoiceData.shippingDetail?.state},
+//               <br />
+//               {invoiceData.shippingDetail?.country} - {invoiceData.shippingDetail?.pincode}
+//             </div>
+//             <div style={recipientDetailsGridStyle}>
+//               <div><div style={detailLabelStyle}>PAN Number :</div>{invoiceData.pan_number}</div>
+//               <div><div style={detailLabelStyle}>Order Number :</div>{invoiceData.dispatch_order_number}</div>
+//               {invoiceData.dc_date !== null && <div><div style={detailLabelStyle}>DC Date :</div>{invoiceData.dc_date}</div>}
+//               <div><div style={detailLabelStyle}>Email :</div>{invoiceData.email}</div>
+//               <div><div style={detailLabelStyle}>Phone :</div>{invoiceData.phone_number}</div>
+//             </div>
+//           </div>
+//         </div>
+
+//         {!isBuyTransaction && (
+//           <div style={invoicePeriodStyle}>
+//             <div><strong>Invoice Period:</strong> {formatDate(invoiceDate)} to {formatDate(invoiceEndDate)}</div>
+//           </div>
+//         )}
+
+//         <table style={tableStyle}>
+//           <thead>
+//             <tr>
+//               <th style={tableHeaderNoStyle}>NO.</th>
+//               <th style={tableHeaderParticularsStyle}>Product Details</th>
+//               <th style={tableHeaderQtyStyle}>Qty</th>
+//               {invoiceData.transaction_type === "Rent" && (
+//                 <>
+//                   <th style={tableHeaderDaysStyle}>Days</th>
+//                   <th style={tableHeaderDaysStyle}>Per Day</th>
+//                 </>
+//               )}
+//               <th style={tableHeaderDaysStyle}>
+//                 {invoiceData.transaction_type === "Rent" ? "Per Month" : "Purchase Price"}
+//               </th>
+//               <th style={tableHeaderRateStyle}>TOTAL</th>
+//             </tr>
+//           </thead>
+//           <tbody>
+//             {rows}
+//             <tr key="total-row" style={totalsRowStyle}>
+//               <td style={tableCellCenterStyle} colSpan={invoiceData.transaction_type === "Rent" ? 6 : 4}>
+//                 <strong>TOTAL</strong>
+//               </td>
+//               <td style={tableCellRightStyle}>{formatINRCurrency(totalAmount)}</td>
+//             </tr>
+//           </tbody>
+//         </table>
+
+//         <div style={taxTotalContainerStyle}>
+//           <div style={taxDetailsStyle}>
+//             <div style={taxRowStyle}><span>Subtotal:</span><span>{formatINRCurrency(totalAmount)}</span></div>
+//             {isKarnataka && (
+//               <>
+//                 <div style={taxRowStyle}><span>CGST @9%:</span><span>{formatINRCurrency(cgst)}</span></div>
+//                 <div style={taxRowStyle}><span>SGST @9%:</span><span>{formatINRCurrency(sgst)}</span></div>
+//               </>
+//             )}
+//             {!isKarnataka && <div style={taxRowStyle}><span>IGST @18%:</span><span>{formatINRCurrency(igst)}</span></div>}
+//             <div style={taxRowTotalStyle}><span>Total Tax:</span><span>{formatINRCurrency(totalTax)}</span></div>
+//             <div style={grandTotalStyle}><span>Grand Total:</span><span>{formatINRCurrency(grandTotal)}</span></div>
+//           </div>
+//         </div>
+
+//         <div style={bankDetailsContainerStyle}>
+//           <div style={bankDetailsTitleStyle}>Bank Details:</div>
+//           <div style={bankLineStyle}>Guru Goutham Infotech Pvt. Ltd., HDFC Bank Ltd, Jayanagar Branch.</div>
+//           <div style={bankLineStyle}>Current A/c No: 50200066787843, IFSC Code: HDFC0000261.</div>
+//           <div style={amountWordsStyle}>Amt. in Words: <span>{numberToWords(grandTotal)}</span></div>
+//           <div style={jurisdictionNoteStyle}>Note: <span style={highlightTextStyle}>Subject to Bengaluru Jurisdiction</span></div>
+//         </div>
+
+//         <div style={signatureSectionStyle}>
+//           <div style={leftSignatureAreaStyle}>
+//             <div style={companySignatureLabelStyle}></div>
+//             <div style={signatureBoxStyle}></div>
+//             <div style={signatureDesignationStyle}>Receiver Signature with Seal</div>
+//           </div>
+//           <div style={rightSignatureAreaStyle}>
+//             <div style={companySignatureLabelStyle}>For Guru Goutham Infotech Private Limited</div>
+//             <div style={signatureBoxStyle}>SD/-</div>
+//             <div style={signatureDesignationStyle}>Authorised Signatory</div>
+//           </div>
+//         </div>
+
+//         <div style={companyFooterStyle}>
+//           <div style={footerAddressStyle}>
+//             <span>📍</span>
+//             <span>No. 8, 2nd Cross, Diagonal Road, 3rd Block,<br />Jayanagar Bengaluru-560011.</span>
+//           </div>
+//           <div style={footerContactStyle}>
+//             <div style={footerContactItemStyle}><span>🌐</span><span>gurugoutam.com</span></div>
+//             <div style={footerContactItemStyle}><span>📞</span><span>080-2242 9955, +91 9449 0789 55</span></div>
+//             <div style={footerContactItemStyle}><span>✉️</span><span>info@gurugoutam.com</span></div>
+//           </div>
+//         </div>
+//       </div>
+//     );
+//   };
+
+//   const handleDownloadPDF = async () => {
+//     try {
+//       await new Promise((resolve) => setTimeout(resolve, 300));
+//       const element = document.getElementById("invoice-current-month-invoice");
+//       if (!element) throw new Error("Could not find invoice element in DOM");
+//       const clone = element.cloneNode(true);
+//       clone.style.position = "absolute";
+//       clone.style.left = "-9999px";
+//       clone.style.visibility = "visible";
+//       clone.style.width = "210mm";
+//       document.body.appendChild(clone);
+//       const options = {
+//         scale: 2,
+//         logging: true,
+//         useCORS: true,
+//         scrollX: 0,
+//         scrollY: 0,
+//         windowWidth: clone.scrollWidth,
+//         windowHeight: clone.scrollHeight,
+//         backgroundColor: "#FFFFFF",
+//       };
+//       const canvas = await html2canvas(clone, options);
+//       document.body.removeChild(clone);
+//       const imgData = canvas.toDataURL("image/png");
+//       const pdf = new jsPDF("p", "mm", "a4");
+//       const imgProps = pdf.getImageProperties(imgData);
+//       const pdfWidth = pdf.internal.pageSize.getWidth();
+//       const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+//       let heightLeft = pdfHeight;
+//       let position = 0;
+//       const pageHeight = pdf.internal.pageSize.getHeight();
+//       pdf.addImage(imgData, "PNG", 0, position, pdfWidth, pdfHeight);
+//       heightLeft -= pageHeight;
+//       while (heightLeft >= 0) {
+//         position = heightLeft - pdfHeight;
+//         pdf.addPage();
+//         pdf.addImage(imgData, "PNG", 0, position, pdfWidth, pdfHeight);
+//         heightLeft -= pageHeight;
+//       }
+//       pdf.save(`invoice-${invoiceData.invoice_number || "INV"}.pdf`);
+//     } catch (error) {
+//       console.error("PDF Generation Error:", error);
+//       alert(`Failed to generate PDF: ${error.message}`);
+//     }
+//   };
+
+//   const handlePrint = () => {
+//     const element = document.getElementById("invoice-current-month-invoice");
+//     if (!element) {
+//       console.error("Print element not found");
+//       alert("Could not find the invoice content for printing");
+//       return;
+//     }
+//     const printWindow = window.open("", "_blank");
+//     printWindow.document.write(`
+//       <!DOCTYPE html>
+//       <html>
+//         <head>
+//           <title>Invoice - ${invoiceData.invoice_number || "INV"}</title>
+//           <style>
+//             @page { size: A4; margin: 10mm; }
+//             body { margin: 0; padding: 0; font-family: Arial, sans-serif; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+//             .print-container { width: 190mm; min-height: 277mm; padding: 0; box-sizing: border-box; }
+//             table { width: 100%; border-collapse: collapse; }
+//             th, td { border: 1px solid #000; padding: 8px; text-align: left; }
+//             th { background-color: #f0f0f0; }
+//           </style>
+//         </head>
+//         <body>
+//           <div class="print-container">${element.innerHTML}</div>
+//           <script>
+//             window.onload = function() {
+//               setTimeout(function() { window.print(); setTimeout(function() { window.close(); }, 500); }, 300);
+//             }
+//           </script>
+//         </body>
+//       </html>
+//     `);
+//     printWindow.document.close();
+//   };
+
+//   return (
+//     <Dialog open={open} onClose={onClose} maxWidth="lg" fullWidth scroll="paper">
+//       <DialogTitle>Invoice</DialogTitle>
+//       <DialogContent>
+//         <div style={{ padding: "20px" }} id="invoice-current-month-invoice">
+//           {renderInvoice()}
+//         </div>
+//       </DialogContent>
+//       <DialogActions>
+//         <Button onClick={onClose}>Close</Button>
+//         <Button onClick={handleDownloadPDF} variant="contained" color="primary" style={{ marginLeft: "10px" }}>Download PDF</Button>
+//         <Button onClick={handlePrint} variant="contained" color="secondary">Print</Button>
+//       </DialogActions>
+//     </Dialog>
+//   );
+// };
+
+
+////
+
+// const InvoiceDialog = ({ open, onClose, invoiceData }) => {
+//   if (!invoiceData) return null;
+
+//   const invoiceType = invoiceData.type;
+//   const isBuyTransaction = invoiceData.transaction_type === "Buy";
+//   const isRentTransaction = invoiceData.transaction_type === "Rent";
+//   const startDate = new Date(invoiceData.invoice_date);
+//   const invoiceDate = new Date(invoiceData.invoice_start_date);
+//   const paymentMode = invoiceData.payment_mode === "Postpaid";
+//   const isKarnataka = invoiceData.shippingDetail?.state === "Karnataka";
+
+//   const dcDate123 = new Date(invoiceData.dc_date);
+//   const invoiceDateOnly = new Date(invoiceData.invoice_date);
+
+//   const sameMonth =
+//     dcDate123.getMonth() === invoiceDateOnly.getMonth() &&
+//     dcDate123.getFullYear() === invoiceDateOnly.getFullYear();
+
+//   // Helper: same month & year check
+//   const isSameMonthYear = (date1, date2) => {
+//     return (
+//       date1.getFullYear() === date2.getFullYear() &&
+//       date1.getMonth() === date2.getMonth()
+//     );
+//   };
+
+//   const hasSameMonthReturn =
+//     invoiceData.credit_notes?.some((note) => {
+//       if (!note.returned_date) return false;
+//       return isSameMonthYear(
+//         new Date(invoiceData.dc_date),
+//         new Date(note.returned_date)
+//       );
+//     }) ||
+//     invoiceData.additional_delivery_challans?.some((challan) =>
+//       challan.credit_notes?.some((note) => {
+//         if (!note.returned_date) return false;
+//         return isSameMonthYear(
+//           new Date(challan.dc_date || invoiceData.dc_date),
+//           new Date(note.returned_date)
+//         );
+//       })
+//     ) ||
+//     false;
+
+//   const hasMonthDifference = invoiceData.credit_notes?.some((creditNote) => {
+//     if (!creditNote.returned_date) return false;
+//     const returnDate = new Date(creditNote.returned_date);
+//     const monthDiff =
+//       (invoiceDate.getFullYear() - returnDate.getFullYear()) * 12 +
+//       (invoiceDate.getMonth() - returnDate.getMonth());
+//     return monthDiff >= 1;
+//   });
+
+//   // Date calculations
+//   const invoiceStartDate = new Date(invoiceData.invoice_start_date);
+//   const dcDate = new Date(invoiceData.dc_date);
+//   const invoiceEndDate = new Date(invoiceData.invoice_end_date);
+//   const dcPeriodEnd = new Date(dcDate.getFullYear(), dcDate.getMonth() + 1, 0);
+
+//   const hasCreditNoteReturnedDate =
+//     invoiceData.credit_notes?.some((note) => !!note.returned_date) ||
+//     invoiceData.additional_delivery_challans?.some((challan) =>
+//       challan.credit_notes?.some((note) => !!note.returned_date)
+//     );
+
+//   function countAllDcDates(invoiceData) {
+//     if (!invoiceData) return 0;
+//     const mainDcCount = 1;
+//     const additionalDcsCount =
+//       invoiceData.additional_delivery_challans?.length || 0;
+//     return mainDcCount + additionalDcsCount;
+//   }
+
+//   const dcDatesCount = countAllDcDates(invoiceData);
+
+//   const monthDiff =
+//     (invoiceStartDate.getFullYear() - dcDate.getFullYear()) * 12 +
+//     (invoiceStartDate.getMonth() - dcDate.getMonth());
+
+//   const hasAdditionalChallans =
+//     invoiceData.additional_delivery_challans?.length > 0;
+//   let additionalChallanMonthDiff = 0;
+
+//   if (hasAdditionalChallans) {
+//     const additionalChallanDate = new Date(
+//       invoiceData.additional_delivery_challans[0].dc_date
+//     );
+//     additionalChallanMonthDiff =
+//       (invoiceStartDate.getFullYear() - additionalChallanDate.getFullYear()) *
+//       12 +
+//       (invoiceStartDate.getMonth() - additionalChallanDate.getMonth());
+//   }
+
+//   const hasSameMonthChallan =
+//     hasAdditionalChallans && additionalChallanMonthDiff === 0;
+//   const hasPrevMonthChallan =
+//     hasAdditionalChallans && additionalChallanMonthDiff === 1;
+//   const specialCase =
+//     paymentMode &&
+//     monthDiff === 0 &&
+//     (hasSameMonthChallan || hasPrevMonthChallan);
+
+//   const showDcPeriod =
+//     (monthDiff === 1 || monthDiff === 0) && dcDate.getDate() !== 1;
+
+//   const formatDate = (dateStr) => {
+//     if (!dateStr) return "-";
+//     const date = new Date(dateStr);
+//     const day = String(date.getDate()).padStart(2, "0");
+//     const month = String(date.getMonth() + 1).padStart(2, "0");
+//     const year = date.getFullYear();
+//     return `${day}/${month}/${year}`;
+//   };
+
+//   const calculateDays = (startDate, endDate) => {
+//     const start = new Date(startDate);
+//     const end = new Date(endDate);
+
+//     let startDay = Math.min(start.getDate(), 30);
+//     let endDay = Math.min(end.getDate(), 30);
+
+//     const lastDayOfMonth = new Date(
+//       end.getFullYear(),
+//       end.getMonth() + 1,
+//       0
+//     ).getDate();
+//     if (end.getDate() === lastDayOfMonth) {
+//       endDay = 30;
+//     }
+
+//     const totalStartDays =
+//       start.getFullYear() * 360 + start.getMonth() * 30 + startDay;
+//     const totalEndDays = end.getFullYear() * 360 + end.getMonth() * 30 + endDay;
+
+//     return totalEndDays - totalStartDays + 1;
+//   };
+
+//   const calculateReturnDays = (returnDate) => {
+//     const returnDateObj = new Date(returnDate);
+//     let matchedDcDate = null;
+
+//     invoiceData.credit_notes?.forEach((note) => {
+//       if (note.returned_date === returnDate) {
+//         matchedDcDate = new Date(invoiceData.dc_date);
+//       }
+//     });
+
+//     if (!matchedDcDate) {
+//       invoiceData.additional_delivery_challans?.forEach((challan) => {
+//         challan.credit_notes?.forEach((note) => {
+//           if (note.returned_date === returnDate) {
+//             matchedDcDate = new Date(challan.dc_date || invoiceData.dc_date);
+//           }
+//         });
+//       });
+//     }
+
+//     if (!matchedDcDate) {
+//       matchedDcDate = new Date(invoiceData.dc_date);
+//     }
+
+//     if (hasSameMonthReturn) {
+//       const diffTime = Math.abs(returnDateObj - matchedDcDate);
+//       return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+//     } else {
+//       const startOfMonth = new Date(
+//         returnDateObj.getFullYear(),
+//         returnDateObj.getMonth(),
+//         1
+//       );
+//       const diffTime = Math.abs(returnDateObj - startOfMonth);
+//       return Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+//     }
+//   };
+
+//   let finalCondition = false;
+
+//   invoiceData.additional_delivery_challans?.forEach((challan) => {
+//     const challanDate = new Date(challan.dc_date);
+//     const mainDcDate = new Date(invoiceData.dc_date);
+//     const invoiceStartDate = new Date(invoiceData.invoice_start_date);
+
+//     const dcMonthDiff =
+//       (mainDcDate.getFullYear() - challanDate.getFullYear()) * 12 +
+//       (mainDcDate.getMonth() - challanDate.getMonth());
+
+//     const isSameMonthBetweenDCs = dcMonthDiff === 0;
+
+//     const dcToInvoiceMonthDiff =
+//       (invoiceStartDate.getFullYear() - mainDcDate.getFullYear()) * 12 +
+//       (invoiceStartDate.getMonth() - mainDcDate.getMonth());
+
+//     if (isSameMonthBetweenDCs && dcToInvoiceMonthDiff === 1) {
+//       finalCondition = true;
+//     }
+//   });
+
+//   // ==================== FIXED CALCULATE INVOICE ITEMS ====================
+//   const calculateInvoiceItems = () => {
+//     const allReturnsMap = {};
+//     const allSwapsMap = {};
+//     const invoiceStartDateObj = new Date(invoiceData.invoice_start_date);
+
+//     // Process main credit notes
+//     invoiceData.credit_notes?.forEach((cn) => {
+//       const returnedDate = new Date(cn.returned_date);
+//       const dcDate = new Date(cn.dc_date || invoiceData.dc_date);
+//       const isReturnBeforeInvoiceStart = returnedDate < invoiceStartDateObj;
+
+//       cn.items?.forEach((ri) => {
+//         const key = `${ri.product_id}`;
+//         if (!allReturnsMap[key]) allReturnsMap[key] = [];
+
+//         const returnedStartDate = new Date(
+//           returnedDate.getFullYear(),
+//           returnedDate.getMonth(),
+//           1
+//         );
+
+//         const daysUsed = hasSameMonthReturn
+//           ? calculateDays(dcDate, returnedDate)
+//           : calculateDays(returnedStartDate, returnedDate);
+
+//         const dailyRate = invoiceData.items?.find(
+//           (item) => item.product_id === ri.product_id
+//         )
+//           ? Number(
+//             invoiceData.items.find(
+//               (item) => item.product_id === ri.product_id
+//             ).unit_price
+//           ) / 30
+//           : 0;
+
+//         allReturnsMap[key].push({
+//           returnedDate,
+//           daysUsed,
+//           deviceIds: ri.device_ids,
+//           amount: parseFloat(
+//             (daysUsed * dailyRate * ri.device_ids.length).toFixed(2)
+//           ),
+//           source: "root",
+//           dcDate: dcDate,
+//           isReturnBeforeInvoiceStart,
+//         });
+//       });
+//     });
+
+//     // Process main asset swaps
+//     invoiceData.asset_swaps?.forEach((swap) => {
+//       const swappedDate = new Date(swap.swapped_on);
+//       const dcDate = new Date(invoiceData.dc_date);
+//       const isSwapBeforeInvoiceStart = swappedDate < invoiceStartDateObj;
+
+//       const key = `${swap.product_id}`;
+//       if (!allSwapsMap[key]) allSwapsMap[key] = [];
+
+//       const swappedStartDate = new Date(
+//         swappedDate.getFullYear(),
+//         swappedDate.getMonth(),
+//         1
+//       );
+
+//       const sameMonth = isSameMonthYear(dcDate, swappedDate);
+
+//       const daysUsed = sameMonth
+//         ? calculateDays(dcDate, swappedDate)
+//         : calculateDays(swappedStartDate, swappedDate);
+
+//       const dailyRateSource =
+//         invoiceData.items?.find((item) => item.product_id === swap.product_id)?.unit_price ||
+//         swap.rent_price_per_month ||
+//         0;
+
+//       const dailyRate = Number(dailyRateSource) / 30;
+
+//       allSwapsMap[key].push({
+//         swappedDate,
+//         daysUsed,
+//         deviceIds: [swap.asset_id],
+//         amount: parseFloat((daysUsed * dailyRate).toFixed(2)),
+//         source: "root",
+//         dcDate: dcDate,
+//         reason: swap.reason,
+//         newDeviceIds: swap.new_device_ids || [],
+//         isSwapBeforeInvoiceStart,
+//       });
+//     });
+
+//     // Process additional delivery challans
+//     invoiceData.additional_delivery_challans?.forEach((challan) => {
+//       const challanDcDate = new Date(challan.dc_date);
+
+//       challan.credit_notes?.forEach((cn) => {
+//         const returnedDate = new Date(cn.returned_date);
+//         const isReturnBeforeInvoiceStart = returnedDate < invoiceStartDateObj;
+
+//         cn.items?.forEach((ri) => {
+//           const key = `${ri.product_id}`;
+//           if (!allReturnsMap[key]) allReturnsMap[key] = [];
+
+//           const returnedStartDate = new Date(
+//             returnedDate.getFullYear(),
+//             returnedDate.getMonth(),
+//             1
+//           );
+
+//           const daysUsed = hasSameMonthReturn
+//             ? calculateDays(challanDcDate, returnedDate)
+//             : calculateDays(returnedStartDate, returnedDate);
+
+//           const dailyRate = challan.items?.find(
+//             (item) => item.product_id === ri.product_id
+//           )
+//             ? Number(
+//               challan.items.find((item) => item.product_id === ri.product_id)
+//                 .unit_price
+//             ) / 30
+//             : 0;
+
+//           allReturnsMap[key].push({
+//             returnedDate,
+//             daysUsed,
+//             dailyRate,
+//             deviceIds: ri.device_ids,
+//             amount: parseFloat(
+//               (daysUsed * dailyRate * ri.device_ids.length).toFixed(2)
+//             ),
+//             source: "additional",
+//             dcDate: challanDcDate,
+//             isReturnBeforeInvoiceStart,
+//           });
+//         });
+//       });
+
+//       challan.asset_swaps?.forEach((swap) => {
+//         const swappedDate = new Date(swap.swapped_on);
+//         const isSwapBeforeInvoiceStart = swappedDate < invoiceStartDateObj;
+
+//         const key = `${swap.product_id}`;
+//         if (!allSwapsMap[key]) allSwapsMap[key] = [];
+
+//         const swappedStartDate = new Date(
+//           swappedDate.getFullYear(),
+//           swappedDate.getMonth(),
+//           1
+//         );
+
+//         const daysUsed = hasSameMonthReturn
+//           ? calculateDays(challanDcDate, swappedDate)
+//           : calculateDays(swappedStartDate, swappedDate);
+
+//         const dailyRate = challan.items?.find(
+//           (item) => item.product_id === swap.product_id
+//         )
+//           ? Number(
+//             challan.items.find((item) => item.product_id === swap.product_id)
+//               .unit_price
+//           ) / 30
+//           : 0;
+
+//         allSwapsMap[key].push({
+//           swappedDate,
+//           daysUsed,
+//           deviceIds: [swap.asset_id],
+//           amount: parseFloat((daysUsed * dailyRate).toFixed(2)),
+//           source: "additional",
+//           dcDate: challanDcDate,
+//           reason: swap.reason,
+//           newDeviceIds: swap.new_device_ids || [],
+//           isSwapBeforeInvoiceStart,
+//         });
+//       });
+//     });
+
+//     const mainItems =
+//       invoiceData.items?.map((item) => {
+//         const rate = isBuyTransaction
+//           ? Number(item.total_price) || 0
+//           : Number(item.unit_price) || 0;
+//         const dailyRate = rate / 30;
+
+//         const originalDeviceIds = item.device_ids || [];
+//         const hasDeviceIds = originalDeviceIds.length > 0;
+
+//         const baseQuantity = hasDeviceIds
+//           ? originalDeviceIds.length
+//           : item.quantity || 0;
+
+//         let days;
+
+//         const isMidMonthDelivery = dcDate.getDate() !== 1;
+
+//         if (isMidMonthDelivery && sameMonth) {
+//           days = calculateDays(dcDate, invoiceEndDate);
+//         } else if (!sameMonth && monthDiff === 1) {
+//           days = calculateDays(invoiceStartDate, invoiceEndDate);
+//         } else {
+//           days = calculateDays(invoiceStartDate, invoiceEndDate);
+//         }
+
+//         const isFullMonth = isBuyTransaction ? true : days >= 28;
+
+//         const returnedDevices =
+//           allReturnsMap[item.product_id]?.filter(
+//             (rd) => new Date(rd.returnedDate) <= invoiceEndDate
+//           ) || [];
+
+//         const swappedDevices =
+//           allSwapsMap[item.product_id]?.filter(
+//             (sd) => new Date(sd.swappedDate) <= invoiceEndDate
+//           ) || [];
+
+//         // ONLY get devices that were returned/swapped BEFORE invoice start for subtraction
+//         const preInvoiceReturnedDeviceIds = returnedDevices
+//           .filter((rd) => rd.isReturnBeforeInvoiceStart)
+//           .flatMap((rd) => rd.deviceIds);
+
+//         const preInvoiceSwappedDeviceIds = swappedDevices
+//           .filter((sd) => sd.isSwapBeforeInvoiceStart)
+//           .flatMap((sd) => sd.deviceIds);
+
+//         let effectiveDeviceIds = [];
+//         let effectiveQty = baseQuantity;
+
+//         if (hasDeviceIds) {
+//           // ONLY subtract devices that were returned/swapped BEFORE invoice start date
+//           effectiveDeviceIds = originalDeviceIds.filter(
+//             (id) =>
+//               !preInvoiceReturnedDeviceIds.includes(id) &&
+//               !preInvoiceSwappedDeviceIds.includes(id)
+//           );
+//           effectiveQty = effectiveDeviceIds.length;
+//         } else {
+//           const totalReturnedQty = preInvoiceReturnedDeviceIds.length;
+//           const totalSwappedQty = preInvoiceSwappedDeviceIds.length;
+//           effectiveQty = Math.max(
+//             0,
+//             baseQuantity - totalReturnedQty - totalSwappedQty
+//           );
+//         }
+
+//         const dcDays = calculateDays(dcDate, dcPeriodEnd);
+
+//         let fullMonthAmount;
+//         if (paymentMode) {
+//           fullMonthAmount = effectiveQty * dailyRate * days;
+//         } else {
+//           fullMonthAmount = isFullMonth
+//             ? effectiveQty * rate
+//             : effectiveQty * dailyRate * days;
+//         }
+
+//         const returnedDevicesAmount = returnedDevices.reduce(
+//           (sum, rd) => sum + rd.amount,
+//           0
+//         );
+
+//         const swappedDevicesAmount = swappedDevices.reduce(
+//           (sum, sd) => sum + sd.amount,
+//           0
+//         );
+
+//         const dcAmountBeforeReturns =
+//           showDcPeriod && !paymentMode && !isBuyTransaction
+//             ? effectiveQty * dailyRate * dcDays
+//             : 0;
+
+//         let description;
+
+//         if (isMidMonthDelivery && sameMonth) {
+//           description = `Billing Start Date: ${formatDate(dcDate)} - Billing End Date: ${formatDate(invoiceEndDate)}`;
+//         } else {
+//           description = `Billing Start Date: ${formatDate(invoiceStartDate)} - Billing End Date: ${formatDate(invoiceEndDate)}`;
+//         }
+
+//         return {
+//           ...item,
+//           originalDeviceIds,
+//           device_ids: effectiveDeviceIds,
+//           quantity: effectiveQty,
+//           rate,
+//           dailyRate,
+//           days,
+//           dcDays,
+//           amount: fullMonthAmount,
+//           dcAmountBeforeReturns,
+//           returnedDevices,
+//           swappedDevices,
+//           totalReturnedQtyAmount: returnedDevicesAmount + swappedDevicesAmount,
+//           description,
+//           isFullMonth,
+//           isSpecialCase: specialCase,
+//         };
+//       }) || [];
+
+//     const additionalItems =
+//       invoiceData.additional_delivery_challans?.flatMap((challan) => {
+//         const challanDateObj = new Date(challan.dc_date);
+//         const orderSaleDateObj = new Date(challan.order_sale_date);
+//         const challanMonthStart = new Date(
+//           orderSaleDateObj.getFullYear(),
+//           orderSaleDateObj.getMonth(),
+//           1
+//         );
+
+//         const invoiceStartDateObj = new Date(invoiceData.invoice_start_date);
+//         const invoiceEndDateObj = new Date(invoiceData.invoice_end_date);
+
+//         const monthDiff =
+//           (invoiceStartDateObj.getFullYear() - challanDateObj.getFullYear()) *
+//           12 +
+//           (invoiceStartDateObj.getMonth() - challanDateObj.getMonth());
+
+//         return challan.items.map((item) => {
+//           const quantity = Number(item.quantity) || 0;
+//           const unit_price = quantity > 0 ? Number(item.unit_price) : 0;
+
+//           const dailyRate = unit_price / 30;
+//           const device_ids = item.device_ids || [];
+
+//           let days,
+//             amount,
+//             description,
+//             midMonthDays = 0;
+
+//           if (monthDiff === 1) {
+//             const deliveryMonthEnd = new Date(
+//               challanDateObj.getFullYear(),
+//               challanDateObj.getMonth() + 1,
+//               0
+//             );
+//             midMonthDays = calculateDays(challanDateObj, deliveryMonthEnd);
+//             days = calculateDays(invoiceStartDateObj, invoiceEndDateObj);
+//             amount =
+//               quantity * dailyRate * midMonthDays + quantity * unit_price;
+//             description = `Billing Start Date: ${formatDate(
+//               invoiceStartDateObj
+//             )} to ${formatDate(invoiceEndDate)}`;
+//           } else if (monthDiff === 0 && challanDateObj.getDate() !== 1) {
+//             days = calculateDays(challanDateObj, invoiceEndDateObj);
+
+//             amount = quantity * dailyRate * days;
+//             description = `Billing Start Date: ${formatDate(
+//               challan.dc_date
+//             )} to ${formatDate(invoiceEndDate)}`;
+//           } else {
+//             if (paymentMode) {
+//               if (
+//                 challan.order_sale_date &&
+//                 isSameMonthYear(invoiceStartDateObj, orderSaleDateObj)
+//               ) {
+//                 days = calculateDays(challanMonthStart, orderSaleDateObj);
+//               }
+//             }
+//             days = calculateDays(invoiceStartDateObj, invoiceEndDateObj);
+
+//             amount = quantity * unit_price;
+//             description = `Billing Start Date: ${formatDate(
+//               invoiceStartDate
+//             )} - Billing End Date: ${formatDate(invoiceEndDate)}`;
+//           }
+
+//           const returnedDevices =
+//             allReturnsMap[item.product_id]?.filter(
+//               (rd) =>
+//                 new Date(rd.returnedDate) <= invoiceEndDate &&
+//                 rd.source === "additional"
+//             ) || [];
+
+//           const swappedDevices =
+//             allSwapsMap[item.product_id]?.filter(
+//               (sd) =>
+//                 new Date(sd.swappedDate) <= invoiceEndDate &&
+//                 sd.source === "additional"
+//             ) || [];
+
+//           return {
+//             ...item,
+//             isAdditionalChallan: true,
+//             challanNumber: challan.dc_id,
+//             challanDate: challan.dc_date,
+//             device_ids,
+//             quantity,
+//             unit_price,
+//             rate: unit_price,
+//             dailyRate,
+//             amount,
+//             days,
+//             midMonthDays,
+//             description,
+//             productDetails: item.product,
+//             isFullMonth: days >= 28,
+//             isSpecialCase: specialCase,
+//             isPrevMonthDelivery: monthDiff === 1,
+//             shouldShowMidMonth:
+//               monthDiff === 1 ||
+//               (monthDiff === 0 && challanDateObj.getDate() !== 1),
+//             returnedDevices,
+//             swappedDevices,
+//           };
+//         });
+//       }) || [];
+
+//     return [...mainItems, ...additionalItems];
+//   };
+//   // ==================== END OF CALCULATE INVOICE ITEMS ====================
+
+//   const items = calculateInvoiceItems();
+
+//   let totalAmount = 0;
+//   let rowCounter = 0;
+//   let renderedAssetIds = new Set();
+
+//   const mergeDeviceIds = (items) => {
+//     const allIds = items.flatMap((i) => i.device_ids || []);
+//     return [...new Set(allIds)];
+//   };
+
+//   const calculateAmount = (daysUsed, dailyRate, baseCount, monthlyRate) => {
+//     const roundedRate = parseFloat(dailyRate.toFixed(2));
+//     const rawAmount =
+//       daysUsed === 30
+//         ? monthlyRate * baseCount
+//         : daysUsed * roundedRate * baseCount;
+//     return parseFloat(rawAmount.toFixed(2));
+//   };
+
+//   const buildTransactionsMap = (invoiceData) => {
+//     const map = {};
+
+//     const pushTxn = (txn) => {
+//       if (!txn) return;
+//       const deviceId = txn.parent_asset_id || txn.parentAssetId || txn.asset_parent_id || txn.asset_parent || txn.parent_asset || txn.device_id;
+//       if (!deviceId) return;
+//       if (!map[deviceId]) map[deviceId] = [];
+//       map[deviceId].push(txn);
+//     };
+
+//     (invoiceData.asset_transactions || []).forEach(pushTxn);
+
+//     (invoiceData.items || []).forEach((it) => {
+//       (it.asset_transactions || []).forEach((x) => {
+//         if (x && x.device_id && Array.isArray(x.transactions)) {
+//           x.transactions.forEach(pushTxn);
+//         } else {
+//           pushTxn(x);
+//         }
+//       });
+//     });
+
+//     Object.keys(map).forEach((k) => {
+//       map[k].sort((a, b) => new Date(a.action_date) - new Date(b.action_date));
+//     });
+
+//     return map;
+//   };
+
+//   const getAssetTransactionsForDevices = (deviceIds = []) => {
+//     if (!invoiceData) return [];
+//     const txnsMap = buildTransactionsMap(invoiceData);
+//     const results = [];
+//     deviceIds.forEach((did) => {
+//       (txnsMap[did] || []).forEach((t) => results.push(t));
+//     });
+//     return results.sort((a, b) => new Date(a.action_date) - new Date(b.action_date));
+//   };
+
+//   const getFinalSpecificationsForDevice = (deviceId, baseProduct, invoiceStartDate) => {
+//     if (!baseProduct) return baseProduct;
+//     if (!invoiceData) return baseProduct;
+
+//     const deviceAssetTransactions = getAssetTransactionsForDevices([deviceId]);
+//     const sortedTransactions = [...deviceAssetTransactions].sort((a, b) => new Date(a.action_date) - new Date(b.action_date));
+    
+//     const filteredTransactions = sortedTransactions.filter((txn) => {
+//       const actionDate = new Date(txn.action_date);
+//       return actionDate <= invoiceStartDate;
+//     });
+
+//     let currentSpecs = {
+//       ram: baseProduct.ram || null,
+//       processor: baseProduct.processor_model || null,
+//       storage: baseProduct.storage || null,
+//       brand: baseProduct.brand || null,
+//       model: baseProduct.model || null,
+//       disk_type: baseProduct.disk_type || null,
+//       graphics: baseProduct.graphics || null,
+//       os: baseProduct.os || null,
+//       lan_card: baseProduct.lan_card || null  // ADDED: LAN Card support
+//     };
+
+//     let ramComponents = [];
+//     let storageComponents = [];
+//     let lanCardComponents = [];  // ADDED: Track LAN Card components
+    
+//     if (currentSpecs.ram) {
+//       ramComponents.push(currentSpecs.ram);
+//     }
+//     if (currentSpecs.storage) {
+//       storageComponents.push(currentSpecs.storage);
+//     }
+//     if (currentSpecs.lan_card) {  // ADDED: Initialize LAN Card
+//       lanCardComponents.push(currentSpecs.lan_card);
+//     }
+
+//     filteredTransactions.forEach((txn) => {
+//       const type = (txn.item_type || "").toLowerCase();
+//       const value = txn.size || txn.specification || null;
+//       const status = (txn.status || "").toLowerCase();
+
+//       if (status === "added") {
+//         if (type === "ram" && value) {
+//           ramComponents.push(value);
+//           currentSpecs.ram = ramComponents.join(" + ");
+//         } else if ((type === "storage" || type === "ssd" || type === "hdd") && value) {
+//           storageComponents.push(value);
+//           currentSpecs.storage = storageComponents.join(" + ");
+//         } else if (type === "processor" && value) {
+//           currentSpecs.processor = value;
+//         } else if ((type === "lan_card" || type === "network_card" || type === "ethernet_card") && value) {  // ADDED: LAN Card handling
+//           lanCardComponents.push(value);
+//           currentSpecs.lan_card = lanCardComponents.join(" + ");
+//         }
+//       } else if (status === "removed") {
+//         if (type === "ram" && value) {
+//           const index = ramComponents.indexOf(value);
+//           if (index > -1) {
+//             ramComponents.splice(index, 1);
+//           }
+//           currentSpecs.ram = ramComponents.length > 0 ? ramComponents.join(" + ") : null;
+//         } else if ((type === "storage" || type === "ssd" || type === "hdd") && value) {
+//           const index = storageComponents.indexOf(value);
+//           if (index > -1) {
+//             storageComponents.splice(index, 1);
+//           }
+//           currentSpecs.storage = storageComponents.length > 0 ? storageComponents.join(" + ") : null;
+//         } else if (type === "processor") {
+//           currentSpecs.processor = baseProduct.processor_model || null;
+//         } else if ((type === "lan_card" || type === "network_card" || type === "ethernet_card") && value) {  // ADDED: LAN Card removal handling
+//           const index = lanCardComponents.indexOf(value);
+//           if (index > -1) {
+//             lanCardComponents.splice(index, 1);
+//           }
+//           currentSpecs.lan_card = lanCardComponents.length > 0 ? lanCardComponents.join(" + ") : null;
+//         }
+//       }
+//     });
+
+//     const finalSpecs = { ...baseProduct };
+//     finalSpecs.ram = currentSpecs.ram;
+//     finalSpecs.processor = currentSpecs.processor;
+//     finalSpecs.storage = currentSpecs.storage;
+//     finalSpecs.lan_card = currentSpecs.lan_card;  // ADDED: Include LAN Card in final specs
+
+//     return finalSpecs;
+//   };
+
+//   const formatSpecifications = (specs) => {
+//     const parts = [];
+//     if (specs.brand) parts.push(`Brand: ${specs.brand}`);
+//     if (specs.model) parts.push(`Model: ${specs.model}`);
+//     if (specs.processor) parts.push(`Processor: ${specs.processor}`);
+//     if (specs.ram) parts.push(`RAM: ${specs.ram}`);
+//     if (specs.storage) parts.push(`Storage: ${specs.storage}`);
+//     if (specs.disk_type) parts.push(`Disk Type: ${specs.disk_type}`);
+//     if (specs.graphics) parts.push(`Graphics: ${specs.graphics}`);
+//     if (specs.os) parts.push(`OS: ${specs.os}`);
+//     if (specs.lan_card) parts.push(`LAN Card: ${specs.lan_card}`);  // ADDED: LAN Card in specifications
+//     return parts.join(', ');
+//   };
+
+//   const shouldShowRow = (item) => {
+//     const hasReturnedDevices = item.returnedDevices?.some(
+//       (rd) => rd.deviceIds?.length > 0 || rd.quantity > 0
+//     );
+//     const hasSwappedDevices = item.swappedDevices?.some(
+//       (sd) => sd.deviceIds?.length > 0
+//     );
+//     return (
+//       item.quantity > 0 ||
+//       item.isAdditionalChallan ||
+//       hasReturnedDevices ||
+//       hasSwappedDevices
+//     );
+//   };
+
+  const specificationsStyle = {
+    fontSize: '12px',
+    color: '#666',
+    marginBottom: '4px',
+    lineHeight: '1.4'
+  };
+
+//   const assetIdsStyle = {
+//     fontSize: '12px',
+//     color: '#333',
+//     fontWeight: '500',
+//     marginBottom: '4px'
+//   };
+
+//   const renderAssetTransactionRow = (product, parentItem) => {
+//     if (invoiceData.is_small_amount) return null;
+
+//     const invoiceDate = new Date(invoiceData.invoice_start_date);
+//     const paymentMode = invoiceData.payment_mode === "Postpaid";
+
+//     // Get transactions from multiple sources
+//     let allAssetTransactions = [...(invoiceData.asset_transactions || [])];
+    
+//     // Also check items for nested asset_transactions
+//     (invoiceData.items || []).forEach((item) => {
+//       if (item.asset_transactions && Array.isArray(item.asset_transactions)) {
+//         item.asset_transactions.forEach((at) => {
+//           if (at.transactions && Array.isArray(at.transactions)) {
+//             allAssetTransactions.push(...at.transactions);
+//           } else {
+//             allAssetTransactions.push(at);
+//           }
+//         });
+//       }
+//     });
+
+//     const productAssetTransactions = allAssetTransactions.filter(
+//       (at) => at.product_id === parentItem.product_id
+//     );
+
+//     if (!productAssetTransactions?.length) return;
+
+//     // ========== STRONG DEDUPLICATION ==========
+//     // Create a unique key that combines ALL relevant fields
+//     const uniqueMap = new Map();
+    
+//     productAssetTransactions.forEach((txn) => {
+//       const actionDate = new Date(txn.action_date);
+//       const monthStartDate = new Date(
+//         actionDate.getFullYear(),
+//         actionDate.getMonth(),
+//         1
+//       );
+//       const monthEndDate = new Date(
+//         actionDate.getFullYear(),
+//         actionDate.getMonth() + 1,
+//         0
+//       );
+
+//       let daysUsed = 0;
+//       let billingStartDate = "";
+//       let billingEndDate = "";
+
+//       if (txn.status === "Removed") {
+//         daysUsed = calculateDays(monthStartDate, actionDate);
+//         billingStartDate = formatDate(monthStartDate);
+//         billingEndDate = formatDate(actionDate);
+//       } else if (txn.status === "Added") {
+//         daysUsed = calculateDays(actionDate, monthEndDate);
+//         billingStartDate = formatDate(actionDate);
+//         billingEndDate = formatDate(monthEndDate);
+//       }
+
+//       // Create a truly unique key
+//       const uniqueKey = `${txn.parent_asset_id}|${txn.status}|${txn.action_date}|${txn.specification}|${txn.price}|${billingStartDate}|${billingEndDate}`;
+      
+//       // Only keep the first occurrence of each unique combination
+//       if (!uniqueMap.has(uniqueKey)) {
+//         uniqueMap.set(uniqueKey, txn);
+//       }
+//     });
+    
+//     const uniqueTransactions = Array.from(uniqueMap.values());
+//     // ========== END DEDUPLICATION ==========
+
+//     const groupedTransactions = {};
+
+//     uniqueTransactions.forEach((assetTxn) => {
+//       const actionDate = new Date(assetTxn.action_date);
+//       const monthStartDate = new Date(
+//         actionDate.getFullYear(),
+//         actionDate.getMonth(),
+//         1
+//       );
+//       const monthEndDate = new Date(
+//         actionDate.getFullYear(),
+//         actionDate.getMonth() + 1,
+//         0
+//       );
+
+//       const monthDiff =
+//         (invoiceDate.getFullYear() - actionDate.getFullYear()) * 12 +
+//         (invoiceDate.getMonth() - actionDate.getMonth());
+
+//       const specialCase = paymentMode ? monthDiff === 0 : monthDiff === 1;
+
+//       if (!specialCase) return;
+
+//       let daysUsed = 0;
+//       let billingStartDate = "";
+//       let billingEndDate = "";
+
+//       if (assetTxn.status === "Removed") {
+//         if (!paymentMode) return;
+//         daysUsed = calculateDays(monthStartDate, actionDate);
+//         billingStartDate = formatDate(monthStartDate);
+//         billingEndDate = formatDate(actionDate);
+//       } else if (assetTxn.status === "Added") {
+//         daysUsed = calculateDays(actionDate, monthEndDate);
+//         billingStartDate = formatDate(actionDate);
+//         billingEndDate = formatDate(monthEndDate);
+//       }
+
+//       const dailyRate = Math.round((assetTxn.price / 30) * 100) / 100;
+//       const amountPerItem = Math.round(daysUsed * dailyRate * 100) / 100;
+
+//       // Group by billing period and status
+//       const groupKey = `${assetTxn.specification}|${assetTxn.status}|${billingStartDate}|${billingEndDate}|${daysUsed}`;
+
+//       if (!groupedTransactions[groupKey]) {
+//         groupedTransactions[groupKey] = {
+//           assetIds: new Set(),
+//           daysUsed,
+//           billingStartDate,
+//           billingEndDate,
+//           price: assetTxn.price,
+//           dailyRate,
+//           amountPerItem,
+//           totalAmount: 0,
+//           specification: assetTxn.specification,
+//           status: assetTxn.status
+//         };
+//       }
+
+//       groupedTransactions[groupKey].assetIds.add(assetTxn.parent_asset_id);
+//     });
+
+//     Object.values(groupedTransactions).forEach((group, index) => {
+//       const quantity = group.assetIds.size;
+//       const totalGroupAmount = Math.round(group.amountPerItem * quantity * 100) / 100;
+
+//       totalAmount += totalGroupAmount;
+
+//       const uniqueAssetIds = Array.from(group.assetIds).sort((a, b) => {
+//         const numA = parseInt(a.match(/\d+/) || 0);
+//         const numB = parseInt(b.match(/\d+/) || 0);
+//         return numA - numB;
+//       });
+
+// rows.push(
+//   <tr
+//     key={`asset-group-${index}`}
+//     style={++rowCounter % 2 === 0 ? tableRowEvenStyle : tableRowOddStyle}
+//   >
+//     <td style={tableCellCenterStyle}>{rowCounter}</td>
+
+//     <td style={tableCellStyle}>
+//       <div style={itemTitleStyle}>
+//         {parentItem.product_name} - {group.specification} ({group.status})
+//       </div>
+
+//       <div style={itemTitleStyle}>
+//         Asset IDs: {uniqueAssetIds.join(", ")}
+//       </div>
+
+//       <br />
+
+//       <div style={itemTitleStyle}>
+//         Billing Start Date: {group.billingStartDate} - Billing End Date:{" "}
+//         {group.billingEndDate}
+//       </div>
+//     </td>
+
+//     <td style={tableCellCenterStyle}>{quantity}</td>
+
+//     {invoiceData.transaction_type === "Rent" && (
+//       <>
+//         <td style={tableCellCenterStyle}>{group.daysUsed}</td>
+
+//         <td style={tableCellCenterStyle}>
+//           {formatINRCurrency(group.dailyRate)}
+//         </td>
+//       </>
+//     )}
+
+//     <td style={tableCellRightStyle}>
+//       {formatINRCurrency(group.price)}
+//     </td>
+
+//     <td style={tableCellRightStyle}>
+//       {formatINRCurrency(totalGroupAmount)}
+//     </td>
+//   </tr>
+// );
+//     });
+//   };
+
+//   const findDeviceDcDate = (deviceId) => {
+//     const mainItem = invoiceData.items.find(item =>
+//       item.device_ids.includes(deviceId)
+//     );
+//     if (mainItem) {
+//       return {
+//         dc_date: new Date(invoiceData.dc_date),
+//         times_created_in_invoice: invoiceData.times_created_in_invoice
+//       };
+//     }
+
+//     for (const challan of invoiceData.additional_delivery_challans || []) {
+//       const challanItem = challan.items.find(item =>
+//         item.device_ids.includes(deviceId)
+//       );
+//       if (challanItem) {
+//         return {
+//           dc_date: new Date(challan.dc_date),
+//           times_created_in_invoice: challan.times_created_in_invoice
+//         };
+//       }
+//     }
+
+//     return {
+//       dc_date: new Date(invoiceData.dc_date || invoiceData.invoice_start_date),
+//       times_created_in_invoice: invoiceData.times_created_in_invoice || 1
+//     };
+//   };
+
+//   const shouldRenderMidMonth = (item, isAdditionalChallan = false) => {
+//     if (isAdditionalChallan) return false;
+//     const challanDate = new Date(invoiceData.dc_date);
+//     const invoiceStartDate = new Date(invoiceData.invoice_start_date);
+//     const challanMonth = new Date(challanDate.getFullYear(), challanDate.getMonth(), 1);
+//     const invoiceMonth = new Date(invoiceStartDate.getFullYear(), invoiceStartDate.getMonth(), 1);
+//     const monthDiff = (invoiceMonth.getFullYear() - challanMonth.getFullYear()) * 12 +
+//       (invoiceMonth.getMonth() - challanMonth.getMonth());
+//     if (monthDiff !== 1) return false;
+//     return invoiceData.times_created_in_invoice === 1;
+//   };
+
+//   const renderReturnedDeviceRow = (item, product, rd) => {
+//     if (!paymentMode && !shouldRenderMidMonth(item)) return null;
+//     let deviceIds = [...new Set((rd.deviceIds || []).map((id) => id.trim()))];
+//     deviceIds = deviceIds.filter((id) => !renderedAssetIds.has(id));
+//     if (deviceIds.length === 0) return null;
+//     deviceIds.forEach((id) => renderedAssetIds.add(id));
+//     const daysUsed = rd.daysUsed || 1;
+//     const baseCount = deviceIds.length > 0 ? deviceIds.length : rd.quantity;
+//     const dailyRate = rd.dailyRate || item.dailyRate || item.rate / 30;
+//     const amount = calculateAmount(daysUsed, dailyRate, baseCount);
+//     totalAmount += Number(amount) || 0;
+//     return (
+//       <tr style={++rowCounter % 2 === 0 ? tableRowEvenStyle : tableRowOddStyle}>
+//         <td style={tableCellCenterStyle}>{rowCounter}</td>
+//         <td style={tableCellStyle}>
+//           <div style={itemTitleStyle}>{item.product_name}</div>
+//           <div style={specificationsStyle}>
+//             {product?.brand && `Brand: ${product.brand}, `}
+//             {product?.model && `Model: ${product.model}, `}
+//             {product?.ram && `RAM: ${product.ram}`}
+//             {product?.lan_card && `, LAN Card: ${product.lan_card}`}  {/* ADDED: LAN Card display */}
+//           </div>
+//           <br />
+//           <div><strong>Returned Asset IDs:</strong> {deviceIds.join(", ")}</div>
+//           <br />
+//           <div style={itemTitleStyle}>Return Date: {formatDate(new Date(rd.returnedDate))}</div>
+//         </td>
+//         <td style={tableCellCenterStyle}>{baseCount}</td>
+//         {invoiceData.transaction_type === "Rent" && (
+//           <>
+//             <td style={tableCellCenterStyle}>{daysUsed}</td>
+//             <td style={tableCellCenterStyle}>{formatINRCurrency(dailyRate)}</td>
+//           </>
+//         )}
+//         <td style={tableCellRightStyle}>-</td>
+//         <td style={tableCellRightStyle}>{formatINRCurrency(amount)}</td>
+//       </tr>
+//     );
+//   };
+
+//   const renderSwappedDeviceRow = (item, product, sd) => {
+//     if (!paymentMode && !shouldRenderMidMonth(item)) return null;
+//     let deviceIds = [...new Set(sd.deviceIds || [])];
+//     deviceIds = deviceIds.filter((id) => !renderedAssetIds.has(id));
+//     deviceIds.forEach((id) => renderedAssetIds.add(id));
+//     if (deviceIds.length === 0) return null;
+//     const daysUsed = sd.daysUsed || 1;
+//     const baseCount = deviceIds.length;
+//     const dailyRate = sd.dailyRate || item.dailyRate || item.rate / 30;
+//     const amount = calculateAmount(daysUsed, dailyRate, baseCount, item.rate);
+//     totalAmount += Number(amount) || 0;
+//     return (
+//       <tr style={++rowCounter % 2 === 0 ? tableRowEvenStyle : tableRowOddStyle}>
+//         <td style={tableCellCenterStyle}>{rowCounter}</td>
+//         <td style={tableCellStyle}>
+//           <div style={itemTitleStyle}>{item.product_name}</div>
+//           <div style={specificationsStyle}>
+//             {product?.brand && `Brand: ${product.brand}, `}
+//             {product?.model && `Model: ${product.model}, `}
+//             {product?.ram && `RAM: ${product.ram}`}
+//             {product?.lan_card && `, LAN Card: ${product.lan_card}`}  {/* ADDED: LAN Card display */}
+//           </div>
+//           <br />
+//           <div><strong>Swapped Asset IDs:</strong> {deviceIds.join(", ")}</div>
+//           <br />
+//           <div style={itemTitleStyle}>
+//             Swap Date: {formatDate(new Date(sd.swappedDate))}
+//             {sd.reason && <div><strong>Reason:</strong> {sd.reason}</div>}
+//           </div>
+//         </td>
+//         <td style={tableCellCenterStyle}>{baseCount}</td>
+//         {invoiceData.transaction_type === "Rent" && (
+//           <>
+//             <td style={tableCellCenterStyle}>{daysUsed}</td>
+//             <td style={tableCellCenterStyle}>{formatINRCurrency(dailyRate)}</td>
+//           </>
+//         )}
+//         <td style={tableCellRightStyle}>-</td>
+//         <td style={tableCellRightStyle}>{formatINRCurrency(amount)}</td>
+//       </tr>
+//     );
+//   };
+
+//   const renderMidMonthRow = (item, product) => {
+//     if (!shouldRenderMidMonth(item)) return null;
+//     if (item.quantity === 0 && (!item.device_ids || item.device_ids.length === 0)) return null;
+//     const deviceIds = item.device_ids || [];
+//     const baseCount = deviceIds.length > 0 ? deviceIds.length : item.quantity;
+//     const challanDate = item.isAdditionalChallan ? new Date(item.challanDate) : new Date(invoiceData.dc_date);
+//     const startDate = challanDate;
+//     const endDate = new Date(challanDate.getFullYear(), challanDate.getMonth() + 1, 0);
+//     const invoiceStartDate = new Date(invoiceData.invoice_start_date);
+//     const isWithinOneMonth = (d1, d2) => {
+//       const diff = (d2.getFullYear() - d1.getFullYear()) * 12 + (d2.getMonth() - d1.getMonth());
+//       return diff === 0 || diff === 1;
+//     };
+//     const daysUsed = calculateDays(startDate, endDate);
+//     const dailyRate = item.dailyRate || item.rate / 30;
+//     const amount = calculateAmount(daysUsed, dailyRate, baseCount);
+//     totalAmount += Number(amount) || 0;
+//     if (!isWithinOneMonth(startDate, invoiceStartDate)) return null;
+//     if (!amount) return null;
+//     return (
+//       <tr style={++rowCounter % 2 === 0 ? tableRowEvenStyle : tableRowOddStyle}>
+//         <td style={tableCellCenterStyle}>{rowCounter}</td>
+//         <td style={tableCellStyle}>
+//           <div><strong>Mid-Month Usage:</strong></div>
+//           <br />
+//           <div style={itemTitleStyle}>{item.product_name}</div>
+//           <div style={specificationsStyle}>
+//             {product?.brand && `Brand: ${product.brand}, `}
+//             {product?.model && `Model: ${product.model}, `}
+//             {product?.ram && `RAM: ${product.ram}`}
+//             {product?.lan_card && `, LAN Card: ${product.lan_card}`}  {/* ADDED: LAN Card display */}
+//           </div>
+//           {deviceIds.length > 0 && <div style={itemTitleStyle}>Asset IDs: {deviceIds.join(", ")}</div>}
+//           <br />
+//           <div style={itemTitleStyle}>Billing Start Date: {formatDate(startDate)} to {formatDate(endDate)}</div>
+//         </td>
+//         <td style={tableCellCenterStyle}>{baseCount}</td>
+//         {invoiceData.transaction_type === "Rent" && (
+//           <>
+//             <td style={tableCellCenterStyle}>{daysUsed}</td>
+//             <td style={tableCellCenterStyle}>{formatINRCurrency(dailyRate)}</td>
+//           </>
+//         )}
+//         <td style={tableCellRightStyle}>-</td>
+//         <td style={tableCellRightStyle}>{formatINRCurrency(amount)}</td>
+//       </tr>
+//     );
+//   };
+
+//   // ==================== MAIN RENDERING LOOP ====================
+//   const rows = [];
+  
+//   const productGroups = new Map();
+//   items.forEach((item) => {
+//     if (!shouldShowRow(item)) return;
+//     const productName = item.product_name;
+//     if (!productGroups.has(productName)) {
+//       productGroups.set(productName, []);
+//     }
+//     productGroups.get(productName).push(item);
+//   });
+
+//   for (const [productName, productItems] of productGroups.entries()) {
+//     const invoiceStartDateObj = new Date(invoiceData.invoice_start_date);
+    
+//     const deviceToItemMap = new Map();
+//     productItems.forEach(item => {
+//       if (item.device_ids && item.device_ids.length > 0) {
+//         item.device_ids.forEach(deviceId => {
+//           if (!deviceToItemMap.has(deviceId)) {
+//             deviceToItemMap.set(deviceId, item);
+//           }
+//         });
+//       }
+//     });
+    
+//     const allDeviceIds = [...deviceToItemMap.keys()];
+    
+//     if (allDeviceIds.length === 0) continue;
+    
+//     const devicesByConfig = new Map();
+    
+//     allDeviceIds.forEach(deviceId => {
+//       const sourceItem = deviceToItemMap.get(deviceId);
+//       if (sourceItem && sourceItem.productDetails) {
+//         const finalSpecs = getFinalSpecificationsForDevice(
+//           deviceId,
+//           sourceItem.productDetails,
+//           invoiceStartDateObj
+//         );
+        
+//         const ramValue = finalSpecs.ram || 'N/A';
+//         const storageValue = finalSpecs.storage || 'N/A';
+//         const lanCardValue = finalSpecs.lan_card || 'N/A';  // ADDED: LAN Card grouping
+//         const configKey = `${ramValue}|${storageValue}|${lanCardValue}`;  // ADDED: Include LAN Card in grouping
+        
+//         if (!devicesByConfig.has(configKey)) {
+//           devicesByConfig.set(configKey, {
+//             deviceIds: [],
+//             specifications: finalSpecs,
+//             rate: sourceItem.rate,
+//             dailyRate: sourceItem.dailyRate,
+//             productName: sourceItem.product_name,
+//             description: sourceItem.description,
+//             days: sourceItem.days,
+//             ramValue: ramValue,
+//             storageValue: storageValue,
+//             lanCardValue: lanCardValue  // ADDED: LAN Card value
+//           });
+//         }
+        
+//         devicesByConfig.get(configKey).deviceIds.push(deviceId);
+//       }
+//     });
+    
+//     for (const [configKey, group] of devicesByConfig.entries()) {
+//       const daysUsed = group.days || 30;
+//       const deviceIds = group.deviceIds;
+//       const baseCount = deviceIds.length;
+//       const monthlyRate = group.rate;
+//       const dailyRate = monthlyRate / 30;
+      
+//       let amount = isBuyTransaction
+//         ? monthlyRate * baseCount
+//         : calculateAmount(daysUsed, dailyRate, baseCount, monthlyRate);
+      
+//       totalAmount += Number(amount) || 0;
+      
+//       rows.push(
+//         <tr
+//           key={`row-${productName}-${configKey}`}
+//           style={++rowCounter % 2 === 0 ? tableRowEvenStyle : tableRowOddStyle}
+//         >
+//           <td style={tableCellCenterStyle}>{rowCounter}</td>
+//           <td style={tableCellStyle}>
+//             <div style={itemTitleStyle}>{group.productName}</div>
+            
+//             <div style={specificationsStyle}>
+//               Brand: {group.specifications.brand || 'Default Brand'}, 
+//               Model: {group.specifications.model || 'Assembled'}, 
+//               RAM: {group.ramValue},
+//               Storage: {group.storageValue},
+//               LAN Card: {group.lanCardValue}  {/* ADDED: LAN Card in specifications */}
+//             </div>
+            
+//             <br />
+            
+//             <div style={assetIdsStyle}>
+//               Asset IDs: {deviceIds.sort((a, b) => {
+//                 const numA = parseInt(a.match(/\d+/) || 0);
+//                 const numB = parseInt(b.match(/\d+/) || 0);
+//                 return numA - numB;
+//               }).join(", ")}
+//             </div>
+            
+//             {invoiceData.transaction_type === "Rent" && (
+//               <>
+//                 <br />
+//                 <div style={itemTitleStyle}>{group.description}</div>
+//               </>
+//             )}
+//           </td>
+          
+//           <td style={tableCellCenterStyle}>{baseCount}</td>
+          
+//           {invoiceData.transaction_type === "Rent" && (
+//             <>
+//               <td style={tableCellCenterStyle}>{daysUsed}</td>
+//               <td style={tableCellCenterStyle}>
+//                 {formatINRCurrency(dailyRate)}
+//               </td>
+//             </>
+//           )}
+          
+//           <td style={tableCellRightStyle}>
+//             {formatINRCurrency(monthlyRate)}
+//           </td>
+          
+//           <td style={tableCellRightStyle}>
+//             {formatINRCurrency(amount)}
+//           </td>
+//         </tr>
+//       );
+//     }
+    
+//     // ========== FIX: Render asset transactions ONLY ONCE per product ==========
+//     // Check if this product has any asset transactions and render only once
+//     const firstItem = productItems[0];
+//     const hasAssetTransactions = invoiceData.asset_transactions?.some(
+//       (at) => at.product_id === firstItem?.product_id
+//     );
+    
+//     if (hasAssetTransactions && firstItem) {
+//       renderAssetTransactionRow(firstItem.productDetails, firstItem);
+//     }
+//     // ========== END FIX ==========
+    
+//     // Render other rows (returns, swaps, mid-month) for each item
+//     productItems.forEach((item) => {
+//       if (!isBuyTransaction && !paymentMode && showDcPeriod) {
+//         const midRow = renderMidMonthRow(item, item.productDetails);
+//         if (midRow) rows.push(midRow);
+//       }
+      
+//       item.returnedDevices?.forEach((rd) => {
+//         const retRow = renderReturnedDeviceRow(item, item.productDetails, rd);
+//         if (retRow) rows.push(retRow);
+//       });
+      
+//       item.swappedDevices?.forEach((sd) => {
+//         const swapRow = renderSwappedDeviceRow(item, item.productDetails, sd);
+//         if (swapRow) rows.push(swapRow);
+//       });
+//     });
+//   }
+//   // ==================== END OF MAIN RENDERING LOOP ====================
+
+//   const netAmount = totalAmount;
+//   let cgst = isKarnataka ? netAmount * 0.09 : 0;
+//   let sgst = isKarnataka ? netAmount * 0.09 : 0;
+//   let igst = isKarnataka ? 0 : netAmount * 0.18;
+//   let totalTax = cgst + sgst + igst;
+//   const grandTotal = netAmount + totalTax;
+
+//   const renderInvoice = () => {
+//     return (
+//       <div
+//         className="invoice-container"
+//         style={receiptContainerStyle}
+//         id="invoice-current-month-invoice"
+//       >
+//         <div style={headerBarStyle}></div>
+//         <div style={companyHeaderStyle}>
+//           <div style={companyInfoContainerStyle}>
+//             <div style={logoStyle}>
+//               <img
+//                 src="/SORT-ICON.png"
+//                 alt="Company Logo"
+//                 style={{ width: "100%", height: "100%", objectFit: "contain" }}
+//               />
+//             </div>
+//             <div>
+//               <div style={companyNameStyle}>Guru Goutam Infotech Pvt. Ltd.</div>
+//               <div style={companyDetailsStyle}>
+//                 CIN: U72200KA2008PTC047679
+//                 <br />
+//                 GST: {invoiceData.customer_gst_number || "29AADCG2608Q1Z6"}
+//               </div>
+//             </div>
+//           </div>
+//           <div style={challanHeaderStyle}>
+//             <div style={challanTitleStyle}>TAX INVOICE</div>
+//             <div style={challanDetailsStyle}>
+//               Invoice No: {invoiceData.invoice_number}
+//               <br />
+//               Invoice Date: {formatDate(startDate)}
+//             </div>
+//           </div>
+//         </div>
+
+//         <div style={recipientSectionStyle}>
+//           <div style={recipientContainerStyle}>
+//             <div style={recipientAddressStyle}>
+//               <div style={recipientLabelStyle}>Bill To</div>
+//               {invoiceData.customer_name}
+//               <br />
+//               {invoiceData.shippingDetail?.street && `${invoiceData.shippingDetail.street}, `}
+//               {invoiceData.shippingDetail?.landmark && `${invoiceData.shippingDetail.landmark}, `}
+//               {invoiceData.shippingDetail?.city}, {invoiceData.shippingDetail?.state},
+//               <br />
+//               {invoiceData.shippingDetail?.country} - {invoiceData.shippingDetail?.pincode}
+//             </div>
+//             <div style={recipientDetailsGridStyle}>
+//               <div><div style={detailLabelStyle}>PAN Number :</div>{invoiceData.pan_number}</div>
+//               <div><div style={detailLabelStyle}>Order Number :</div>{invoiceData.dispatch_order_number}</div>
+//               {invoiceData.dc_date !== null && <div><div style={detailLabelStyle}>DC Date :</div>{invoiceData.dc_date}</div>}
+//               <div><div style={detailLabelStyle}>Email :</div>{invoiceData.email}</div>
+//               <div><div style={detailLabelStyle}>Phone :</div>{invoiceData.phone_number}</div>
+//             </div>
+//           </div>
+//         </div>
+
+//         {!isBuyTransaction && (
+//           <div style={invoicePeriodStyle}>
+//             <div><strong>Invoice Period:</strong> {formatDate(invoiceDate)} to {formatDate(invoiceEndDate)}</div>
+//           </div>
+//         )}
+
+//         <table style={tableStyle}>
+//           <thead>
+//             <tr>
+//               <th style={tableHeaderNoStyle}>NO.</th>
+//               <th style={tableHeaderParticularsStyle}>Product Details</th>
+//               <th style={tableHeaderQtyStyle}>Qty</th>
+//               {invoiceData.transaction_type === "Rent" && (
+//                 <>
+//                   <th style={tableHeaderDaysStyle}>Days</th>
+//                   <th style={tableHeaderDaysStyle}>Per Day</th>
+//                 </>
+//               )}
+//               <th style={tableHeaderDaysStyle}>
+//                 {invoiceData.transaction_type === "Rent" ? "Per Month" : "Purchase Price"}
+//               </th>
+//               <th style={tableHeaderRateStyle}>TOTAL</th>
+//             </tr>
+//           </thead>
+//           <tbody>
+//             {rows}
+//             <tr key="total-row" style={totalsRowStyle}>
+//               <td style={tableCellCenterStyle} colSpan={invoiceData.transaction_type === "Rent" ? 6 : 4}>
+//                 <strong>TOTAL</strong>
+//               </td>
+//               <td style={tableCellRightStyle}>{formatINRCurrency(totalAmount)}</td>
+//             </tr>
+//           </tbody>
+//         </table>
+
+//         <div style={taxTotalContainerStyle}>
+//           <div style={taxDetailsStyle}>
+//             <div style={taxRowStyle}><span>Subtotal:</span><span>{formatINRCurrency(totalAmount)}</span></div>
+//             {isKarnataka && (
+//               <>
+//                 <div style={taxRowStyle}><span>CGST @9%:</span><span>{formatINRCurrency(cgst)}</span></div>
+//                 <div style={taxRowStyle}><span>SGST @9%:</span><span>{formatINRCurrency(sgst)}</span></div>
+//               </>
+//             )}
+//             {!isKarnataka && <div style={taxRowStyle}><span>IGST @18%:</span><span>{formatINRCurrency(igst)}</span></div>}
+//             <div style={taxRowTotalStyle}><span>Total Tax:</span><span>{formatINRCurrency(totalTax)}</span></div>
+//             <div style={grandTotalStyle}><span>Grand Total:</span><span>{formatINRCurrency(grandTotal)}</span></div>
+//           </div>
+//         </div>
+
+//         <div style={bankDetailsContainerStyle}>
+//           <div style={bankDetailsTitleStyle}>Bank Details:</div>
+//           <div style={bankLineStyle}>Guru Goutham Infotech Pvt. Ltd., HDFC Bank Ltd, Jayanagar Branch.</div>
+//           <div style={bankLineStyle}>Current A/c No: 50200066787843, IFSC Code: HDFC0000261.</div>
+//           <div style={amountWordsStyle}>Amt. in Words: <span>{numberToWords(grandTotal)}</span></div>
+//           <div style={jurisdictionNoteStyle}>Note: <span style={highlightTextStyle}>Subject to Bengaluru Jurisdiction</span></div>
+//         </div>
+
+//         <div style={signatureSectionStyle}>
+//           <div style={leftSignatureAreaStyle}>
+//             <div style={companySignatureLabelStyle}></div>
+//             <div style={signatureBoxStyle}></div>
+//             <div style={signatureDesignationStyle}>Receiver Signature with Seal</div>
+//           </div>
+//           <div style={rightSignatureAreaStyle}>
+//             <div style={companySignatureLabelStyle}>For Guru Goutham Infotech Private Limited</div>
+//             <div style={signatureBoxStyle}>SD/-</div>
+//             <div style={signatureDesignationStyle}>Authorised Signatory</div>
+//           </div>
+//         </div>
+
+//         <div style={companyFooterStyle}>
+//           <div style={footerAddressStyle}>
+//             <span>📍</span>
+//             <span>No. 8, 2nd Cross, Diagonal Road, 3rd Block,<br />Jayanagar Bengaluru-560011.</span>
+//           </div>
+//           <div style={footerContactStyle}>
+//             <div style={footerContactItemStyle}><span>🌐</span><span>gurugoutam.com</span></div>
+//             <div style={footerContactItemStyle}><span>📞</span><span>080-2242 9955, +91 9449 0789 55</span></div>
+//             <div style={footerContactItemStyle}><span>✉️</span><span>info@gurugoutam.com</span></div>
+//           </div>
+//         </div>
+//       </div>
+//     );
+//   };
+
+//   const handleDownloadPDF = async () => {
+//     try {
+//       await new Promise((resolve) => setTimeout(resolve, 300));
+//       const element = document.getElementById("invoice-current-month-invoice");
+//       if (!element) throw new Error("Could not find invoice element in DOM");
+//       const clone = element.cloneNode(true);
+//       clone.style.position = "absolute";
+//       clone.style.left = "-9999px";
+//       clone.style.visibility = "visible";
+//       clone.style.width = "210mm";
+//       document.body.appendChild(clone);
+//       const options = {
+//         scale: 2,
+//         logging: true,
+//         useCORS: true,
+//         scrollX: 0,
+//         scrollY: 0,
+//         windowWidth: clone.scrollWidth,
+//         windowHeight: clone.scrollHeight,
+//         backgroundColor: "#FFFFFF",
+//       };
+//       const canvas = await html2canvas(clone, options);
+//       document.body.removeChild(clone);
+//       const imgData = canvas.toDataURL("image/png");
+//       const pdf = new jsPDF("p", "mm", "a4");
+//       const imgProps = pdf.getImageProperties(imgData);
+//       const pdfWidth = pdf.internal.pageSize.getWidth();
+//       const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+//       let heightLeft = pdfHeight;
+//       let position = 0;
+//       const pageHeight = pdf.internal.pageSize.getHeight();
+//       pdf.addImage(imgData, "PNG", 0, position, pdfWidth, pdfHeight);
+//       heightLeft -= pageHeight;
+//       while (heightLeft >= 0) {
+//         position = heightLeft - pdfHeight;
+//         pdf.addPage();
+//         pdf.addImage(imgData, "PNG", 0, position, pdfWidth, pdfHeight);
+//         heightLeft -= pageHeight;
+//       }
+//       pdf.save(`invoice-${invoiceData.invoice_number || "INV"}.pdf`);
+//     } catch (error) {
+//       console.error("PDF Generation Error:", error);
+//       alert(`Failed to generate PDF: ${error.message}`);
+//     }
+//   };
+
+//   const handlePrint = () => {
+//     const element = document.getElementById("invoice-current-month-invoice");
+//     if (!element) {
+//       console.error("Print element not found");
+//       alert("Could not find the invoice content for printing");
+//       return;
+//     }
+//     const printWindow = window.open("", "_blank");
+//     printWindow.document.write(`
+//       <!DOCTYPE html>
+//       <html>
+//         <head>
+//           <title>Invoice - ${invoiceData.invoice_number || "INV"}</title>
+//           <style>
+//             @page { size: A4; margin: 10mm; }
+//             body { margin: 0; padding: 0; font-family: Arial, sans-serif; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+//             .print-container { width: 190mm; min-height: 277mm; padding: 0; box-sizing: border-box; }
+//             table { width: 100%; border-collapse: collapse; }
+//             th, td { border: 1px solid #000; padding: 8px; text-align: left; }
+//             th { background-color: #f0f0f0; }
+//           </style>
+//         </head>
+//         <body>
+//           <div class="print-container">${element.innerHTML}</div>
+//           <script>
+//             window.onload = function() {
+//               setTimeout(function() { window.print(); setTimeout(function() { window.close(); }, 500); }, 300);
+//             }
+//           </script>
+//         </body>
+//       </html>
+//     `);
+//     printWindow.document.close();
+//   };
+
+//   return (
+//     <Dialog open={open} onClose={onClose} maxWidth="lg" fullWidth scroll="paper">
+//       <DialogTitle>Invoice</DialogTitle>
+//       <DialogContent>
+//         <div style={{ padding: "20px" }} id="invoice-current-month-invoice">
+//           {renderInvoice()}
+//         </div>
+//       </DialogContent>
+//       <DialogActions>
+//         <Button onClick={onClose}>Close</Button>
+//         <Button onClick={handleDownloadPDF} variant="contained" color="primary" style={{ marginLeft: "10px" }}>Download PDF</Button>
+//         <Button onClick={handlePrint} variant="contained" color="secondary">Print</Button>
+//       </DialogActions>
+//     </Dialog>
+//   );
+// };
+
+
+/// 19-05-2026
+
+
+// const InvoiceDialog = ({ open, onClose, invoiceData }) => {
+//   if (!invoiceData) return null;
+
+//   const invoiceType = invoiceData.type;
+//   const isBuyTransaction = invoiceData.transaction_type === "Buy";
+//   const isRentTransaction = invoiceData.transaction_type === "Rent";
+//   const startDate = new Date(invoiceData.invoice_date);
+//   const invoiceDate = new Date(invoiceData.invoice_start_date);
+//   const paymentMode = invoiceData.payment_mode === "Postpaid";
+//   const isKarnataka = invoiceData.shippingDetail?.state === "Karnataka";
+
+//   const dcDate123 = new Date(invoiceData.dc_date);
+//   const invoiceDateOnly = new Date(invoiceData.invoice_date);
+
+//   const sameMonth =
+//     dcDate123.getMonth() === invoiceDateOnly.getMonth() &&
+//     dcDate123.getFullYear() === invoiceDateOnly.getFullYear();
+
+//   // Helper: same month & year check
+//   const isSameMonthYear = (date1, date2) => {
+//     return (
+//       date1.getFullYear() === date2.getFullYear() &&
+//       date1.getMonth() === date2.getMonth()
+//     );
+//   };
+
+//   const hasSameMonthReturn =
+//     invoiceData.credit_notes?.some((note) => {
+//       if (!note.returned_date) return false;
+//       return isSameMonthYear(
+//         new Date(invoiceData.dc_date),
+//         new Date(note.returned_date)
+//       );
+//     }) ||
+//     invoiceData.additional_delivery_challans?.some((challan) =>
+//       challan.credit_notes?.some((note) => {
+//         if (!note.returned_date) return false;
+//         return isSameMonthYear(
+//           new Date(challan.dc_date || invoiceData.dc_date),
+//           new Date(note.returned_date)
+//         );
+//       })
+//     ) ||
+//     false;
+
+//   const hasMonthDifference = invoiceData.credit_notes?.some((creditNote) => {
+//     if (!creditNote.returned_date) return false;
+//     const returnDate = new Date(creditNote.returned_date);
+//     const monthDiff =
+//       (invoiceDate.getFullYear() - returnDate.getFullYear()) * 12 +
+//       (invoiceDate.getMonth() - returnDate.getMonth());
+//     return monthDiff >= 1;
+//   });
+
+//   // Date calculations
+//   const invoiceStartDate = new Date(invoiceData.invoice_start_date);
+//   const dcDate = new Date(invoiceData.dc_date);
+//   const invoiceEndDate = new Date(invoiceData.invoice_end_date);
+//   const dcPeriodEnd = new Date(dcDate.getFullYear(), dcDate.getMonth() + 1, 0);
+
+//   const hasCreditNoteReturnedDate =
+//     invoiceData.credit_notes?.some((note) => !!note.returned_date) ||
+//     invoiceData.additional_delivery_challans?.some((challan) =>
+//       challan.credit_notes?.some((note) => !!note.returned_date)
+//     );
+
+//   function countAllDcDates(invoiceData) {
+//     if (!invoiceData) return 0;
+//     const mainDcCount = 1;
+//     const additionalDcsCount =
+//       invoiceData.additional_delivery_challans?.length || 0;
+//     return mainDcCount + additionalDcsCount;
+//   }
+
+//   const dcDatesCount = countAllDcDates(invoiceData);
+
+//   const monthDiff =
+//     (invoiceStartDate.getFullYear() - dcDate.getFullYear()) * 12 +
+//     (invoiceStartDate.getMonth() - dcDate.getMonth());
+
+//   const hasAdditionalChallans =
+//     invoiceData.additional_delivery_challans?.length > 0;
+//   let additionalChallanMonthDiff = 0;
+
+//   if (hasAdditionalChallans) {
+//     const additionalChallanDate = new Date(
+//       invoiceData.additional_delivery_challans[0].dc_date
+//     );
+//     additionalChallanMonthDiff =
+//       (invoiceStartDate.getFullYear() - additionalChallanDate.getFullYear()) *
+//       12 +
+//       (invoiceStartDate.getMonth() - additionalChallanDate.getMonth());
+//   }
+
+//   const hasSameMonthChallan =
+//     hasAdditionalChallans && additionalChallanMonthDiff === 0;
+//   const hasPrevMonthChallan =
+//     hasAdditionalChallans && additionalChallanMonthDiff === 1;
+//   const specialCase =
+//     paymentMode &&
+//     monthDiff === 0 &&
+//     (hasSameMonthChallan || hasPrevMonthChallan);
+
+//   const showDcPeriod =
+//     (monthDiff === 1 || monthDiff === 0) && dcDate.getDate() !== 1;
+
+//   const formatDate = (dateStr) => {
+//     if (!dateStr) return "-";
+//     const date = new Date(dateStr);
+//     const day = String(date.getDate()).padStart(2, "0");
+//     const month = String(date.getMonth() + 1).padStart(2, "0");
+//     const year = date.getFullYear();
+//     return `${day}/${month}/${year}`;
+//   };
+
+//   const calculateDays = (startDate, endDate) => {
+//     const start = new Date(startDate);
+//     const end = new Date(endDate);
+
+//     let startDay = Math.min(start.getDate(), 30);
+//     let endDay = Math.min(end.getDate(), 30);
+
+//     const lastDayOfMonth = new Date(
+//       end.getFullYear(),
+//       end.getMonth() + 1,
+//       0
+//     ).getDate();
+//     if (end.getDate() === lastDayOfMonth) {
+//       endDay = 30;
+//     }
+
+//     const totalStartDays =
+//       start.getFullYear() * 360 + start.getMonth() * 30 + startDay;
+//     const totalEndDays = end.getFullYear() * 360 + end.getMonth() * 30 + endDay;
+
+//     return totalEndDays - totalStartDays + 1;
+//   };
+
+//   const calculateReturnDays = (returnDate) => {
+//     const returnDateObj = new Date(returnDate);
+//     let matchedDcDate = null;
+
+//     invoiceData.credit_notes?.forEach((note) => {
+//       if (note.returned_date === returnDate) {
+//         matchedDcDate = new Date(invoiceData.dc_date);
+//       }
+//     });
+
+//     if (!matchedDcDate) {
+//       invoiceData.additional_delivery_challans?.forEach((challan) => {
+//         challan.credit_notes?.forEach((note) => {
+//           if (note.returned_date === returnDate) {
+//             matchedDcDate = new Date(challan.dc_date || invoiceData.dc_date);
+//           }
+//         });
+//       });
+//     }
+
+//     if (!matchedDcDate) {
+//       matchedDcDate = new Date(invoiceData.dc_date);
+//     }
+
+//     if (hasSameMonthReturn) {
+//       const diffTime = Math.abs(returnDateObj - matchedDcDate);
+//       return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+//     } else {
+//       const startOfMonth = new Date(
+//         returnDateObj.getFullYear(),
+//         returnDateObj.getMonth(),
+//         1
+//       );
+//       const diffTime = Math.abs(returnDateObj - startOfMonth);
+//       return Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+//     }
+//   };
+
+//   let finalCondition = false;
+
+//   invoiceData.additional_delivery_challans?.forEach((challan) => {
+//     const challanDate = new Date(challan.dc_date);
+//     const mainDcDate = new Date(invoiceData.dc_date);
+//     const invoiceStartDate = new Date(invoiceData.invoice_start_date);
+
+//     const dcMonthDiff =
+//       (mainDcDate.getFullYear() - challanDate.getFullYear()) * 12 +
+//       (mainDcDate.getMonth() - challanDate.getMonth());
+
+//     const isSameMonthBetweenDCs = dcMonthDiff === 0;
+
+//     const dcToInvoiceMonthDiff =
+//       (invoiceStartDate.getFullYear() - mainDcDate.getFullYear()) * 12 +
+//       (invoiceStartDate.getMonth() - mainDcDate.getMonth());
+
+//     if (isSameMonthBetweenDCs && dcToInvoiceMonthDiff === 1) {
+//       finalCondition = true;
+//     }
+//   });
+
+//   const calculateInvoiceItems = () => {
+//     const allReturnsMap = {};
+//     const allSwapsMap = {};
+
+//     invoiceData.credit_notes?.forEach((cn) => {
+//       const returnedDate = new Date(cn.returned_date);
+//       const dcDate = new Date(cn.dc_date || invoiceData.dc_date);
+
+//       cn.items?.forEach((ri) => {
+//         const key = `${ri.product_id}`;
+//         if (!allReturnsMap[key]) allReturnsMap[key] = [];
+
+//         const returnedStartDate = new Date(
+//           returnedDate.getFullYear(),
+//           returnedDate.getMonth(),
+//           1
+//         );
+
+//         const daysUsed = hasSameMonthReturn
+//           ? calculateDays(dcDate, returnedDate)
+//           : calculateDays(returnedStartDate, returnedDate);
+
+//         const dailyRate = invoiceData.items?.find(
+//           (item) => item.product_id === ri.product_id
+//         )
+//           ? Number(
+//             invoiceData.items.find(
+//               (item) => item.product_id === ri.product_id
+//             ).unit_price
+//           ) / 30
+//           : 0;
+
+//         allReturnsMap[key].push({
+//           returnedDate,
+//           daysUsed,
+//           deviceIds: ri.device_ids,
+//           amount: parseFloat(
+//             (daysUsed * dailyRate * ri.device_ids.length).toFixed(2)
+//           ),
+//           source: "root",
+//           dcDate: dcDate,
+//         });
+//       });
+//     });
+
+//     invoiceData.asset_swaps?.forEach((swap) => {
+//       const swappedDate = new Date(swap.swapped_on);
+//       const dcDate = new Date(invoiceData.dc_date);
+
+//       const key = `${swap.product_id}`;
+//       if (!allSwapsMap[key]) allSwapsMap[key] = [];
+
+//       const swappedStartDate = new Date(
+//         swappedDate.getFullYear(),
+//         swappedDate.getMonth(),
+//         1
+//       );
+
+//       const sameMonth = isSameMonthYear(dcDate, swappedDate);
+
+//       const daysUsed = sameMonth
+//         ? calculateDays(dcDate, swappedDate)
+//         : calculateDays(swappedStartDate, swappedDate);
+
+//       const dailyRateSource =
+//         invoiceData.items?.find((item) => item.product_id === swap.product_id)?.unit_price ||
+//         swap.rent_price_per_month ||
+//         0;
+
+//       const dailyRate = Number(dailyRateSource) / 30;
+
+//       allSwapsMap[key].push({
+//         swappedDate,
+//         daysUsed,
+//         deviceIds: [swap.asset_id],
+//         amount: parseFloat((daysUsed * dailyRate).toFixed(2)),
+//         source: "root",
+//         dcDate: dcDate,
+//         reason: swap.reason,
+//         newDeviceIds: swap.new_device_ids || [],
+//       });
+//     });
+
+//     invoiceData.additional_delivery_challans?.forEach((challan) => {
+//       const challanDcDate = new Date(challan.dc_date);
+
+//       challan.credit_notes?.forEach((cn) => {
+//         const returnedDate = new Date(cn.returned_date);
+
+//         cn.items?.forEach((ri) => {
+//           const key = `${ri.product_id}`;
+//           if (!allReturnsMap[key]) allReturnsMap[key] = [];
+
+//           const returnedStartDate = new Date(
+//             returnedDate.getFullYear(),
+//             returnedDate.getMonth(),
+//             1
+//           );
+
+//           const daysUsed = hasSameMonthReturn
+//             ? calculateDays(challanDcDate, returnedDate)
+//             : calculateDays(returnedStartDate, returnedDate);
+
+//           const dailyRate = challan.items?.find(
+//             (item) => item.product_id === ri.product_id
+//           )
+//             ? Number(
+//               challan.items.find((item) => item.product_id === ri.product_id)
+//                 .unit_price
+//             ) / 30
+//             : 0;
+
+//           allReturnsMap[key].push({
+//             returnedDate,
+//             daysUsed,
+//             dailyRate,
+//             deviceIds: ri.device_ids,
+//             amount: parseFloat(
+//               (daysUsed * dailyRate * ri.device_ids.length).toFixed(2)
+//             ),
+//             source: "additional",
+//             dcDate: challanDcDate,
+//           });
+//         });
+//       });
+
+//       challan.asset_swaps?.forEach((swap) => {
+//         const swappedDate = new Date(swap.swapped_on);
+
+//         const key = `${swap.product_id}`;
+//         if (!allSwapsMap[key]) allSwapsMap[key] = [];
+
+//         const swappedStartDate = new Date(
+//           swappedDate.getFullYear(),
+//           swappedDate.getMonth(),
+//           1
+//         );
+
+//         const daysUsed = hasSameMonthReturn
+//           ? calculateDays(challanDcDate, swappedDate)
+//           : calculateDays(swappedStartDate, swappedDate);
+
+//         const dailyRate = challan.items?.find(
+//           (item) => item.product_id === swap.product_id
+//         )
+//           ? Number(
+//             challan.items.find((item) => item.product_id === swap.product_id)
+//               .unit_price
+//           ) / 30
+//           : 0;
+
+//         allSwapsMap[key].push({
+//           swappedDate,
+//           daysUsed,
+//           deviceIds: [swap.asset_id],
+//           amount: parseFloat((daysUsed * dailyRate).toFixed(2)),
+//           source: "additional",
+//           dcDate: challanDcDate,
+//           reason: swap.reason,
+//           newDeviceIds: swap.new_device_ids || [],
+//         });
+//       });
+//     });
+
+//     const allReturnedDeviceIds = Object.values(allReturnsMap).flatMap((arr) =>
+//       arr.flatMap((r) => r.deviceIds)
+//     );
+
+//     const allSwappedDeviceIds = Object.values(allSwapsMap).flatMap((arr) =>
+//       arr.flatMap((s) => s.deviceIds)
+//     );
+
+//     const mainItems =
+//       invoiceData.items?.map((item) => {
+//         const rate = isBuyTransaction
+//           ? Number(item.total_price) || 0
+//           : Number(item.unit_price) || 0;
+//         const dailyRate = rate / 30;
+
+//         const originalDeviceIds = item.device_ids || [];
+//         const hasDeviceIds = originalDeviceIds.length > 0;
+
+//         const baseQuantity = hasDeviceIds
+//           ? originalDeviceIds.length
+//           : item.quantity || 0;
+
+//         let days;
+
+//         const isMidMonthDelivery = dcDate.getDate() !== 1;
+
+//         if (isMidMonthDelivery && sameMonth) {
+//           days = calculateDays(dcDate, invoiceEndDate);
+//         } else if (!sameMonth && monthDiff === 1) {
+//           days = calculateDays(invoiceStartDate, invoiceEndDate);
+//         } else {
+//           days = calculateDays(invoiceStartDate, invoiceEndDate);
+//         }
+
+//         const isFullMonth = isBuyTransaction ? true : days >= 28;
+
+//         const returnedDevices =
+//           allReturnsMap[item.product_id]?.filter(
+//             (rd) => new Date(rd.returnedDate) <= invoiceEndDate
+//           ) || [];
+
+//         const swappedDevices =
+//           allSwapsMap[item.product_id]?.filter(
+//             (sd) => new Date(sd.swappedDate) <= invoiceEndDate
+//           ) || [];
+
+//         const preInvoiceReturnedDeviceIds = returnedDevices
+//           .filter((rd) => new Date(rd.returnedDate) < invoiceStartDate)
+//           .flatMap((rd) => rd.deviceIds);
+
+//         const preInvoiceSwappedDeviceIds = swappedDevices
+//           .filter((sd) => new Date(sd.swappedDate) < invoiceStartDate)
+//           .flatMap((sd) => sd.deviceIds);
+
+//         let effectiveDeviceIds = [];
+//         let effectiveQty = baseQuantity;
+
+//         if (hasDeviceIds) {
+//           effectiveDeviceIds = originalDeviceIds.filter(
+//             (id) =>
+//               !preInvoiceReturnedDeviceIds.includes(id) &&
+//               !preInvoiceSwappedDeviceIds.includes(id) &&
+//               !allReturnedDeviceIds.includes(id) &&
+//               !allSwappedDeviceIds.includes(id)
+//           );
+//           effectiveQty = effectiveDeviceIds.length;
+//         } else {
+//           const totalReturnedQty = returnedDevices.reduce(
+//             (sum, rd) => sum + (rd.quantity || 0),
+//             0
+//           );
+//           const totalSwappedQty = swappedDevices.reduce(
+//             (sum, sd) => sum + (sd.quantity || 0),
+//             0
+//           );
+//           effectiveQty = Math.max(
+//             0,
+//             baseQuantity - totalReturnedQty - totalSwappedQty
+//           );
+//         }
+
+//         const dcDays = calculateDays(dcDate, dcPeriodEnd);
+
+//         let fullMonthAmount;
+//         if (paymentMode) {
+//           fullMonthAmount = effectiveQty * dailyRate * days;
+//         } else {
+//           fullMonthAmount = isFullMonth
+//             ? effectiveQty * rate
+//             : effectiveQty * dailyRate * days;
+//         }
+
+//         const returnedDevicesAmount = returnedDevices.reduce(
+//           (sum, rd) => sum + rd.amount,
+//           0
+//         );
+
+//         const swappedDevicesAmount = swappedDevices.reduce(
+//           (sum, sd) => sum + sd.amount,
+//           0
+//         );
+
+//         const dcAmountBeforeReturns =
+//           showDcPeriod && !paymentMode && !isBuyTransaction
+//             ? effectiveQty * dailyRate * dcDays
+//             : 0;
+
+//         let description;
+
+//         if (isMidMonthDelivery && sameMonth) {
+//           description = `Billing Start Date: ${formatDate(dcDate)} - Billing End Date: ${formatDate(invoiceEndDate)}`;
+//         } else {
+//           description = `Billing Start Date: ${formatDate(invoiceStartDate)} - Billing End Date: ${formatDate(invoiceEndDate)}`;
+//         }
+
+//         return {
+//           ...item,
+//           originalDeviceIds,
+//           device_ids: effectiveDeviceIds,
+//           quantity: effectiveQty,
+//           rate,
+//           dailyRate,
+//           days,
+//           dcDays,
+//           amount: fullMonthAmount,
+//           dcAmountBeforeReturns,
+//           returnedDevices,
+//           swappedDevices,
+//           totalReturnedQtyAmount: returnedDevicesAmount + swappedDevicesAmount,
+//           description,
+//           isFullMonth,
+//           isSpecialCase: specialCase,
+//         };
+//       }) || [];
+
+//     const additionalItems =
+//       invoiceData.additional_delivery_challans?.flatMap((challan) => {
+//         const challanDateObj = new Date(challan.dc_date);
+//         const orderSaleDateObj = new Date(challan.order_sale_date);
+//         const challanMonthStart = new Date(
+//           orderSaleDateObj.getFullYear(),
+//           orderSaleDateObj.getMonth(),
+//           1
+//         );
+
+//         const invoiceStartDateObj = new Date(invoiceData.invoice_start_date);
+//         const invoiceEndDateObj = new Date(invoiceData.invoice_end_date);
+
+//         const monthDiff =
+//           (invoiceStartDateObj.getFullYear() - challanDateObj.getFullYear()) *
+//           12 +
+//           (invoiceStartDateObj.getMonth() - challanDateObj.getMonth());
+
+//         return challan.items.map((item) => {
+//           const quantity = Number(item.quantity) || 0;
+//           const unit_price = quantity > 0 ? Number(item.unit_price) : 0;
+
+//           const dailyRate = unit_price / 30;
+//           const device_ids = item.device_ids || [];
+
+//           let days,
+//             amount,
+//             description,
+//             midMonthDays = 0;
+
+//           if (monthDiff === 1) {
+//             const deliveryMonthEnd = new Date(
+//               challanDateObj.getFullYear(),
+//               challanDateObj.getMonth() + 1,
+//               0
+//             );
+//             midMonthDays = calculateDays(challanDateObj, deliveryMonthEnd);
+//             days = calculateDays(invoiceStartDateObj, invoiceEndDateObj);
+//             amount =
+//               quantity * dailyRate * midMonthDays + quantity * unit_price;
+//             description = `Billing Start Date: ${formatDate(
+//               invoiceStartDateObj
+//             )} to ${formatDate(invoiceEndDate)}`;
+//           } else if (monthDiff === 0 && challanDateObj.getDate() !== 1) {
+//             days = calculateDays(challanDateObj, invoiceEndDateObj);
+
+//             amount = quantity * dailyRate * days;
+//             description = `Billing Start Date: ${formatDate(
+//               challan.dc_date
+//             )} to ${formatDate(invoiceEndDate)}`;
+//           } else {
+//             if (paymentMode) {
+//               if (
+//                 challan.order_sale_date &&
+//                 isSameMonthYear(invoiceStartDateObj, orderSaleDateObj)
+//               ) {
+//                 days = calculateDays(challanMonthStart, orderSaleDateObj);
+//               }
+//             }
+//             days = calculateDays(invoiceStartDateObj, invoiceEndDateObj);
+
+//             amount = quantity * unit_price;
+//             description = `Billing Start Date: ${formatDate(
+//               invoiceStartDate
+//             )} - Billing End Date: ${formatDate(invoiceEndDate)}`;
+//           }
+
+//           const returnedDevices =
+//             allReturnsMap[item.product_id]?.filter(
+//               (rd) =>
+//                 new Date(rd.returnedDate) <= invoiceEndDate &&
+//                 rd.source === "additional"
+//             ) || [];
+
+//           const swappedDevices =
+//             allSwapsMap[item.product_id]?.filter(
+//               (sd) =>
+//                 new Date(sd.swappedDate) <= invoiceEndDate &&
+//                 sd.source === "additional"
+//             ) || [];
+
+//           return {
+//             ...item,
+//             isAdditionalChallan: true,
+//             challanNumber: challan.dc_id,
+//             challanDate: challan.dc_date,
+//             device_ids,
+//             quantity,
+//             unit_price,
+//             rate: unit_price,
+//             dailyRate,
+//             amount,
+//             days,
+//             midMonthDays,
+//             description,
+//             productDetails: item.product,
+//             isFullMonth: days >= 28,
+//             isSpecialCase: specialCase,
+//             isPrevMonthDelivery: monthDiff === 1,
+//             shouldShowMidMonth:
+//               monthDiff === 1 ||
+//               (monthDiff === 0 && challanDateObj.getDate() !== 1),
+//             returnedDevices,
+//             swappedDevices,
+//           };
+//         });
+//       }) || [];
+
+//     return [...mainItems, ...additionalItems];
+//   };
+
+//   const items = calculateInvoiceItems();
+
+//   let totalAmount = 0;
+//   let rowCounter = 0;
+//   let renderedAssetIds = new Set();
+
+//   const mergeDeviceIds = (items) => {
+//     const allIds = items.flatMap((i) => i.device_ids || []);
+//     return [...new Set(allIds)];
+//   };
+
+//   const calculateAmount = (daysUsed, dailyRate, baseCount, monthlyRate) => {
+//     const roundedRate = parseFloat(dailyRate.toFixed(2));
+//     const rawAmount =
+//       daysUsed === 30
+//         ? monthlyRate * baseCount
+//         : daysUsed * roundedRate * baseCount;
+//     return parseFloat(rawAmount.toFixed(2));
+//   };
+
+//   const buildTransactionsMap = (invoiceData) => {
+//     const map = {};
+
+//     const pushTxn = (txn) => {
+//       if (!txn) return;
+//       const deviceId = txn.parent_asset_id || txn.parentAssetId || txn.asset_parent_id || txn.asset_parent || txn.parent_asset || txn.device_id;
+//       if (!deviceId) return;
+//       if (!map[deviceId]) map[deviceId] = [];
+//       map[deviceId].push(txn);
+//     };
+
+//     (invoiceData.asset_transactions || []).forEach(pushTxn);
+
+//     (invoiceData.items || []).forEach((it) => {
+//       (it.asset_transactions || []).forEach((x) => {
+//         if (x && x.device_id && Array.isArray(x.transactions)) {
+//           x.transactions.forEach(pushTxn);
+//         } else {
+//           pushTxn(x);
+//         }
+//       });
+//     });
+
+//     Object.keys(map).forEach((k) => {
+//       map[k].sort((a, b) => new Date(a.action_date) - new Date(b.action_date));
+//     });
+
+//     return map;
+//   };
+
+//   const getAssetTransactionsForDevices = (deviceIds = []) => {
+//     if (!invoiceData) return [];
+//     const txnsMap = buildTransactionsMap(invoiceData);
+//     const results = [];
+//     deviceIds.forEach((did) => {
+//       (txnsMap[did] || []).forEach((t) => results.push(t));
+//     });
+//     return results.sort((a, b) => new Date(a.action_date) - new Date(b.action_date));
+//   };
+
+//   // FIXED: Get final specifications for device with SSD support (merged like RAM)
+//   const getFinalSpecificationsForDevice = (deviceId, baseProduct, invoiceStartDate) => {
+//     if (!baseProduct) return baseProduct;
+//     if (!invoiceData) return baseProduct;
+
+//     const deviceAssetTransactions = getAssetTransactionsForDevices([deviceId]);
+//     const sortedTransactions = [...deviceAssetTransactions].sort((a, b) => new Date(a.action_date) - new Date(b.action_date));
+    
+//     // Filter transactions that happened before or on invoice start date
+//     const filteredTransactions = sortedTransactions.filter((txn) => {
+//       const actionDate = new Date(txn.action_date);
+//       return actionDate <= invoiceStartDate;
+//     });
+
+//     // Start with base product specs
+//     let currentSpecs = {
+//       ram: baseProduct.ram || null,
+//       processor: baseProduct.processor_model || null,
+//       storage: baseProduct.storage || null,
+//       brand: baseProduct.brand || null,
+//       model: baseProduct.model || null,
+//       disk_type: baseProduct.disk_type || null,
+//       graphics: baseProduct.graphics || null,
+//       os: baseProduct.os || null
+//     };
+
+//     // Track all RAM and STORAGE components for accumulation (like RAM)
+//     let ramComponents = [];
+//     let storageComponents = [];
+    
+//     if (currentSpecs.ram) {
+//       ramComponents.push(currentSpecs.ram);
+//     }
+//     if (currentSpecs.storage) {
+//       storageComponents.push(currentSpecs.storage);
+//     }
+
+//     // Process transactions in chronological order
+//     filteredTransactions.forEach((txn) => {
+//       const type = (txn.item_type || "").toLowerCase();
+//       const value = txn.size || txn.specification || null;
+//       const status = (txn.status || "").toLowerCase();
+
+//       if (status === "added") {
+//         // When a component is added, ADD it to the list (accumulate)
+//         if (type === "ram" && value) {
+//           ramComponents.push(value);
+//           currentSpecs.ram = ramComponents.join(" + ");
+//           console.log(`Device ${deviceId}: RAM added ${value} -> now: ${currentSpecs.ram}`);
+//         } else if ((type === "storage" || type === "ssd" || type === "hdd") && value) {
+//           // FIXED: Accumulate storage components like RAM
+//           storageComponents.push(value);
+//           currentSpecs.storage = storageComponents.join(" + ");
+//           console.log(`Device ${deviceId}: Storage added ${value} -> now: ${currentSpecs.storage}`);
+//         } else if (type === "processor" && value) {
+//           currentSpecs.processor = value;
+//           console.log(`Device ${deviceId}: Processor changed to ${value}`);
+//         }
+//       } else if (status === "removed") {
+//         // When a component is removed, remove it from the list
+//         if (type === "ram" && value) {
+//           const index = ramComponents.indexOf(value);
+//           if (index > -1) {
+//             ramComponents.splice(index, 1);
+//           }
+//           currentSpecs.ram = ramComponents.length > 0 ? ramComponents.join(" + ") : null;
+//           console.log(`Device ${deviceId}: RAM removed ${value} -> now: ${currentSpecs.ram}`);
+//         } else if ((type === "storage" || type === "ssd" || type === "hdd") && value) {
+//           // FIXED: Remove storage component from accumulated list
+//           const index = storageComponents.indexOf(value);
+//           if (index > -1) {
+//             storageComponents.splice(index, 1);
+//           }
+//           currentSpecs.storage = storageComponents.length > 0 ? storageComponents.join(" + ") : null;
+//           console.log(`Device ${deviceId}: Storage removed ${value} -> now: ${currentSpecs.storage}`);
+//         } else if (type === "processor") {
+//           currentSpecs.processor = baseProduct.processor_model || null;
+//         }
+//       }
+//     });
+
+//     // Build final specifications object
+//     const finalSpecs = { ...baseProduct };
+//     finalSpecs.ram = currentSpecs.ram;
+//     finalSpecs.processor = currentSpecs.processor;
+//     finalSpecs.storage = currentSpecs.storage;
+
+//     console.log(`Device ${deviceId} final specs:`, {
+//       originalRAM: baseProduct.ram,
+//       finalRAM: finalSpecs.ram,
+//       originalStorage: baseProduct.storage,
+//       finalStorage: finalSpecs.storage,
+//       transactionsCount: filteredTransactions.length
+//     });
+
+//     return finalSpecs;
+//   };
+
+//   const formatSpecifications = (specs) => {
+//     const parts = [];
+//     if (specs.brand) parts.push(`Brand: ${specs.brand}`);
+//     if (specs.model) parts.push(`Model: ${specs.model}`);
+//     if (specs.processor) parts.push(`Processor: ${specs.processor}`);
+//     if (specs.ram) parts.push(`RAM: ${specs.ram}`);
+//     if (specs.storage) parts.push(`Storage: ${specs.storage}`);
+//     if (specs.disk_type) parts.push(`Disk Type: ${specs.disk_type}`);
+//     if (specs.graphics) parts.push(`Graphics: ${specs.graphics}`);
+//     if (specs.os) parts.push(`OS: ${specs.os}`);
+//     return parts.join(', ');
+//   };
+
+//   const shouldShowRow = (item) => {
+//     const hasReturnedDevices = item.returnedDevices?.some(
+//       (rd) => rd.deviceIds?.length > 0 || rd.quantity > 0
+//     );
+//     const hasSwappedDevices = item.swappedDevices?.some(
+//       (sd) => sd.deviceIds?.length > 0
+//     );
+//     return (
+//       item.quantity > 0 ||
+//       item.isAdditionalChallan ||
+//       hasReturnedDevices ||
+//       hasSwappedDevices
+//     );
+//   };
+
+//   const specificationsStyle = {
+//     fontSize: '12px',
+//     color: '#666',
+//     marginBottom: '4px',
+//     lineHeight: '1.4'
+//   };
+
+//   const assetIdsStyle = {
+//     fontSize: '12px',
+//     color: '#333',
+//     fontWeight: '500',
+//     marginBottom: '4px'
+//   };
+
+//   const renderAssetTransactionRow = (product, parentItem) => {
+//     if (invoiceData.is_small_amount) return null;
+
+//     const invoiceDate = new Date(invoiceData.invoice_start_date);
+//     const paymentMode = invoiceData.payment_mode === "Postpaid";
+
+//     const productAssetTransactions = invoiceData.asset_transactions?.filter(
+//       (at) => at.product_id === parentItem.product_id
+//     );
+
+//     if (!productAssetTransactions?.length) return;
+
+//     const uniqueTransactions = [];
+//     productAssetTransactions.forEach((txn) => {
+//       if (!uniqueTransactions.some((t) => t.id === txn.id)) {
+//         uniqueTransactions.push(txn);
+//       }
+//     });
+
+//     const groupedTransactions = {};
+
+//     uniqueTransactions.forEach((assetTxn) => {
+//       const actionDate = new Date(assetTxn.action_date);
+
+//       const monthStartDate = new Date(
+//         actionDate.getFullYear(),
+//         actionDate.getMonth(),
+//         1
+//       );
+
+//       const monthEndDate = new Date(
+//         actionDate.getFullYear(),
+//         actionDate.getMonth() + 1,
+//         0
+//       );
+
+//       const deviceInfo = findDeviceDcDate(assetTxn.parent_asset_id);
+
+//       const timesCreatedInInvoice =
+//         deviceInfo?.times_created_in_invoice === 0 ||
+//         deviceInfo?.times_created_in_invoice === 1;
+
+//       const monthDiff =
+//         (invoiceDate.getFullYear() - actionDate.getFullYear()) * 12 +
+//         (invoiceDate.getMonth() - actionDate.getMonth());
+
+//       const specialCase = paymentMode ? monthDiff === 0 : monthDiff === 1;
+
+//       if (!specialCase) return;
+
+//       let daysUsed = 0;
+//       let billingStartDate = "";
+//       let billingEndDate = "";
+
+//       if (assetTxn.status === "Removed") {
+//         if (!paymentMode) return;
+//         daysUsed = calculateDays(monthStartDate, actionDate);
+//         billingStartDate = formatDate(monthStartDate);
+//         billingEndDate = formatDate(actionDate);
+//       } else if (assetTxn.status === "Added") {
+//         daysUsed = calculateDays(actionDate, monthEndDate);
+//         billingStartDate = formatDate(actionDate);
+//         billingEndDate = formatDate(monthEndDate);
+//       }
+
+//       const dailyRate = Math.round((assetTxn.price / 30) * 100) / 100;
+//       const amountPerItem = Math.round(daysUsed * dailyRate * 100) / 100;
+
+//       const groupKey = `${parentItem.product_name}-${assetTxn.specification}-${assetTxn.status}-${billingStartDate}-${billingEndDate}-${daysUsed}-${assetTxn.price}`;
+
+//       if (!groupedTransactions[groupKey]) {
+//         groupedTransactions[groupKey] = {
+//           assetIds: new Set(),
+//           daysUsed,
+//           billingStartDate,
+//           billingEndDate,
+//           price: assetTxn.price,
+//           dailyRate,
+//           amountPerItem,
+//           totalAmount: 0,
+//           specification: assetTxn.specification,
+//           status: assetTxn.status
+//         };
+//       }
+
+//       groupedTransactions[groupKey].assetIds.add(assetTxn.parent_asset_id);
+//     });
+
+//     Object.values(groupedTransactions).forEach((group, index) => {
+//       const quantity = group.assetIds.size;
+//       const totalGroupAmount = Math.round(group.amountPerItem * quantity * 100) / 100;
+
+//       totalAmount += totalGroupAmount;
+
+//       const uniqueAssetIds = Array.from(group.assetIds);
+
+//       rows.push(
+//         <tr
+//           key={`asset-group-${index}`}
+//           style={++rowCounter % 2 === 0 ? tableRowEvenStyle : tableRowOddStyle}
+//         >
+//           <td style={tableCellCenterStyle}>{rowCounter}</td>
+//           <td style={tableCellStyle}>
+//             <div style={itemTitleStyle}>
+//               {parentItem.product_name} - {group.specification} ({group.status})
+//             </div>
+//             <div style={itemTitleStyle}>
+//               Asset IDs: {uniqueAssetIds.join(", ")}
+//             </div>
+//             <br />
+//             <div style={itemTitleStyle}>
+//               Billing Start Date: {group.billingStartDate} - Billing End Date:{" "}
+//               {group.billingEndDate}
+//             </div>
+//           </td>
+//           <td style={tableCellCenterStyle}>{quantity}</td>
+//           {invoiceData.transaction_type === "Rent" && (
+//             <>
+//               <td style={tableCellCenterStyle}>{group.daysUsed}</td>
+//               <td style={tableCellCenterStyle}>{formatINRCurrency(group.dailyRate)}</td>
+//             </>
+//           )}
+//           <td style={tableCellRightStyle}>{formatINRCurrency(group.price)}</td>
+//           <td style={tableCellRightStyle}>{formatINRCurrency(totalGroupAmount)}</td>
+//         </tr>
+//       );
+//     });
+//   };
+
+//   const findDeviceDcDate = (deviceId) => {
+//     const mainItem = invoiceData.items.find(item =>
+//       item.device_ids.includes(deviceId)
+//     );
+//     if (mainItem) {
+//       return {
+//         dc_date: new Date(invoiceData.dc_date),
+//         times_created_in_invoice: invoiceData.times_created_in_invoice
+//       };
+//     }
+
+//     for (const challan of invoiceData.additional_delivery_challans || []) {
+//       const challanItem = challan.items.find(item =>
+//         item.device_ids.includes(deviceId)
+//       );
+//       if (challanItem) {
+//         return {
+//           dc_date: new Date(challan.dc_date),
+//           times_created_in_invoice: challan.times_created_in_invoice
+//         };
+//       }
+//     }
+
+//     return {
+//       dc_date: new Date(invoiceData.dc_date || invoiceData.invoice_start_date),
+//       times_created_in_invoice: invoiceData.times_created_in_invoice || 1
+//     };
+//   };
+
+//   const shouldRenderMidMonth = (item, isAdditionalChallan = false) => {
+//     if (isAdditionalChallan) return false;
+//     const challanDate = new Date(invoiceData.dc_date);
+//     const invoiceStartDate = new Date(invoiceData.invoice_start_date);
+//     const challanMonth = new Date(challanDate.getFullYear(), challanDate.getMonth(), 1);
+//     const invoiceMonth = new Date(invoiceStartDate.getFullYear(), invoiceStartDate.getMonth(), 1);
+//     const monthDiff = (invoiceMonth.getFullYear() - challanMonth.getFullYear()) * 12 +
+//       (invoiceMonth.getMonth() - challanMonth.getMonth());
+//     if (monthDiff !== 1) return false;
+//     return invoiceData.times_created_in_invoice === 1;
+//   };
+
+//   const renderReturnedDeviceRow = (item, product, rd) => {
+//     if (!paymentMode && !shouldRenderMidMonth(item)) return null;
+//     let deviceIds = [...new Set((rd.deviceIds || []).map((id) => id.trim()))];
+//     deviceIds = deviceIds.filter((id) => !renderedAssetIds.has(id));
+//     if (deviceIds.length === 0) return null;
+//     deviceIds.forEach((id) => renderedAssetIds.add(id));
+//     const daysUsed = rd.daysUsed || 1;
+//     const baseCount = deviceIds.length > 0 ? deviceIds.length : rd.quantity;
+//     const dailyRate = rd.dailyRate || item.dailyRate || item.rate / 30;
+//     const amount = calculateAmount(daysUsed, dailyRate, baseCount);
+//     totalAmount += Number(amount) || 0;
+//     return (
+//       <tr style={++rowCounter % 2 === 0 ? tableRowEvenStyle : tableRowOddStyle}>
+//         <td style={tableCellCenterStyle}>{rowCounter}</td>
+//         <td style={tableCellStyle}>
+//           <div style={itemTitleStyle}>{item.product_name}</div>
+//           <div style={specificationsStyle}>
+//             {product?.brand && `Brand: ${product.brand}, `}
+//             {product?.model && `Model: ${product.model}, `}
+//             {product?.ram && `RAM: ${product.ram}`}
+//           </div>
+//           <br />
+//           <div><strong>Returned Asset IDs:</strong> {deviceIds.join(", ")}</div>
+//           <br />
+//           <div style={itemTitleStyle}>Return Date: {formatDate(new Date(rd.returnedDate))}</div>
+//         </td>
+//         <td style={tableCellCenterStyle}>{baseCount}</td>
+//         {invoiceData.transaction_type === "Rent" && (
+//           <>
+//             <td style={tableCellCenterStyle}>{daysUsed}</td>
+//             <td style={tableCellCenterStyle}>{formatINRCurrency(dailyRate)}</td>
+//           </>
+//         )}
+//         <td style={tableCellRightStyle}></td>
+//         <td style={tableCellRightStyle}>{formatINRCurrency(amount)}</td>
+//       </tr>
+//     );
+//   };
+
+//   const renderSwappedDeviceRow = (item, product, sd) => {
+//     if (!paymentMode && !shouldRenderMidMonth(item)) return null;
+//     let deviceIds = [...new Set(sd.deviceIds || [])];
+//     deviceIds = deviceIds.filter((id) => !renderedAssetIds.has(id));
+//     deviceIds.forEach((id) => renderedAssetIds.add(id));
+//     if (deviceIds.length === 0) return null;
+//     const daysUsed = sd.daysUsed || 1;
+//     const baseCount = deviceIds.length;
+//     const dailyRate = sd.dailyRate || item.dailyRate || item.rate / 30;
+//     const amount = calculateAmount(daysUsed, dailyRate, baseCount, item.rate);
+//     totalAmount += Number(amount) || 0;
+//     return (
+//       <tr style={++rowCounter % 2 === 0 ? tableRowEvenStyle : tableRowOddStyle}>
+//         <td style={tableCellCenterStyle}>{rowCounter}</td>
+//         <td style={tableCellStyle}>
+//           <div style={itemTitleStyle}>{item.product_name}</div>
+//           <div style={specificationsStyle}>
+//             {product?.brand && `Brand: ${product.brand}, `}
+//             {product?.model && `Model: ${product.model}, `}
+//             {product?.ram && `RAM: ${product.ram}`}
+//           </div>
+//           <br />
+//           <div><strong>Swapped Asset IDs:</strong> {deviceIds.join(", ")}</div>
+//           <br />
+//           <div style={itemTitleStyle}>
+//             Swap Date: {formatDate(new Date(sd.swappedDate))}
+//             {sd.reason && <div><strong>Reason:</strong> {sd.reason}</div>}
+//           </div>
+//         </td>
+//         <td style={tableCellCenterStyle}>{baseCount}</td>
+//         {invoiceData.transaction_type === "Rent" && (
+//           <>
+//             <td style={tableCellCenterStyle}>{daysUsed}</td>
+//             <td style={tableCellCenterStyle}>{formatINRCurrency(dailyRate)}</td>
+//           </>
+//         )}
+//         <td style={tableCellRightStyle}></td>
+//         <td style={tableCellRightStyle}>{formatINRCurrency(amount)}</td>
+//       </tr>
+//     );
+//   };
+
+//   const renderMidMonthRow = (item, product) => {
+//     if (!shouldRenderMidMonth(item)) return null;
+//     if (item.quantity === 0 && (!item.device_ids || item.device_ids.length === 0)) return null;
+//     const deviceIds = item.device_ids || [];
+//     const baseCount = deviceIds.length > 0 ? deviceIds.length : item.quantity;
+//     const challanDate = item.isAdditionalChallan ? new Date(item.challanDate) : new Date(invoiceData.dc_date);
+//     const startDate = challanDate;
+//     const endDate = new Date(challanDate.getFullYear(), challanDate.getMonth() + 1, 0);
+//     const invoiceStartDate = new Date(invoiceData.invoice_start_date);
+//     const isWithinOneMonth = (d1, d2) => {
+//       const diff = (d2.getFullYear() - d1.getFullYear()) * 12 + (d2.getMonth() - d1.getMonth());
+//       return diff === 0 || diff === 1;
+//     };
+//     const daysUsed = calculateDays(startDate, endDate);
+//     const dailyRate = item.dailyRate || item.rate / 30;
+//     const amount = calculateAmount(daysUsed, dailyRate, baseCount);
+//     totalAmount += Number(amount) || 0;
+//     if (!isWithinOneMonth(startDate, invoiceStartDate)) return null;
+//     if (!amount) return null;
+//     return (
+//       <tr style={++rowCounter % 2 === 0 ? tableRowEvenStyle : tableRowOddStyle}>
+//         <td style={tableCellCenterStyle}>{rowCounter}</td>
+//         <td style={tableCellStyle}>
+//           <div><strong>Mid-Month Usage:</strong></div>
+//           <br />
+//           <div style={itemTitleStyle}>{item.product_name}</div>
+//           <div style={specificationsStyle}>
+//             {product?.brand && `Brand: ${product.brand}, `}
+//             {product?.model && `Model: ${product.model}, `}
+//             {product?.ram && `RAM: ${product.ram}`}
+//           </div>
+//           {deviceIds.length > 0 && <div style={itemTitleStyle}>Asset IDs: {deviceIds.join(", ")}</div>}
+//           <br />
+//           <div style={itemTitleStyle}>Billing Start Date: {formatDate(startDate)} to {formatDate(endDate)}</div>
+//         </td>
+//         <td style={tableCellCenterStyle}>{baseCount}</td>
+//         {invoiceData.transaction_type === "Rent" && (
+//           <>
+//             <td style={tableCellCenterStyle}>{daysUsed}</td>
+//             <td style={tableCellCenterStyle}>{formatINRCurrency(dailyRate)}</td>
+//           </>
+//         )}
+//         <td style={tableCellRightStyle}></td>
+//         <td style={tableCellRightStyle}>{formatINRCurrency(amount)}</td>
+//       </tr>
+//     );
+//   };
+
+//   // ==================== FIXED MAIN RENDERING LOOP WITH SSD SUPPORT ====================
+//   const rows = [];
+  
+//   // Group items by product name first
+//   const productGroups = new Map();
+//   items.forEach((item) => {
+//     if (!shouldShowRow(item)) return;
+//     const productName = item.product_name;
+//     if (!productGroups.has(productName)) {
+//       productGroups.set(productName, []);
+//     }
+//     productGroups.get(productName).push(item);
+//   });
+
+//   // Process each product group
+//   for (const [productName, productItems] of productGroups.entries()) {
+//     const invoiceStartDateObj = new Date(invoiceData.invoice_start_date);
+    
+//     // Create a map of device ID to its source item
+//     const deviceToItemMap = new Map();
+//     productItems.forEach(item => {
+//       if (item.device_ids && item.device_ids.length > 0) {
+//         item.device_ids.forEach(deviceId => {
+//           if (!deviceToItemMap.has(deviceId)) {
+//             deviceToItemMap.set(deviceId, item);
+//           }
+//         });
+//       }
+//     });
+    
+//     // Get all unique device IDs
+//     const allDeviceIds = [...deviceToItemMap.keys()];
+    
+//     if (allDeviceIds.length === 0) continue;
+    
+//     // FIXED: Group devices by BOTH RAM AND STORAGE specification combination
+//     const devicesByConfig = new Map();
+    
+//     allDeviceIds.forEach(deviceId => {
+//       const sourceItem = deviceToItemMap.get(deviceId);
+//       if (sourceItem && sourceItem.productDetails) {
+//         const finalSpecs = getFinalSpecificationsForDevice(
+//           deviceId,
+//           sourceItem.productDetails,
+//           invoiceStartDateObj
+//         );
+        
+//         const ramValue = finalSpecs.ram || 'Unknown';
+//         const storageValue = finalSpecs.storage || 'Unknown';
+//         // Create a composite key for both RAM and Storage
+//         const configKey = `${ramValue}|${storageValue}`;
+        
+//         if (!devicesByConfig.has(configKey)) {
+//           devicesByConfig.set(configKey, {
+//             deviceIds: [],
+//             specifications: finalSpecs,
+//             rate: sourceItem.rate,
+//             dailyRate: sourceItem.dailyRate,
+//             productName: sourceItem.product_name,
+//             description: sourceItem.description,
+//             days: sourceItem.days,
+//             ramValue: ramValue,
+//             storageValue: storageValue
+//           });
+//         }
+        
+//         devicesByConfig.get(configKey).deviceIds.push(deviceId);
+//       }
+//     });
+    
+//     // Render each configuration group as a separate row
+//     for (const [configKey, group] of devicesByConfig.entries()) {
+//       const daysUsed = group.days || 30;
+//       const deviceIds = group.deviceIds;
+//       const baseCount = deviceIds.length;
+//       const monthlyRate = group.rate;
+//       const dailyRate = monthlyRate / 30;
+      
+//       let amount = isBuyTransaction
+//         ? monthlyRate * baseCount
+//         : calculateAmount(daysUsed, dailyRate, baseCount, monthlyRate);
+      
+//       totalAmount += Number(amount) || 0;
+      
+//       rows.push(
+//         <tr
+//           key={`row-${productName}-${configKey}`}
+//           style={++rowCounter % 2 === 0 ? tableRowEvenStyle : tableRowOddStyle}
+//         >
+//           <td style={tableCellCenterStyle}>{rowCounter}</td>
+//           <td style={tableCellStyle}>
+//             <div style={itemTitleStyle}>{group.productName}</div>
+            
+//             <div style={specificationsStyle}>
+//               Brand: {group.specifications.brand || 'Default Brand'}, 
+//               Model: {group.specifications.model || 'Assembled'}, 
+//               RAM: {group.ramValue},
+//               Storage: {group.storageValue}
+//             </div>
+            
+//             <br />
+            
+//             <div style={assetIdsStyle}>
+//               Asset IDs: {deviceIds.sort((a, b) => {
+//                 const numA = parseInt(a.match(/\d+/) || 0);
+//                 const numB = parseInt(b.match(/\d+/) || 0);
+//                 return numA - numB;
+//               }).join(", ")}
+//             </div>
+            
+//             {invoiceData.transaction_type === "Rent" && (
+//               <>
+//                 <br />
+//                 <div style={itemTitleStyle}>{group.description}</div>
+//               </>
+//             )}
+//           </td>
+          
+//           <td style={tableCellCenterStyle}>{baseCount}</td>
+          
+//           {invoiceData.transaction_type === "Rent" && (
+//             <>
+//               <td style={tableCellCenterStyle}>{daysUsed}</td>
+//               <td style={tableCellCenterStyle}>
+//                 {formatINRCurrency(dailyRate)}
+//               </td>
+//             </>
+//           )}
+          
+//           <td style={tableCellRightStyle}>
+//             {formatINRCurrency(monthlyRate)}
+//           </td>
+          
+//           <td style={tableCellRightStyle}>
+//             {formatINRCurrency(amount)}
+//           </td>
+//         </tr>
+//       );
+//     }
+    
+//     // Handle asset transactions, returns, swaps, mid-month for this product group
+//     productItems.forEach((item) => {
+//       // Check if there are asset transactions for this specific product
+//       const hasAssetTransactions = invoiceData.asset_transactions?.some(
+//         (at) => at.product_id === item.product_id
+//       );
+      
+//       if (hasAssetTransactions) {
+//         renderAssetTransactionRow(item.productDetails, item);
+//       }
+      
+//       // Handle returns, swaps, mid-month for this item
+//       if (!isBuyTransaction && !paymentMode && showDcPeriod) {
+//         const midRow = renderMidMonthRow(item, item.productDetails);
+//         if (midRow) rows.push(midRow);
+//       }
+      
+//       item.returnedDevices?.forEach((rd) => {
+//         const retRow = renderReturnedDeviceRow(item, item.productDetails, rd);
+//         if (retRow) rows.push(retRow);
+//       });
+      
+//       item.swappedDevices?.forEach((sd) => {
+//         const swapRow = renderSwappedDeviceRow(item, item.productDetails, sd);
+//         if (swapRow) rows.push(swapRow);
+//       });
+//     });
+//   }
+//   // ==================== END OF FIXED MAIN RENDERING LOOP ====================
+
+//   const netAmount = totalAmount;
+//   let cgst = isKarnataka ? netAmount * 0.09 : 0;
+//   let sgst = isKarnataka ? netAmount * 0.09 : 0;
+//   let igst = isKarnataka ? 0 : netAmount * 0.18;
+//   let totalTax = cgst + sgst + igst;
+//   const grandTotal = netAmount + totalTax;
+
+//   const renderInvoice = () => {
+//     return (
+//       <div
+//         className="invoice-container"
+//         style={receiptContainerStyle}
+//         id="invoice-current-month-invoice"
+//       >
+//         <div style={headerBarStyle}></div>
+//         <div style={companyHeaderStyle}>
+//           <div style={companyInfoContainerStyle}>
+//             <div style={logoStyle}>
+//               <img
+//                 src="/SORT-ICON.png"
+//                 alt="Company Logo"
+//                 style={{ width: "100%", height: "100%", objectFit: "contain" }}
+//               />
+//             </div>
+//             <div>
+//               <div style={companyNameStyle}>Guru Goutam Infotech Pvt. Ltd.</div>
+//               <div style={companyDetailsStyle}>
+//                 CIN: U72200KA2008PTC047679
+//                 <br />
+//                 GST: {invoiceData.customer_gst_number || "29AADCG2608Q1Z6"}
+//               </div>
+//             </div>
+//           </div>
+//           <div style={challanHeaderStyle}>
+//             <div style={challanTitleStyle}>TAX INVOICE</div>
+//             <div style={challanDetailsStyle}>
+//               Invoice No: {invoiceData.invoice_number}
+//               <br />
+//               Invoice Date: {formatDate(startDate)}
+//             </div>
+//           </div>
+//         </div>
+
+//         <div style={recipientSectionStyle}>
+//           <div style={recipientContainerStyle}>
+//             <div style={recipientAddressStyle}>
+//               <div style={recipientLabelStyle}>Bill To</div>
+//               {invoiceData.customer_name}
+//               <br />
+//               {invoiceData.shippingDetail?.street && `${invoiceData.shippingDetail.street}, `}
+//               {invoiceData.shippingDetail?.landmark && `${invoiceData.shippingDetail.landmark}, `}
+//               {invoiceData.shippingDetail?.city}, {invoiceData.shippingDetail?.state},
+//               <br />
+//               {invoiceData.shippingDetail?.country} - {invoiceData.shippingDetail?.pincode}
+//             </div>
+//             <div style={recipientDetailsGridStyle}>
+//               <div><div style={detailLabelStyle}>PAN Number :</div>{invoiceData.pan_number}</div>
+//               <div><div style={detailLabelStyle}>Order Number :</div>{invoiceData.dispatch_order_number}</div>
+//               {invoiceData.dc_date !== null && <div><div style={detailLabelStyle}>DC Date :</div>{invoiceData.dc_date}</div>}
+//               <div><div style={detailLabelStyle}>Email :</div>{invoiceData.email}</div>
+//               <div><div style={detailLabelStyle}>Phone :</div>{invoiceData.phone_number}</div>
+//             </div>
+//           </div>
+//         </div>
+
+//         {!isBuyTransaction && (
+//           <div style={invoicePeriodStyle}>
+//             <div><strong>Invoice Period:</strong> {formatDate(invoiceDate)} to {formatDate(invoiceEndDate)}</div>
+//           </div>
+//         )}
+
+//         <table style={tableStyle}>
+//           <thead>
+//             <tr>
+//               <th style={tableHeaderNoStyle}>NO.</th>
+//               <th style={tableHeaderParticularsStyle}>Product Details</th>
+//               <th style={tableHeaderQtyStyle}>Qty</th>
+//               {invoiceData.transaction_type === "Rent" && (
+//                 <>
+//                   <th style={tableHeaderDaysStyle}>Days</th>
+//                   <th style={tableHeaderDaysStyle}>Per Day</th>
+//                 </>
+//               )}
+//               <th style={tableHeaderDaysStyle}>
+//                 {invoiceData.transaction_type === "Rent" ? "Per Month" : "Purchase Price"}
+//               </th>
+//               <th style={tableHeaderRateStyle}>TOTAL</th>
+//             </tr>
+//           </thead>
+//           <tbody>
+//             {rows}
+//             <tr key="total-row" style={totalsRowStyle}>
+//               <td style={tableCellCenterStyle} colSpan={invoiceData.transaction_type === "Rent" ? 6 : 4}>
+//                 <strong>TOTAL</strong>
+//               </td>
+//               <td style={tableCellRightStyle}>{formatINRCurrency(totalAmount)}</td>
+//             </tr>
+//           </tbody>
+//         </table>
+
+//         <div style={taxTotalContainerStyle}>
+//           <div style={taxDetailsStyle}>
+//             <div style={taxRowStyle}><span>Subtotal:</span><span>{formatINRCurrency(totalAmount)}</span></div>
+//             {isKarnataka && (
+//               <>
+//                 <div style={taxRowStyle}><span>CGST @9%:</span><span>{formatINRCurrency(cgst)}</span></div>
+//                 <div style={taxRowStyle}><span>SGST @9%:</span><span>{formatINRCurrency(sgst)}</span></div>
+//               </>
+//             )}
+//             {!isKarnataka && <div style={taxRowStyle}><span>IGST @18%:</span><span>{formatINRCurrency(igst)}</span></div>}
+//             <div style={taxRowTotalStyle}><span>Total Tax:</span><span>{formatINRCurrency(totalTax)}</span></div>
+//             <div style={grandTotalStyle}><span>Grand Total:</span><span>{formatINRCurrency(grandTotal)}</span></div>
+//           </div>
+//         </div>
+
+//         <div style={bankDetailsContainerStyle}>
+//           <div style={bankDetailsTitleStyle}>Bank Details:</div>
+//           <div style={bankLineStyle}>Guru Goutham Infotech Pvt. Ltd., HDFC Bank Ltd, Jayanagar Branch.</div>
+//           <div style={bankLineStyle}>Current A/c No: 50200066787843, IFSC Code: HDFC0000261.</div>
+//           <div style={amountWordsStyle}>Amt. in Words: <span>{numberToWords(grandTotal)}</span></div>
+//           <div style={jurisdictionNoteStyle}>Note: <span style={highlightTextStyle}>Subject to Bengaluru Jurisdiction</span></div>
+//         </div>
+
+//         <div style={signatureSectionStyle}>
+//           <div style={leftSignatureAreaStyle}>
+//             <div style={companySignatureLabelStyle}></div>
+//             <div style={signatureBoxStyle}></div>
+//             <div style={signatureDesignationStyle}>Receiver Signature with Seal</div>
+//           </div>
+//           <div style={rightSignatureAreaStyle}>
+//             <div style={companySignatureLabelStyle}>For Guru Goutham Infotech Private Limited</div>
+//             <div style={signatureBoxStyle}>SD/-</div>
+//             <div style={signatureDesignationStyle}>Authorised Signatory</div>
+//           </div>
+//         </div>
+
+//         <div style={companyFooterStyle}>
+//           <div style={footerAddressStyle}>
+//             <span>📍</span>
+//             <span>No. 8, 2nd Cross, Diagonal Road, 3rd Block,<br />Jayanagar Bengaluru-560011.</span>
+//           </div>
+//           <div style={footerContactStyle}>
+//             <div style={footerContactItemStyle}><span>🌐</span><span>gurugoutam.com</span></div>
+//             <div style={footerContactItemStyle}><span>📞</span><span>080-2242 9955, +91 9449 0789 55</span></div>
+//             <div style={footerContactItemStyle}><span>✉️</span><span>info@gurugoutam.com</span></div>
+//           </div>
+//         </div>
+//       </div>
+//     );
+//   };
+
+//   const handleDownloadPDF = async () => {
+//     try {
+//       await new Promise((resolve) => setTimeout(resolve, 300));
+//       const element = document.getElementById("invoice-current-month-invoice");
+//       if (!element) throw new Error("Could not find invoice element in DOM");
+//       const clone = element.cloneNode(true);
+//       clone.style.position = "absolute";
+//       clone.style.left = "-9999px";
+//       clone.style.visibility = "visible";
+//       clone.style.width = "210mm";
+//       document.body.appendChild(clone);
+//       const options = {
+//         scale: 2,
+//         logging: true,
+//         useCORS: true,
+//         scrollX: 0,
+//         scrollY: 0,
+//         windowWidth: clone.scrollWidth,
+//         windowHeight: clone.scrollHeight,
+//         backgroundColor: "#FFFFFF",
+//       };
+//       const canvas = await html2canvas(clone, options);
+//       document.body.removeChild(clone);
+//       const imgData = canvas.toDataURL("image/png");
+//       const pdf = new jsPDF("p", "mm", "a4");
+//       const imgProps = pdf.getImageProperties(imgData);
+//       const pdfWidth = pdf.internal.pageSize.getWidth();
+//       const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+//       let heightLeft = pdfHeight;
+//       let position = 0;
+//       const pageHeight = pdf.internal.pageSize.getHeight();
+//       pdf.addImage(imgData, "PNG", 0, position, pdfWidth, pdfHeight);
+//       heightLeft -= pageHeight;
+//       while (heightLeft >= 0) {
+//         position = heightLeft - pdfHeight;
+//         pdf.addPage();
+//         pdf.addImage(imgData, "PNG", 0, position, pdfWidth, pdfHeight);
+//         heightLeft -= pageHeight;
+//       }
+//       pdf.save(`invoice-${invoiceData.invoice_number || "INV"}.pdf`);
+//     } catch (error) {
+//       console.error("PDF Generation Error:", error);
+//       alert(`Failed to generate PDF: ${error.message}`);
+//     }
+//   };
+
+//   const handlePrint = () => {
+//     const element = document.getElementById("invoice-current-month-invoice");
+//     if (!element) {
+//       console.error("Print element not found");
+//       alert("Could not find the invoice content for printing");
+//       return;
+//     }
+//     const printWindow = window.open("", "_blank");
+//     printWindow.document.write(`
+//       <!DOCTYPE html>
+//       <html>
+//         <head>
+//           <title>Invoice - ${invoiceData.invoice_number || "INV"}</title>
+//           <style>
+//             @page { size: A4; margin: 10mm; }
+//             body { margin: 0; padding: 0; font-family: Arial, sans-serif; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+//             .print-container { width: 190mm; min-height: 277mm; padding: 0; box-sizing: border-box; }
+//             table { width: 100%; border-collapse: collapse; }
+//             th, td { border: 1px solid #000; padding: 8px; text-align: left; }
+//             th { background-color: #f0f0f0; }
+//           </style>
+//         </head>
+//         <body>
+//           <div class="print-container">${element.innerHTML}</div>
+//           <script>
+//             window.onload = function() {
+//               setTimeout(function() { window.print(); setTimeout(function() { window.close(); }, 500); }, 300);
+//             }
+//           </script>
+//         </body>
+//       </html>
+//     `);
+//     printWindow.document.close();
+//   };
+
+//   return (
+//     <Dialog open={open} onClose={onClose} maxWidth="lg" fullWidth scroll="paper">
+//       <DialogTitle>Invoice</DialogTitle>
+//       <DialogContent>
+//         <div style={{ padding: "20px" }} id="invoice-current-month-invoice">
+//           {renderInvoice()}
+//         </div>
+//       </DialogContent>
+//       <DialogActions>
+//         <Button onClick={onClose}>Close</Button>
+//         <Button onClick={handleDownloadPDF} variant="contained" color="primary" style={{ marginLeft: "10px" }}>Download PDF</Button>
+//         <Button onClick={handlePrint} variant="contained" color="secondary">Print</Button>
+//       </DialogActions>
+//     </Dialog>
+//   );
+// };
 
 
 
@@ -11771,7 +14173,7 @@ const DynamicTable = ({
                           {row[column.id]}
                         </Typography>
                       ) : (
-                        row[column.id] || "0"
+                        row[column.id] || "N/A"
                       )}
                     </TableCell>
                   ))}

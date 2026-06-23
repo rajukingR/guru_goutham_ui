@@ -21,9 +21,6 @@ import ItemVarientPageLayout from "../pages/product_library/itemvarient/ItemVari
 import AssetPageLayout from "../pages/product_library/asset/AssetPageLayout.jsx";
 import AssetmtTrackerPageLayout from "../pages/product_library/assetmodificationtracker/AssetmtTrackerPageLayout.jsx";
 import GradePageLayoutPage from "../pages/product_library/grade/GradePageLayoutPage.jsx";
-import StockLocationPageLayout from "../pages/product_library/stocklocations/StockLocationPageLayout.jsx";
-import StockLoAddPage from "../pages/product_library/stocklocations/StockLoAddPage.jsx";
-import StockLoEditPage from "../pages/product_library/stocklocations/StockLoEditPage.jsx";
 import GradeAddPage from "../pages/product_library/grade/GradeAddPage.jsx";
 import GradeEditPage from "../pages/product_library/grade/GradeEditPage.jsx";
 import AssetmtTrackerPageLayoutAdd from "../pages/product_library/assetmodificationtracker/AssetmtTrackerPageLayoutAdd.jsx";
@@ -91,14 +88,11 @@ import BranchTablePageLayout from "../pages/settings/branch/BranchTablePageLayou
 import BranchAddPageLayout from "../pages/settings/branch/BranchAddPageLayout.jsx";
 import BranchEditPageLayout from "../pages/settings/branch/BranchEditPageLayout.jsx";
 import UsersEditPage from "../pages/settings/users/UsersEditPage.jsx";
-import GrnLayoutTableContent from "../pages/operations/grn/GrnLayoutTableContent.jsx";
 import AssetTrackerOp from "../pages/operations/assetmodificationtracker/AssetTrackerOp.jsx";
 import ServiceTableOp from "../pages/operations/service/ServiceTableOp.jsx";
 import ClientJourneyOp from "../pages/operations/clientjourney/ClientJourneyOp.jsx";
-import GrnAddForm from "../pages/operations/grn/GrnAddForm.jsx";
 import ServiceAdd from "../pages/operations/service/ServiceAdd.jsx";
 import AssetModificationTrackerAdd from "../pages/operations/assetmodificationtracker/AssetModificationTrackerAdd.jsx";
-import GrnEditForm from "../pages/operations/grn/GrnEditForm.jsx";
 import ServiceEdit from "../pages/operations/service/ServiceEdit.jsx";
 import AssetModificationTrackerEdit from "../pages/operations/assetmodificationtracker/AssetModificationTrackerEdit.jsx";
 import CreaditNotesTableLayout from "../pages/operations/creaditnotes/CreaditNotesTableLayout.jsx";
@@ -142,6 +136,8 @@ import ForgotPasswordContainer from "../pages/auth_page/password-page/ForgotPass
 import ResetPasswordContainer from "../pages/auth_page/password-page/ResetPasswordContainer.jsx";
 import RemoveItemsLayout from "../pages/operations/asset-items-remove-add/RemoveItemsLayout.jsx";
 import CourseEditForm from "../pages/courses/CourseEditForm.jsx";
+import DeliveryChallanView from "../components/delivery-challan/DeliveryChallanView.jsx";
+import GoodsReturnNote from "../components/goods-return-note/GoodsReturnNote.jsx";
 
 const ProtectedRoute = ({ element }) => {
   const user = useSelector((state) => state.auth.user);
@@ -260,18 +256,8 @@ const RoutesConfig = () => {
               path="product_library/grade/edit/:id"
               element={<GradeEditPage />}
             />
-            <Route
-              path="product_library/stock_locations"
-              element={<StockLocationPageLayout />}
-            />
-            <Route
-              path="product_library/stock_locations/add/"
-              element={<StockLoAddPage />}
-            />
-            <Route
-              path="product_library/stock_locations/edit/:id"
-              element={<StockLoEditPage />}
-            />
+            
+            
             <Route
               path="procurement/purchase-requests"
               element={<PurchaseRequestTableLayout />}
@@ -402,9 +388,7 @@ const RoutesConfig = () => {
               path="operations/invoices/edit/:id"
               element={<InvoicesEditPage />}
             />
-            {/* <Route path="operations/grn" element={<GrnLayoutTableContent />} />
-            <Route path="operations/grn/add" element={<GrnAddForm />} />
-            <Route path="operations/grn/edit/:id" element={<GrnEditForm />} /> */}
+           
             <Route
               path="operations/asset-updation"
               element={<AssetTrackerOp />}
@@ -566,9 +550,15 @@ const RoutesConfig = () => {
               element={<ClientDataEditTable />}
             />
             <Route path="reports" element={<AllReportsDataLayout />} />
+            {/* <Route
+              path="reports/sales_performance_report"
+              element={<div>sales_performance_report</div>}
+            /> */}
+
+
             <Route
               path="reports/sales_performance_report"
-              element={<SalesPerformanceReport />}
+              element={<GoodsReturnNote/>}
             />
             <Route
               path="operations/feedback"

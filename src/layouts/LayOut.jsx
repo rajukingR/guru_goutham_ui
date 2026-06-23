@@ -37,6 +37,9 @@ const navItems = [
   { label: "Inventory", path: "/dashboard/inventory" },
   { label: "CRM", path: "/dashboard/crm/client-list" },
   { label: "Operations", path: "/dashboard/operations" },
+  { label: "Reports", path: "/dashboard/reports" },
+  // { label: "HR Management", path: "/dashboard/employees" },
+
 ];
 
 const LayOut = () => {
@@ -73,7 +76,6 @@ const LayOut = () => {
     }
   }, [user?.id, token]);
 
-  // Function to determine which section the user is on
   const getSection = () => {
     if (location.pathname.includes("/dashboard/product_library"))
       return "product_library";
@@ -87,85 +89,79 @@ const LayOut = () => {
       return "users_performance";
     if (location.pathname.includes("/dashboard/client")) return "client";
     if (location.pathname.includes("/dashboard/reports")) return "reports";
+    if (location.pathname.includes("/dashboard/employees")) return "employees";
     if (location.pathname.includes("/dashboard/settings")) return "settings";
     if (location.pathname.includes("/dashboard/profile")) return "profile";
 
     return "dashboard";
   };
 
-  // Function to find the correct tab index based on current path
   const findCurrentTabIndex = () => {
     const currentPath = location.pathname;
-    
-    // For profile, settings, and other non-main-nav pages, we don't highlight any main nav tab
-    if (currentPath.includes("/dashboard/settings") || 
-        currentPath.includes("/dashboard/profile")) {
-      return null; // No tab selected for these pages
+
+    if (currentPath.includes("/dashboard/settings") ||
+      currentPath.includes("/dashboard/profile")) {
+      return null;
     }
-    
-    // Check if we're in procurement section
+
     if (currentPath.includes("/dashboard/procurement")) {
       return navItems.findIndex(item => item.label === "Procurement");
     }
-    
-    // Check if we're in product library section
+
     if (currentPath.includes("/dashboard/product_library")) {
       return navItems.findIndex(item => item.label === "Product Library");
     }
-    
-    // Check if we're in inventory section
+
     if (currentPath.includes("/dashboard/inventory")) {
       return navItems.findIndex(item => item.label === "Inventory");
     }
-    
-    // Check if we're in CRM section
+
     if (currentPath.includes("/dashboard/crm")) {
       return navItems.findIndex(item => item.label === "CRM");
     }
-    
-    // Check if we're in operations section
+
     if (currentPath.includes("/dashboard/operations")) {
       return navItems.findIndex(item => item.label === "Operations");
     }
-    
-    // Default to dashboard
+
+    if (currentPath.includes("/dashboard/reports")) {
+      return navItems.findIndex(item => item.label === "Reports");
+    }
+
+    if (currentPath.includes("/dashboard/employees")) {
+      return navItems.findIndex(item => item.label === "Employees");
+    }
+
     return navItems.findIndex(item => item.label === "Dashboard");
   };
 
-  // Update selected tab on route change and page load
   useEffect(() => {
     const currentTabIndex = findCurrentTabIndex();
-    
-    if (currentTabIndex !== -1) {
+
+    if (currentTabIndex !== -1 && currentTabIndex !== null) {
       setSelectedTab(currentTabIndex);
     } else {
-      setSelectedTab(null); // For profile, settings, and other pages
+      setSelectedTab(null);
     }
 
-    // Update the section whenever the location changes
     setSection(getSection());
   }, [location.pathname]);
 
-  // Save current section to localStorage whenever it changes
   useEffect(() => {
     const currentSection = getSection();
     localStorage.setItem('lastActiveSection', currentSection);
-    
-    // Also save the full path for more accurate navigation
     localStorage.setItem('lastActivePath', location.pathname);
   }, [location.pathname]);
 
-  // Check for last active section on component mount
   useEffect(() => {
     const lastActiveSection = localStorage.getItem('lastActiveSection');
     const lastActivePath = localStorage.getItem('lastActivePath');
-    
-    // Only navigate if we're not already on the correct path and it's not profile/settings
-    if (lastActivePath && 
-        lastActivePath !== location.pathname && 
-        lastActivePath !== '/dashboard' &&
-        !lastActivePath.includes('/dashboard/profile') &&
-        !lastActivePath.includes('/dashboard/settings')) {
+
+    if (lastActivePath &&
+      lastActivePath !== location.pathname &&
+      lastActivePath !== '/dashboard' &&
+      !lastActivePath.includes('/dashboard/profile') &&
+      !lastActivePath.includes('/dashboard/settings')) {
       navigate(lastActivePath);
     }
   }, []);
@@ -173,8 +169,7 @@ const LayOut = () => {
   const handleTabChange = (_, newValue) => {
     setSelectedTab(newValue);
     navigate(navItems[newValue].path);
-    
-    // Save to localStorage immediately when tab changes
+
     localStorage.setItem('lastActiveSection', getSectionFromTabIndex(newValue));
     localStorage.setItem('lastActivePath', navItems[newValue].path);
   };
@@ -187,25 +182,22 @@ const LayOut = () => {
       case 3: return 'inventory';
       case 4: return 'crm';
       case 5: return 'operations';
+      case 6: return 'reports';
+      case 7: return 'employees';
       default: return 'dashboard';
     }
   };
 
-  // Handle settings navigation separately
   const handleSettingsClick = () => {
     setSection("settings");
     navigate("/dashboard/settings/users");
-    // Save settings to localStorage
     localStorage.setItem('lastActiveSection', 'settings');
     localStorage.setItem('lastActivePath', '/dashboard/settings/users');
   };
 
-  // Handle profile navigation separately
   const handleProfileClick = () => {
     setSection("profile");
     navigate("/dashboard/profile");
-    // Don't save profile to localStorage for auto-redirect
-    // This way when you refresh on profile, it won't auto-redirect away
   };
 
   const handleMenuClick = (event) => {
@@ -216,7 +208,6 @@ const LayOut = () => {
     setMenuAnchor(null);
     if (index !== null) {
       navigate(navItems[index].path);
-      // Save section when navigating from menu
       localStorage.setItem('lastActiveSection', getSectionFromTabIndex(index));
       localStorage.setItem('lastActivePath', navItems[index].path);
     }
@@ -226,7 +217,6 @@ const LayOut = () => {
     setMobileDrawerOpen(open);
   };
 
-  // Mobile navigation drawer - shows both main nav and sidebar items
   const mobileDrawer = (
     <Box sx={{ width: 280 }} role="presentation">
       <List>
@@ -242,18 +232,20 @@ const LayOut = () => {
             onClick={() => {
               navigate(item.path);
               setMobileDrawerOpen(false);
-              // Save section when navigating from mobile drawer
               localStorage.setItem('lastActiveSection', getSectionFromTabIndex(index));
               localStorage.setItem('lastActivePath', item.path);
             }}
-            selected={location.pathname === item.path || 
+            selected={location.pathname === item.path ||
               (item.label === "Procurement" && location.pathname.includes("/dashboard/procurement")) ||
-              (item.label === "CRM" && location.pathname.includes("/dashboard/crm"))}
+              (item.label === "CRM" && location.pathname.includes("/dashboard/crm")) ||
+              (item.label === "Reports" && location.pathname.includes("/dashboard/reports")) ||
+              (item.label === "Employees" && location.pathname.includes("/dashboard/employees"))
+            }
+              
           >
             <ListItemText primary={item.label} />
           </ListItem>
         ))}
-        {/* Settings in mobile drawer */}
         <ListItem
           button
           onClick={() => {
@@ -266,17 +258,14 @@ const LayOut = () => {
         </ListItem>
       </List>
       <Divider />
-
-      {/* Sidebar content for the current section */}
       <Box sx={{ mt: 2 }}>
         <Sidebar section={getSection()} isMobile={true} />
       </Box>
     </Box>
   );
 
-  // Check if sidebar should be shown (for all pages except dashboard and profile)
-  const shouldShowSidebar = location.pathname !== "/dashboard" && 
-                           !location.pathname.includes("/dashboard/profile");
+  const shouldShowSidebar = location.pathname !== "/dashboard" &&
+    !location.pathname.includes("/dashboard/profile")
 
   return (
     <Box
@@ -287,31 +276,40 @@ const LayOut = () => {
         backgroundColor: "#F4F1FA",
       }}
     >
-      {/* AppBar for navigation */}
       <AppBar
         position="fixed"
         sx={{
           width: "100%",
           zIndex: theme.zIndex.drawer + 1,
           backgroundColor: "#FFFFFF",
-          boxShadow: "none",
-          borderBottom: "1px solid #ddd",
+          boxShadow: "0px 2px 4px rgba(0,0,0,0.05)",
+          borderBottom: "1px solid #e0e0e0",
         }}
       >
         <Toolbar
           sx={{
             justifyContent: "space-between",
-            padding: { xs: "0 8px", sm: "0 16px" },
+            padding: { xs: "0 12px", sm: "0 24px" },
+            minHeight: { xs: 56, sm: 64 },
+            display: "flex",
+            alignItems: "center",
           }}
         >
-          {/* Left Navigation Buttons */}
-          <Box display="flex" alignItems="center">
+          {/* Left Section - Logo and Navigation Controls */}
+          <Box
+            display="flex"
+            alignItems="center"
+            sx={{
+              flex: { xs: 0, md: "0 0 auto" },
+              gap: { xs: 0.5, sm: 1 },
+            }}
+          >
             <IconButton
               sx={{
                 border: "1px solid #ddd",
                 borderRadius: "50%",
-                width: 40,
-                height: 40,
+                width: { xs: 32, sm: 40 },
+                height: { xs: 32, sm: 40 },
                 display: { xs: "none", sm: "flex" },
               }}
               onClick={() => navigate(-1)}
@@ -320,7 +318,7 @@ const LayOut = () => {
                 component="img"
                 src={BackwardIcon}
                 alt="Backward"
-                sx={{ width: 18, height: 18 }}
+                sx={{ width: 16, height: 16 }}
               />
             </IconButton>
 
@@ -328,10 +326,10 @@ const LayOut = () => {
               sx={{
                 border: "1px solid #ddd",
                 borderRadius: "50%",
-                width: 40,
-                height: 40,
-                ml: 1,
+                width: { xs: 32, sm: 40 },
+                height: { xs: 32, sm: 40 },
                 display: { xs: "none", sm: "flex" },
+                ml: 0.5,
               }}
               onClick={() => navigate(1)}
             >
@@ -339,71 +337,109 @@ const LayOut = () => {
                 component="img"
                 src={ForwardIcon}
                 alt="Forward"
-                sx={{ width: 18, height: 18 }}
+                sx={{ width: 16, height: 16 }}
               />
             </IconButton>
 
             <IconButton
               onClick={toggleMobileDrawer(true)}
-              sx={{ display: { xs: "flex", md: "none" }, mr: 1 }}
+              sx={{ display: { xs: "flex", md: "none" }, ml: 0 }}
             >
               <MenuIcon />
             </IconButton>
 
-            <IconButton sx={{ display: { xs: "none", sm: "flex" } }}>
-              <Box
-                component="img"
-                src={NavLogo}
-                alt="Logo"
-                sx={{
-                  maxWidth: { xs: 150, sm: 200, md: 250 },
-                  height: "auto",
-                  ml: { xs: 0, sm: 1 },
-                }}
-              />
-            </IconButton>
+            <Box
+              component="img"
+              src={NavLogo}
+              alt="Logo"
+              sx={{
+                maxWidth: { xs: 120, sm: 180, md: 220 },
+                height: "auto",
+                display: { xs: "none", sm: "block" },
+                ml: 1,
+              }}
+            />
           </Box>
 
-          {/* Desktop Navigation Tabs */}
+          {/* Center Section - Navigation Tabs */}
           {!isMobile && (
-            <Tabs
-              value={selectedTab}
-              onChange={handleTabChange}
-              textColor="primary"
-              indicatorColor="primary"
+            <Box
               sx={{
-                maxWidth: { md: 500, lg: 600 },
-                "& .MuiTab-root": {
-                  minWidth: "auto",
-                  px: 1.5,
-                  fontSize: { md: "0.8rem", lg: "0.9rem" },
-                },
+                flex: 1,
+                display: "flex",
+                justifyContent: "center",
+                alignItems: "center",
+                mx: 2,
               }}
             >
-              {navItems.map((item, index) => (
-                <Tab
-                  key={index}
-                  label={item.label}
-                  sx={{
+              <Tabs
+                value={selectedTab}
+                onChange={handleTabChange}
+                textColor="primary"
+                indicatorColor="primary"
+                variant="scrollable"
+                scrollButtons="auto"
+                allowScrollButtonsMobile
+                sx={{
+                  "& .MuiTabs-flexContainer": {
+                    gap: { md: 0.5, lg: 1 },
+                  },
+                  "& .MuiTab-root": {
+                    minWidth: "auto",
+                    padding: { md: "6px 12px", lg: "8px 16px" },
+                    fontSize: { md: "0.8rem", lg: "0.875rem" },
+                    fontWeight: 500,
                     textTransform: "none",
-                    fontWeight: "bold",
-                  }}
-                />
-              ))}
-            </Tabs>
+                    letterSpacing: "0.3px",
+                    whiteSpace: "nowrap",
+                    minHeight: 48,
+                    color: "#555",
+                    "&.Mui-selected": {
+                      color: "#667eea",
+                      fontWeight: 600,
+                    },
+                  },
+                  "& .MuiTabs-indicator": {
+                    backgroundColor: "#667eea",
+                    height: 3,
+                    borderRadius: "3px 3px 0 0",
+                  },
+                }}
+              >
+                {navItems.map((item, index) => (
+                  <Tab
+                    key={index}
+                    label={item.label}
+                    sx={{
+                      textTransform: "none",
+                    }}
+                  />
+                ))}
+              </Tabs>
+            </Box>
           )}
 
-          {/* Right Side Icons */}
-          <Box display="flex" alignItems="center">
-            {/* Settings Icon */}
+          {/* Right Section - Settings and Profile */}
+          <Box
+            display="flex"
+            alignItems="center"
+            sx={{
+              flex: { xs: 0, md: "0 0 auto" },
+              gap: { xs: 0.5, sm: 1 },
+            }}
+          >
             <IconButton
               onClick={handleSettingsClick}
               size={isSmallMobile ? "small" : "medium"}
               sx={{
-                backgroundColor: location.pathname.includes("/dashboard/settings") 
-                  ? "rgba(0, 0, 0, 0.04)" 
+                backgroundColor: location.pathname.includes("/dashboard/settings")
+                  ? "rgba(102, 126, 234, 0.08)"
                   : "transparent",
                 borderRadius: "50%",
+                padding: { xs: 0.5, sm: 1 },
+                "&:hover": {
+                  backgroundColor: "rgba(102, 126, 234, 0.08)",
+                },
               }}
             >
               <Box
@@ -411,8 +447,8 @@ const LayOut = () => {
                 src={SettingIcon}
                 alt="Settings"
                 sx={{
-                  width: { xs: 25, sm: 30, md: 35 },
-                  height: { xs: 25, sm: 30, md: 35 },
+                  width: { xs: 22, sm: 28, md: 32 },
+                  height: { xs: 22, sm: 28, md: 32 },
                 }}
               />
             </IconButton>
@@ -423,7 +459,12 @@ const LayOut = () => {
                 alignItems: "center",
                 gap: 1,
                 cursor: "pointer",
-                ml: 1,
+                ml: { xs: 0.5, sm: 1 },
+                padding: "4px 8px 4px 4px",
+                borderRadius: "30px",
+                "&:hover": {
+                  backgroundColor: "rgba(102, 126, 234, 0.05)",
+                },
               }}
               onClick={handleProfileClick}
             >
@@ -436,38 +477,37 @@ const LayOut = () => {
                 sx={{
                   width: { xs: 32, sm: 40 },
                   height: { xs: 32, sm: 40 },
-                  border: location.pathname.includes("/dashboard/profile") 
-                    ? "2px solid #764ba2" 
-                    : "2px solid #667eea",
+                  border: location.pathname.includes("/dashboard/profile")
+                    ? "2px solid #667eea"
+                    : "2px solid transparent",
                   "&:hover": {
-                    borderColor: "#764ba2",
+                    borderColor: "#667eea",
                   },
                 }}
                 onError={(e) => {
                   e.target.onerror = null;
                   e.target.src = DefaultImage;
                 }}
-              ></Avatar>
+              />
               <Typography
                 sx={{
-                  color: location.pathname.includes("/dashboard/profile") 
-                    ? "#764ba2" 
-                    : "#171719",
+                  color: "#171719",
                   display: { xs: "none", sm: "block" },
-                  fontSize: { sm: "0.9rem", md: "1rem" },
-                  fontWeight: location.pathname.includes("/dashboard/profile") 
-                    ? "bold" 
-                    : "normal",
+                  fontSize: { sm: "0.85rem", md: "0.95rem" },
+                  fontWeight: 500,
+                  maxWidth: { sm: 100, md: 150 },
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  whiteSpace: "nowrap",
                 }}
               >
-                {profileData?.full_name || "Loading..."}
+                {profileData?.full_name || "User"}
               </Typography>
             </Box>
           </Box>
         </Toolbar>
       </AppBar>
 
-      {/* Mobile Navigation Drawer - Shows both main nav and sidebar items */}
       <Drawer
         anchor="left"
         open={mobileDrawerOpen}
@@ -486,7 +526,6 @@ const LayOut = () => {
       <Toolbar />
 
       <Box sx={{ display: "flex", flex: 1, overflow: "hidden" }}>
-        {/* Sidebar - Show for all sections except dashboard and profile */}
         {shouldShowSidebar && (
           <Box
             sx={{
@@ -496,7 +535,8 @@ const LayOut = () => {
               height: "calc(100vh - 64px)",
               overflowY: "auto",
               flexShrink: 0,
-              borderRight: "1px solid #ddd",
+              width: 280,
+              borderRight: "1px solid #e0e0e0",
               backgroundColor: "#FFFFFF",
             }}
           >
@@ -504,7 +544,6 @@ const LayOut = () => {
           </Box>
         )}
 
-        {/* Main Content */}
         <Box
           component="main"
           sx={{
@@ -512,7 +551,6 @@ const LayOut = () => {
             p: { xs: 2, sm: 3 },
             height: "calc(100vh - 64px)",
             overflowY: "auto",
-            // Adjust width based on sidebar visibility
             width: shouldShowSidebar ? "calc(100% - 280px)" : "100%",
             transition: "width 0.3s ease",
           }}
@@ -567,7 +605,6 @@ export default LayOut;
 //   { label: "Procurement", path: "/dashboard/procurement/supplier" },
 //   { label: "Inventory", path: "/dashboard/inventory" },
 //   { label: "CRM", path: "/dashboard/crm/client-list" },
-//   { label: "Operations", path: "/dashboard/operations" },
 // ];
 
 // const LayOut = () => {
@@ -986,7 +1023,6 @@ export default LayOut;
 //   { label: "Procurement", path: "/dashboard/procurement/supplier" },
 //   { label: "Inventory", path: "/dashboard/inventory" },
 //   { label: "CRM", path: "/dashboard/crm/client-list" },
-//   { label: "Operations", path: "/dashboard/operations" },
 //   // { label: "Reports", path: "/dashboard/reports" },
 //   // { label: "Users Performance", path: "/dashboard/users_performance" },
 //   // { label: "Client", path: "/dashboard/client" },
